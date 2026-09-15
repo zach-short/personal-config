@@ -1,4 +1,4 @@
-import type { Prompter } from '../lib/ask.ts';
+import { BACK, type Prompter } from '../lib/ask.ts';
 import type { Answers, Config, Phase, Question } from '../lib/types.ts';
 import { askable, questionsFor } from '../questions/index.ts';
 
@@ -20,10 +20,31 @@ export async function askPhase(
     .filter((q) => (only ? only.includes(q.id) : true))
     .filter((q) => !skip?.includes(q.id));
 
-  for (const question of scoped) {
-    if (!askable([question], answers).length) continue;
+  // The trail is every index actually asked, in order, and it is what `← back` walks. A plain
+  // `index - 1` would be wrong: a question skipped by its `when` was never asked, so stepping
+  // onto it would show the person a question they have not seen as the one they came from.
+  // An empty trail is also exactly the test for "this phase's first question", which is where
+  // `← back` is deliberately not offered — `askPhase` is called once per phase and knows
+  // nothing about the phase before it, so there is nowhere for it to go.
+  const trail: number[] = [];
+
+  for (let index = 0; index < scoped.length; ) {
+    const question = scoped[index];
+    if (!question || askable([question], answers).length === 0) {
+      index += 1;
+      continue;
+    }
+
     const fallback = defaultFor(question, answers, config);
-    answers[question.configKey] = await prompter.ask(question, fallback);
+    const value = await prompter.ask(question, fallback, trail.length > 0);
+    if (value === BACK) {
+      index = trail.pop() ?? index;
+      continue;
+    }
+
+    answers[question.configKey] = value;
+    trail.push(index);
+    index += 1;
   }
 }
 

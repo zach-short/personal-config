@@ -6,7 +6,7 @@
  */
 import { describe, expect, test } from 'bun:test';
 import { parseCli } from '../src/lib/args.ts';
-import { cancelMessage, checkpointing, type Prompter } from '../src/lib/ask.ts';
+import { BACK, cancelMessage, checkpointing, type Prompter } from '../src/lib/ask.ts';
 import { loadConfig } from '../src/lib/config.ts';
 import {
   type Checkpoint,
@@ -285,6 +285,115 @@ describe('which endings retire the checkpoint', () => {
   test('a preview and a decline keep it, because the run never reached its end', () => {
     expect(retiresCheckpoint('dry-run')).toBe(false);
     expect(retiresCheckpoint('declined')).toBe(false);
+  });
+});
+
+describe('going back, and what the checkpoint does about it', () => {
+  /** One entry per ask; `BACK` in the script is the person picking `← back`. */
+  function scripted(script: AnswerValue[]): Prompter & { asked: string[] } {
+    const asked: string[] = [];
+    return {
+      asked,
+      async ask(question) {
+        asked.push(question.id);
+        return script[asked.length - 1] ?? `live-${question.id}`;
+      },
+      async confirm(_message, fallback) {
+        return fallback;
+      },
+    };
+  }
+
+  test('a corrected answer replaces the one it corrects, rather than sitting beside it', async () => {
+    await inTempHome(async () => {
+      const prompter = checkpointing(scripted(['one-a', 'two-a', BACK, 'two-b', 'three-a']));
+
+      await askAll(prompter, ['one', 'two', 'three', 'two', 'three']);
+
+      // Three entries, not five, and `two` holds the second answer. A tape that appended both
+      // would replay `two-a` — the answer the person went back specifically to change.
+      expect((await onDisk()).entries).toEqual([
+        { id: 'one', value: 'one-a' },
+        { id: 'two', value: 'two-b' },
+        { id: 'three', value: 'three-a' },
+      ]);
+    });
+  });
+
+  test('the sentinel itself never reaches the tape', async () => {
+    await inTempHome(async () => {
+      const prompter = checkpointing(scripted(['one-a', BACK, 'one-b']));
+      await askAll(prompter, ['one', 'two', 'one']);
+
+      const values = (await onDisk()).entries.map((e) => e.value);
+      expect(values).not.toContain(BACK);
+      expect(values).toEqual(['one-b']);
+    });
+  });
+
+  test('the corrected answer is what the next run picks up', async () => {
+    await inTempHome(async () => {
+      const first = checkpointing(scripted(['one-a', 'two-a', BACK, 'two-b']));
+      await askAll(first, ['one', 'two', 'three', 'two']);
+
+      const offer = await readCheckpoint();
+      expect(offer.kind).toBe('ready');
+      if (offer.kind !== 'ready') return;
+
+      const second = recording('second');
+      const given = await askAll(checkpointing(second, offer.checkpoint.entries), [
+        'one',
+        'two',
+        'three',
+      ]);
+
+      expect(given).toEqual(['one-a', 'two-b', 'second-three']);
+      expect(second.asked).toEqual(['three']);
+    });
+  });
+
+  test('stepping back inside a replay stops it, or it hands back the answer being corrected', async () => {
+    await inTempHome(async () => {
+      const tape: ResumeEntry[] = [
+        { id: 'one', value: 'kept-one' },
+        { id: 'two', value: 'kept-two' },
+      ];
+      const inner = scripted([BACK, 'live-two']);
+      const prompter = checkpointing(inner, tape);
+
+      const given = await askAll(prompter, ['one', 'two', 'three', 'two']);
+
+      // `one` and `two` came back off the tape unasked; `three` was the first live question and
+      // the person stepped off it. `two` must now be *asked*, not handed back from the tape.
+      expect(given).toEqual(['kept-one', 'kept-two', BACK, 'live-two']);
+      expect(inner.asked).toEqual(['three', 'two']);
+      expect((await onDisk()).entries).toEqual([
+        { id: 'one', value: 'kept-one' },
+        { id: 'two', value: 'live-two' },
+      ]);
+    });
+  });
+
+  test('rewinding past the only answer empties the tape rather than going negative', async () => {
+    await inTempHome(async () => {
+      const prompter = checkpointing(scripted(['one-a', BACK]));
+      await askAll(prompter, ['one', 'two']);
+
+      // The file is still there, holding nothing — and an empty checkpoint is no offer, so the
+      // next run starts clean instead of proposing to resume a run with no answers in it.
+      expect((await onDisk()).entries).toEqual([]);
+      expect((await readCheckpoint()).kind).toBe('none');
+    });
+  });
+
+  test('back before any answer writes no checkpoint, so the cancel line stays the bare one', async () => {
+    await inTempHome(async () => {
+      const prompter = checkpointing(scripted([BACK]));
+      await askAll(prompter, ['one']);
+
+      expect(hasCheckpoint()).toBe(false);
+      expect(cancelMessage()).toBe('Nothing was written.');
+    });
   });
 });
 

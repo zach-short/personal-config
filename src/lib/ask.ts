@@ -7,11 +7,24 @@ import type { AnswerValue, Question } from './types.ts';
 export const READ_MORE = '__read_more__';
 
 /**
+ * Picked instead of an answer: leave this question unanswered and re-ask the previous one.
+ * A sentinel rather than a thrown control flow because `READ_MORE` already established the
+ * shape, and because the phase runner is the only thing that knows what "previous" means.
+ */
+export const BACK = '__back__';
+
+/**
  * Every phase asks through this interface, never through clack directly. The harness has no
  * TTY, so the only way any of this is testable is if asking is a swappable strategy.
  */
 export type Prompter = {
-  ask(question: Question, fallback: AnswerValue): Promise<AnswerValue>;
+  /**
+   * `canGoBack` is the runner's answer to "is there a question behind this one?", and the only
+   * thing that puts `← back` in the list. Asking is not allowed to work it out for itself: a
+   * phase's first question has nothing behind it, and neither does a question reached by an
+   * `only`/`skip` filter that left it alone in the run.
+   */
+  ask(question: Question, fallback: AnswerValue, canGoBack?: boolean): Promise<AnswerValue>;
   confirm(message: string, fallback: boolean): Promise<boolean>;
   /**
    * Records something the run settled that was not a question — today, which repos were
@@ -34,8 +47,8 @@ export function defaultsPrompter(scripted: Record<string, AnswerValue> = {}): Pr
 
 export function clackPrompter(): Prompter {
   return {
-    async ask(question, fallback) {
-      return askInteractively(question, fallback);
+    async ask(question, fallback, canGoBack = false) {
+      return askInteractively(question, fallback, canGoBack);
     },
     async confirm(message, fallback) {
       return unwrap<boolean>(await p.confirm({ message, initialValue: fallback }));
@@ -56,10 +69,17 @@ export function checkpointing(inner: Prompter, replay: ResumeEntry[] = []): Prom
   const tape = answerTape(replay);
 
   return {
-    async ask(question, fallback) {
+    async ask(question, fallback, canGoBack) {
       const replayed = tape.replayed(question.id);
       if (replayed !== null) return replayed.value;
-      const value = await inner.ask(question, fallback);
+      const value = await inner.ask(question, fallback, canGoBack);
+      // `BACK` is not an answer to this question, and recording it would put a sentinel in the
+      // tape where a value belongs. What it is, to the checkpoint, is the previous answer
+      // becoming provisional again.
+      if (value === BACK) {
+        await tape.rewind();
+        return BACK;
+      }
       await tape.record({ id: question.id, value });
       return value;
     },
@@ -73,9 +93,16 @@ export function checkpointing(inner: Prompter, replay: ResumeEntry[] = []): Prom
   };
 }
 
+/**
+ * `text` and `confirm` questions carry no option list, so there is nowhere to put `← back` and
+ * they do not offer it. They are still reachable *as* a destination — stepping back from the
+ * next `select` lands on one — so the gap is that a chain ending in free text cannot be left
+ * backwards, not that a typed answer is uncorrectable.
+ */
 async function askInteractively(
   question: Question,
   fallback: AnswerValue,
+  canGoBack: boolean,
 ): Promise<AnswerValue> {
   if (question.kind === 'text') return askText(question, fallback);
   if (question.kind === 'confirm') {
@@ -83,7 +110,7 @@ async function askInteractively(
       await p.confirm({ message: question.ask, initialValue: fallback === true }),
     );
   }
-  return askChoice(question, fallback);
+  return askChoice(question, fallback, canGoBack);
 }
 
 async function askText(question: Question, fallback: AnswerValue): Promise<AnswerValue> {
@@ -98,19 +125,12 @@ async function askText(question: Question, fallback: AnswerValue): Promise<Answe
 }
 
 /** The `Read more…` loop: print the long form, then ask the same question again. */
-async function askChoice(question: Question, fallback: AnswerValue): Promise<AnswerValue> {
-  const options = [
-    ...(question.options ?? []).map((o) => ({
-      value: o.value,
-      label: o.recommended ? `${o.label}  (recommended)` : o.label,
-      hint: o.example,
-    })),
-    {
-      value: READ_MORE,
-      label: 'Read more…',
-      hint: 'what each option means, and how to undo it',
-    },
-  ];
+async function askChoice(
+  question: Question,
+  fallback: AnswerValue,
+  canGoBack: boolean,
+): Promise<AnswerValue> {
+  const options = choiceOptions(question, canGoBack);
 
   for (;;) {
     const answer =
@@ -124,13 +144,42 @@ async function askChoice(question: Question, fallback: AnswerValue): Promise<Ans
             }),
           );
 
+    // Leaving beats reading: a multiselect can carry both sentinels at once, and the person who
+    // ticked `← back` has said they are on the wrong question.
+    if (wantsBack(answer)) return BACK;
     if (!wantsMore(answer)) return answer as AnswerValue;
     p.note(await readMore(question.readMore), `More on: ${question.ask}`);
   }
 }
 
+/** Exported for the test that checks which questions offer the way out, and which cannot. */
+export function choiceOptions(
+  question: Question,
+  canGoBack: boolean,
+): Array<{ value: string; label: string; hint: string }> {
+  return [
+    ...(question.options ?? []).map((o) => ({
+      value: o.value,
+      label: o.recommended ? `${o.label}  (recommended)` : o.label,
+      hint: o.example,
+    })),
+    {
+      value: READ_MORE,
+      label: 'Read more…',
+      hint: 'what each option means, and how to undo it',
+    },
+    ...(canGoBack
+      ? [{ value: BACK, label: '← back', hint: 'change the answer before this one' }]
+      : []),
+  ];
+}
+
 function wantsMore(answer: unknown): boolean {
   return answer === READ_MORE || (Array.isArray(answer) && answer.includes(READ_MORE));
+}
+
+function wantsBack(answer: unknown): boolean {
+  return answer === BACK || (Array.isArray(answer) && answer.includes(BACK));
 }
 
 export async function readMore(id: string): Promise<string> {

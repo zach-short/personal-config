@@ -105,6 +105,12 @@ export type AnswerTape = {
    */
   replayed(id: string, value?: AnswerValue): ResumeEntry | null;
   record(entry: ResumeEntry): Promise<void>;
+  /**
+   * One question backwards. Drops the entry the run is about to re-ask, so the corrected answer
+   * lands in that position instead of beside it — a tape holding both would replay the answer
+   * the person went back to change.
+   */
+  rewind(): Promise<void>;
 };
 
 /**
@@ -134,6 +140,18 @@ export function answerTape(replay: ResumeEntry[]): AnswerTape {
     },
     async record(entry) {
       kept.push(entry);
+      await writeCheckpoint(kept);
+    },
+    async rewind() {
+      if (kept.length === 0) return;
+      kept.pop();
+      // No `replaying = false` here, though going back plainly ends a replay: `replayed()` has
+      // already set it. A rewind only ever follows a question the person was *shown*, and a
+      // question is only shown once `replayed()` has returned null — which is the same line
+      // that stops the replay. Written down because the guard looked missing, was added, and
+      // then could not be made to fail: a check that cannot fire reads as evidence when it is
+      // none. Verified by mutation 2026-09-15 — removing it broke no test, and none can be
+      // written without a second caller that rewinds mid-replay.
       await writeCheckpoint(kept);
     },
   };
