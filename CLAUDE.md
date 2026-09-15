@@ -1,152 +1,114 @@
-# personal-config — staged onboarding
+# personal-config
 
-This repo is a staged, opt-in installer for a personal Claude Code working style. It does
-nothing on its own — it only acts when the user says `start` (or `begin`, `setup`, or asks to
-get started) in a session running inside this directory.
+> **Before writing or editing any code, read `docs/conventions-ts.md` in full.** Not optional,
+> not conditional on task size. If you have not read it this session, read it now.
 
-## Trigger
+> **Before scoping, planning or building a feature, read
+> `standard/AGENT-PRACTICES.boilerplate.md`.** It is the process standard this repo owns and
+> ships — the same one the tool installs into other repos. Do not ask how the flow works; it is
+> written down.
 
-When the user says `start` (or an equivalent), run the flow below. Before Stage 1, silently
-read `README.md` in this repo for the framing, then read the user's existing
-`~/.claude/CLAUDE.md` if it exists, so any addition merges with what's already there instead of
-conflicting with or duplicating it. Say in one line what you found (empty, or a summary).
+This repo is a Bun + TypeScript CLI that asks a person how they work and writes the matching
+documents into their repos. **Other people clone and run it**, most of whom have never seen a
+ledger, a board or a model tier.
 
-Go through the six stages **one at a time, in order** — never batch them into one question.
-For each stage:
+## The rules that get broken
 
-1. Explain in 2-3 sentences what it does and why, using the stage's example below.
-2. Ask via `AskUserQuestion` with options: **Adopt as-is** / **Adapt it** (then ask follow-up
-   specifics before writing anything) / **Skip**.
-3. Only after the answer, apply that stage (see "How to apply" per stage) before moving on.
-   Don't get ahead of the user's answers.
-4. If a stage depends on something skipped earlier, say so and offer a fallback or skip it too.
+- **Zero personal strings in the engine.** No name, no `~/Projects`, no machine-specific hook
+  belongs in `src/`, `templates/` or `standard/`. Those live in `profiles/*.json`, or in
+  `docs/choices/*.md` labelled as one person's worked example. `bun test` enforces this with a
+  grep; do not defeat it by paraphrasing.
+- **Never write outside a temp directory in a test.** `os.homedir()` is snapshotted by Bun at
+  startup, so `src/lib/paths.ts` reads `$HOME` itself and the test preload redirects it. A test
+  that reaches the real `~/.claude` has already done the damage by the time it fails.
+- **Every question needs a long form.** `docs/choices/<readMore>.md` must exist, and must carry
+  each option's defense, **the strongest argument against it**, what it writes, and how to undo
+  it. A test checks presence and length; only a reader checks honesty.
+- **Nothing is written without a stamp and a preview.** Everything goes through
+  `planned()` in `src/render/context.ts` and `resolvePlan()` before `commitPlan()`. A renderer
+  that writes a file directly bypasses the preview, the backup and the undo.
+- **A generated file's placeholders must all be filled — except the two Part 0 owns.**
+  `{{WORKTREE_SETUP}}` and `{{BUILD_CMD}}` are deliberately left; anything else left behind is
+  a renderer that forgot a variable, and `fill()` leaves unknown tokens in place so `doctor`
+  catches it.
+- **Never run `git commit` or `git push`.** Print two blocks instead: `git add <exact files>` —
+  never `-A`, never `.` — then `git commit -m "<short, lowercase>"`. No attribution trailer.
 
-Stages 1–3 write to `~/.claude/CLAUDE.md` (global, applies to every project). Stages 4–6 write
-to a target project directory, which is **not** this repo — ask once, before Stage 4, which
-project directory these should apply to (current directory the session started in is the
-default if it isn't this repo; otherwise ask for a path). Skip stages 4-6 entirely if the user
-says they don't have a target project right now — tell them they can clone this repo again (or
-just re-run `start` in a future session from inside this repo) whenever they do.
+## Stack
 
-For any project-level file (stages 4–6), before writing: check that directory's `.gitignore`
-and `.git/info/exclude` for an entry covering it, and add one if missing (e.g. `CLAUDE.local.md`,
-`HANDOFF.md`, `PASSOFF.md`). These are personal process, never meant to be committed to the
-target project's own repo.
+Bun 1.2.9 · TypeScript 5.9.2 (`strict`, `noUncheckedIndexedAccess`) · `@clack/prompts` 1.8.1 ·
+Biome 2.2.4 · `bun test`. No build step: Bun runs the TypeScript directly, and `src/cli.ts` is
+the bin with a `#!/usr/bin/env bun` shebang.
 
-For `~/.claude/CLAUDE.md` (stages 1–3): if the file already has a section covering the same
-ground, ask whether to replace it or leave it — never silently duplicate or overwrite.
+## Architecture
 
----
+- **Questions are data, not control flow.** A `Question` is `{ id, phase, ask, options, readMore,
+  configKey }`. Phases pick questions; a `Prompter` asks them. That split is the only reason any
+  of this is testable — the harness has no TTY, so `defaultsPrompter()` answers from the merged
+  config and `clackPrompter()` is only used against a real terminal.
+- **Rendering is pure until the very end.** `renderAll()` returns `PlannedFile[]`; nothing
+  touches the disk until `commitPlan()`.
+- **A `PracticeArea` carries its question *and* what the answer renders into**, so the catalog
+  cannot drift from the files it produces.
+- **`doctor` rules are one file each** under `src/doctor/rules/`, each with a fixture test that
+  violates it and one that passes.
 
-## Stage 1 — Commit discipline
+## Directory map
 
-What: never run `git commit` or `git push` directly. Instead, at the end of a task, print two
-copy-pasteable bash blocks — a `git add` of only the files touched this session, then a
-`git commit -m "..."` — and stop.
+| Path | Belongs here | Does not |
+|---|---|---|
+| `src/lib/` | Pure logic: config merge, paths, stamps, diff, write plan, discovery | Prompts, console output (except `ui.ts`) |
+| `src/questions/` | Question definitions and the practices catalog | Rendering, file paths |
+| `src/phases/` | The runner that asks a phase's questions | Question text |
+| `src/render/` | One module per output family; returns `PlannedFile[]` | Disk writes |
+| `src/doctor/` | One rule per file, plus the scanner | Anything that fixes by default |
+| `templates/` | Document scaffolds carrying `{{TOKENS}}` | Answer-dependent prose — that is code |
+| `standard/` | The canonical boilerplate, versioned. **Byte-for-byte except its version line** | Local edits |
+| `docs/choices/` | One long form per question | Anything the wizard reads at runtime |
+| `profiles/` | Default answers, including personal ones | Anything the engine imports directly |
+| `examples/` | Filled, sanitized documents for a fictional repo. Tracked. | Real repo data |
+| `tests/fixtures/` | **Generated** by `bun run fixtures`; git-ignored | Committed fixtures |
 
-Example:
+## Commands
+
 ```bash
-git add src/utils/foo.ts
+bun run typecheck
 ```
+
 ```bash
-git commit -m "fix: handle null timezone in slot calc"
+bun run lint
 ```
 
-Why: keeps the user as the actual author of history — useful when running multiple sessions in
-one repo at once, since only they know which uncommitted files belong to which.
-
-How to apply: append `templates/01-commit-discipline.md` to `~/.claude/CLAUDE.md` under a
-`# Commits` heading. If the user adapts it (e.g. allow commit but not push, or allow
-attribution), edit the template's wording to match before appending — don't append it verbatim
-if it no longer reflects what they agreed to.
-
-## Stage 2 — Model-routing awareness
-
-What: if a task explicitly names a model (a board's Model column, a doc's `**Model: X**`
-line), check the session's own model against it before starting. If they don't match, either
-delegate to a subagent running that model, or stop and write a hand-off brief — never silently
-do the work on the wrong model.
-
-Example: a task board row says "Model: Opus" but the session is on a lighter model — spawn an
-Opus subagent with the full prompt, or write a hand-off note and stop.
-
-Why: treats model choice as a deliberate safety/quality decision, not a preference to override
-because a task "looked simple."
-
-How to apply: append `templates/02-model-routing.md` to `~/.claude/CLAUDE.md`. Skip by default
-if the user doesn't use model-tagged tasks or boards — say so as part of asking.
-
-## Stage 3 — Prefer live docs tools over memory for library APIs
-
-What: for questions about a specific library/framework/SDK/API, prefer a connected docs-lookup
-MCP tool over answering from training data, which can be stale.
-
-Example: "how do I do optimistic updates in TanStack Query" → look it up via the docs tool
-rather than recalling it from memory.
-
-Only relevant if a docs MCP is connected. Ask the user which one (Context7 is common) — if
-none is connected, ask whether to skip this stage or note it as a future addition once one is.
-
-How to apply: fill `{{DOCS_MCP_NAME}}` in `templates/03-docs-lookup.md` with the tool's actual
-name, then append the result to `~/.claude/CLAUDE.md`.
-
-## Stage 4 — Untracked project router (CLAUDE.local.md)
-
-What: a project-local, git-ignored file that sits *below* the target project's own tracked
-rules in precedence — it adds personal process on top and never edits or overrides the
-project's own `CONTRIBUTING.md`/`AGENTS.md`/lint configs. Most useful in a repo whose
-conventions aren't the user's to set (a course fork, an OSS project, a client repo).
-
-Why: stops an agent from "fixing" repo-owned conventions it disagrees with, while still
-letting the user keep personal environment notes and working style.
-
-How to apply: copy `templates/04-CLAUDE.local.md.template` to `<target project>/CLAUDE.local.md`,
-filling in `{{PROJECT_NAME}}`. Leave the environment-quirks section as a stub — it fills in
-over time, not now.
-
-## Stage 5 — Personal ledger (HANDOFF.md)
-
-What: an untracked, append-only "what is true" log — dated environment facts, settled
-decisions, and a numbered step log where each session appends what it did and what's left,
-instead of re-deriving things every session.
-
-Example entry:
-```markdown
-**3. Recorded the real gate baselines.** Done 2026-09-14. `yarn test` exit 0, 407 files,
-4119 tests. Left owed: `yarn build` has never been run here.
+```bash
+bun test
 ```
 
-Why: a fresh session doesn't re-discover the same environment gotchas or re-ask settled
-questions.
-
-How to apply: copy `templates/05-HANDOFF.md.template` to `<target project>/HANDOFF.md`, filling
-in `{{PROJECT_NAME}}` and `{{DATE}}` (today, absolute). If the user wants to adapt it (e.g. skip
-the step log), trim the corresponding section before writing.
-
-## Stage 6 — Personal task board (PASSOFF.md)
-
-What: an untracked board of "what's next" — one row per task (status/model/dependencies), and
-a standalone, self-contained prompt below the board per task, so a fresh session or a different
-model can pick it up without replaying the whole conversation.
-
-Example row:
-```markdown
-| # | Task | Status | Model | Waits on |
-|---|------|--------|-------|----------|
-| 3 | Fix flaky checkout test | OPEN | Default | — |
+```bash
+bun run doctor . examples
 ```
 
-Why: makes handoff between sessions (or between models) cheap and explicit — most useful for
-multi-day or multi-agent work; skip if the user only runs short single sessions.
+```bash
+bun run setup --profile starter --yes --dry-run --projects-dir tests/fixtures
+```
 
-How to apply: copy `templates/06-PASSOFF.md.template` to `<target project>/PASSOFF.md`, filling
-in `{{PROJECT_NAME}}` and `{{DATE}}`.
+**Gates that lie.** `bun test` needs `tests/fixtures/` to exist — `tests/make-fixtures.ts`
+rebuilds it in `beforeAll`, so a bare `bun run fixtures` is only needed for the manual dry-run
+above. `bun run lint` fails on *formatting* as well as lint findings; `bunx biome check --write`
+fixes almost all of them, and from then on the config is the rule.
 
----
+## Where work is written down
 
-## Wrap-up
+- `HANDOFF.md` — what is true here: environment, settled decisions, the code map, the step log.
+  Read first. **Untracked** — this is personal process, not part of the public repo.
+- `PASSOFF.md` — what is next, one standalone prompt per item. Untracked.
+- `examples/` — the tracked, curated equivalents, for people reading the repo.
 
-After all six stages: list what was adopted vs. adapted vs. skipped; show the final file tree
-of everything created or edited (global and, if applicable, the target project); and run
-`git status --ignored` in the target project to confirm the new files are actually ignored, not
-about to be swept into a commit.
+## Never do this
+
+- Commit `tests/fixtures/` — they are generated, and a nested `.git` is an embedded repository
+  git will not track.
+- Edit `standard/AGENT-PRACTICES.boilerplate.md`'s content. Only its version header line is in
+  scope, and changing anything else desynchronizes it from the version it claims to be.
+- Add a test-only branch to `src/`. If something is untestable, that is a design finding.
+- Write a conventions rule with an invented correct/incorrect pair and no provenance label —
+  the labels exist to stop a later agent "correcting" a deliberate call.

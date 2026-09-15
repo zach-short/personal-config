@@ -1,0 +1,49 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.2.4/schema.json",
+  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+  "files": {
+    "includes": ["src/**/*.ts", "tests/**/*.ts", "profiles/**/*.json"]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 96
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single",
+      "semicolons": "always",
+      "trailingCommas": "all",
+      "arrowParentheses": "always"
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "style": {
+        "useConst": "error",
+        "useImportType": "error",
+        "noParameterAssign": "error",
+        "useNodejsImportProtocol": "error"
+      },
+      "suspicious": {
+        "noExplicitAny": "error",
+        "noConsole": { "level": "error", "options": { "allow": ["error"] } }
+      },
+      "complexity": {
+        "noExcessiveCognitiveComplexity": {
+          "level": "error",
+          "options": { "maxAllowedComplexity": 12 }
+        }
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["tests/**/*.ts", "src/lib/ui.ts", "src/cli.ts", "src/doctor/index.ts"],
+      "linter": { "rules": { "suspicious": { "noConsole": "off" } } }
+    }
+  ]
+}

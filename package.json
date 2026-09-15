@@ -1,0 +1,37 @@
+{
+  "name": "personal-config",
+  "version": "0.1.0",
+  "description": "A terminal wizard that sets up an agent-driven working style in your repos — a ledger, a board, a working standard, and the rules your agent reads before it writes code.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "personal-config": "src/cli.ts"
+  },
+  "files": [
+    "src",
+    "standard",
+    "templates",
+    "profiles",
+    "docs"
+  ],
+  "scripts": {
+    "setup": "bun run src/cli.ts setup",
+    "doctor": "bun run src/cli.ts doctor",
+    "undo": "bun run src/cli.ts undo",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check src tests",
+    "format": "biome format --write src tests"
+  },
+  "dependencies": {
+    "@clack/prompts": "1.8.1"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.2.4",
+    "@types/bun": "^1.4.2",
+    "typescript": "5.9.2"
+  },
+  "engines": {
+    "bun": ">=1.2.0"
+  }
+}

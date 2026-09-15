@@ -1,0 +1,39 @@
+{
+  "profile": "zach",
+  "projectsDir": "~/Projects",
+  "archiveHome": "~/Projects/archive/<repo>",
+  "identity": {
+    "githubLogin": "zach-short"
+  },
+  "models": {
+    "deep": "Fable 5.1",
+    "default": "Opus 5",
+    "fast": "Sonnet 5"
+  },
+  "answers": {
+    "commitPolicy": "print-blocks",
+    "attribution": "none",
+    "modelRouting": "delegate-or-stop",
+    "docsMcp": "Context7 MCP",
+    "keepExistingGlobal": "report",
+    "workProfile": "ledger",
+    "trackMode": "tracked",
+    "mode": "solo",
+    "tracker": "",
+    "hooks": "both",
+    "skills": "all",
+    "practices.comments": "why-only",
+    "practices.function-length": "house-6-15",
+    "practices.exports": "named-only",
+    "practices.file-naming": "ecosystem-default",
+    "practices.imports": "no-parent-relative",
+    "practices.types": "strict",
+    "practices.logic-placement": "extract-by-concept",
+    "practices.data-layer": "one-client",
+    "practices.states": "all-three",
+    "practices.design-tokens": "tokens-only",
+    "practices.test-policy": "new-file-per-feature",
+    "practices.copy-registers": "ask-three-registers",
+    "practices.drive-by-fixes": "note-and-raise"
+  }
+}
