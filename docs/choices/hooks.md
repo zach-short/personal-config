@@ -8,8 +8,9 @@ opens with a short reminder of where work is written down.
 
 ## The options
 
-**Block `git commit`, `git push` and `git add -A`.** *Recommended.* A `PreToolUse` hook
-inspects the command, and refuses those, printing the two-block ritual to the agent instead.
+**Block `git commit`, `git push` and `git add -A`.** *Recommended.* A `PreToolUse` hook reads
+the command the agent is about to run, and refuses those, printing the two-block ritual to the
+agent instead.
 
 *The defense.* This is the one rule whose violation is hard to undo. A rule in prose is a rule a
 session can reason its way past — under time pressure, or because the task "obviously" wants a
@@ -34,6 +35,25 @@ including the ones where you just want to ask a question. And a banner people le
 worse than no banner, because it looks like the problem is solved.
 
 **No hooks.** Nothing is added to `settings.json`.
+
+## What the guard catches, and what it does not
+
+It parses the command out of the tool call with `jq` and walks its words, so it is exact about
+both halves of the question. **Caught:** `git commit` and `git push` in any form, including
+behind git's own options (`git -C . commit`, `git -c user.name=x commit`), after another
+command (`ls && git commit`), on a later line, and inside a shell wrapper (`sh -c "git push"`).
+`git add -A`, `--all`, `-Av` and `git add .` are caught; `git add <named files>` is not,
+because that is the ritual.
+
+**Not caught:** a commit a script makes when you run the script, since the hook sees
+`./deploy.sh` and nothing more; a commit written into a heredoc or a file and executed later;
+and any git wrapper of your own under a different name. It is a guard against a session
+reaching for a commit, not against a determined one.
+
+It needs `jq` on your `PATH`. Without it the hook says so and falls back to matching the raw
+payload, which over-blocks — a `grep` for the phrase gets refused. That is the deliberate
+direction to fail in: over-blocking costs one message, and a commit you did not make cannot be
+taken back out of a checkout your other sessions are working in.
 
 ## What it writes and where
 

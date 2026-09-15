@@ -25,13 +25,13 @@ rule whose violation is legal-with-a-comment is a rule that erodes.
 
 ## The part that is not optional either way
 
-Both platforms default to the OS colour scheme, and **a colour that cannot resolve per scheme
-is not a token**. A palette that only works in light mode is a light-mode palette with extra
+Every platform in the repo defaults to the OS colour scheme, and **a colour that cannot
+resolve per scheme is not a token**. A palette that only works in light mode is a light-mode palette with extra
 steps.
 
 ## What it writes and where
 
-Rule `S1` in `docs/conventions-typescript.md` and `-swift.md`, tagged *lint*.
+Rule `S1` in `docs/conventions-typescript.md` and `-swift.md`, tagged *review*.
 
 ## How to undo it
 

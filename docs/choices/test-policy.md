@@ -26,7 +26,7 @@ that matters, and it puts the collision back.
 
 ## What it writes and where
 
-Rule `X1` in each `docs/conventions-<lang>.md`, tagged *CI*.
+Rule `X1` in each `docs/conventions-<lang>.md`, tagged *review*.
 
 ## How to undo it
 

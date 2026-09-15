@@ -32,7 +32,7 @@ decision and an undocumented one is a bug.
 
 ## What it writes and where
 
-Rule `F1` in each `docs/conventions-<lang>.md`, tagged *lint*.
+Rule `F1` in each `docs/conventions-<lang>.md`, tagged *review*.
 
 ## How to undo it
 

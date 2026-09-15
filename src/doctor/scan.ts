@@ -8,6 +8,10 @@ export type DocKind =
   | 'standard'
   | 'conventions'
   | 'archive-index'
+  /** §2.2 — a Profile P effort's `SCOPE.md`, `DESIGN.md`, `PLAN.md` or `RUNTIME-PASS.md`. */
+  | 'project'
+  /** §8.2 — the docs index, which is the one map of a docs tree. */
+  | 'docs-index'
   | 'other';
 
 export type Doc = {
@@ -58,7 +62,14 @@ const NAMES: Array<[RegExp, DocKind]> = [
   [/^agent-practices.*\.md$/, 'standard'],
   [/^conventions-.*\.md$/, 'conventions'],
   [/^INDEX\.md$/, 'archive-index'],
+  [/^(SCOPE|DESIGN|PLAN|RUNTIME-PASS)\.md$/, 'project'],
 ];
+
+/** §2.2 puts one folder per open effort under `incomplete/`; every doc in one is a project doc. */
+const IN_PROGRESS = /(^|\/)incomplete\/.+\.md$/;
+
+/** §8.2's docs index. The repo's own root `README.md` is not one, hence the required folder. */
+const DOCS_INDEX = /(^|\/)docs\/README\.md$/i;
 
 /**
  * The adopted names win over the table, so a repo whose ledger is `NOTES.md` gets the ledger
@@ -68,6 +79,14 @@ export function kindOf(path: string, names: DocNames = DEFAULT_DOC_NAMES): DocKi
   const name = basename(path);
   if (name === names.ledger) return 'ledger';
   if (name === names.board) return 'board';
+
+  // Path before name: a Profile P repo keeps whatever it likes inside an effort's folder, and
+  // all of it is a doc the prose rules apply to. Before 2026-09-15 they all landed in `other`,
+  // which every rule skips, so a Profile P repo was walked and nothing applied to anything.
+  const normalized = path.replaceAll('\\', '/');
+  if (IN_PROGRESS.test(normalized)) return 'project';
+  if (DOCS_INDEX.test(normalized)) return 'docs-index';
+
   return NAMES.find(([pattern]) => pattern.test(name))?.[1] ?? 'other';
 }
 

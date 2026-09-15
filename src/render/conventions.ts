@@ -82,6 +82,10 @@ function document(language: string, rules: ConventionRule[], all: string[]): str
     '> **Seeded by `personal-config` from your answers.** Every correct/incorrect pair below is',
     '> illustrative until someone replaces it with real code from this repo — the standard asks',
     '> for real pairs, and a seeded one is a placeholder that happens to compile.',
+    '>',
+    '> Every rule is seeded *review* for the same reason: a tag is a claim about tooling, and',
+    '> nothing here has configured a linter, a type gate or a CI job that catches these. Promote',
+    '> a rule to *lint*, *gate* or *CI* yourself once something does.',
     '',
     ...rules.flatMap(renderRule),
   ].join('\n');

@@ -23,7 +23,7 @@ decays fastest under deadline — which is when the error states matter most.
 
 ## What it writes and where
 
-Rule `D6` in `docs/conventions-typescript.md` and `-swift.md`, tagged *review*.
+Rule `D2` in `docs/conventions-typescript.md` and `-swift.md`, tagged *review*.
 
 ## How to undo it
 

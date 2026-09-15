@@ -5,6 +5,7 @@ import { configHash, loadConfig } from '../lib/config.ts';
 import { expandHome } from '../lib/paths.ts';
 import type { Cli, Finding } from '../lib/types.ts';
 import { standardVersion } from '../render/standard.ts';
+import { absenceEvidence } from './rules/absence-evidence.ts';
 import { archiveIndex } from './rules/archive-index.ts';
 import { archivedCitations } from './rules/archived-citations.ts';
 import { boardStatus } from './rules/board-status.ts';
@@ -15,7 +16,7 @@ import { stampDrift } from './rules/stamp-drift.ts';
 import { stepNumbers } from './rules/step-numbers.ts';
 import { collectDocs, type Doc } from './scan.ts';
 
-const DOC_RULES = [relativeDates, placeholders, stepNumbers, boardStatus];
+const DOC_RULES = [relativeDates, absenceEvidence, placeholders, stepNumbers, boardStatus];
 
 export type DoctorReport = { findings: Finding[]; checked: number };
 

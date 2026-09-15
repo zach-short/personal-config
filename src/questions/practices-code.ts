@@ -3,6 +3,21 @@ import type { ConventionRule, PracticeArea, Question } from '../lib/types.ts';
 type Pair = { correct: string; incorrect: string };
 type PairsByLanguage = Record<string, Pair>;
 
+/**
+ * Every seeded rule is tagged *review*, and none is tagged *lint*, *gate* or *CI*.
+ *
+ * §8.1 says the tag is what tells a reader whether a clean run means anything — so a tag is a
+ * claim about tooling, and this wizard configures no linter, no type gate and no CI job. `E1`,
+ * `F1`, `I1`, `D1` and `S1` claimed *lint* and `T1` and `X1` claimed *CI* until 2026-09-15,
+ * which made a clean run read as evidence it was not.
+ *
+ * Deriving the tag from `scan.hasCi` was the alternative and is no better: a repo having *a* CI
+ * job says nothing about whether that job enforces *this* rule, so it trades one unearned claim
+ * for a subtler one. Promote a rule by hand — the generated file says so at the top — once you
+ * have configured something that actually catches it.
+ */
+const SEEDED: ConventionRule['enforcement'] = 'review';
+
 /** Falls back to the generic pair so a language we have no real example for says nothing false. */
 function pairFor(pairs: PairsByLanguage, language: string): Pair | null {
   return pairs[language] ?? pairs.generic ?? null;
@@ -56,7 +71,7 @@ const COMMENTS: PracticeArea = {
         body:
           'A comment restating the line below it is banned — rename or extract instead. A comment recording *why* is required where the reason is not derivable from the code. **Never bulk-delete comments**, and never strip one in a protected category: product or design rationale, a lint-suppression justification, an external-constraint workaround, or documentation on a public export.' +
           (value === 'why-plus-headers' ? ' Section banners in a long file are exempt.' : ''),
-        enforcement: 'review',
+        enforcement: SEEDED,
         provenance: 'OURS',
       },
       {
@@ -104,7 +119,7 @@ const FUNCTION_LENGTH: PracticeArea = {
         id: 'L1',
         title: `Functions stay short — ${shape}`,
         body: `A function that fits on a screen is reviewed at a glance and tested alone. Extract for a *concept*, not to relocate lines: a helper that needs three parameters to explain itself was the wrong cut. Markup and view bodies are exempt from the count.`,
-        enforcement: 'review',
+        enforcement: SEEDED,
         provenance: 'OURS',
       },
       {
@@ -146,7 +161,7 @@ const EXPORTS: PracticeArea = {
           id: 'E1',
           title: 'Minimize the exported surface',
           body: 'Capitalization *is* the export mechanism. Export an identifier only when something outside the package calls it, and avoid stutter: `helpcontent.Load`, not `helpcontent.LoadHelpContent`.',
-          enforcement: 'review',
+          enforcement: SEEDED,
           provenance: 'STANDARD',
         },
         {
@@ -169,7 +184,7 @@ const EXPORTS: PracticeArea = {
           value === 'named-only'
             ? 'Default exports only where the framework requires them (a route file, an entry point). Anything exported is a `function` declaration rather than a `const` arrow, so it hoists, names itself in a stack trace, and is greppable.'
             : 'Either form is acceptable; pick one per file and stay with it.',
-        enforcement: 'lint',
+        enforcement: SEEDED,
         provenance: 'COMMON',
       },
       {
@@ -222,7 +237,7 @@ const FILE_NAMING: PracticeArea = {
         id: 'F1',
         title: `Filenames are ${shape}`,
         body: `Acronyms are words, not shouts: \`userId\`, \`apiUrl\`, \`HttpClient\` — except in Go, where initialisms keep uniform case (\`userID\`, \`apiURL\`, \`HTTPClient\`). Where two standards disagree on this, the file extension decides which applies, and both say so.`,
-        enforcement: 'lint',
+        enforcement: SEEDED,
         provenance: 'COMMON',
       },
       {
@@ -273,7 +288,7 @@ const IMPORTS: PracticeArea = {
             ? '`./sibling` is fine; anything containing `../` is not — use the path alias. A `../` chain encodes the current file’s position in the tree, so moving the file breaks an import that had nothing to do with the move. '
             : ''
         }Groups: standard library, third party, internal aliases, then relative.`,
-        enforcement: 'lint',
+        enforcement: SEEDED,
         provenance: 'COMMON',
       },
       {
@@ -333,7 +348,7 @@ const TYPES: PracticeArea = {
           value === 'strict'
             ? body
             : `${body} An escape hatch is permitted only with a why-comment naming the gap it works around.`,
-        enforcement: language === 'go' ? 'review' : 'CI',
+        enforcement: SEEDED,
         provenance: language === 'python' ? 'STANDARD' : 'OURS',
       },
       {
@@ -394,7 +409,7 @@ const LOGIC_PLACEMENT: PracticeArea = {
         id: 'L2',
         title: 'Logic is extracted by concept',
         body,
-        enforcement: 'review',
+        enforcement: SEEDED,
         provenance: 'OURS',
       },
       {
@@ -451,8 +466,12 @@ const DATA_LAYER: PracticeArea = {
           value === 'one-client'
             ? 'One typed client; raw calls are banned in app code'
             : 'One agreed data library',
-        body: 'Environment variables are read and validated once at startup and passed down — never read inline in app code, where a missing value surfaces as a runtime undefined three layers away from the cause.',
-        enforcement: 'lint',
+        body:
+          (value === 'one-client'
+            ? 'Every network and database call goes through one typed client; a bare `fetch` or a raw driver call in app code fails review, because the client is the one place retries, auth, error shape and types are decided. '
+            : 'Every call goes through the one agreed library, called directly — no wrapper layer, and no second library either. ') +
+          'Environment variables are read and validated once at startup and passed down — never read inline in app code, where a missing value surfaces as a runtime undefined three layers away from the cause.',
+        enforcement: SEEDED,
         provenance: 'OURS',
       },
       {
@@ -497,13 +516,13 @@ const STATES: PracticeArea = {
       ? null
       : ruleFrom(
           {
-            id: 'D6',
+            id: 'D2',
             title: 'Loading, error and empty states are mandatory',
             body:
               value === 'all-three'
                 ? 'All three render through one shared component, so a screen cannot ship with two of them. The empty state is the one that gets skipped, and it is the one a new user sees first.'
                 : 'All three are required on every data-backed screen; the implementation is the screen’s own.',
-            enforcement: 'review',
+            enforcement: SEEDED,
             provenance: 'OURS',
           },
           {
@@ -551,11 +570,11 @@ const DESIGN_TOKENS: PracticeArea = {
             id: 'S1',
             title: 'Design tokens, never literals',
             body:
-              'Role-named tokens with one swap point per platform, so a redesign is one edit rather than a repo-wide find-and-replace. Both platforms default to the OS colour scheme; a colour that cannot resolve per scheme is not a token.' +
+              'Role-named tokens with one swap point per platform, so a redesign is one edit rather than a repo-wide find-and-replace. Every platform in the repo defaults to the OS colour scheme; a colour that cannot resolve per scheme is not a token.' +
               (value === 'tokens-with-escape'
                 ? ' A raw value is permitted with a comment naming why no token fits.'
                 : ''),
-            enforcement: 'lint',
+            enforcement: SEEDED,
             provenance: 'OURS',
           },
           {
@@ -603,7 +622,7 @@ const TEST_POLICY: PracticeArea = {
               value === 'new-file-per-feature'
                 ? 'A new file rather than an addition to an existing suite, so two sessions working in parallel do not collide in one file. Write characterization tests *before* moving logic, not after — a test written after the move proves the new shape, not that the behaviour survived.'
                 : 'Each source file’s tests sit beside it, discovered by the runner’s include glob.',
-            enforcement: 'CI',
+            enforcement: SEEDED,
             provenance: 'COMMON',
           },
           {

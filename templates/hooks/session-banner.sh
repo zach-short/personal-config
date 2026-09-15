@@ -14,7 +14,9 @@ standard="$(sed -n 's/.*"standardPath"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/
 [ -n "$ledger" ] && [ -f "$ledger" ] && echo "Ledger: $ledger — what is true. Read first."
 
 if [ -n "$board" ] && [ -f "$board" ]; then
-  row="$(grep -m1 '`OPEN`' "$board" || true)"
+  # A table row, not the first line containing the word. Unanchored, this matched the status
+  # vocabulary sentence every rendered board carries, and announced it as the next open item.
+  row="$(grep -m1 '^|.*`OPEN`' "$board" || true)"
   if [ -n "$row" ]; then
     echo "Board: $board — next open item:"
     echo "  $(printf '%s' "$row" | sed 's/^[[:space:]]*//')"

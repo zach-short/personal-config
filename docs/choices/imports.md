@@ -28,7 +28,7 @@ for a language with strong tooling is correctly scoped, not missing rules.
 
 ## What it writes and where
 
-Rule `I1` in `docs/conventions-typescript.md`, `-python.md` and `-swift.md`, tagged *lint*.
+Rule `I1` in `docs/conventions-typescript.md`, `-python.md` and `-swift.md`, tagged *review*.
 
 ## How to undo it
 

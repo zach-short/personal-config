@@ -28,7 +28,7 @@ shorter, then they get copied, then they stop meaning anything.
 
 ## What it writes and where
 
-Rule `T1` in each `docs/conventions-<lang>.md`, tagged *CI* or *review*.
+Rule `T1` in each `docs/conventions-<lang>.md`, tagged *review*.
 
 ## How to undo it
 

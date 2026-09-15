@@ -29,7 +29,7 @@ away from its cause; validated at startup it is one clear error before anything 
 
 ## What it writes and where
 
-Rule `D1` in `docs/conventions-typescript.md`, `-go.md` and `-python.md`, tagged *lint*.
+Rule `D1` in `docs/conventions-typescript.md`, `-go.md` and `-python.md`, tagged *review*.
 
 ## How to undo it
 

@@ -29,8 +29,7 @@ the TypeScript one, and why the file extension decides which applies.
 
 ## What it writes and where
 
-Rule `E1` in `docs/conventions-typescript.md`, `-go.md` and `-swift.md`, tagged *lint* or
-*review*.
+Rule `E1` in `docs/conventions-typescript.md`, `-go.md` and `-swift.md`, tagged *review*.
 
 ## How to undo it
 
