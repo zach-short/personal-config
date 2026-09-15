@@ -52,9 +52,13 @@ function checkRow(doc: Doc, row: string[], columns: Columns, line: number): Find
   // The status cell is excluded from `rest`, or `SUPERSEDED` would satisfy its own test.
   const rest = row.filter((_, index) => index !== columns.status).join(' ');
 
-  if (/DONE/.test(status) && !/HANDOFF\s+\d+/i.test(status)) {
+  if (/DONE/.test(status) && !citesLedger(status, doc.ledgerStem)) {
     return [
-      finding(doc, line, '`DONE` must point at the ledger step — write `DONE — HANDOFF <n>`'),
+      finding(
+        doc,
+        line,
+        `\`DONE\` must point at the ledger step — write \`DONE — ${doc.ledgerStem} <n>\``,
+      ),
     ];
   }
   if (/HELD/.test(status) && isEmpty(row[columns.waitsOn])) {
@@ -69,6 +73,16 @@ function checkRow(doc: Doc, row: string[], columns: Columns, line: number): Find
     ];
   }
   return [];
+}
+
+/** `DONE — HANDOFF 24`, or the same shape under whatever name §0.2 adopted. */
+function citesLedger(status: string, stem: string): boolean {
+  return new RegExp(`${escaped(stem)}\\s+\\d+`, 'i').test(status);
+}
+
+/** An adopted name is a filename, not a pattern: `C++.md` must not compile to one. */
+function escaped(text: string): string {
+  return text.replaceAll(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function isSeparator(row: string[]): boolean {

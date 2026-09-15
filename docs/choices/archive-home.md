@@ -2,8 +2,8 @@
 
 ## What this is
 
-A directory outside the repo where finished documents land when their work is done, with an
-`INDEX.md` mapping what is in there.
+A directory where finished documents land when their work is done, with an `INDEX.md` mapping
+what is in there. Usually outside the repo; an in-tree `docs/archive/` is the other real answer.
 
 ## The defense
 
@@ -29,8 +29,10 @@ durability.
 `<archive home>/INDEX.md`, seeded with the legend and an empty Closed section. `<repo>` in the
 path you give is replaced with each repo's name, so one answer covers every repo.
 
-Write `none` to keep closed work in-tree; nothing is written and the standard's archive rules
-are still there to follow when you want them.
+To keep closed work in-tree, answer with an in-tree path such as `docs/archive/`. The standard
+interpolates this answer into `<archive home>/<slug>/`, so it has to be a path — the word
+`none` would render `none/<slug>/`. Leave it empty and no index is written; the standard's
+archive rules are still there to follow when you want them.
 
 ## `doctor` checks it both ways
 

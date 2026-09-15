@@ -93,7 +93,7 @@ const COMMIT_POLICY: PracticeArea = {
     if (value === 'agent-commits') {
       return '**The agent may commit, never push.** Commit early, in small slices — after each leg lands, not once at the end. Never `git add -A`, never `git add .`: it sweeps up another session’s in-flight work. Pushing is the owner’s.';
     }
-    return '**Commits are the owner’s.** *Never run `git commit` or `git push`.* Several sessions run in one checkout and only the owner knows which uncommitted file belongs to which. When work is ready, run `git status --short`, then print exactly two copyable `bash` blocks, one command each: `git add <the exact files this session touched>` — never `-A`, never `.` — then `git commit -m "<short, all lowercase>"`.';
+    return '**Commits are the owner’s.** *Never run `git commit` or `git push`.* Several sessions run in one checkout and only the owner knows which uncommitted file belongs to which. When work is ready, run `git status --short`, then print exactly two copyable `bash` blocks, one command each: `git add <the exact files this session touched>` — never `-A`, never `.` — then `git commit <the same files> -m "<short, all lowercase>"`, because naming paths implies `--only` and a bare `git commit` sweeps in whatever another session has staged.';
   },
 };
 

@@ -22,6 +22,8 @@ export function testScan(overrides: Partial<RepoScan> = {}): RepoScan {
     hasCi: true,
     migrations: [],
     existingDocs: [],
+    ledgerDoc: null,
+    boardDoc: null,
     worktrees: 1,
     remoteOwner: 'owner',
     impliedProfile: null,

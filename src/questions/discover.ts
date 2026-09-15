@@ -66,7 +66,7 @@ export const DISCOVER_QUESTIONS: Question[] = [
     ask: 'Where should closed work go when it leaves the repo?',
     configKey: 'archiveHome',
     readMore: 'archive-home',
-    placeholder: '~/Projects/archive/<repo>/, or "none" to keep closed work in-tree',
+    placeholder: '~/Projects/archive/<repo>/, or docs/archive/ to keep closed work in-tree',
   },
   {
     id: 'mode',

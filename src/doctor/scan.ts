@@ -1,5 +1,6 @@
 import { readdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
+import { DEFAULT_DOC_NAMES, type DocNames, docStem, readDocNames } from '../lib/repo-config.ts';
 
 export type DocKind =
   | 'ledger'
@@ -16,6 +17,8 @@ export type Doc = {
   lines: string[];
   /** A source template: unfilled by construction, so the prose rules do not apply to it. */
   isTemplate: boolean;
+  /** How this repo cites its ledger — `HANDOFF` unless §0.2 adopted another name. */
+  ledgerStem: string;
 };
 
 /**
@@ -57,8 +60,14 @@ const NAMES: Array<[RegExp, DocKind]> = [
   [/^INDEX\.md$/, 'archive-index'],
 ];
 
-export function kindOf(path: string): DocKind {
+/**
+ * The adopted names win over the table, so a repo whose ledger is `NOTES.md` gets the ledger
+ * rules; the table still runs, so a repo keeping both files is not made to choose.
+ */
+export function kindOf(path: string, names: DocNames = DEFAULT_DOC_NAMES): DocKind {
   const name = basename(path);
+  if (name === names.ledger) return 'ledger';
+  if (name === names.board) return 'board';
   return NAMES.find(([pattern]) => pattern.test(name))?.[1] ?? 'other';
 }
 
@@ -78,16 +87,18 @@ const SKIP_DIRS = new Set([
 ]);
 
 export async function collectDocs(root: string, depth = 4): Promise<Doc[]> {
-  const paths = await walk(root, depth);
+  const [paths, names] = await Promise.all([walk(root, depth), readDocNames(root)]);
+  const ledgerStem = docStem(names.ledger);
   return Promise.all(
     paths.map(async (path) => {
       const text = await Bun.file(path).text();
       return {
         path,
-        kind: kindOf(path),
+        kind: kindOf(path, names),
         text,
         lines: text.split('\n'),
         isTemplate: isTemplateSource(path),
+        ledgerStem,
       };
     }),
   );

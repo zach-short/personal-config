@@ -3,6 +3,27 @@
 The CLI. The working standard it installs is versioned separately — see
 [`standard/CHANGELOG.md`](standard/CHANGELOG.md).
 
+## Unreleased
+
+### Fixed
+
+- **An adopted ledger or board name is honoured end to end.** `ledgerFile()` returned
+  `HANDOFF.md` on both branches of its own ternary, so §0.2’s "adopt those files as they are"
+  was never implemented, and a ledger under another name was invisible to `doctor`. Discovery,
+  the renderers and `doctor` now read both names from `<repo>/.personal-config.json` through one
+  module, and the `DONE — HANDOFF <n>` check follows whichever name was adopted.
+- **The archive slot no longer renders the word `none`.** An unanswered archive home filled
+  `{{ARCHIVE_HOME}}` with `none`, so the adapted standard told its reader closed work moves to
+  `none/<slug>/`. It falls back to `docs/archive`, and the question offers an in-tree path
+  instead of the word.
+- **The printed commit ritual names its files.** The commit-guard hook and the Part 11 paragraph
+  both ended in a bare `git commit -m`, which commits the whole index — the failure the rule
+  exists to prevent when several sessions share a checkout.
+
+### Changed
+
+- **The working standard** is at 1.0.1 — see [`standard/CHANGELOG.md`](standard/CHANGELOG.md).
+
 ## 0.1.0 — 2026-09-15
 
 First slice: `setup`, `doctor` and `undo`.

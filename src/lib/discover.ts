@@ -2,6 +2,7 @@ import { readdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { isGitRepo, ownerFromRemote, remoteUrl, worktreeCount } from './git.ts';
 import { expandHome } from './paths.ts';
+import { type DocNames, readDocNames } from './repo-config.ts';
 import type { RepoScan, WorkProfile } from './types.ts';
 
 /** Marker file → language. First match per language wins; a repo can report several. */
@@ -25,12 +26,9 @@ const LOCKFILES: Array<[string, string]> = [
 
 const MIGRATION_DIRS = ['migrations', 'supabase/migrations', 'db/migrate'];
 
-/** Files whose presence means the profile is already chosen (standard §0.2) — adopt, never rename. */
-const LEDGER_MARKERS = ['HANDOFF.md', 'PASSOFF.md'];
+/** A project folder fixes the profile the way a ledger does (standard §0.2). */
 const FOLDER_MARKERS = ['docs/incomplete'];
 const DOC_MARKERS = [
-  'HANDOFF.md',
-  'PASSOFF.md',
   'docs/incomplete',
   'AGENT-PRACTICES.md',
   'docs/agent-practices.md',
@@ -55,17 +53,19 @@ export async function scanProjectsDir(dir: string): Promise<RepoScan[]> {
 }
 
 export async function scanRepo(path: string): Promise<RepoScan> {
+  const names = await readDocNames(path);
   const [languages, packageManager, hasCi, migrations, existingDocs, worktrees, owner] =
     await Promise.all([
       detectLanguages(path),
       detectPackageManager(path),
       exists(join(path, '.github', 'workflows')),
       detectPresent(path, MIGRATION_DIRS),
-      detectPresent(path, DOC_MARKERS),
+      detectPresent(path, [names.ledger, names.board, ...DOC_MARKERS]),
       worktreeCount(path),
       remoteUrl(path).then(ownerFromRemote),
     ]);
 
+  const adopted = adoptedDocs(names, existingDocs);
   return {
     path,
     name: basename(path),
@@ -74,14 +74,25 @@ export async function scanRepo(path: string): Promise<RepoScan> {
     hasCi,
     migrations,
     existingDocs,
+    ...adopted,
     worktrees,
     remoteOwner: owner,
-    impliedProfile: impliedProfile(existingDocs),
+    impliedProfile: impliedProfile(existingDocs, adopted),
   };
 }
 
-function impliedProfile(existingDocs: string[]): WorkProfile | null {
-  if (LEDGER_MARKERS.some((m) => existingDocs.includes(m))) return 'ledger';
+type AdoptedDocs = Pick<RepoScan, 'ledgerDoc' | 'boardDoc'>;
+
+/** Adopted under its own name: a rename would break every citation already pointing at it. */
+function adoptedDocs(names: DocNames, existingDocs: string[]): AdoptedDocs {
+  return {
+    ledgerDoc: existingDocs.includes(names.ledger) ? names.ledger : null,
+    boardDoc: existingDocs.includes(names.board) ? names.board : null,
+  };
+}
+
+function impliedProfile(existingDocs: string[], adopted: AdoptedDocs): WorkProfile | null {
+  if (adopted.ledgerDoc || adopted.boardDoc) return 'ledger';
   if (FOLDER_MARKERS.some((m) => existingDocs.includes(m))) return 'folders';
   return null;
 }

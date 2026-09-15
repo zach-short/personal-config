@@ -27,7 +27,7 @@ assumed.
 
 Its job is to make the owner's decisions cheap. **It proposes and decides nothing.**
 
-1. **What exists today (verified `<date>`)** — the ground-truth table, first, because every
+1. **What exists, verified `<date>`** — the ground-truth table, first, because every
    option is only meaningful against it.
 2. **What this is / what this is not** — the non-scope list is as load-bearing as the scope
    list and gets skipped constantly; without it every parked item is relitigated mid-build.

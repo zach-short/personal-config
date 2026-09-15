@@ -52,6 +52,9 @@ export type RepoScan = {
   hasCi: boolean;
   migrations: string[];
   existingDocs: string[];
+  /** The ledger and board this repo already keeps, under whatever name (standard §0.2). */
+  ledgerDoc: string | null;
+  boardDoc: string | null;
   worktrees: number;
   remoteOwner: string | null;
   /** Set when an existing ledger/board/project-folder fixes the profile (standard §0.2). */

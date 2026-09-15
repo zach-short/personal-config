@@ -40,7 +40,10 @@ function placeholders(ctx: RenderContext, mode: string): Record<string, string> 
     DATE: ctx.date,
     MODE: mode,
     DOCS_HOME: 'docs',
-    ARCHIVE_HOME: ctx.repo?.archiveHome || 'none',
+    // Interpolated into a path — `{{ARCHIVE_HOME}}/<slug>/`. The literal `none` that §0.3
+    // allows for an empty slot would render `none/<slug>/`, so an unanswered archive falls
+    // back to the in-tree default Appendix A names instead.
+    ARCHIVE_HOME: ctx.repo?.archiveHome || 'docs/archive',
     TRACKER: mode === 'team' ? answer(ctx, 'tracker', 'none') : 'none',
     MODEL_DEEP: ctx.config.models.deep || 'unset',
     MODEL_DEFAULT: ctx.config.models.default || 'unset',

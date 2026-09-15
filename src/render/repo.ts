@@ -39,7 +39,7 @@ async function renderRouter(ctx: RenderContext, languages: string[]): Promise<Pl
     PROJECT_NAME: projectName(ctx),
     STANDARD_PATH: standardPath(ctx),
     LEDGER_FILE: ledgerFile(ctx),
-    BOARD_FILE: boardFile(),
+    BOARD_FILE: boardFile(ctx),
     STACK_LINE: stackLine(ctx),
     COMMIT_LINE: commitLine(ctx),
     CONVENTIONS_LIST: conventionsList(languages),
@@ -83,7 +83,7 @@ function workRecordLines(ctx: RenderContext): string {
   if (ctx.repo?.workProfile === 'folders') {
     return `- \`docs/incomplete/<slug>/\` — one folder per open effort: \`SCOPE.md\` → \`DESIGN.md\` → \`PLAN.md\` → \`RUNTIME-PASS.md\`.\n- Closed efforts move to \`${ctx.repo.archiveHome || 'the archive'}\`.`;
   }
-  return `- \`${ledgerFile(ctx)}\` — what is true: environment, settled decisions, the step log. Read first.\n- \`${boardFile()}\` — what is next, one standalone prompt per item.`;
+  return `- \`${ledgerFile(ctx)}\` — what is true: environment, settled decisions, the step log. Read first.\n- \`${boardFile(ctx)}\` — what is next, one standalone prompt per item.`;
 }
 
 async function renderWorkRecord(ctx: RenderContext): Promise<PlannedFile[]> {
@@ -96,7 +96,7 @@ async function renderLedgerAndBoard(ctx: RenderContext): Promise<PlannedFile[]> 
     PROJECT_NAME: projectName(ctx),
     DATE: ctx.date,
     LEDGER_FILE: ledgerFile(ctx),
-    BOARD_FILE: boardFile(),
+    BOARD_FILE: boardFile(ctx),
     ROUTER_FILE: routerFile(ctx),
     STANDARD_PATH: standardPath(ctx),
     MODEL_DEFAULT: ctx.config.models.default || 'Default',
@@ -112,7 +112,7 @@ async function renderLedgerAndBoard(ctx: RenderContext): Promise<PlannedFile[]> 
     ),
     planned(
       ctx,
-      join(repoPath, boardFile()),
+      join(repoPath, boardFile(ctx)),
       'the board — what is next',
       await filledTemplate('PASSOFF.md', vars),
     ),
@@ -144,6 +144,8 @@ async function renderFolders(ctx: RenderContext): Promise<PlannedFile[]> {
 
 async function renderArchiveIndex(ctx: RenderContext): Promise<PlannedFile | null> {
   const home = ctx.repo?.archiveHome;
+  // An empty answer means no archive index. `none` is no longer offered, but a config saved
+  // before that still carries it, and expanding it would seed `./none/INDEX.md`.
   if (!home || home.toLowerCase() === 'none') return null;
   const body = await filledTemplate('archive-INDEX.md', { PROJECT_NAME: projectName(ctx) });
   return planned(ctx, join(expandHome(home), 'INDEX.md'), 'archive index seed', body);
@@ -157,7 +159,7 @@ function renderRepoConfig(ctx: RenderContext): PlannedFile {
       workProfile: ctx.repo?.workProfile,
       trackMode: ctx.repo?.trackMode,
       ledgerFile: ctx.repo?.workProfile === 'folders' ? '' : ledgerFile(ctx),
-      boardFile: ctx.repo?.workProfile === 'folders' ? '' : boardFile(),
+      boardFile: ctx.repo?.workProfile === 'folders' ? '' : boardFile(ctx),
       standardPath: standardPath(ctx),
       archiveHome: ctx.repo?.archiveHome ?? '',
       models: ctx.config.models,
@@ -188,7 +190,7 @@ function renderIgnore(ctx: RenderContext): PlannedFile | null {
   const personal = ['.personal-config.json', 'PART0-PROMPT.md'];
   const untracked = [
     ledgerFile(ctx),
-    boardFile(),
+    boardFile(ctx),
     'CLAUDE.local.md',
     'AGENT-PRACTICES.local.md',
   ];

@@ -27,6 +27,7 @@ function doc(text: string) {
     text,
     lines: text.split('\n'),
     isTemplate: false,
+    ledgerStem: 'HANDOFF',
   };
 }
 

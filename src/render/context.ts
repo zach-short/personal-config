@@ -1,3 +1,4 @@
+import { DEFAULT_DOC_NAMES } from '../lib/repo-config.ts';
 import type { StampParts } from '../lib/stamp.ts';
 import { withStamp } from '../lib/stamp.ts';
 import type { Answers, Config, PlannedFile, RepoPlan } from '../lib/types.ts';
@@ -32,13 +33,13 @@ export function planned(
   };
 }
 
-/** The ledger and board filenames, honouring an existing file's name (standard §0.2). */
+/** The ledger and board filenames, honouring an adopted file's name (standard §0.2). */
 export function ledgerFile(ctx: RenderContext): string {
-  return ctx.repo?.scan.existingDocs.includes('HANDOFF.md') ? 'HANDOFF.md' : 'HANDOFF.md';
+  return ctx.repo?.scan.ledgerDoc ?? DEFAULT_DOC_NAMES.ledger;
 }
 
-export function boardFile(): string {
-  return 'PASSOFF.md';
+export function boardFile(ctx: RenderContext): string {
+  return ctx.repo?.scan.boardDoc ?? DEFAULT_DOC_NAMES.board;
 }
 
 export function routerFile(ctx: RenderContext): string {

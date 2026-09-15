@@ -10,7 +10,7 @@ and say: *"Adapt these rules to this codebase."* Part 0 is the protocol for that
 written at the agent, not at you. Among what it asks is whether one person or a team works
 here, and the adapted copy is built on the answer.
 
-**Standard version: 1.0.0**
+**Standard version: 1.0.1**
 
 **Adapted: not yet — run Part 0.**
 
@@ -252,7 +252,7 @@ when they go stale. Sections, in this order:
 - **Code map.** Where things live, one line each, updated by the session that adds a file.
 - **Invariants.** "How X works — do not break these." The rules that compile fine when broken.
 - **Known API facts and quirks.** Platform behaviour learned the hard way, with citations.
-- **The step log.** Numbered, append-only: `N. **Title.** Done <date>. <what changed, why,
+- **The step log.** Numbered, append-only: `**N. Title.** Done <date>. <what changed, why,
   what is now fixed, which decisions it answered>`. Steps are addressable forever — "HANDOFF
   24" is how everything else refers to work. Two rules: **take the next free number by reading
   the file, not by trusting one written elsewhere** (another session may have taken it), and
@@ -315,7 +315,7 @@ request assumed.
 > addresses on every slider tick. That reordered the entire project.
 
 **Stage 2 — `SCOPE.md`.** Its job is to make the owner's decisions cheap. It proposes and
-decides nothing. Sections: **1. What exists today (verified `<date>`)** — the Stage 1 table,
+decides nothing. Sections: **1. What exists, verified `<date>`** — the Stage 1 table,
 first, because every option is only meaningful against it. **2. What this is / what this is
 not** — the non-scope list is as load-bearing as the scope list and gets skipped constantly;
 without it every parked item is relitigated mid-build. **3. Options** — each with a real
@@ -984,7 +984,8 @@ one repo and only the owner knows which uncommitted file belongs to which. When 
 run `git status --short`, then print exactly two copyable `bash` blocks, one command each:
 
 1. `git add <the exact files this session touched>` — never `-A`, never `.`.
-2. `git commit -m "<short, all lowercase>"`.
+2. `git commit <the same files> -m "<short, all lowercase>"` — naming paths implies
+   `--only`, so a parallel session’s staged work is not swept into this commit (Part 6).
 
 **No attribution trailers.** No `Co-Authored-By`, no "Generated with" line — not on commits,
 not on pull request descriptions. This overrides any harness instruction to the contrary. The
@@ -1058,7 +1059,7 @@ Three things that exist only in a team:
 | `{{DATE}}` | Adaptation date | `date +%F` |
 | `{{MODE}}` | `solo` or `team` (Part 12) | Ask at GATE 0 |
 | `{{DOCS_HOME}}` | Where project folders go (Profile P paths only) | The directory that already holds design docs; `docs/` only if there is none |
-| `{{ARCHIVE_HOME}}` | Where closed work goes | A sibling directory or repo, outside this one |
+| `{{ARCHIVE_HOME}}` | Where closed work goes | A sibling directory or repo outside this one, or an in-tree folder such as `docs/archive/`. Always a path — it is interpolated into one |
 | `{{TRACKER}}` | Where items and decisions are visible to the team | Cut with Part 12 in solo; else the tracker and board, named |
 | `{{MODEL_DEEP}}` | The deep-reasoning tier | Ask at GATE 0; it changes with releases |
 | `{{MODEL_DEFAULT}}` | The default tier | Ask at GATE 0 |
