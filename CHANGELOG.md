@@ -5,6 +5,21 @@ The CLI. The working standard it installs is versioned separately — see
 
 ## Unreleased
 
+### Added
+
+- **An interrupted `setup` can be picked up where it left off.** Every answer is written to
+  `~/.config/personal-config/run.json` as it is given, and the next run offers to resume from
+  it — so `Ctrl+C` on question twenty of thirty costs one answer instead of twenty. The file is
+  transient, not the saved config: a run that reaches its end deletes it, declining the offer
+  deletes it, and a checkpoint written by another version of the CLI is discarded rather than
+  replayed into a question catalog that may have changed under it. A preview (`--dry-run`) and a
+  declined write both keep it, because those are the answers a person would least like to type
+  again. Replay stops at the first question that does not match, and at a repo set picked
+  differently from the previous run, so it can never answer one repo's questions with another's.
+  `--yes` neither reads nor writes it.
+- **A cancelled prompt says what survived.** Every exit — a question, the repo picker, a declined
+  preview — now prints the same line, and it names the checkpoint when there is one to name.
+
 ### Fixed
 
 - **A freshly configured repo no longer reports drift on its first `doctor` run.** `setup`

@@ -1,6 +1,7 @@
 import { join } from 'node:path';
 import * as p from '@clack/prompts';
 import { repoRoot } from './paths.ts';
+import { answerTape, hasCheckpoint, type ResumeEntry } from './resume.ts';
 import type { AnswerValue, Question } from './types.ts';
 
 export const READ_MORE = '__read_more__';
@@ -12,6 +13,11 @@ export const READ_MORE = '__read_more__';
 export type Prompter = {
   ask(question: Question, fallback: AnswerValue): Promise<AnswerValue>;
   confirm(message: string, fallback: boolean): Promise<boolean>;
+  /**
+   * Records something the run settled that was not a question — today, which repos were
+   * picked. A prompter that keeps no record of the run leaves it undefined.
+   */
+  mark?(id: string, value: string): Promise<void>;
 };
 
 /** Non-interactive: takes the merged-config default, or a scripted answer in tests. */
@@ -33,6 +39,36 @@ export function clackPrompter(): Prompter {
     },
     async confirm(message, fallback) {
       return unwrap<boolean>(await p.confirm({ message, initialValue: fallback }));
+    },
+  };
+}
+
+/**
+ * Wraps any prompter so an interrupted run can be picked up. Every answer is written to the
+ * checkpoint as it is given, and a previous run's answers are handed back without asking —
+ * which is what makes `Ctrl+C` on question twenty cost one question instead of twenty.
+ *
+ * It is a decorator rather than a branch inside `clackPrompter` so that what is replayed is
+ * exactly what was asked: the phases cannot tell the difference, and a test can drive the same
+ * tape through `defaultsPrompter` with no terminal in sight.
+ */
+export function checkpointing(inner: Prompter, replay: ResumeEntry[] = []): Prompter {
+  const tape = answerTape(replay);
+
+  return {
+    async ask(question, fallback) {
+      const replayed = tape.replayed(question.id);
+      if (replayed !== null) return replayed.value;
+      const value = await inner.ask(question, fallback);
+      await tape.record({ id: question.id, value });
+      return value;
+    },
+    async confirm(message, fallback) {
+      return inner.confirm(message, fallback);
+    },
+    async mark(id, value) {
+      if (tape.replayed(id, value) !== null) return;
+      await tape.record({ id, value });
     },
   };
 }
@@ -104,9 +140,30 @@ export async function readMore(id: string): Promise<string> {
 }
 
 function unwrap<T>(value: T | symbol): T {
-  if (p.isCancel(value)) {
-    p.cancel('Nothing was written.');
-    process.exit(0);
-  }
+  if (p.isCancel(value)) cancelRun();
   return value as T;
+}
+
+/**
+ * The one place a cancelled prompt leaves, so every prompt tells the person the same true thing
+ * about what survives. `setup`'s repo picker is not a `Question` and so cannot reach `unwrap`;
+ * it printed the bare "Nothing was written." until 2026-09-15 even though the whole `you` phase
+ * was already on disk behind it. Exported so there is one message rather than two.
+ */
+export function cancelRun(): never {
+  p.cancel(cancelMessage());
+  process.exit(0);
+}
+
+/**
+ * "Nothing was written" was the whole truth until 2026-09-15: answers lived in memory only, so
+ * a cancel on question twenty of thirty threw away the first nineteen as well as the files.
+ * It is still the truth about the files; the second sentence is what changed.
+ */
+export function cancelMessage(): string {
+  if (!hasCheckpoint()) return 'Nothing was written.';
+  return [
+    'Nothing was written. Your answers so far are saved —',
+    'run `personal-config setup` again to pick up where you left off.',
+  ].join(' ');
 }

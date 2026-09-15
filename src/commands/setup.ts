@@ -1,10 +1,25 @@
 import * as p from '@clack/prompts';
-import { clackPrompter, defaultsPrompter, type Prompter } from '../lib/ask.ts';
+import {
+  cancelMessage,
+  cancelRun,
+  checkpointing,
+  clackPrompter,
+  defaultsPrompter,
+  type Prompter,
+} from '../lib/ask.ts';
 import { configHash, loadConfig, savedUserConfig } from '../lib/config.ts';
 import { today } from '../lib/date.ts';
 import { scanProjectsDir } from '../lib/discover.ts';
 import { githubLogin, ownsRepo } from '../lib/git.ts';
 import { configFile, expandHome } from '../lib/paths.ts';
+import {
+  clearCheckpoint,
+  describeCheckpoint,
+  type ResumeEntry,
+  type RunOutcome,
+  readCheckpoint,
+  retiresCheckpoint,
+} from '../lib/resume.ts';
 import type { Answers, Cli, Config, RepoPlan, RepoScan } from '../lib/types.ts';
 import { previewTree, renderDiff, say, short } from '../lib/ui.ts';
 import { version } from '../lib/version.ts';
@@ -16,7 +31,7 @@ import { standardVersion } from '../render/standard.ts';
 
 export async function runSetup(cli: Cli): Promise<number> {
   const interactive = process.stdout.isTTY === true && !cli.yes;
-  const prompter: Prompter = interactive ? clackPrompter() : defaultsPrompter();
+  const asking: Prompter = interactive ? clackPrompter() : defaultsPrompter();
 
   if (interactive) p.intro('personal-config — setup');
   else say('personal-config — setup (non-interactive)');
@@ -24,6 +39,9 @@ export async function runSetup(cli: Cli): Promise<number> {
   const config = await loadConfig(cli, null);
   const answers: Answers = { ...config.answers };
   await reportSaved();
+
+  // Only a person can be interrupted mid-question; `--yes` has no run worth recovering.
+  const prompter = interactive ? checkpointing(asking, await offerResume(asking)) : asking;
 
   await askPhase('you', prompter, answers, config);
   const repos = await chooseRepos(cli, config, answers, prompter, interactive);
@@ -49,6 +67,29 @@ async function reportSaved(): Promise<void> {
   say(`Loaded ${count} saved answer(s) from ${short(configFile())} — this run's defaults.`);
 }
 
+/**
+ * The one place that decides whether an unfinished run is picked up. Declining clears the
+ * checkpoint: a run abandoned on purpose should not be offered back every time setup starts.
+ */
+async function offerResume(prompter: Prompter): Promise<ResumeEntry[]> {
+  const offer = await readCheckpoint();
+  if (offer.kind === 'stale') {
+    say(
+      `Discarded an unfinished run from v${offer.version} — its questions were a different set.`,
+    );
+    await clearCheckpoint();
+    return [];
+  }
+  if (offer.kind === 'none') return [];
+
+  const found = describeCheckpoint(offer.checkpoint);
+  if (await prompter.confirm(`Pick up the run you left unfinished (${found})?`, true)) {
+    return offer.checkpoint.entries;
+  }
+  await clearCheckpoint();
+  return [];
+}
+
 async function chooseRepos(
   cli: Cli,
   config: Config,
@@ -69,6 +110,9 @@ async function chooseRepos(
   say(repoTable(scans));
 
   const picked = interactive ? await pickRepos(scans) : scans.slice(0, 1);
+  // Everything after this is asked once per repo under the same question ids, so a resumed run
+  // that picked a different set here must stop replaying rather than answer for the wrong repo.
+  await prompter.mark?.('repos', repoKey(picked));
   const login = config.identity.githubLogin ?? (await githubLogin());
 
   const plans: RepoPlan[] = [];
@@ -76,6 +120,14 @@ async function chooseRepos(
     plans.push(await planRepo(scan, login, answers, config, prompter));
   }
   return plans;
+}
+
+/** The picked set as one order-independent string, which is all a replay needs to compare. */
+function repoKey(scans: RepoScan[]): string {
+  return scans
+    .map((s) => s.path)
+    .sort()
+    .join(',');
 }
 
 function repoTable(scans: RepoScan[]): string {
@@ -98,10 +150,7 @@ async function pickRepos(scans: RepoScan[]): Promise<RepoScan[]> {
     options: scans.map((s) => ({ value: s.path, label: s.name, hint: s.languages.join(', ') })),
     required: false,
   });
-  if (p.isCancel(chosen)) {
-    p.cancel('Nothing was written.');
-    process.exit(0);
-  }
+  if (p.isCancel(chosen)) cancelRun();
   return scans.filter((s) => (chosen as string[]).includes(s.path));
 }
 
@@ -221,16 +270,18 @@ async function finish(
 
   if (cli.dryRun) {
     say('\n--dry-run: nothing was written.');
-    return 0;
+    return endRun('dry-run');
   }
   if (real.length === 0) {
     say('\nEverything is already current.');
-    return 0;
+    return endRun('already-current');
   }
 
+  // Declining the preview keeps the checkpoint on purpose, so say so rather than implying the
+  // thirty answers behind this confirmation went with it.
   if (interactive && !(await confirmBatch(real, prompter))) {
-    say('Nothing was written.');
-    return 0;
+    say(cancelMessage());
+    return endRun('declined');
   }
 
   const result = await commitPlan(changes);
@@ -241,6 +292,16 @@ async function finish(
     );
   }
   await copyPart0(changes);
+  return endRun('written');
+}
+
+/**
+ * Every ending goes through one place, so which of them leaves a run to pick up is a single
+ * decision rather than four scattered returns — which is how "already current" kept a
+ * checkpoint and offered to resume a run that had reached its end (found 2026-09-15).
+ */
+async function endRun(outcome: RunOutcome): Promise<number> {
+  if (retiresCheckpoint(outcome)) await clearCheckpoint();
   return 0;
 }
 

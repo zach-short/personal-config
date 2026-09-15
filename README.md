@@ -78,6 +78,12 @@ fictional repo — that is what these look like after a few weeks of real use.
 - **`--dry-run`** writes nothing at all.
 - **Backups.** Anything overwritten is copied to `~/.config/personal-config/backups/<timestamp>/`
   with a manifest, and `personal-config undo` restores the last run.
+- **An interrupted run is picked up, not re-typed.** Each answer is written to
+  `~/.config/personal-config/run.json` as you give it, so `Ctrl+C` on question twenty costs you
+  that one question rather than the nineteen behind it. The next `setup` offers to resume, and
+  says how many answers it found and when. Decline and the file is deleted; finish a run and it
+  is deleted too. It is a scratch file, not your saved config — nothing in it becomes a default
+  until a run completes.
 - **Re-running replaces what the tool wrote and touches nothing else.** Every generated file
   carries a stamp naming the version, the date, a hash of your answers, and the standard
   version. Files without that stamp are not this tool's to overwrite.
@@ -133,8 +139,9 @@ personal-config undo    # restore whatever the last run overwrote
 Then delete what you no longer want: `~/.claude/rules/{commits,model-routing,docs-lookup}.md`,
 the four directories under `~/.claude/skills/`, `~/.claude/hooks/personal-config/`, and the
 generated files in each repo. Remove the `hooks` entries from `~/.claude/settings.json` if you
-installed them. There is no daemon, no global state beyond `~/.config/personal-config/`, and
-nothing that runs unless you run it.
+installed them. There is no daemon, no global state beyond `~/.config/personal-config/`
+(your saved answers, the backups, and `run.json` if a run was interrupted), and nothing that
+runs unless you run it.
 
 ## A note on agent memory
 
