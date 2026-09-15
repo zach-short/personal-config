@@ -90,6 +90,8 @@ export type Cli = {
   dryRun: boolean;
   force: boolean;
   fix: boolean;
+  /** `archive` only: perform the move as well as planning it. */
+  move: boolean;
   projectsDir: string | null;
   /** `context` only: the phrase that proves a transcript is this conversation. */
   sentinel: string | null;

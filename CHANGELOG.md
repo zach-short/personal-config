@@ -7,6 +7,33 @@ The CLI. The working standard it installs is versioned separately — see
 
 ### Added
 
+- **`passoff next` and `passoff claim <n>` read the board and take an item off it.** `next`
+  prints the first `OPEN` row, its model and lane, and the standalone prompt written under it —
+  and warns when something already `IN FLIGHT` owns one of the same files, which is the whole
+  reason the "Files it owns" column exists. `claim` marks the row `IN FLIGHT` and dates the
+  claim in the item's own section rather than in the status cell, because §2.3 allows six status
+  words "and no others" and `doctor` enforces it. It previews both edits exactly — the generic
+  diff would print the four hundred lines between them — and refuses if the board changed while
+  it was reading it, which narrows a lost update to milliseconds and turns it into a refusal
+  instead of a silent overwrite.
+- **`handoff step` reports the next free ledger number by reading the ledger.** Which is the
+  rule (§2.1) — the failure it prevents is trusting a number written somewhere else. It reports
+  rather than reserves, and says so: reserving means writing, and the only thing there is to
+  write at that moment is an empty step. It prints the ledger's modification time so a session
+  that has been thinking can tell whether the answer went stale, flags a log that is already
+  non-contiguous, and scaffolds what §2.1 says a step must name.
+- **`archive <slug>` runs Part 7's archiving steps.** It greps every tracked file for referrers
+  and splits them into paths read at runtime (which block the move) and prose citations (which
+  will merely point at nothing); checks the folder is committed in its final state and prints
+  the two commit blocks when it is not; prints the `git mv`, or performs it under `--move` and
+  verifies every file arrived; then writes the archive index line and marks the doc's line in
+  the docs index. The two index lines are written only once the folder is actually in the
+  archive — §8.2 calls a line pointing at a folder that is not there worse than no line at all —
+  so the shape is run it, move it, run it again, and `--move` collapses the two. It moves by
+  default never, because Part 7 step 2 wants a commit this tool is forbidden to make. `<slug>`
+  is a folder under `docs/incomplete/` or any path in the repo, so one command serves a
+  project-folder repo and a ledger-and-board one alike.
+
 - **`worktree <lane>` prints a lane's checkout plan with its fresh-checkout recipe.** The
   recipe is read out of the adapted standard `setup` wrote, at the path `.personal-config.json`
   records as `standardPath` — the first thing to read that key back rather than write it. It
@@ -94,6 +121,15 @@ The CLI. The working standard it installs is versioned separately — see
   now states which form ships and what it costs.
 
 ### Changed
+
+- **The board and the step log now have one parser each, shared by the commands and by
+  `doctor`.** `src/lib/board.ts` and `src/lib/ledger.ts`; the §2.3 and §2.1 rules read through
+  them, and so do `passoff` and `handoff`. Two parsers of one file drift, and the drift is
+  silent in the worst direction — a row `passoff` hands out as `OPEN` that the rule never saw,
+  or a step number the command offers and the rule already counts as taken.
+- **A cell reading `— (item 3 done, HANDOFF 6)` names nothing to wait on.** That is how a real
+  board records *why* a row waits on nothing, and reading it as a live blocker made `passoff
+  next` warn that an item was waiting on the note explaining that it was not.
 
 - **The working standard** is at 1.0.2 — see [`standard/CHANGELOG.md`](standard/CHANGELOG.md).
 

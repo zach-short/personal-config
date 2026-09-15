@@ -33,6 +33,20 @@ export function planned(
   };
 }
 
+/**
+ * A file a command changes *in place* rather than generates — the board row `passoff claim`
+ * marks, the line `archive` adds to an index. It carries no stamp, and that is the point: a
+ * stamp claims this tool produced the file, and re-stamping an edited one would also refresh the
+ * config hash `doctor` compares against, hiding drift in a file nothing re-rendered. A board a
+ * person wrote by hand would acquire a stamp it never earned.
+ *
+ * It still enters the plan through this module, so an edit gets the same preview, the same
+ * backup and the same `undo` as a generated file.
+ */
+export function edit(path: string, label: string, contents: string): PlannedFile {
+  return { path, label, contents, strategy: 'overwrite' };
+}
+
 /** The ledger and board filenames, honouring an adopted file's name (standard §0.2). */
 export function ledgerFile(ctx: RenderContext): string {
   return ctx.repo?.scan.ledgerDoc ?? DEFAULT_DOC_NAMES.ledger;

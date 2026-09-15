@@ -56,3 +56,47 @@ export function ownsRepo(login: string | null, owner: string | null): boolean {
   if (!login || !owner) return false;
   return login.toLowerCase() === owner.toLowerCase();
 }
+
+export async function currentBranch(dir: string): Promise<string | null> {
+  return git(dir, ['rev-parse', '--abbrev-ref', 'HEAD']);
+}
+
+/** The repository a path belongs to. Null when it belongs to none — an archive need not be one. */
+export async function topLevel(dir: string): Promise<string | null> {
+  return git(dir, ['rev-parse', '--show-toplevel']);
+}
+
+/**
+ * The last commit that touched any of these paths — Part 7 step 4's "last commit" in the index
+ * line. Several pathspecs because by the time the line is written the folder has usually already
+ * moved, and a deleted path still matches its own history.
+ */
+export async function lastCommit(dir: string, paths: string[]): Promise<string | null> {
+  const out = await git(dir, ['log', '-1', '--format=%h', '--', ...paths]);
+  return out === null || out === '' ? null : out;
+}
+
+/**
+ * Part 7 step 2: the folder is committed in its final state *before* the move, so the repo
+ * records how it ended. Anything porcelain reports — staged, unstaged or untracked — means it
+ * is not.
+ */
+export async function uncommittedUnder(dir: string, path: string): Promise<string[]> {
+  const out = await git(dir, ['status', '--porcelain', '--', path]);
+  return out === null || out === '' ? [] : out.split('\n').filter(Boolean);
+}
+
+/**
+ * Part 7 step 1's referrer grep, over tracked files only — `git grep` searches the same set as
+ * `git ls-files | xargs grep`, without the argument-length limit. `-F` because a filename is a
+ * string, not a pattern, and `-e` so a name beginning with `-` is still a needle.
+ */
+export async function trackedReferrers(dir: string, needle: string): Promise<string[]> {
+  const out = await git(dir, ['grep', '-n', '-F', '-e', needle]);
+  return out === null || out === '' ? [] : out.split('\n').filter(Boolean);
+}
+
+/** `git mv`, which keeps the rename in history. Only valid inside one repository. */
+export async function gitMove(dir: string, from: string, to: string): Promise<boolean> {
+  return (await git(dir, ['mv', from, to])) !== null;
+}

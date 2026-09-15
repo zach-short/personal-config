@@ -1,7 +1,18 @@
 import { parseArgs } from 'node:util';
 import type { Cli } from './types.ts';
 
-const COMMANDS = ['setup', 'doctor', 'undo', 'worktree', 'context', 'help', 'version'] as const;
+const COMMANDS = [
+  'setup',
+  'doctor',
+  'undo',
+  'archive',
+  'passoff',
+  'handoff',
+  'worktree',
+  'context',
+  'help',
+  'version',
+] as const;
 
 export function parseCli(argv: string[]): Cli {
   const { values, positionals } = parseArgs({
@@ -13,6 +24,7 @@ export function parseCli(argv: string[]): Cli {
       'dry-run': { type: 'boolean', default: false },
       force: { type: 'boolean', default: false },
       fix: { type: 'boolean', default: false },
+      move: { type: 'boolean', default: false },
       'projects-dir': { type: 'string' },
       sentinel: { type: 'string' },
       help: { type: 'boolean', default: false },
@@ -28,6 +40,7 @@ export function parseCli(argv: string[]): Cli {
     dryRun: values['dry-run'] === true,
     force: values.force === true,
     fix: values.fix === true,
+    move: values.move === true,
     projectsDir: values['projects-dir'] ?? null,
     sentinel: values.sentinel ?? null,
     paths: rest,

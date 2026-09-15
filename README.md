@@ -119,6 +119,47 @@ whose folder is missing and folders missing from the index; in-tree citations of
 moved to the archive; a generated file whose stamp no longer matches your answers; and personal
 files that git can still see.
 
+## `passoff`, `handoff` and `archive`
+
+Three commands for the rituals the standard asks for at the start and the end of a piece of
+work — the parts people skip because they are fiddly, not because they are unimportant.
+
+```bash
+bun run src/cli.ts passoff next        # the next OPEN item, with its prompt
+bun run src/cli.ts passoff claim 5     # take it: IN FLIGHT, dated
+```
+
+`next` prints the first `OPEN` row on the board, its model and lane, and the standalone prompt
+written under it — and warns when an item already `IN FLIGHT` owns one of the same files, which
+is the collision check the "Files it owns" column exists for. `claim` marks the row `IN FLIGHT`
+and dates it in the item's own section, because the status cell may hold only the words the
+standard allows. It shows both edits, backs the file up, and refuses if the board changed while
+it was reading it — nothing locks that file, and every parallel session reads it.
+
+```bash
+bun run src/cli.ts handoff step
+```
+
+Reports the next free ledger step number **by reading the ledger**, which is the rule, plus the
+file's modification time and a scaffold of what a step has to name. It reports rather than
+reserves, and says so: reserving means writing, and the only thing there is to write at that
+point is an empty step.
+
+```bash
+bun run src/cli.ts archive <slug>          # plan it
+bun run src/cli.ts archive <slug> --move   # and perform the move
+```
+
+Part 7's archiving steps: it greps every tracked file for referrers and splits them into the
+ones read at runtime (which block the move) and the ones that are prose citations (which will
+just point at nothing); checks the folder is committed in its final state, printing the two
+commit blocks when it is not; prints the `git mv`; verifies every file arrived; then writes the
+archive index line and marks the doc's line in your docs index. The two index lines are written
+only once the folder is actually in the archive — a line pointing at a folder that is not there
+is worse than no line at all — so the shape is: run it, move it, run it again. `--move` does
+both halves. `<slug>` is a folder under `docs/incomplete/` or any path in the repo, so it serves
+a project-folder repo and a ledger-and-board one alike.
+
 ## `worktree` and `context`
 
 Two commands for running several agent sessions against one repo at once, which is what the

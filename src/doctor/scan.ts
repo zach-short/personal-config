@@ -1,5 +1,6 @@
 import { readdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
+import { type Line, eachLine as linesOf, proseLines as proseOf } from '../lib/markdown.ts';
 import { DEFAULT_DOC_NAMES, type DocNames, docStem, readDocNames } from '../lib/repo-config.ts';
 
 export type DocKind =
@@ -39,20 +40,18 @@ export function isTemplateSource(path: string): boolean {
   );
 }
 
-export function eachLine(doc: Doc): Array<{ text: string; line: number }> {
-  return doc.lines.map((text, index) => ({ text, line: index + 1 }));
+/**
+ * Both reads delegate to `src/lib/markdown.ts`, which is where the commands read the same files
+ * from. A rule that numbered its lines differently from the command acting on them would cite a
+ * `file:line` that command could not find.
+ */
+export function eachLine(doc: Doc): Line[] {
+  return linesOf(doc.text);
 }
 
 /** Lines inside fenced blocks are code, and most rules are about prose. */
-export function proseLines(doc: Doc): Array<{ text: string; line: number }> {
-  let fenced = false;
-  return eachLine(doc).filter(({ text }) => {
-    if (text.trimStart().startsWith('```')) {
-      fenced = !fenced;
-      return false;
-    }
-    return !fenced;
-  });
+export function proseLines(doc: Doc): Line[] {
+  return proseOf(doc.text);
 }
 
 const NAMES: Array<[RegExp, DocKind]> = [

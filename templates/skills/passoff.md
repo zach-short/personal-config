@@ -33,5 +33,10 @@ Nine parts, in this order. Skip one only when it is genuinely empty, and say so.
 9. **Hand back.** The literal gate commands that must be green, what the owner should do and
    see, and the commit step.
 
+`personal-config passoff next` prints the next `OPEN` item with its prompt and its model line,
+and warns when something already in flight owns one of the same files; `personal-config passoff
+claim <n>` marks the row `IN FLIGHT` and dates it. Neither writes the prompt — that is this
+skill's work.
+
 **A prompt rots the moment it is executed.** The ledger step is the truth; the prompt is the
 ask. Never paste a prompt marked done — a fresh session would build it again.

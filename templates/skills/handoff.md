@@ -24,6 +24,10 @@ wrong claim stays findable, marked wrong, with the disproof beside it.
 A step names: what changed, why, what is now fixed, which questions it answered, and what is
 left owed. It is addressable forever — "HANDOFF 24" is how everything else refers to that work.
 
+`personal-config handoff step` does that read for you: it reports the next free number, the
+ledger's modification time, and what a step has to name. It cannot *reserve* the number — only
+writing would — so re-read the file immediately before you append.
+
 ## Editing a standing section
 
 Environment, Settled, Code map, Invariants, Known facts are edited in place when they go stale,

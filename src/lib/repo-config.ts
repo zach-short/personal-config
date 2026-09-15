@@ -40,6 +40,15 @@ export async function readWorktreePath(repoDir: string): Promise<string | null> 
   return stringAt(await readRepoJson(repoDir), 'worktreePath');
 }
 
+/**
+ * Where this repo's closed work goes (§2.2, Part 7). Stored resolved — `<repo>` is substituted
+ * at setup time — and stored with a leading `~` where it is under the home directory, so the
+ * caller expands it.
+ */
+export async function readArchiveHome(repoDir: string): Promise<string | null> {
+  return stringAt(await readRepoJson(repoDir), 'archiveHome');
+}
+
 /** One read of the file every reader here shares, so they cannot disagree about its shape. */
 async function readRepoJson(repoDir: string): Promise<unknown> {
   const file = Bun.file(join(repoDir, '.personal-config.json'));

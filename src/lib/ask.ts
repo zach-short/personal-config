@@ -216,3 +216,15 @@ export function cancelMessage(): string {
     'run `personal-config setup` again to pick up where you left off.',
   ].join(' ');
 }
+
+/**
+ * The confirm in front of a write a command makes on its own — `passoff claim`, `archive` —
+ * rather than at the end of a wizard. In a terminal it asks; with no TTY there is nobody to ask,
+ * so the preview printed above it is the whole contract and the write goes ahead, which is what
+ * lets the harness and the test suite drive these commands at all. `--force` skips it the way it
+ * does for `setup`.
+ */
+export async function confirmWrite(message: string, force: boolean): Promise<boolean> {
+  if (force || process.stdout.isTTY !== true) return true;
+  return clackPrompter().confirm(message, true);
+}
