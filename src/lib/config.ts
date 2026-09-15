@@ -91,6 +91,52 @@ export function hashedAnswers(answers: Answers): Answers {
 }
 
 /**
+ * The answers that belong to the *person* rather than to a repo — the set `setup` saves into
+ * `~/.config/personal-config/config.json` so a second run does not re-ask them.
+ *
+ * This is an allowlist, and deliberately: an answer added to the catalog later is per-repo
+ * until someone puts it here. That is the safe direction. The saved layer sits below a repo's
+ * `.personal-config.json` in the merge, so a key the repo already holds cannot move its stamp
+ * — but a key *no* repo has ever saved is a new input to the hash, and every configured repo
+ * reports drift the moment it appears. Verified both ways 2026-09-15: a saved `commitPolicy`
+ * differing from the rendered repo's left `doctor` clean, and one invented key produced six
+ * `stamp-drift` findings.
+ *
+ * `practices.*` is absent on purpose. Those answers read as a person's house style, but they
+ * are what each repo's `docs/conventions-<language>.md` is rendered from, and a Go repo and a
+ * Swift repo want different ones. The owner's call, 2026-09-15.
+ *
+ * `workProfile`, `trackMode`, `archiveHome`, `mode` and `tracker` are absent because they are
+ * already saved per repo, and `projectsDir` because it is where an invocation was pointed.
+ */
+const PERSONAL_ANSWERS = new Set([
+  'attribution',
+  'commitPolicy',
+  'docsMcp',
+  'hooks',
+  'keepExistingGlobal',
+  'models.deep',
+  'models.default',
+  'models.fast',
+  'modelRouting',
+  'skills',
+]);
+
+/** The subset of `answers` that is saved for the person, sorted so the file is diff-stable. */
+export function personalAnswers(answers: Answers): Answers {
+  return Object.fromEntries(
+    Object.entries(answers)
+      .filter(([key]) => PERSONAL_ANSWERS.has(key))
+      .sort(([a], [b]) => a.localeCompare(b)),
+  );
+}
+
+/** What the saved layer holds, for a caller that wants to report it before the merge hides it. */
+export async function savedUserConfig(): Promise<Partial<Config>> {
+  return readJson(configFile());
+}
+
+/**
  * The stamp's `config <sha256[:8]>` — what makes drift detectable on a later `doctor` run.
  *
  * The promise this keeps is **save what is hashed**, not "hash only what is already saved".

@@ -1,10 +1,10 @@
 import * as p from '@clack/prompts';
 import { clackPrompter, defaultsPrompter, type Prompter } from '../lib/ask.ts';
-import { configHash, loadConfig } from '../lib/config.ts';
+import { configHash, loadConfig, savedUserConfig } from '../lib/config.ts';
 import { today } from '../lib/date.ts';
 import { scanProjectsDir } from '../lib/discover.ts';
 import { githubLogin, ownsRepo } from '../lib/git.ts';
-import { expandHome } from '../lib/paths.ts';
+import { configFile, expandHome } from '../lib/paths.ts';
 import type { Answers, Cli, Config, RepoPlan, RepoScan } from '../lib/types.ts';
 import { previewTree, renderDiff, say, short } from '../lib/ui.ts';
 import { version } from '../lib/version.ts';
@@ -23,6 +23,7 @@ export async function runSetup(cli: Cli): Promise<number> {
 
   const config = await loadConfig(cli, null);
   const answers: Answers = { ...config.answers };
+  await reportSaved();
 
   await askPhase('you', prompter, answers, config);
   const repos = await chooseRepos(cli, config, answers, prompter, interactive);
@@ -34,6 +35,18 @@ export async function runSetup(cli: Cli): Promise<number> {
 
   const changes = await planEverything(config, answers, repos);
   return finish(cli, changes, prompter, interactive);
+}
+
+/**
+ * Saved answers are *offered*, never slipped in. They are already this run's defaults by the
+ * time the first question is asked — they are a merge layer — so the only honest thing left is
+ * to say so out loud, and where they came from, before the person starts confirming them.
+ */
+async function reportSaved(): Promise<void> {
+  const saved = await savedUserConfig();
+  const count = Object.keys(saved.answers ?? {}).length;
+  if (count === 0) return;
+  say(`Loaded ${count} saved answer(s) from ${short(configFile())} — this run's defaults.`);
 }
 
 async function chooseRepos(

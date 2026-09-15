@@ -6,6 +6,7 @@ import { renderPart0, renderRepoFiles } from './repo.ts';
 import { renderGlobalRules } from './rules.ts';
 import { renderSkills } from './skills.ts';
 import { renderStandard } from './standard.ts';
+import { renderUserConfig } from './user-config.ts';
 
 /** Everything one run would write, in the order the preview shows it. */
 export async function renderAll(ctx: RenderContext): Promise<PlannedFile[]> {
@@ -19,6 +20,7 @@ export async function renderAll(ctx: RenderContext): Promise<PlannedFile[]> {
     renderStandard(ctx).then((f) => (f ? [f] : [])),
     Promise.resolve(renderConventions(ctx, languages)),
     renderPart0(ctx).then((f) => (f ? [f] : [])),
+    Promise.resolve(renderUserConfig(ctx)),
   ]);
 
   return groups.flat();
