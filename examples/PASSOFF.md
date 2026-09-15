@@ -88,11 +88,62 @@ commit blocks.
 
 *Opened 2026-09-10, out of the owner wanting `leaflet.sh/docs` to be theirs to set.*
 
-**Model: Default. Lane B. Waits on nothing.**
+**Model: Default. Lane B. Waits on nothing.** Lane A has item 1 in the primary checkout, so
+take a worktree: `git worktree add .claude/worktrees/item-2 main`, then `bun install --cwd web`
+inside it before believing any gate.
 
-<!-- A standalone prompt in the same nine-part shape as item 1: orientation and session rules
-     inline, why it exists in product terms, what is fixed with citations, numbered steps each
-     carrying its reason, the owner's calls, the negative list, and the hand-back. -->
+You are picking up leaflet, a Go + TypeScript link shortener. Read `HANDOFF.md` first — the
+gates, the invariants and the code map are there; do not re-derive them — then
+`docs/AGENT-PRACTICES.md` in full, then `internal/shortcode/` and `web/app/new/`.
+
+Session rules, inline: absolute dates only. Every claim carries a `file:line` or the command
+that produced it. Grep before recording an absence. Ask the owner in chat, in one batch, in the
+same turn, before building anything that depends on an answer. Never run `git commit` or
+`git push` — print the two blocks instead.
+
+**Why this exists.** Every code is random, which is right for links nobody has to remember — but
+the owner wants `leaflet.sh/docs` and `leaflet.sh/hiring` to be theirs to set. A custom code is a
+small feature with one sharp edge: a user who claims `api`, `admin` or `login` has taken a path
+the app may need later, and a code printed on a flyer cannot be reassigned.
+
+**What is fixed.** Read these before changing anything; do not relitigate them.
+
+- **Random codes are the default and stay the default** — settled 2026-08-30, `HANDOFF.md`. A
+  custom code is opt-in on the new-link form, never inferred.
+- **Codes are 7 characters from a 58-character alphabet** (`internal/shortcode/generate.go:31`).
+  A custom code may be longer, never shorter than 4, and only from the same alphabet.
+- **The redirect path makes exactly one database read** (`internal/redirect/handler.go:44`).
+  Custom codes live in the same column and the same index, so it stays one.
+- **`web/lib/api.ts` is the only typed client.** The form talks to the API through it and
+  nowhere else.
+
+Do these, in order:
+
+1. **Write the reserved list as data, not code.** One file, `internal/shortcode/reserved.go`,
+   holding the words with a one-line reason each; the check reads the list. Seed it from the
+   routes the API and the dashboard already serve (`grep -rn HandleFunc cmd/` and `ls web/app/`),
+   so a live path can never be claimed.
+2. **Validate in one place.** `internal/shortcode/` gains `ValidateCustom(code string) error`,
+   and both the API handler and the form call it — the form for a fast message, the API because
+   the form is not the only client.
+3. **The form.** One optional field on `web/app/new/`, with loading, error and empty states
+   through the shared component (`docs/conventions-typescript.md`, `D2`). The three messages it
+   can show are the owner's to word (below).
+4. **Record it.** Append the next free ledger step — read `HANDOFF.md` for the number. Name what
+   changed, why, and what is now fixed. Add `reserved.go` to the code map.
+
+**Ask before building:** the three messages a user sees when a code is taken, reserved, or
+malformed — offer plain, warm and terse variants of each rather than picking. And whether the
+owner may claim a reserved word themselves, which is a real question: `docs` is reserved
+precisely so that the owner can have it.
+
+**Not in scope, whoever asks:** editing a code after creation; anything in `internal/redirect/`;
+the click sweep (item 1, Lane A).
+
+**Hand back:** `go build ./...`, `go test -race ./...`, `golangci-lint run` and
+`bun run --cwd web typecheck`, all green, with output quoted — and the web test count, not its
+exit code (`HANDOFF.md`, gates that lie). A runtime entry: open `/new`, submit the code `docs`,
+and say what the form showed. Then `git status --short` and the two commit blocks.
 
 ---
 
@@ -101,8 +152,51 @@ commit blocks.
 *Opened 2026-09-08, out of HANDOFF 4 — the web test glob had been passing having run nothing.*
 
 **Model: Mechanical. Lane B. Waits on item 2**, which changes the new-link form this would test.
+`HELD` until item 2 is `DONE` — writing these first means writing them twice. Same worktree as
+item 2 once it lands, or a fresh one from `main`.
 
-<!-- Held until item 2 lands. Writing these first means writing them twice. -->
+You are picking up leaflet, a Go + TypeScript link shortener. Read `HANDOFF.md` first — the
+gates are there, and the web test gate is the one that lied — then `docs/AGENT-PRACTICES.md` in
+full, then `docs/conventions-typescript.md`, then `web/app/`.
+
+Session rules, inline: absolute dates only. Every claim carries a `file:line` or the command
+that produced it. Grep before recording an absence. Never run `git commit` or `git push` — print
+the two blocks instead. This is Mechanical-tier work: if a test fails for a reason you cannot
+name in one sentence, stop and hand back rather than debugging into it.
+
+**Why this exists.** From 2026-09-02 to 2026-09-08 the web test command exited 0 having run
+nothing (`HANDOFF.md`, step 4). Fixing the glob turned up two real failures in the shared lib
+and showed that the dashboard screens themselves have no tests — every one is checked by a
+person opening it.
+
+**What is fixed.** Read these before changing anything; do not relitigate them.
+
+- **Tests are pure logic in a new file named for the feature** (`docs/conventions-typescript.md`,
+  `X1`). No existing test file is appended to; each screen gets its own.
+- **Every screen renders loading, error and empty through one component** (`D2`). That contract
+  is what to test, not the pixels.
+- **`web/lib/api.ts` is the only typed client**, so it is the only thing to mock.
+
+Do these, in order:
+
+1. **List the screens first**, with the states each can be in, as a table in your notes. That
+   table is the work-list, and it is what you report against.
+2. **One file per screen**, `web/app/<screen>/<screen>.test.tsx`, asserting the three states and
+   the one happy path. Mock the client, never the network.
+3. **Prove the gate sees them.** Run `bun run --cwd web test` and quote the test count; a count
+   that did not go up means the glob still misses them.
+4. **Record it.** Append the next free ledger step — read `HANDOFF.md` for the number — and
+   close the "dashboard has no tests" line that steps 1 and 4 left owed.
+
+**Ask before building:** nothing — the shape is settled by the conventions file. If a screen does
+not fit the shared states component, stop and raise it; do not test around it.
+
+**Not in scope, whoever asks:** fixing what the tests find — each finding becomes a new board
+item with its citation; changing `web/lib/api.ts`; visual or snapshot testing.
+
+**Hand back:** `bun run --cwd web typecheck` and `bun run --cwd web test`, green, with the test
+count quoted before and after. No runtime entry — nothing here is user-visible. Then
+`git status --short` and the two commit blocks.
 
 ---
 

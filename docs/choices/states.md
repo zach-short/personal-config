@@ -1,5 +1,12 @@
 # What a screen that loads data must render
 
+## What this is
+
+A rule in `docs/conventions-<lang>.md` — the per-language code standard an agent reads in full
+before writing any code, and the file a reviewer checks a diff against — saying what a screen that
+loads data must be able to show. It applies to every screen an agent builds, and a reviewer
+checks it by asking three questions of each.
+
 ## The options
 
 **Loading, error and empty — all three, mandatory, through one component.** *Recommended.*

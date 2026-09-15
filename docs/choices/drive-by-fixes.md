@@ -1,5 +1,12 @@
 # What happens to an unrelated problem found mid-task
 
+## What this is
+
+A paragraph in Part 11 of your repo's copy of the working standard — the part that holds your
+own policy rather than craft, and the part the standard itself marks as editable — saying what
+an agent does with a problem it finds that is not the task it was given. It governs what ends up
+in the diff you review.
+
 ## The options
 
 **Note it and raise it — never fold it in.** *Recommended.*

@@ -1,5 +1,12 @@
 # Who picks the words a user reads
 
+## What this is
+
+A paragraph in Part 11 of your repo's copy of the working standard — the part that holds your
+own policy rather than craft, and the part the standard itself marks as editable — saying who
+decides the words a user sees on screen. The agent reads it before proposing any user-facing
+text.
+
 ## The options
 
 **You do — the agent offers 2–3 variations in different registers.** *Recommended.* Plain,

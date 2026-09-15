@@ -1,5 +1,12 @@
 # How code reaches the network or the database
 
+## What this is
+
+A rule in `docs/conventions-<lang>.md` — the per-language code standard an agent reads in full
+before writing any code, and the file a reviewer checks a diff against — saying how application
+code is allowed to reach the network or the database. It decides where a new API call goes on
+the day it is written.
+
 ## The options
 
 **One typed client; raw calls banned in app code.** *Recommended.*

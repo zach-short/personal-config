@@ -1,5 +1,12 @@
 # How colours, spacing and radii are written
 
+## What this is
+
+A rule in `docs/conventions-<lang>.md` — the per-language code standard an agent reads in full
+before writing any code, and the file a reviewer checks a diff against — saying how a colour, a
+spacing value or a corner radius may be written in view code. It is the difference between a
+redesign being one edit and being a repo-wide search.
+
 ## The options
 
 **Role-named tokens only; literals banned.** *Recommended.* `bg-primary`, `border-line`,

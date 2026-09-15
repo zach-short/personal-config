@@ -1,5 +1,11 @@
 # What a change owes in tests
 
+## What this is
+
+A rule in `docs/conventions-<lang>.md` — the per-language code standard an agent reads in full
+before writing any code, and the file a reviewer checks a diff against — saying what tests a
+change owes and where they live. The agent follows it before declaring a change done.
+
 ## The options
 
 **Pure logic is tested, in a new file named for the feature.** *Recommended.*

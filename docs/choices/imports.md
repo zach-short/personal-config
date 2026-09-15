@@ -1,5 +1,12 @@
 # How imports are written and ordered
 
+## What this is
+
+A rule in `docs/conventions-<lang>.md` — the per-language code standard an agent reads in full
+before writing any code, and the file a reviewer checks a diff against — saying how one file may
+refer to another. A wrong import style compiles fine and rots slowly, which is why it is written
+down.
+
 ## The options
 
 **No `../`; grouped, blank line between groups.** *Recommended.* `./sibling` is fine; anything

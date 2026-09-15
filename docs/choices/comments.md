@@ -1,5 +1,12 @@
 # What a code comment may say
 
+## What this is
+
+A rule in `docs/conventions-<lang>.md` — the per-language code standard an agent reads in full
+before writing any code, and the file a reviewer checks a diff against — saying what a code
+comment may contain. It is the rule most often broken by a tidy-up pass, which is why it is
+written down rather than assumed.
+
 ## The options
 
 **Why only — never what.** *Recommended.* A comment restating the line below it is banned;

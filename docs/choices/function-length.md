@@ -1,5 +1,11 @@
 # How long a function may get
 
+## What this is
+
+A rule in `docs/conventions-<lang>.md` — the per-language code standard an agent reads in full
+before writing any code, and the file a reviewer checks a diff against — saying how long a
+function may grow before it is split. Nothing enforces it but the person reading the diff.
+
 ## The options
 
 **Roughly 6–15 lines; extract helpers.** *Recommended.*

@@ -1,5 +1,12 @@
 # How files and folders are named
 
+## What this is
+
+A rule in `docs/conventions-<lang>.md` — the per-language code standard an agent reads in full
+before writing any code, and the file a reviewer checks a diff against — saying how files and
+folders are named. It is the first rule a new file meets, and the one a reviewer can check
+without opening it.
+
 ## The options
 
 **Whatever the language's ecosystem does.** *Recommended.* kebab-case in TypeScript,

@@ -1,5 +1,12 @@
 # How strict the type layer is
 
+## What this is
+
+A rule in `docs/conventions-<lang>.md` — the per-language code standard an agent reads in full
+before writing any code, and the file a reviewer checks a diff against — saying how far the type
+system may be bypassed. It matters most at the edges — parsed JSON, a third-party library — where
+the data is least trustworthy.
+
 ## The options
 
 **Strict — no escape hatches at a boundary.** *Recommended.*

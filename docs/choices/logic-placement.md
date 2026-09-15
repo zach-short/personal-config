@@ -1,5 +1,12 @@
 # Where logic lives once a view or handler grows
 
+## What this is
+
+A rule in `docs/conventions-<lang>.md` — the per-language code standard an agent reads in full
+before writing any code, and the file a reviewer checks a diff against — saying where logic
+goes once a screen or a request handler grows past the trivial. It decides what can be tested
+without a network or a browser.
+
 ## The options
 
 **Extracted into a named unit, one per file.** *Recommended.* In a React or React Native app:

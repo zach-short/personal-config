@@ -1,5 +1,11 @@
 # How a module's public surface is declared
 
+## What this is
+
+A rule in `docs/conventions-<lang>.md` — the per-language code standard an agent reads in full
+before writing any code, and the file a reviewer checks a diff against — saying how a module
+declares what other files may import from it. It shapes every `import` line in the repo.
+
 ## The options
 
 **Named exports; declarations, not `const` arrows.** *Recommended.* Default exports only where
