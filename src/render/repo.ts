@@ -1,4 +1,5 @@
 import { join } from 'node:path';
+import { hashedAnswers } from '../lib/config.ts';
 import { expandHome } from '../lib/paths.ts';
 import { filledTemplate } from '../lib/template.ts';
 import type { PlannedFile } from '../lib/types.ts';
@@ -151,7 +152,16 @@ async function renderArchiveIndex(ctx: RenderContext): Promise<PlannedFile | nul
   return planned(ctx, join(expandHome(home), 'INDEX.md'), 'archive index seed', body);
 }
 
-/** Read by the session banner hook, so one hook serves every repo without a constant in it. */
+/**
+ * Read by the session banner hook, so one hook serves every repo without a constant in it —
+ * and by `loadConfig`, which is why `answers` is here.
+ *
+ * `answers` is what a later `doctor` recomputes the stamp's config hash from. Without it the
+ * only answers `doctor` could see were whichever profile it happened to be given, so every
+ * repo reported drift the moment it was rendered (fixed 2026-09-15). `hashedAnswers()` owns
+ * the set, so what is saved and what is hashed cannot fall out of step. It sits last because
+ * the banner hook greps this file line by line for the flat keys above it.
+ */
 function renderRepoConfig(ctx: RenderContext): PlannedFile {
   const body = `${JSON.stringify(
     {
@@ -163,6 +173,7 @@ function renderRepoConfig(ctx: RenderContext): PlannedFile {
       standardPath: standardPath(ctx),
       archiveHome: ctx.repo?.archiveHome ?? '',
       models: ctx.config.models,
+      answers: hashedAnswers(ctx.config.answers),
     },
     null,
     2,

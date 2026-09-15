@@ -7,6 +7,16 @@ The CLI. The working standard it installs is versioned separately — see
 
 ### Fixed
 
+- **A freshly configured repo no longer reports drift on its first `doctor` run.** `setup`
+  hashed the answers it had just collected, but nothing ever wrote them down, so `doctor` could
+  only rebuild whichever profile it happened to be given — six `stamp-drift` findings telling
+  the owner to re-run the setup they had just run. `<repo>/.personal-config.json` now carries
+  the answers the hash covers, and one function owns that set so the two sides cannot fall out
+  of step. Three inputs left the hash: the directory `setup` was pointed at, which shapes no
+  rendered byte, and the three `models.*` answers, already hashed as the model tiers they
+  derive. The stamp is also computed per repo rather than per run, because an archive home is
+  resolved per repo and the resolved value is what gets saved. **Repos configured by an earlier
+  version will report drift once, and re-running `setup` clears it.**
 - **An adopted ledger or board name is honoured end to end.** `ledgerFile()` returned
   `HANDOFF.md` on both branches of its own ternary, so §0.2’s "adopt those files as they are"
   was never implemented, and a ledger under another name was invisible to `doctor`. Discovery,

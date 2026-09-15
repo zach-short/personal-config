@@ -148,19 +148,32 @@ async function planEverything(
   repos: RepoPlan[],
 ): Promise<PlannedChange[]> {
   const merged: Config = { ...config, answers, models: modelsFrom(answers, config) };
+  const targets: (RepoPlan | null)[] = repos.length > 0 ? repos : [null];
+  const contexts = await Promise.all(targets.map((repo) => contextFor(merged, answers, repo)));
+  const planned = (await Promise.all(contexts.map(renderAll))).flat();
+  return resolvePlan(dedupe(planned));
+}
+
+/**
+ * One stamp per repo, not one per run, because `archiveHome` is resolved per repo — `<repo>`
+ * becomes the repo's own name — and the resolved value is what `.personal-config.json` saves.
+ * Hashing the unresolved profile template instead stamped every repo with a hash `doctor`
+ * could never reproduce. Found 2026-09-15, and only by a profile carrying a real archive home:
+ * where that answer is empty both forms are the empty string, and the bug hides.
+ */
+async function contextFor(
+  merged: Config,
+  answers: Answers,
+  repo: RepoPlan | null,
+): Promise<RenderContext> {
+  const config: Config = repo ? { ...merged, archiveHome: repo.archiveHome } : merged;
   const stamp = {
     version: await version(),
     date: today(),
-    configHash: await configHash(merged),
+    configHash: await configHash(config),
     standardVersion: await standardVersion(),
   };
-
-  const contexts: RenderContext[] = repos.length
-    ? repos.map((repo) => ({ config: merged, answers, stamp, date: today(), repo }))
-    : [{ config: merged, answers, stamp, date: today(), repo: null }];
-
-  const planned = (await Promise.all(contexts.map(renderAll))).flat();
-  return resolvePlan(dedupe(planned));
+  return { config, answers, stamp, date: today(), repo };
 }
 
 /** Global files are produced once per repo context; the first wins, the rest are identical. */

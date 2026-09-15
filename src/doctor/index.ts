@@ -78,14 +78,20 @@ function sort(findings: Finding[]): Finding[] {
 
 export async function runDoctor(cli: Cli): Promise<number> {
   const roots = cli.paths.length > 0 ? cli.paths.map(expandHome) : [process.cwd()];
-  const config = await loadConfig(cli, roots[0] ?? null);
-  const expectation: Expectation = {
-    configHash: await configHash(config),
-    standardVersion: await standardVersion(),
-  };
+  const standard = await standardVersion();
 
   let total = 0;
   for (const root of roots) {
+    // Per root, not once for the run. Now that `setup` saves its answers into each repo's
+    // `.personal-config.json`, the expected hash is a property of the repo being checked —
+    // computing it once from `roots[0]` would judge every later repo against the first one's
+    // answers. Harmless while no answers were saved and both hashes were a profile's
+    // defaults; a false drift finding the moment they are.
+    const config = await loadConfig(cli, root);
+    const expectation: Expectation = {
+      configHash: await configHash(config),
+      standardVersion: standard,
+    };
     const report = await runDoctorOn(root, expectation);
     printReport(root, report);
     total += report.findings.length;
