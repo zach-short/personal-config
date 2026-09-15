@@ -7,6 +7,31 @@ The CLI. The working standard it installs is versioned separately — see
 
 ### Added
 
+- **`worktree <lane>` prints a lane's checkout plan with its fresh-checkout recipe.** The
+  recipe is read out of the adapted standard `setup` wrote, at the path `.personal-config.json`
+  records as `standardPath` — the first thing to read that key back rather than write it. It
+  takes *every* fenced block under the recipe heading, not the first: a real adapted copy splits
+  its recipe into install plus five gitignored files to copy in, and taking only the first drops
+  the half that actually costs you a gate. It refuses, naming the fix, when the repo was never
+  set up, when the recorded standard is not on disk, and when Part 0 left `{{WORKTREE_SETUP}}`
+  unfilled. It prints rather than performs: `undo` cannot reach a worktree, and a checkout made
+  without its recipe is the failure Part 6 opens by naming. `worktreePath` overrides the default
+  `../<repo>-<lane>` for repos that keep worktrees elsewhere.
+- **`context --sentinel <phrase>` reports the current session's context size.** Part 5's
+  measurement, reimplemented in Bun so it needs no `python3` and no heredoc quoting around the
+  sentinel. The sentinel is required, not optional: with several sessions in one repo, newest
+  transcript by modification time is the wrong one often enough to have reported a neighbouring
+  session's size as ours. No match lists the candidates rather than falling back to a guess.
+
+- **`← back` on every choice question but a phase's first.** The wizard only ever moved
+  forward: `askChoice`'s loop re-asked the *same* question and the phase runner was a plain
+  `for`, so a wrong answer on question four could only be fixed by finishing the run and
+  starting another. It now sits under `Read more…` and steps the runner back one *asked*
+  question — not one index, so a question skipped by its condition is stepped over rather than
+  shown to someone who never saw it. It agrees with the checkpoint: a corrected answer replaces
+  the entry it corrects instead of appending beside it, and stepping back inside a resumed run
+  stops the replay, which would otherwise hand back the very answer you went back to change.
+  `text` and `confirm` questions carry no option list, so they do not offer it.
 - **An interrupted `setup` can be picked up where it left off.** Every answer is written to
   `~/.config/personal-config/run.json` as it is given, and the next run offers to resume from
   it — so `Ctrl+C` on question twenty of thirty costs one answer instead of twenty. The file is

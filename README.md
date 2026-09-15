@@ -34,10 +34,14 @@ Optionally `bun link` to get `personal-config` on your `PATH`.
 ## What it asks
 
 Each question is one line with a practical example beside every option, the recommended one
-first. The last option is always **`Read more…`**, which prints the long form — what the option
-means, the honest argument *against* it, what it writes, and how to undo it — and then asks
-again. Those long forms live in [`docs/choices/`](docs/choices) and are worth reading even if
-you never run the tool.
+first. Below the real options sits **`Read more…`**, which prints the long form — what the
+option means, the honest argument *against* it, what it writes, and how to undo it — and then
+asks again. Those long forms live in [`docs/choices/`](docs/choices) and are worth reading even
+if you never run the tool.
+
+Below that, on every question but the first of a phase, sits **`← back`**: it drops the answer
+you are on and re-asks the one before it, as many times as you like. A question you return to
+shows what you picked last time, so walking forward again is a row of Enters.
 
 In four phases:
 
@@ -78,6 +82,9 @@ fictional repo — that is what these look like after a few weeks of real use.
 - **`--dry-run`** writes nothing at all.
 - **Backups.** Anything overwritten is copied to `~/.config/personal-config/backups/<timestamp>/`
   with a manifest, and `personal-config undo` restores the last run.
+- **A wrong answer is fixable in place.** `← back` re-asks the previous question rather than
+  making you finish the run and start another — and the correction *replaces* the answer it
+  corrects, so an interrupted run picks up the answer you meant rather than the one you fixed.
 - **An interrupted run is picked up, not re-typed.** Each answer is written to
   `~/.config/personal-config/run.json` as you give it, so `Ctrl+C` on question twenty costs you
   that one question rather than the nineteen behind it. The next `setup` offers to resume, and
@@ -111,6 +118,34 @@ ledger step, `HELD` with nothing to wait on, `SUPERSEDED` with no replacement; a
 whose folder is missing and folders missing from the index; in-tree citations of a path that has
 moved to the archive; a generated file whose stamp no longer matches your answers; and personal
 files that git can still see.
+
+## `worktree` and `context`
+
+Two commands for running several agent sessions against one repo at once, which is what the
+standard's Part 6 is about.
+
+```bash
+bun run src/cli.ts worktree <lane>
+```
+
+Prints where that lane's worktree goes and the **fresh-checkout recipe** that has to run inside
+it — the install, the gitignored files to copy in, whatever your repo needs — read out of the
+adapted standard that `setup` wrote. A fresh checkout fails its gates for environmental reasons
+before it fails a real one, and the `git worktree add` line is not the part anyone forgets. It
+prints rather than performs: a half-made checkout is the state this is meant to prevent, and
+`undo` cannot reach a worktree. Set `worktreePath` in `.personal-config.json` (`<repo>` and
+`<lane>` are substituted) if your worktrees do not live beside the checkout; the default is
+`../<repo>-<lane>`.
+
+```bash
+bun run src/cli.ts context --sentinel "a phrase from this conversation"
+```
+
+Prints the current session's context size, which the agent harness records and the agent itself
+cannot see — the first signal of an overrun is auto-compaction, by which point it is working
+from a summary of its own reasoning. `--sentinel` is required rather than convenient: when two
+sessions share a repo, picking the newest transcript by modification time reports the other
+session's size as yours. If nothing matches, it lists the candidates instead of guessing.
 
 ## Profiles
 

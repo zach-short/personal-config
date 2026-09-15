@@ -13,14 +13,38 @@ export const DEFAULT_DOC_NAMES: DocNames = { ledger: 'HANDOFF.md', board: 'PASSO
  * disagree about which file is the ledger.
  */
 export async function readDocNames(repoDir: string): Promise<DocNames> {
-  const file = Bun.file(join(repoDir, '.personal-config.json'));
-  if (!(await file.exists())) return DEFAULT_DOC_NAMES;
+  const parsed = await readRepoJson(repoDir);
+  if (parsed === null) return DEFAULT_DOC_NAMES;
 
-  const parsed: unknown = await file.json().catch(() => null);
   return {
     ledger: stringAt(parsed, 'ledgerFile') ?? DEFAULT_DOC_NAMES.ledger,
     board: stringAt(parsed, 'boardFile') ?? DEFAULT_DOC_NAMES.board,
   };
+}
+
+/**
+ * Where `setup` put this repo's adapted standard. Written by the renderers since the first
+ * slice and, until now, never read back — `worktree` is the first command that needs to find
+ * the standard rather than write it. Null when this repo has not been set up.
+ */
+export async function readStandardPath(repoDir: string): Promise<string | null> {
+  return stringAt(await readRepoJson(repoDir), 'standardPath');
+}
+
+/**
+ * The worktree path template, with `<repo>` and `<lane>` substituted. A house convention, not a
+ * constant: one verified repo keeps its worktrees under `.claude/worktrees/<lane>` rather than
+ * beside the checkout, and a hardcoded sibling path would be wrong there every time.
+ */
+export async function readWorktreePath(repoDir: string): Promise<string | null> {
+  return stringAt(await readRepoJson(repoDir), 'worktreePath');
+}
+
+/** One read of the file every reader here shares, so they cannot disagree about its shape. */
+async function readRepoJson(repoDir: string): Promise<unknown> {
+  const file = Bun.file(join(repoDir, '.personal-config.json'));
+  if (!(await file.exists())) return null;
+  return file.json().catch(() => null);
 }
 
 /** `NOTES.md` is cited as "NOTES 12", the way the default is cited as "HANDOFF 24". */

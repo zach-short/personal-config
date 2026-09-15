@@ -53,3 +53,16 @@ export function claudeSettingsFile(): string {
 export function repoRoot(): string {
   return resolve(import.meta.dir, '..', '..');
 }
+
+/**
+ * The harness names a project's transcript directory after its working directory, one `-` per
+ * character it cannot use. Built here rather than spelled inline at the call site so that the
+ * test suite's `$HOME` redirection keeps holding — `X2`.
+ */
+export function claudeProjectsDir(cwd: string): string {
+  return join(claudeDir(), 'projects', projectSlug(cwd));
+}
+
+export function projectSlug(cwd: string): string {
+  return cwd.replace(/[^A-Za-z0-9]/g, '-');
+}

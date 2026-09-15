@@ -91,6 +91,8 @@ export type Cli = {
   force: boolean;
   fix: boolean;
   projectsDir: string | null;
+  /** `context` only: the phrase that proves a transcript is this conversation. */
+  sentinel: string | null;
   paths: string[];
 };
 
