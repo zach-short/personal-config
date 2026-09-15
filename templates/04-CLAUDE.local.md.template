@@ -1,0 +1,28 @@
+# {{PROJECT_NAME}} — personal router (not repo policy — untracked)
+
+> Before writing or editing any code, read this repo's own rules in full — its
+> CONTRIBUTING.md, AGENTS.md/CLAUDE.md, and any linter or style config. Not optional, not
+> conditional on task size.
+
+## Precedence
+
+1. **The repo's own rules** — CONTRIBUTING.md, AGENTS.md/CLAUDE.md, linter configs, PR
+   templates, any other tracked convention files.
+2. **This file**, only where those are silent.
+3. Nothing else.
+
+Where 1 and 2 disagree, 1 wins and 2 is amended. **This repo's conventions are not mine to
+set — never edit its own rule files to suit a personal preference.**
+
+## Environment quirks specific to my machine
+
+<!-- fill in as discovered: package manager/version pins, local DB setup, gates that lie
+     (cached commands, flaky tests), anything that cost real time to figure out. -->
+
+## Never do this
+
+- Commit a credential, token, or `.env` value.
+- Loosen, disable, skip, or delete a check to make a gate green.
+- Use an API, option, or config key not seen in the installed version.
+- Edit this repo's own tracked rule files.
+- Run `git commit`, `git push`, or `git add -A`/`git add .`.
