@@ -87,6 +87,11 @@ The CLI. The working standard it installs is versioned separately — see
 - **The printed commit ritual names its files.** The commit-guard hook and the Part 11 paragraph
   both ended in a bare `git commit -m`, which commits the whole index — the failure the rule
   exists to prevent when several sessions share a checkout.
+- **The rule file now prints the same ritual the hook does.** That fix reached the hook and the
+  standard but not `~/.claude/rules/commits.md`, so the tool installed a hook demanding one form
+  and a rule teaching another. Both bodies in `src/render/rules.ts` name the files and say why,
+  and so do the wizard's own example for the option and `docs/choices/commit-policy.md`, which
+  now states which form ships and what it costs.
 
 ### Changed
 

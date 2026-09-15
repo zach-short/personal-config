@@ -16,7 +16,7 @@ export const YOU_QUESTIONS: Question[] = [
       {
         value: 'print-blocks',
         label: 'Only me — the agent prints the commands',
-        example: 'Agent ends with `git add src/foo.ts` then `git commit -m "fix null case"`',
+        example: 'Agent ends with `git add src/foo.ts` then `git commit src/foo.ts -m "..."`',
         recommended: true,
       },
       {

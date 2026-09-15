@@ -32,7 +32,8 @@ ledger, a board or a model tier.
   a renderer that forgot a variable, and `fill()` leaves unknown tokens in place so `doctor`
   catches it.
 - **Never run `git commit` or `git push`.** Print two blocks instead: `git add <exact files>` —
-  never `-A`, never `.` — then `git commit -m "<short, lowercase>"`. No attribution trailer.
+  never `-A`, never `.` — then `git commit <the same files> -m "<short, lowercase>"`, because
+  naming paths implies `--only` and a bare commit takes the whole index. No attribution trailer.
 
 ## Stack
 

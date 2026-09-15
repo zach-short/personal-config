@@ -44,7 +44,9 @@ When work is ready, print exactly two copyable \`\`\`bash blocks, one command ea
 1. \`git add <exact files this session touched>\` — run \`git status --short\` first and list only
    those files. **Never \`git add -A\`, never \`git add .\`.** I may run several sessions in one
    repo at once, so only I know which uncommitted files belong to which session.
-2. \`git commit -m "..."\` — a short, all-lowercase message.
+2. \`git commit <the same files> -m "..."\` — a short, all-lowercase message. Naming the
+   paths implies \`--only\`, so the commit takes exactly what block 1 listed. A bare
+   \`git commit\` takes the whole index, including whatever a parallel session staged.
 
 Two more that hold whoever commits: \`git add -N\` first for any file git has never seen, because
 \`--only\` silently drops untracked paths and the commit still typechecks. And never
@@ -58,8 +60,10 @@ change across a long gate run.
 **Never run \`git push\`.** Pushing is mine.
 
 **Never \`git add -A\`, never \`git add .\`**, not even scoped to a directory — it sweeps up another
-session's in-flight work. Name the exact files. Use \`git add -N\` first for any file git has never
-seen, because \`--only\` silently drops untracked paths and the commit still typechecks.
+session's in-flight work. Name the exact files in the \`git add\` and again in the commit —
+\`git commit <the same files> -m "..."\` — because naming paths implies \`--only\`, and a bare
+\`git commit\` takes the whole index. Use \`git add -N\` first for any file git has never seen,
+because \`--only\` silently drops untracked paths and the commit still typechecks.
 
 After a split commit, build HEAD in isolation before I push: gates run against the working tree,
 so a partial commit can leave the branch unbuildable while the tree is green.

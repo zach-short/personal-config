@@ -8,7 +8,7 @@ A rule in `~/.claude/rules/commits.md` telling every agent session what it may d
 
 **Only me — the agent prints the commands.** *Recommended.* The session ends by running
 `git status --short` and printing two copyable blocks: a `git add` naming the exact files it
-touched, then a `git commit -m "..."`. You paste them.
+touched, then a `git commit <the same files> -m "..."`. You paste them.
 
 *The defense.* If you ever run two agent sessions in one checkout, only you know which
 uncommitted file belongs to which. An agent that commits will sweep up work it cannot see — and
@@ -35,6 +35,27 @@ is a worse recovery than a missing commit.
 *The defense.* Fewer rules in context, and the agent behaves reasonably by default.
 
 *The strongest argument against it.* "Reasonably by default" includes `git add -A`.
+
+## Which commit form this ships, and why
+
+**Both printed blocks name the files.** Not `git add <files>` then a bare `git commit -m "..."`,
+which is what this shipped before 2026-09-15.
+
+Passing paths to `git commit` implies `--only`: the commit takes exactly those paths and ignores
+the rest of the index. A bare `git commit` takes the whole index — so if a parallel session
+staged something between your `git add` and your paste, the bare form commits their work under
+your message, and it still typechecks, because the files are on disk. That is the same collision
+this whole question exists to prevent, surviving one step further down the ritual. Naming the
+paths twice looks redundant and is not: the first names what to stage, the second names what to
+take.
+
+One consequence comes with it. `--only` silently drops paths git has never seen, so a brand-new
+file needs `git add -N <path>` first or it is quietly left out of the commit.
+
+The tradeoff is real but small — a longer line to paste, and a second place to get the file list
+right. The alternative was to keep the short form for a solo checkout and accept that the tool's
+own hook would print a ritual the rule file it writes contradicts. One tool cannot ship two
+answers to the same question.
 
 ## What it writes and where
 
