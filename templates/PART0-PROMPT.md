@@ -1,8 +1,8 @@
 # Adapt the working standard to {{PROJECT_NAME}}
 
 **Model: {{MODEL_DEFAULT}}.** Run this once, in a fresh session, in `{{REPO_PATH}}`. Do no
-feature work in the same session: adaptation costs 40–80k of context and you want the whole
-budget for it.
+feature work in the same session: adaptation cost 40–80k of context in the two repos the standard
+was written from (2026-09-14), and you want the whole budget for it.
 
 `personal-config` has already written the files listed at the bottom and filled every
 placeholder a human could answer. **What is left is the half only this repo knows** — the
@@ -11,7 +11,8 @@ it is what this prompt is for.
 
 Read `{{STANDARD_PATH}}` in full first. Then do its Part 0, sections 0.1 and 0.4 through 0.7,
 in order. **0.2 and 0.3 are already done** — the profile is `{{WORK_PROFILE}}` and Appendix A
-is filled; do not re-ask them.
+is filled except `{{WORKTREE_SETUP_TOKEN}}` and `{{BUILD_CMD_TOKEN}}`, which answers 3 and 1 below
+produce; do not re-ask the rest.
 
 ## 0.1 — Inventory, read-only. Propose nothing yet.
 
@@ -26,7 +27,7 @@ git log --oneline -20; git worktree list; git status --ignored --short | grep '^
 Answer these, with citations:
 
 1. **What are the gates?** The exact commands that prove a change is sound. **Run every one
-   once before you write it down.**
+   once before you write it down.** The build command among them becomes `{{BUILD_CMD_TOKEN}}`.
 2. **Which gates can lie?** A checker that skips silently when an env var is missing; a lint
    run where everything is a warning; a suite that prints `ok` having run nothing.
 3. **What does a fresh checkout not have?** Gitignored-but-required files. That block becomes

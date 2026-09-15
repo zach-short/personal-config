@@ -238,6 +238,7 @@ export async function renderPart0(ctx: RenderContext): Promise<PlannedFile | nul
         : 'Profile L — ledger + board',
     MODE: answer(ctx, 'mode', 'solo'),
     WORKTREE_SETUP_TOKEN: '{{WORKTREE_SETUP}}',
+    BUILD_CMD_TOKEN: '{{BUILD_CMD}}',
     DISCOVERY_SUMMARY: discoverySummary(ctx),
     CUT_HINTS: cutHints(ctx),
     WRITTEN_FILES: '(filled at write time)',
@@ -261,7 +262,8 @@ function discoverySummary(ctx: RenderContext): string {
     `- CI: ${scan.hasCi ? '`.github/workflows` exists — take the gates from it' : 'no `.github/workflows` — take the gates from the toolchain'}.`,
     `- Migrations: ${scan.migrations.join(', ') || 'none found — confirm with a grep before recording the absence'}.`,
     `- Existing docs: ${scan.existingDocs.join(', ') || 'none'}.`,
-    `- Worktrees listed by git: ${scan.worktrees}.`,
+    // `git worktree list` includes the checkout being set up, so a count of 1 means none extra.
+    `- Extra worktrees beyond this checkout: ${Math.max(scan.worktrees - 1, 0)}.`,
   ].join('\n');
 }
 
@@ -276,6 +278,9 @@ function cutHints(ctx: RenderContext): string {
     hints.push(
       'No migrations directory was found, so the migration-number rule is a candidate to cut — keep the general numbered-shared-resource rule if any number is shared.',
     );
-  if (answer(ctx, 'mode', 'solo') === 'solo') hints.push('Part 12 is already cut.');
+  if (answer(ctx, 'mode', 'solo') === 'solo')
+    hints.push(
+      "Part 12 is already cut; its cross-references (`grep -n 'Part 12'`) are still yours to fix here.",
+    );
   return hints.length > 0 ? hints.join(' ') : 'Verify each before cutting.';
 }

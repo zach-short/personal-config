@@ -102,8 +102,9 @@ function replaceSection(
 function header(text: string, ctx: RenderContext, mode: string): string {
   const note = [
     '',
-    `**Pre-filled by \`personal-config\` on ${ctx.date}.** Appendix A is filled, the profile is`,
-    `chosen (${ctx.repo?.workProfile === 'folders' ? 'Profile P — project folders' : 'Profile L — ledger + board'}),`,
+    `**Pre-filled by \`personal-config\` on ${ctx.date}.** Appendix A is filled, except the two`,
+    'slots only this repo can answer — the fresh-checkout recipe and the build command — which Part 0',
+    `produces. The profile is chosen (${ctx.repo?.workProfile === 'folders' ? 'Profile P — project folders' : 'Profile L — ledger + board'}),`,
     mode === 'solo'
       ? 'and Part 12 (teams) was cut because one person decides here.'
       : 'and Part 12 (teams) was kept.',

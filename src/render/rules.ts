@@ -91,20 +91,22 @@ function modelRoutingRule(ctx: RenderContext): PlannedFile | null {
 
 const DELEGATE_OR_STOP = `If they do not, pick one of these two, never a third:
 
-1. **Delegate it, in session.** Spawn a subagent with the model parameter set to the assigned
-   model and hand it the whole prompt. This file is the authorization to do that without asking
-   first. Relay what comes back. Where the harness can switch the session's own model instead,
-   that is fine too when the whole session should change.
-2. **Stop and hand it off.** Do not start the work. Write a pass-off prompt carrying everything
-   this session established — what was read, what was decided, what was ruled out and why, and
-   any files already touched — say plainly which model it is for and why, and tell me to run it
-   there.
+1. **Delegate it, in session — for a review or a sweep.** Spawn a subagent with the model
+   parameter set to the assigned model and hand it the whole prompt. This file is the
+   authorization to do that without asking first. Relay what comes back. Where the harness can
+   switch the session's own model instead, that is fine too when the whole session should change.
+2. **Stop and hand it off — for a build.** Do not start the work. Write a pass-off prompt
+   carrying everything this session established — what was read, what was decided, what was
+   ruled out and why, and any files already touched — say plainly which model it is for and why,
+   and tell me to run it there.
 
-Prefer 1 when the task is self-contained; prefer 2 when it needs my decisions along the way, or
-when the context already built is worth more than the work. Never do the work yourself on the
-wrong model, and never quietly downgrade an assignment because the task looks small from here —
-"it turned out to be simple" is a judgement only the assigned model gets to make. If an
-assignment looks wrong, say so and ask; do not overrule it.
+Prefer 1 when the task's whole output is a verdict or a list — a subagent keeps only its final
+text, which is all a review or a sweep produces. Prefer 2 when the task builds, needs my
+decisions along the way, or when the context already built is worth more than the work; a Deep
+subagent never builds, because the boundary discards the sustained reasoning that tier is for.
+Never do the work yourself on the wrong model, and never quietly downgrade an assignment because
+the task looks small from here — "it turned out to be simple" is a judgement only the assigned
+model gets to make. If an assignment looks wrong, say so and ask; do not overrule it.
 
 Two rules about subagents, from getting this wrong: **a subagent spawned into the shared
 worktree will edit source even when asked only to review** — give anything analytical its own

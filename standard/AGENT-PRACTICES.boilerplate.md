@@ -5,12 +5,22 @@ scoped and decided, how it is sized to a model's context, which model runs what,
 sessions run against one repo without eating each other's work, what a session hands the next
 one, and how the documentation is written so the next session can trust it.
 
+**Five words this file leans on.** A **ledger** is the file recording what is true of a repo —
+its environment, its settled decisions, and a numbered, append-only log of the work done. A
+**board** is the file listing what is next, one standalone prompt per item. A **profile** is the
+shape a repo keeps its work in: a ledger and a board, or one folder per effort (Part 2 defines
+both). **Mode** is whether one person decides here or several (Part 12, which a one-person repo
+cuts). A **tier** is one of three named slots — Deep, Default, Mechanical — that a task's model
+is picked from (Part 4).
+
 **How to use it.** Copy this file into a repo — `docs/AGENT-PRACTICES.md` is the usual home —
 and say: *"Adapt these rules to this codebase."* Part 0 is the protocol for that; it is
 written at the agent, not at you. Among what it asks is whether one person or a team works
-here, and the adapted copy is built on the answer.
+here, and the adapted copy is built on the answer. If an installer put this file here, it also
+left a prompt saying which of Part 0's steps are already done; follow that prompt rather than
+this paragraph.
 
-**Standard version: 1.0.1**
+**Standard version: 1.0.2**
 
 **Adapted: not yet — run Part 0.**
 
@@ -29,8 +39,9 @@ made it necessary:
 - **Repo B — a Swift app** (iOS + macOS + widgets + extensions, XcodeGen, no CI). Small,
   gates are two `xcodebuild` commands, work arrives as a stream of independent items.
 
-Their failures are preserved as `> **Worked example**` blocks. Those describe *those* repos.
-They are evidence for a rule, never facts about yours.
+Their failures are preserved as `> **Worked example**` blocks — or, where a sentence is enough,
+named inline as repo A's or repo B's. Either way they describe *those* repos: evidence for a
+rule, never facts about yours.
 
 **Map.** Part 0 adapts this file and is deleted once it has. Part 1 is the twelve rules that
 hold everywhere. Part 2 is where work gets written down, in one of two profiles. Part 3 is the
@@ -45,7 +56,8 @@ Appendix B lists what adaptation produces.
 # Part 0 — Adapt protocol
 
 Run once, on first read, before any feature work. Do not do feature work in the same session:
-adaptation costs 40–80k of context and you want the whole budget for the build.
+adaptation costs 40–80k of context — repos A and B, 2026-09-14 — and you want the whole budget
+for the build.
 
 ### 0.1 Inventory, read-only
 
@@ -158,8 +170,8 @@ repo, that person; in a team, the named decider for the area (Part 12).
 
 **R1 — Absolute dates only.** `2026-09-14`, never "today", "recently", "last week". Docs are
 read months later by an agent with no idea when they were written.
-*Test:* `grep -niE 'today|yesterday|recently|last (week|month)|this (week|month)'` over what
-you wrote returns nothing.
+*Test:* `grep -niE 'today|yesterday|tomorrow|recently|currently|last (week|month|year)|this (week|month|year)|(days|weeks|months) ago'`
+over what you wrote returns nothing.
 
 **R2 — Every claim carries a citation.** `file:line`, a filename, a commit hash, a migration
 name, the query that produced it. A claim with no citation is a guess and will be treated as
@@ -355,10 +367,13 @@ phase). **3. Dials.** **4. Seams reserved, deliberately not built** — so the n
 not guess whether an omission was considered. **5. Repo hazards, with live numbers.**
 **6. Session protocol** — a link to this file, plus anything specific to this project.
 
-> A phase whose done-when is only "gates pass" has no done-when. Gates cannot see a screen, and
-> in repo A they could not see repository SQL at all. Real ones: *"a hand-run query proves the
-> aggregate matches a manual average for one seeded user"*; *"an integration test proves
-> creating a review enqueues an in-app row and **zero** push sends."*
+A phase whose done-when is only "gates pass" has no done-when. Gates cannot see a screen, so a
+real done-when names the proof a green gate cannot supply.
+
+> **Worked example — repo A.** Its gates could not see repository SQL at all. The done-whens
+> that worked: *"a hand-run query proves the aggregate matches a manual average for one seeded
+> user"*; *"an integration test proves creating a review enqueues an in-app row and **zero**
+> push sends."*
 
 **GATE 2 — Plan approval.** Phases, order, lanes and dials go to the owner before any code.
 Once approved, the plan authorizes the whole run; phases do not each need re-approval.
@@ -484,9 +499,9 @@ the owner can set the model before opening the next session.
 ## Subagents
 
 **A context-budget instrument first, a parallelism one second.** An inventory sweep run inline
-costs the lead 30–50k in file reads; the same sweep in a subagent costs it a 2k summary. If a
-phase is oversized only because of what it has to *read*, it is not oversized — it is
-under-delegated.
+costs the lead 30–50k in file reads; the same sweep in a subagent costs it a 2k summary (repo A,
+an observation as of 2026-09-14, not a measurement). If a phase is oversized only because of
+what it has to *read*, it is not oversized — it is under-delegated.
 
 | Subagent | Use for |
 |---|---|
@@ -551,7 +566,9 @@ reasoning and will re-read files it already read.
 and the first signal of overrun is auto-compaction firing — which is already the expensive
 outcome. **In the Claude Code harness** it is measurable on demand: the harness writes
 per-message usage into the session transcript, and the newest assistant message's
-`input + cache_creation + cache_read` is the current size.
+`input + cache_creation + cache_read` is the current size. The script needs `python3` on the
+path — macOS and most Linux distributions ship it — and prints one plain line, rather than a
+traceback, when no transcript or no usage record exists yet.
 
 ```bash
 python3 - <<'PY'
@@ -560,19 +577,23 @@ SENTINEL = ""   # a distinctive phrase from THIS session; see the note below
 proj = re.sub(r'[^A-Za-z0-9]', '-', os.getcwd())
 files = sorted(glob.glob(os.path.expanduser(f'~/.claude/projects/{proj}/*.jsonl')),
                key=os.path.getmtime, reverse=True)
+if not files:
+    raise SystemExit(f"no transcript found under ~/.claude/projects/{proj}/")
 f = next((p for p in files if SENTINEL and SENTINEL in open(p, errors='ignore').read()), files[0])
 last = None
 for line in open(f, errors='ignore'):
     try: u = (json.loads(line).get('message') or {}).get('usage')
     except Exception: continue
     if u: last = u
-print(os.path.basename(f),
-      f"context: {last['input_tokens']+last['cache_creation_input_tokens']+last['cache_read_input_tokens']:,} tokens")
+if not last:
+    raise SystemExit(f"{os.path.basename(f)}: no usage records yet")
+KEYS = ('input_tokens', 'cache_creation_input_tokens', 'cache_read_input_tokens')
+print(os.path.basename(f), f"context: {sum(last.get(k, 0) for k in KEYS):,} tokens")
 PY
 ```
 
 **With parallel sessions in one repo, newest-mtime picks the wrong transcript** — verified
-2026-09-14: the bare version reported another session's 394k as ours. Set `SENTINEL` to a
+2026-09-14 in repo A: the bare version reported another session's 394k as ours. Set `SENTINEL` to a
 phrase unique to this conversation (a few words from the task prompt) and it selects correctly.
 
 **On any other harness**, find its equivalent or treat the size as unmeasurable. Unmeasurable
@@ -586,8 +607,8 @@ second subsystem, the second platform, a long debugging loop.
 
 - **Fixed overhead, before any work.** The standards you must read, plus the plan and
   `CLAUDE.md`. Measure it rather than guessing: `wc -c <files> | awk '{print $1/4}'` is a
-  usable token estimate. In repo A this was 60–80k — on a Deep phase, a third of the budget
-  before a line of code is read.
+  usable token estimate. In repo A this was 60–80k (2026-08-16) — on a Deep phase, a third of
+  the budget before a line of code is read.
 - **Gate output is not free.** A failing build or a race-detector run can dump thousands of
   tokens per attempt, and the debugging loop is where budgets actually die. Leave headroom for
   three or four red runs.
@@ -598,7 +619,8 @@ second subsystem, the second platform, a long debugging loop.
   the second mirrors the first and inherits its decisions, which is also why it goes second.
 - It contains **both a broad audit and an implementation**. Make the audit its own phase, or
   push it into subagents.
-- It touches more than roughly **15–20 files**, or more than two or three subsystems.
+- It touches more than roughly **15–20 files**, or more than two or three subsystems — a rule
+  of thumb from repo A (2026-08-16), not a measurement.
 - **It needs to read a large area to decide where to work.** That reading is a subagent's job.
 
 The seams that keep coming out right, in order: **data layer + reads → writes → shared
@@ -628,6 +650,9 @@ what you concluded for each, which item you stopped on and how far into it you g
 paths that mattered, and the exact remaining list. Write it to stand alone — the next agent
 will not see this conversation.
 ```
+
+The `~25 files` and `2/3` figures are rules of thumb from repo A (2026-08-17), not measurements;
+set them to what your subagents are observed to manage.
 
 **Then the lead relays.** A subagent's final text *is* its return value, so a returned pass-off
 prompt is a normal result, not an error: spawn a fresh subagent of the same model with that
@@ -680,8 +705,8 @@ the script does, and fail in ways that have nothing to do with your change.
 ## Committing under a shared index
 
 These bind whoever commits — the agent where Part 11 allows it, otherwise the person running
-the blocks the agent prints. The first four are for sessions sharing one checkout; the last two
-hold regardless.
+the blocks the agent prints. Two of them — never `-A`, and never `checkout --` or `stash` — exist
+because of a shared checkout; the rest hold regardless.
 
 ```bash
 git add -N <new-path> && git commit -o <path> <path> -m "..."
@@ -702,10 +727,12 @@ git add -N <new-path> && git commit -o <path> <path> -m "..."
 - **After a split commit, build HEAD in isolation before pushing.** Gates run against the
   working tree, not HEAD, so a partial commit can leave the branch unbuildable while your tree
   is green. The archive has none of what the fresh-checkout recipe adds, so that recipe runs
-  inside it first (joined with `&&` here):
+  inside it first (joined with `&&` here). A fresh `mktemp -d` every time: a fixed path collides
+  with a parallel session, and `tar -x` over a stale extraction keeps files deleted since, so
+  HEAD can look buildable when it is not.
 
 ```bash
-mkdir -p /tmp/headcheck && git archive HEAD | tar -x -C /tmp/headcheck && cd /tmp/headcheck && {{WORKTREE_SETUP}} && {{BUILD_CMD}}
+d=$(mktemp -d) && git archive HEAD | tar -x -C "$d" && cd "$d" && {{WORKTREE_SETUP}} && {{BUILD_CMD}}
 ```
 
 - **Shell working directory resets between calls in some harnesses.** A relative-path check can
@@ -881,8 +908,7 @@ follows**. Each is one paragraph: the rule, why it exists, and the archived doc 
 The file every session receives whether it asks or not — `CLAUDE.md` in Claude Code,
 `AGENTS.md` or the equivalent elsewhere; the shape is the same. It is a **router and a hazard
 list**, not a second copy of the standard. Keep it short enough that its cost is worth paying
-on every single session. In Profile L its Commands section points at the ledger's Environment
-section rather than repeating it.
+on every single session.
 
 ```markdown
 # <repo>
@@ -935,8 +961,10 @@ which wins.
 
 # Part 10 — Agent memory
 
-Where the harness offers persistent memory, it holds **one fact per file**, indexed by a single
-`MEMORY.md` whose lines are hooks, not content.
+Where the harness offers persistent memory, keep it to **one fact per file**, indexed by a single
+file whose lines are hooks, not content. In Claude Code that is a directory of markdown files in
+the shape below, indexed by `MEMORY.md`; another harness has its own shape, and the rules under
+the template apply to it as they stand.
 
 ```markdown
 ---

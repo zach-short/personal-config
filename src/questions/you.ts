@@ -93,7 +93,8 @@ export const YOU_QUESTIONS: Question[] = [
       {
         value: 'delegate-or-stop',
         label: 'Delegate to that model, or stop and hand off',
-        example: 'Board row says Deep, session is Default → it spawns a Deep subagent',
+        example:
+          'Row says Deep, session is Default → a review goes to a Deep subagent; a build is handed off',
         recommended: true,
       },
       {

@@ -17,6 +17,24 @@ The CLI. The working standard it installs is versioned separately — see
   derive. The stamp is also computed per repo rather than per run, because an archive home is
   resolved per repo and the resolved value is what gets saved. **Repos configured by an earlier
   version will report drift once, and re-running `setup` clears it.**
+- **The Part 0 prompt no longer overstates what is filled.** It said "Appendix A is filled"; the
+  fresh-checkout recipe and the build command are Part 0’s to produce. The prompt and the rendered
+  standard’s header now say so, and the prompt names which inventory answers produce them.
+- **The Part 0 prompt counts extra worktrees.** `git worktree list` includes the checkout itself,
+  so "Worktrees listed by git: 1" meant none; it now reports the worktrees beyond the one being
+  set up.
+- **The Part 0 prompt’s cut hint says the cross-references are still to fix.** Cutting Part 12 in
+  solo mode leaves references to it in place, which §0.4 makes the Part 0 session’s job; the hint
+  had said only "already cut".
+- **Model routing no longer sends a build to a Deep subagent.** The rule file, its long form and
+  the question’s example all said a mismatched session spawns a subagent on the assigned model
+  and hands it the whole prompt; Part 4 says a Deep subagent never builds. A review or a sweep is
+  delegated; a build is handed off.
+- **The agent-commits Part 11 paragraph carries the two rules its long form promised** —
+  `git add -N` before committing a file git has never seen, and building HEAD in isolation after
+  a split commit.
+- **`relative-dates` follows R1’s widened test** (standard 1.0.2): `tomorrow`, `currently`,
+  `last year`, `this year` and `N days/weeks/months ago` are flagged again.
 - **An adopted ledger or board name is honoured end to end.** `ledgerFile()` returned
   `HANDOFF.md` on both branches of its own ternary, so §0.2’s "adopt those files as they are"
   was never implemented, and a ledger under another name was invisible to `doctor`. Discovery,
@@ -32,7 +50,7 @@ The CLI. The working standard it installs is versioned separately — see
 
 ### Changed
 
-- **The working standard** is at 1.0.1 — see [`standard/CHANGELOG.md`](standard/CHANGELOG.md).
+- **The working standard** is at 1.0.2 — see [`standard/CHANGELOG.md`](standard/CHANGELOG.md).
 
 ## 0.1.0 — 2026-09-15
 

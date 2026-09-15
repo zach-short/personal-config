@@ -3,8 +3,8 @@ import { relativeDates } from '../src/doctor/rules/relative-dates.ts';
 import type { Doc } from '../src/doctor/scan.ts';
 
 /**
- * R1 states its own test as a grep. These assert the rule matches that grep and nothing wider:
- * a doc that passes the standard must not fail the tool that claims to enforce it.
+ * R1 states its own test as a grep (standard 1.0.2). These assert the rule matches that grep and
+ * nothing wider: a doc that passes the standard must not fail the tool that claims to enforce it.
  */
 function ledger(text: string): Doc {
   return {
@@ -20,13 +20,21 @@ function ledger(text: string): Doc {
 const STATED = [
   'today',
   'yesterday',
+  'tomorrow',
   'recently',
+  'currently',
   'last week',
   'last month',
+  'last year',
   'this week',
   'this month',
+  'this year',
+  'a few days ago',
+  'two weeks ago',
+  '3 months ago',
 ];
-const NOT_STATED = ['tomorrow', 'last year', 'this year', 'a few days ago', 'currently'];
+// Deliberately outside the grep: common prose that a wider pattern would start flagging.
+const NOT_STATED = ['now', 'soon', 'later', 'this file', 'last resort', 'in days'];
 
 describe('R1 — the rule matches the stated test', () => {
   for (const word of STATED) {

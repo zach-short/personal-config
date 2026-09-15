@@ -5,6 +5,43 @@ that renders it (see the root `CHANGELOG.md` for that). An adapted copy in anoth
 the version it was adapted from; `personal-config doctor` reports a copy whose stamp is older
 than `standard/VERSION`.
 
+## 1.0.2 — 2026-09-15
+
+Corrections from the 2026-09-15 standards review (sixteen findings). One test line widened;
+nothing else a rule requires changed.
+
+- **R1’s *Test:* grep** now also matches `tomorrow`, `currently`, `last year`, `this year` and
+  `(days|weeks|months) ago`. The rule’s first sentence already forbade every one of them; only
+  the test was narrower than the rule, and `doctor` had been narrowed to the stated test to match
+  it (board item 6, 2026-09-15). The `relative-dates` rule widens with it.
+- **A glossary** after "What this is" defines ledger, board, profile, mode and tier before the
+  Map uses them. They were first defined in Parts 2, 4 and 12, hundreds of lines in.
+- **"How to use it"** says that a copy placed by an installer comes with a prompt naming which
+  Part 0 steps are done, so a rendered copy no longer gives two instructions in its first twenty
+  lines.
+- **Part 9** no longer says Profile L’s Commands section points at the ledger instead of listing
+  the gates. §0.5 and the template both say the gates go in as fenced blocks; the sentence was
+  the odd one out.
+- **Part 6’s split of the shared-index rules** names the two that exist because of a shared
+  checkout — never `-A`, never `checkout --` or `stash` — instead of "the first four", which
+  miscounted: `git add -N` and small slices hold for anyone committing by path.
+- **The HEAD-isolation check** uses `mktemp -d` instead of a fixed `/tmp/headcheck`, which two
+  parallel sessions collide on and which `tar -x` over a stale extraction makes lie.
+- **Part 5’s measurement script** says it needs `python3`, prints a line instead of a traceback
+  when no transcript or no usage record exists, and reads the usage keys with `.get(key, 0)`.
+- **Part 10** describes Claude Code’s memory shape as Claude Code’s, not as what memory "holds".
+- **Provenance on five numbers** that carried none: 40–80k (repos A and B, 2026-09-14); 30–50k
+  and 2k (repo A, an observation as of 2026-09-14); 60–80k and 15–20 files (repo A, 2026-08-16);
+  ~25 files (repo A, 2026-08-17). Dated from the archived predecessor document the numbers came
+  from and the source repo’s history, not from memory.
+- **Worked-example labelling.** The Stage 4 done-when blockquote is split into the rule and a
+  labelled repo A example; the provenance paragraph admits inline "repo A" mentions where a
+  sentence is enough; the 2026-09-14 sentinel verification names repo A.
+
+Left as it was, on purpose: R3’s worked example names a file path in repo A
+(`backend/helpers/listingHelpers.go:326`). Whether a path in a private repo counts as a private
+string is the owner’s call and was raised, not taken.
+
 ## 1.0.1 — 2026-09-15
 
 Corrections. No rule was added, removed, or changed in substance — four places where the file
