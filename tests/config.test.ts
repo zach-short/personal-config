@@ -18,7 +18,9 @@ describe('profile merge', () => {
   });
 
   test('an unknown profile is an error, not a silent starter', async () => {
-    expect(loadConfig(parseCli(['setup', '--profile', 'nope']), null)).rejects.toThrow('nope');
+    await expect(loadConfig(parseCli(['setup', '--profile', 'nope']), null)).rejects.toThrow(
+      'nope',
+    );
   });
 
   test('a per-repo .personal-config.json outranks the named profile', async () => {

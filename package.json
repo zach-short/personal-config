@@ -19,6 +19,7 @@
     "doctor": "bun run src/cli.ts doctor",
     "undo": "bun run src/cli.ts undo",
     "test": "bun test",
+    "fixtures": "bun run tests/make-fixtures.ts",
     "typecheck": "tsc --noEmit",
     "lint": "biome check src tests",
     "format": "biome format --write src tests"
