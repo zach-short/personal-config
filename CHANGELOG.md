@@ -3,6 +3,42 @@
 The CLI. The working standard it installs is versioned separately — see
 [`standard/CHANGELOG.md`](standard/CHANGELOG.md).
 
+## Unreleased
+
+### Fixed
+
+- **The stamp guard is real now.** The README has promised since 0.1.0 that "files without that
+  stamp are not this tool's to overwrite", and nothing enforced it: `isOurs()` existed in
+  `src/lib/stamp.ts` with no caller anywhere in `src/`, and `applyStrategy` returned the new
+  contents unconditionally. A re-run of `setup` replaced `CLAUDE.md`, the ledger, the board and
+  `docs/AGENT-PRACTICES.md` whether or not a person had rewritten them. `resolvePlan` now asks
+  before every write: if something is already at the path, carries no stamp, and the file this
+  run would put there does, nothing is written and the path is named in the report.
+
+  It keys on whether *we* claim the file rather than on the write strategy, because the two
+  differ. The merge into `settings.json`, the lines appended to an ignore file and the in-place
+  edits behind `passoff claim` and `archive` all land in files a person owns, and all three read
+  what is there and keep it — keying on the strategy would have refused every one of them.
+
+- **A stamped file that you edited is still overwritten, and that is now written down.** Nothing
+  in a stamp records the bytes that were written, so a hand edit to a generated file leaves no
+  trace the tool can read. The overwrite is previewed, backed up and undone by
+  `personal-config undo` — and deleting the one stamp line is the way to take a generated file
+  back for good. Part 0's prompt gained a step 0.8 telling the adapting session to do exactly
+  that to the documents it rewrites, which is the case this whole guarantee exists for.
+
+- **A test that committed a rendered plan poisoned every later test file.** `renderAll` writes
+  the saved answers into the one sandbox `$HOME` the suite shares, and `loadConfig` reads that
+  file as a merge layer, so whether the profile-merge tests passed depended on the order Bun
+  happened to run the files in. `clearSavedAnswers()` in `tests/helpers.ts` is now called by
+  every test that commits one.
+
+### Documentation
+
+- **`doctor`'s silence on an unstamped file is a decision, not an accident.** `stampDrift` has
+  always returned nothing without a stamp; it now says why, and a test pins it to the guard. The
+  two have to agree, or stripping a stamp would buy a drift finding no re-run could ever clear.
+
 ## 0.2.1 — 2026-09-16
 
 ### Added

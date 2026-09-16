@@ -2,6 +2,7 @@ import { mkdir } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { backupFiles, type Manifest } from './backup.ts';
 import { diffSummary } from './diff.ts';
+import { isOurs } from './stamp.ts';
 import type { PlannedFile } from './types.ts';
 
 export type PlannedChange = {
@@ -11,6 +12,8 @@ export type PlannedChange = {
   /** What will be on disk after. For merge/append strategies this is the merged result. */
   after: string;
   summary: string;
+  /** Why nothing is written, where the stamp guard refused it; `none` everywhere else. */
+  guard: 'none' | 'no-stamp';
 };
 
 export async function resolvePlan(files: PlannedFile[]): Promise<PlannedChange[]> {
@@ -20,8 +23,33 @@ export async function resolvePlan(files: PlannedFile[]): Promise<PlannedChange[]
 async function resolveOne(file: PlannedFile): Promise<PlannedChange> {
   const handle = Bun.file(file.path);
   const before = (await handle.exists()) ? await handle.text() : '';
-  const after = applyStrategy(file, before);
-  return { file, before, after, summary: diffSummary(before, after) };
+  const guard = stampGuard(file, before);
+  const after = guard === 'none' ? applyStrategy(file, before) : before;
+  return { file, before, after, guard, summary: diffSummary(before, after) };
+}
+
+/**
+ * The stamp guard. Not the *ownership* guard, which is about somebody else's `origin` remote and
+ * is settled before a file is ever planned: this one is per file. A stamp is the only record
+ * that this tool wrote something, so a file already on disk without one is not ours to replace
+ * and the write is refused rather than backed up and done anyway.
+ *
+ * It asks whether *we* claim the path, not which strategy we would use, because the two answers
+ * differ. A merge into `settings.json`, a line appended to an ignore file and an in-place
+ * `edit()` of a board all land in files a person owns — and all three read what is there and
+ * keep it, so none claims authorship and none is guarded. Keying on the strategy would have
+ * refused all three, and `passoff claim` would never mark a board again.
+ *
+ * A *stamped* file is written even where a person has edited it. Nothing in the stamp records
+ * the bytes we wrote, so an edit to a generated file leaves no trace this can read; that
+ * overwrite is backed up and `personal-config undo` restores it. Deleting the stamp line is how
+ * a generated file is taken back for good — which is what Part 0 adaptation does to the
+ * documents it rewrites.
+ */
+function stampGuard(file: PlannedFile, before: string): PlannedChange['guard'] {
+  if (before.length === 0) return 'none';
+  if (!isOurs(file.contents)) return 'none';
+  return isOurs(before) ? 'none' : 'no-stamp';
 }
 
 function applyStrategy(file: PlannedFile, before: string): string {

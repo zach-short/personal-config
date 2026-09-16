@@ -24,11 +24,16 @@ export function previewTree(changes: PlannedChange[]): string {
   for (const [group, items] of groups) {
     lines.push(group);
     for (const item of items) {
-      const mark = item.before.length === 0 ? 'new' : item.summary;
-      lines.push(`  ${leafOf(item.file.path)}  — ${item.file.label}  [${mark}]`);
+      lines.push(`  ${leafOf(item.file.path)}  — ${item.file.label}  [${markOf(item)}]`);
     }
   }
   return lines.join('\n');
+}
+
+/** The bracket. A refusal outranks any diff: there is no change to summarize behind it. */
+function markOf(change: PlannedChange): string {
+  if (change.guard === 'no-stamp') return 'no stamp — left alone';
+  return change.before.length === 0 ? 'new' : change.summary;
 }
 
 function groupOf(path: string): string {
@@ -43,6 +48,7 @@ function leafOf(path: string): string {
 
 /** The per-file expansion behind the single batch confirm. */
 export function renderDiff(change: PlannedChange, maxLines = 40): string {
+  if (change.guard === 'no-stamp') return `${short(change.file.path)}: no stamp — left alone`;
   if (change.before === change.after) return `${short(change.file.path)}: unchanged`;
   const lines = diffLines(change.before, change.after);
   const shown = lines.slice(0, maxLines).map((l) => `${l.kind} ${l.text}`);

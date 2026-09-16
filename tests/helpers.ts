@@ -2,6 +2,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { emptyConfig } from '../src/lib/config.ts';
+import { configFile } from '../src/lib/paths.ts';
 import type { Answers, Config, RepoPlan, RepoScan } from '../src/lib/types.ts';
 import type { RenderContext } from '../src/render/context.ts';
 
@@ -11,6 +12,17 @@ export async function tempDir(prefix = 'pc-test-'): Promise<string> {
 
 export async function cleanup(dir: string): Promise<void> {
   await rm(dir, { recursive: true, force: true });
+}
+
+/**
+ * `renderAll` writes the saved answers into the one sandbox `$HOME` every test file shares, and
+ * `loadConfig` reads that file as a merge layer. So a test that commits a real plan and leaves
+ * it behind decides what a *later file's* `loadConfig` returns — which is how the profile-merge
+ * tests began failing on 2026-09-16, from nothing but a new test file changing the order Bun
+ * ran them in. Any test that commits a rendered plan calls this in its `finally`.
+ */
+export async function clearSavedAnswers(): Promise<void> {
+  await Bun.write(configFile(), '{}');
 }
 
 export function testScan(overrides: Partial<RepoScan> = {}): RepoScan {

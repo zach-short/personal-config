@@ -100,7 +100,8 @@ fictional repo — that is what these look like after a few weeks of real use.
   until a run completes.
 - **Re-running replaces what the tool wrote and touches nothing else.** Every generated file
   carries a stamp naming the version, the date, a hash of your answers, and the standard
-  version. Files without that stamp are not this tool's to overwrite.
+  version. A file already sitting at one of those paths without that stamp is left alone and
+  named in the run's report — see below.
 - **Nothing leaves your machine.** The program makes two network calls and no others:
   `gh api user`, to find out your GitHub login, and only if `gh` is installed; and the fetch
   behind `setup --from <url|id>`, which happens only when you pass that flag and sends nothing
@@ -112,6 +113,29 @@ If a repo's `origin` remote is owned by somebody else, the tool **will not offer
 tracked rule file into it. It switches to untracked mode and uses `.git/info/exclude` rather
 than editing the repo's own `.gitignore`. A course fork or a client repo is not yours to
 configure, and that should not depend on you remembering to decline.
+
+### The stamp guard
+
+A stamp is the only record that this tool wrote a file. So on a re-run, a file that is already
+there and carries **no** stamp is left alone and reported — your own `CLAUDE.md`, a
+`docs/conventions-ts.md` you wrote by hand, a `HANDOFF.md` that predates this tool. Nothing is
+backed up, because nothing is written. Delete the file if you want it generated fresh.
+
+A file that **does** carry the stamp is overwritten even where you have edited it. Nothing in
+the stamp records the bytes that were written, so an edit to a generated file leaves no trace
+the tool can read, and guessing would mean either refusing every re-run or losing your edits
+silently. It does neither: the overwrite is previewed, backed up, and `personal-config undo`
+puts it back.
+
+**Deleting the stamp line is how you take a generated file back.** One line, off the top of the
+file, and no re-run touches it again — and `doctor` stops asking you to re-render it, because a
+file the tool will not overwrite is not one it has standing to report drift on. That is the last
+step of Part 0: adaptation turns these documents into the repo's own, and a document that is the
+repo's own does not keep somebody else's stamp on it.
+
+Three writes are deliberately outside the guard, because none of them claims authorship: the
+JSON merge into `settings.json`, the lines appended to an ignore file, and the in-place edits
+`passoff claim` and `archive` make. All three read what is there and keep it.
 
 ## `doctor`
 

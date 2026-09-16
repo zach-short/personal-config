@@ -8,6 +8,11 @@ export type StampExpectation = { configHash: string; standardVersion: string };
  * Drift: a file this tool wrote whose stamped config hash no longer matches the merged config,
  * or whose standard version is behind `standard/VERSION`. Both mean the file predates an
  * answer or a standard revision — it is stale, not wrong, and re-running `setup` fixes it.
+ *
+ * Silent on a file with no stamp, and that is the same call the stamp guard makes in
+ * `write-plan.ts`: a file no re-run will overwrite is a file this has no standing to report on.
+ * The two have to agree, or stripping a stamp to take a document back would buy a drift finding
+ * that no re-run could ever clear.
  */
 export function stampDrift(doc: Doc, expected: StampExpectation): Finding[] {
   const stamp = readStamp(doc.text);

@@ -263,17 +263,20 @@ async function finish(
   interactive: boolean,
 ): Promise<number> {
   const real = changes.filter((c) => c.before !== c.after);
+  const guarded = changes.filter((c) => c.guard === 'no-stamp');
 
   say('\nThis run would write:\n');
   say(previewTree(changes));
-  say(`\n${real.length} file(s) to write, ${changes.length - real.length} already current.`);
+  const current = changes.length - real.length - guarded.length;
+  say(`\n${real.length} file(s) to write, ${current} already current.`);
+  if (guarded.length > 0) say(leftAlone(guarded));
 
   if (cli.dryRun) {
     say('\n--dry-run: nothing was written.');
     return endRun('dry-run');
   }
   if (real.length === 0) {
-    say('\nEverything is already current.');
+    say(guarded.length > 0 ? '\nNothing left to write.' : '\nEverything is already current.');
     return endRun('already-current');
   }
 
@@ -303,6 +306,19 @@ async function finish(
 async function endRun(outcome: RunOutcome): Promise<number> {
   if (retiresCheckpoint(outcome)) await clearCheckpoint();
   return 0;
+}
+
+/**
+ * Named rather than counted. A file the stamp guard refused is the one outcome a person cannot
+ * infer from what was written — it looks identical to "already current" in a total — and the
+ * way out of it is a choice only they can make.
+ */
+function leftAlone(guarded: PlannedChange[]): string {
+  return [
+    `\n${guarded.length} file(s) left alone — no stamp, so this tool did not write them:`,
+    ...guarded.map((c) => `  ${short(c.file.path)}`),
+    'Delete one to have it generated fresh; leave it and no re-run will touch it.',
+  ].join('\n');
 }
 
 async function confirmBatch(real: PlannedChange[], prompter: Prompter): Promise<boolean> {

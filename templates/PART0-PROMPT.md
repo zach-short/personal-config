@@ -52,6 +52,14 @@ What discovery already found, to be verified rather than trusted:
 - **0.7 — Stamp and delete Part 0.** Change the header to `**Adapted to this repo <date>,
   {{MODE}} mode.**`, note what you cut and why, then delete the rest of Part 0. Run
   `grep -nE '\{\{' {{STANDARD_PATH}}` and fix every hit outside Appendix A.
+- **0.8 — Take the adapted files back.** Delete the generator's stamp — the one
+  `<!-- personal-config … -->` line at the top — from every file you rewrote here, at minimum
+  `{{STANDARD_PATH}}` and `{{ROUTER_FILE}}`. That line is what marks a file as the generator's
+  to replace; without it a later `setup` leaves the file alone and its drift check goes quiet.
+  Leaving it on means a re-run overwrites this whole session's work — recoverably, via
+  `personal-config undo`, but there is no reason to rely on that. Do the same to the ledger and
+  the board once they hold real entries. Then run `grep -rn 'personal-config v' .` and confirm
+  nothing you edited still carries one.
 
 ## Already written, do not recreate
 

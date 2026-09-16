@@ -6,6 +6,7 @@ import { commitPlan, resolvePlan } from '../src/lib/write-plan.ts';
 import { renderAll } from '../src/render/index.ts';
 import {
   cleanup,
+  clearSavedAnswers,
   DEFAULT_ANSWERS,
   tempDir,
   testContext,
@@ -35,6 +36,7 @@ describe('renderers', () => {
       expect(await Bun.file(join(dir, 'HANDOFF.md')).text()).toBe(after);
     } finally {
       await cleanup(dir);
+      await clearSavedAnswers();
     }
   });
 
@@ -125,6 +127,7 @@ describe('renderers', () => {
       expect(await Bun.file(join(dir, '.gitignore')).text()).toStartWith('build/\n');
     } finally {
       await cleanup(dir);
+      await clearSavedAnswers();
     }
   });
 
