@@ -3,10 +3,20 @@
 The CLI. The working standard it installs is versioned separately — see
 [`standard/CHANGELOG.md`](standard/CHANGELOG.md).
 
-## Unreleased
+## 0.2.0 — 2026-09-16
 
 ### Added
 
+- **`catalog` writes the questions out as data.** `catalog.json` carries every question — its
+  text, options, examples and condition — and the 28 long forms keyed by `readMore`, stamped
+  `<version>+<sha256 of the source>[:8]` so a consumer can tell which questions it was built
+  from. A test fails when the questions change and the catalog was not regenerated, which is
+  the only way a second copy of the questions stays honest.
+- **`setup --from <src>` starts from a profile you already have.** A local path, an https URL,
+  or the 8-character id a site hands back, which resolves against `package.json`'s `homepage`
+  as `/p/<id>`. It sits above the saved config and the repo file and below the flags, so thirty
+  answers given seconds ago cannot lose silently to a config saved long before; the cost,
+  accepted, is that it re-renders an already-configured repo.
 - **`passoff next` and `passoff claim <n>` read the board and take an item off it.** `next`
   prints the first `OPEN` row, its model and lane, and the standalone prompt written under it —
   and warns when something already `IN FLIGHT` owns one of the same files, which is the whole
@@ -122,6 +132,10 @@ The CLI. The working standard it installs is versioned separately — see
 
 ### Changed
 
+- **`Question.when` is data, not a closure.** A `{ never }` / `{ key, is }` / `{ key, isNot }`
+  spec read by one module, so the catalog can carry a question's condition and the freshness
+  test can see it drift. A predicate cannot be serialized, and a hand-copied one would have
+  been a second source of truth.
 - **The board and the step log now have one parser each, shared by the commands and by
   `doctor`.** `src/lib/board.ts` and `src/lib/ledger.ts`; the §2.3 and §2.1 rules read through
   them, and so do `passoff` and `handoff`. Two parsers of one file drift, and the drift is
@@ -131,7 +145,7 @@ The CLI. The working standard it installs is versioned separately — see
   board records *why* a row waits on nothing, and reading it as a live blocker made `passoff
   next` warn that an item was waiting on the note explaining that it was not.
 
-- **The working standard** is at 1.0.2 — see [`standard/CHANGELOG.md`](standard/CHANGELOG.md).
+- **The working standard** is at 1.0.3 — see [`standard/CHANGELOG.md`](standard/CHANGELOG.md).
 
 ## 0.1.0 — 2026-09-15
 

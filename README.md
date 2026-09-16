@@ -23,6 +23,13 @@ writes the first draft of them, correctly, for your repo.
 no build step.
 
 ```bash
+bunx personal-config setup
+```
+
+`bunx`, not `npx` — the bin is TypeScript, and only Bun runs that directly. Or from a clone,
+which is also how you run this repo's own tests and doctor:
+
+```bash
 git clone https://github.com/zach-short/personal-config
 cd personal-config
 bun install
