@@ -5,6 +5,16 @@ that renders it (see the root `CHANGELOG.md` for that). An adapted copy in anoth
 the version it was adapted from; `personal-config doctor` reports a copy whose stamp is older
 than `standard/VERSION`.
 
+## 1.0.3 — 2026-09-16
+
+One correction. No rule changed.
+
+- **Part 5's fixed-overhead figure.** 1.0.2 dated "60–80k (repo A, 2026-08-16)" from the
+  archived document the number came from — and repo A had already disproved it on 2026-09-14:
+  its adapted copy records 60–80k as the files' byte counts presented as token counts, and
+  measures the documents at ~30–35k. The bullet now states the measured figure and keeps
+  60–80k findable, marked wrong, with the disproof beside it (R5).
+
 ## 1.0.2 — 2026-09-15
 
 Corrections from the 2026-09-15 standards review (sixteen findings). One test line widened;

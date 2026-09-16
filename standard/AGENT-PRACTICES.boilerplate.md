@@ -20,7 +20,7 @@ here, and the adapted copy is built on the answer. If an installer put this file
 left a prompt saying which of Part 0's steps are already done; follow that prompt rather than
 this paragraph.
 
-**Standard version: 1.0.2**
+**Standard version: 1.0.3**
 
 **Adapted: not yet — run Part 0.**
 
@@ -607,8 +607,9 @@ second subsystem, the second platform, a long debugging loop.
 
 - **Fixed overhead, before any work.** The standards you must read, plus the plan and
   `CLAUDE.md`. Measure it rather than guessing: `wc -c <files> | awk '{print $1/4}'` is a
-  usable token estimate. In repo A this was 60–80k (2026-08-16) — on a Deep phase, a third of
-  the budget before a line of code is read.
+  usable token estimate. In repo A the documents measured ~30–35k (2026-09-14). The 60–80k
+  this file carried for repo A (2026-08-16) was wrong — byte counts presented as token
+  counts — and repo A's adapted copy of this file recorded the disproof on 2026-09-14.
 - **Gate output is not free.** A failing build or a race-detector run can dump thousands of
   tokens per attempt, and the debugging loop is where budgets actually die. Leave headroom for
   three or four red runs.
