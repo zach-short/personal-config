@@ -1,4 +1,4 @@
-import type { Answers, Question } from '../lib/types.ts';
+import type { Question } from '../lib/types.ts';
 
 /**
  * Phase 2 — what is true of each repo. Only what a human knows is asked here; everything the
@@ -57,7 +57,7 @@ export const DISCOVER_QUESTIONS: Question[] = [
         recommended: false,
       },
     ],
-    when: (answers: Answers) => answers.owned !== false,
+    when: { key: 'owned', isNot: false },
   },
   {
     id: 'archive-home',
@@ -98,6 +98,6 @@ export const DISCOVER_QUESTIONS: Question[] = [
     configKey: 'tracker',
     readMore: 'tracker',
     placeholder: 'e.g. GitHub Issues on this repo',
-    when: (answers: Answers) => answers.mode === 'team',
+    when: { key: 'mode', is: 'team' },
   },
 ];

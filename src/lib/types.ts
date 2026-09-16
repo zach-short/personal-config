@@ -18,6 +18,15 @@ export type QuestionOption = {
 
 export type QuestionKind = 'select' | 'multiselect' | 'text' | 'confirm';
 
+/**
+ * A question's condition, as data rather than a predicate. It is data because `catalog.json`
+ * has to carry it to a browser that cannot serialize a closure (D6) — and because one
+ * declarative form is the only way the catalog cannot drift from what the wizard asks.
+ */
+export type WhenSpec =
+  /** Never asked: the value is derived elsewhere. */
+  { never: true } | { key: string; is: AnswerValue } | { key: string; isNot: AnswerValue };
+
 export type Question = {
   id: string;
   phase: Phase;
@@ -31,11 +40,27 @@ export type Question = {
   readMore: string;
   /** Dotted path into the config this question reads its default from and writes back to. */
   configKey: string;
-  /** Asked only when this returns true for the answers so far. */
-  when?: (answers: Answers) => boolean;
+  /** Asked only when this matches the answers so far. Data, so the catalog can carry it. */
+  when?: WhenSpec;
 };
 
 export type Answers = Record<string, AnswerValue>;
+
+/** One question's long form, as `docs/choices/<id>.md` holds it. */
+export type CatalogChoice = {
+  id: string;
+  body: string;
+};
+
+/**
+ * What `bun run catalog` emits and the site pins (D6). A pin means the site can lag the wizard;
+ * that is the point — alignment becomes a deliberate bump with a diff.
+ */
+export type Catalog = {
+  catalogVersion: string;
+  questions: Question[];
+  choices: CatalogChoice[];
+};
 
 export type ModelTiers = {
   deep: string;
@@ -93,6 +118,8 @@ export type Cli = {
   /** `archive` only: perform the move as well as planning it. */
   move: boolean;
   projectsDir: string | null;
+  /** `setup` only: a profile to start from — a local path, an https URL, or a short id. */
+  from: string | null;
   /** `context` only: the phrase that proves a transcript is this conversation. */
   sentinel: string | null;
   paths: string[];

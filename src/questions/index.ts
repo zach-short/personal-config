@@ -1,4 +1,5 @@
 import type { Answers, PracticeArea, Question } from '../lib/types.ts';
+import { matchesWhen } from '../lib/when.ts';
 import { DISCOVER_QUESTIONS } from './discover.ts';
 import { CODE_AREAS } from './practices-code.ts';
 import { POLICY_AREAS } from './practices-policy.ts';
@@ -21,7 +22,7 @@ export function questionsFor(phase: Question['phase']): Question[] {
 }
 
 export function askable(questions: Question[], answers: Answers): Question[] {
-  return questions.filter((q) => q.when === undefined || q.when(answers));
+  return questions.filter((q) => matchesWhen(q.when, answers));
 }
 
 export function findQuestion(id: string): Question | undefined {
