@@ -101,8 +101,10 @@ fictional repo — that is what these look like after a few weeks of real use.
 - **Re-running replaces what the tool wrote and touches nothing else.** Every generated file
   carries a stamp naming the version, the date, a hash of your answers, and the standard
   version. Files without that stamp are not this tool's to overwrite.
-- **Nothing leaves your machine.** The only network call in the whole program is `gh api user`,
-  to find out your GitHub login, and only if `gh` is installed.
+- **Nothing leaves your machine.** The program makes two network calls and no others:
+  `gh api user`, to find out your GitHub login, and only if `gh` is installed; and the fetch
+  behind `setup --from <url|id>`, which happens only when you pass that flag and sends nothing
+  but the request. Your answers are never uploaded by this tool.
 
 ### The ownership guard
 
@@ -213,11 +215,47 @@ To write your own, copy [`profiles/starter.json`](profiles/starter.json) and cha
 They merge, lowest precedence first:
 
 ```
-starter  →  --profile <name>  →  ~/.config/personal-config/config.json  →  <repo>/.personal-config.json  →  CLI flags
+starter  →  --profile <name>  →  ~/.config/personal-config/config.json  →  <repo>/.personal-config.json  →  --from <src>  →  CLI flags
 ```
 
 A profile is a *default provider*, which is why `--profile` sits below the files: an answer you
 have already saved outranks the profile that suggested it.
+
+### Starting from answers you already have
+
+```bash
+bun run setup --from ./answers.json                   # a file
+bun run setup --from https://example.com/p/k3f9d2ab   # a URL
+bun run setup --from k3f9d2ab                         # or just the id a site handed you
+```
+
+Three forms, told apart by shape: eight characters of `[a-z0-9]` with no `/` and no `.` is an
+id, anything with a scheme is a URL, everything else is a path. An id resolves against the
+`homepage` field in `package.json` as `/p/<id>` — so a fork pointed at its own site hands out
+its own ids. A URL is fetched over https and nothing else, the one exception being `localhost`,
+for developing the site that hands out the ids.
+
+`--from` sits *above* the saved config and the repo file, unlike `--profile`, which sits below
+them. It carries answers given seconds ago, and the failure worth preventing is those losing
+silently to a config saved months earlier and forgotten. The accepted cost: running it inside an
+already-configured repo re-renders that repo to the new answers.
+
+## `catalog`
+
+```bash
+bun run catalog
+```
+
+Writes `catalog.json` in the repo root: every question the wizard asks — its text, its options
+with their examples, and the condition deciding whether it is asked at all — plus the long forms
+from [`docs/choices/`](docs/choices), keyed by the id each question cites. Thirty questions and
+twenty-eight long forms as of `0.2.0+39bbcb0e`.
+
+It exists so another surface can ask the same questions without importing the wizard, which is
+not browser-safe. The stamp is the package version plus a hash of the questions it was built
+from, so a consumer can tell which ones it pinned, and `bun test` fails when the questions
+change and the catalog was not rebuilt — a second copy of the questions is only honest if
+something checks it.
 
 ## Uninstall
 

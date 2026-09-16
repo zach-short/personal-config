@@ -15,6 +15,19 @@ The CLI. The working standard it installs is versioned separately — see
   construction — under the untracked work profile there is no diff of it to read, so R8 stays a
   reader's rule there.
 
+### Fixed
+
+- **Two README claims that 0.2.0 made false.** The control guarantee said the only network call
+  in the program was `gh api user`; `setup --from <url|id>` fetches, so the guarantee now names
+  both calls and says the fetch happens only when you pass the flag. And the merge chain under
+  Profiles omitted `--from`, which sits above the saved config and the repo file rather than
+  below them like `--profile`.
+
+### Documentation
+
+- **`catalog` and `setup --from` are in the README.** Both shipped in 0.2.0 and neither was
+  documented, on a package that is public.
+
 ## 0.2.0 — 2026-09-16
 
 ### Added
