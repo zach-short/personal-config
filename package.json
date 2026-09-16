@@ -1,6 +1,6 @@
 {
   "name": "personal-config",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "A terminal wizard that sets up an agent-driven working style in your repos — a ledger, a board, a working standard, and the rules your agent reads before it writes code.",
   "license": "MIT",
   "homepage": "https://zacharyshort.com",
