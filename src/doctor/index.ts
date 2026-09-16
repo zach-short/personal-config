@@ -42,7 +42,7 @@ export async function runDoctorOn(
   // and a `PART0-PROMPT.md` sitting in, say, a docs folder is not a personal file at all.
   const configured = await Bun.file(join(root, '.personal-config.json')).exists();
   const fromStamps = configured ? docs.flatMap((doc) => stampDrift(doc, expectation)) : [];
-  const fromCitations = archivedCitations(docs, await archivedNames(docs));
+  const fromCitations = archivedCitations(docs, await archivedInfo(docs));
   const fromIgnore = configured ? await ignoredFiles(root) : [];
 
   return {
@@ -59,17 +59,23 @@ export async function runDoctorOn(
 
 type Expectation = { configHash: string; standardVersion: string };
 
-/** Folder names sitting in an archive index's directory — what "now lives in the archive" means. */
-async function archivedNames(docs: Doc[]): Promise<string[]> {
-  const indexes = docs.filter((d) => d.kind === 'archive-index');
+/**
+ * Folder names sitting in an archive index's directory — what "now lives in the archive" means
+ * — plus the directories themselves, so a doc can be excluded by identity (its path sits under
+ * one) rather than by a `/archive/` substring, which answers differently depending on whether
+ * the root was typed relatively or absolutely.
+ */
+async function archivedInfo(docs: Doc[]): Promise<{ names: string[]; dirs: string[] }> {
+  const dirs = docs
+    .filter((d) => d.kind === 'archive-index')
+    .map((doc) => doc.path.slice(0, doc.path.lastIndexOf('/')));
   const names = await Promise.all(
-    indexes.map(async (doc) => {
-      const dir = doc.path.slice(0, doc.path.lastIndexOf('/'));
+    dirs.map(async (dir) => {
       const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
       return entries.filter((e) => e.isDirectory()).map((e) => e.name);
     }),
   );
-  return names.flat();
+  return { names: names.flat(), dirs };
 }
 
 function sort(findings: Finding[]): Finding[] {

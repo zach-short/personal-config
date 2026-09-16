@@ -7,12 +7,15 @@ import { type Doc, proseLines } from '../scan.ts';
  * prose citations are reported: a path read at runtime by a script or a CI command is a
  * different, louder failure, and one this rule cannot tell apart from prose anyway.
  */
-export function archivedCitations(docs: Doc[], archivedNames: string[]): Finding[] {
-  if (archivedNames.length === 0) return [];
-  const names = new Set(archivedNames.map((n) => basename(n)));
+export function archivedCitations(
+  docs: Doc[],
+  archived: { names: string[]; dirs: string[] },
+): Finding[] {
+  if (archived.names.length === 0) return [];
+  const names = new Set(archived.names.map((n) => basename(n)));
 
   return docs
-    .filter((doc) => !doc.path.includes('/archive/'))
+    .filter((doc) => !archived.dirs.some((dir) => doc.path.startsWith(`${dir}/`)))
     .flatMap((doc) =>
       proseLines(doc)
         .filter(({ text }) => [...names].some((name) => text.includes(name)))
