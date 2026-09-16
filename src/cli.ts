@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 import { runArchive } from './commands/archive.ts';
+import { runCatalog } from './commands/catalog.ts';
 import { runContext } from './commands/context.ts';
 import { runHandoff } from './commands/handoff.ts';
 import { runPassoff } from './commands/passoff.ts';
@@ -21,9 +22,12 @@ const HELP = `personal-config — set up an agent-driven working style in your r
   personal-config archive <slug>               plan Part 7's archiving steps for closed work
   personal-config worktree <lane>              plan a lane's worktree, with its checkout recipe
   personal-config context --sentinel <phrase>  this session's context size, from its transcript
+  personal-config catalog                      regenerate catalog.json — the questions, as data
 
 Options
   --profile <name>     start from profiles/<name>.json          (default: starter)
+  --from <src>         setup only: start from a profile you already have —
+                       ./profile.json, an https URL, or the 8-character id the site gives you
   --projects-dir <dir> where to look for repos                  (default: ~/Projects)
   --yes                accept every default without asking       (still previews, still confirms)
   --dry-run            print the preview and write nothing
@@ -33,8 +37,9 @@ Options
   --sentinel <phrase>  context only: a phrase unique to this conversation  (required)
   --help, --version
 
-Nothing leaves your machine. Every run previews the whole file tree before writing, backs up
-anything it overwrites, and can be undone.`;
+Nothing leaves your machine — --from <url|id> is the one exception, and it only fetches the
+profile you ask for. Every run previews the whole file tree before writing, backs up anything it
+overwrites, and can be undone.`;
 
 async function main(): Promise<number> {
   const cli = parseCli(Bun.argv.slice(2));
@@ -48,6 +53,7 @@ async function main(): Promise<number> {
     return 0;
   }
   if (cli.command === 'setup') return runSetup(cli);
+  if (cli.command === 'catalog') return runCatalog();
   if (cli.command === 'doctor') return runDoctor(cli);
   if (cli.command === 'undo') return runUndo();
   if (cli.command === 'archive') return runArchive(cli);

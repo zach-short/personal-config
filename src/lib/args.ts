@@ -3,6 +3,7 @@ import type { Cli } from './types.ts';
 
 const COMMANDS = [
   'setup',
+  'catalog',
   'doctor',
   'undo',
   'archive',
@@ -26,6 +27,7 @@ export function parseCli(argv: string[]): Cli {
       fix: { type: 'boolean', default: false },
       move: { type: 'boolean', default: false },
       'projects-dir': { type: 'string' },
+      from: { type: 'string' },
       sentinel: { type: 'string' },
       help: { type: 'boolean', default: false },
       version: { type: 'boolean', default: false },
@@ -42,6 +44,7 @@ export function parseCli(argv: string[]): Cli {
     fix: values.fix === true,
     move: values.move === true,
     projectsDir: values['projects-dir'] ?? null,
+    from: values.from ?? null,
     sentinel: values.sentinel ?? null,
     paths: rest,
   };

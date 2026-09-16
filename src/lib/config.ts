@@ -1,12 +1,18 @@
 import { join } from 'node:path';
 import { configFile, repoRoot } from './paths.ts';
+import { loadProfileFrom } from './profile-source.ts';
 import type { Answers, Cli, Config } from './types.ts';
 
 /**
  * Merge order, lowest first: `starter` → `--profile <name>` → the user's saved config → the
- * repo's `.personal-config.json` → CLI flags. A profile is therefore a *default provider*,
- * which is why `--profile` sits below the files: a saved answer outranks the profile that
- * suggested it.
+ * repo's `.personal-config.json` → `--from` → CLI flags. A profile is therefore a *default
+ * provider*, which is why `--profile` sits below the files: a saved answer outranks the profile
+ * that suggested it.
+ *
+ * `--from` sits above them instead, and deliberately: it carries thirty answers the person gave
+ * seconds ago on the site, and the failure worth preventing is those answers losing silently to
+ * a saved config they have forgotten writing. The cost, accepted 2026-09-16: running it inside
+ * an already-configured repo re-renders that repo to the new answers.
  */
 export async function loadConfig(cli: Cli, repoDir: string | null): Promise<Config> {
   const layers = [
@@ -14,6 +20,7 @@ export async function loadConfig(cli: Cli, repoDir: string | null): Promise<Conf
     cli.profile === 'starter' ? {} : await readProfile(cli.profile),
     await readJson(configFile()),
     repoDir ? await readJson(join(repoDir, '.personal-config.json')) : {},
+    cli.from ? await loadProfileFrom(cli.from) : {},
     cliLayer(cli),
   ];
   return layers.reduce<Config>(mergeLayer, emptyConfig(cli.profile));

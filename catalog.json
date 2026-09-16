@@ -1,0 +1,764 @@
+{
+  "catalogVersion": "0.2.0+39bbcb0e",
+  "questions": [
+    {
+      "id": "commit-policy",
+      "phase": "you",
+      "kind": "select",
+      "ask": "Who runs `git commit` — you, or the agent?",
+      "options": [
+        {
+          "value": "print-blocks",
+          "label": "Only me — the agent prints the commands",
+          "example": "Agent ends with `git add src/foo.ts` then `git commit src/foo.ts -m \"...\"`",
+          "recommended": true
+        },
+        {
+          "value": "agent-commits",
+          "label": "The agent may commit, never push",
+          "example": "Agent commits each green slice; you review the log and push",
+          "recommended": false
+        },
+        {
+          "value": "no-rule",
+          "label": "No rule — leave it to the agent",
+          "example": "Nothing is written; the agent does whatever it would do by default",
+          "recommended": false
+        }
+      ],
+      "readMore": "commit-policy",
+      "configKey": "commitPolicy"
+    },
+    {
+      "id": "attribution",
+      "phase": "you",
+      "kind": "select",
+      "ask": "Should agent commits say an agent wrote them?",
+      "options": [
+        {
+          "value": "none",
+          "label": "No trailers",
+          "example": "A plain `fix: handle null timezone` and nothing else",
+          "recommended": true
+        },
+        {
+          "value": "co-authored",
+          "label": "Add a `Co-Authored-By:` trailer",
+          "example": "`Co-Authored-By: Claude <noreply@anthropic.com>` on every agent commit",
+          "recommended": false
+        }
+      ],
+      "readMore": "attribution",
+      "configKey": "attribution"
+    },
+    {
+      "id": "model-deep",
+      "phase": "you",
+      "kind": "text",
+      "ask": "Which model is your Deep tier — for work whose mistakes pass every gate?",
+      "placeholder": "e.g. a top reasoning model, named as your harness names it",
+      "readMore": "model-tiers",
+      "configKey": "models.deep"
+    },
+    {
+      "id": "model-default",
+      "phase": "you",
+      "kind": "text",
+      "ask": "Which model is your Default tier — everything whose failure is loud?",
+      "placeholder": "e.g. your everyday model",
+      "readMore": "model-tiers",
+      "configKey": "models.default"
+    },
+    {
+      "id": "model-fast",
+      "phase": "you",
+      "kind": "text",
+      "ask": "Which model is your Mechanical tier — sweeps, renames, doc reconciliation?",
+      "placeholder": "e.g. your fastest model",
+      "readMore": "model-tiers",
+      "configKey": "models.fast"
+    },
+    {
+      "id": "model-routing",
+      "phase": "you",
+      "kind": "select",
+      "ask": "What should a session do when a task names a model it is not running on?",
+      "options": [
+        {
+          "value": "delegate-or-stop",
+          "label": "Delegate to that model, or stop and hand off",
+          "example": "Row says Deep, session is Default → a review goes to a Deep subagent; a build is handed off",
+          "recommended": true
+        },
+        {
+          "value": "warn-only",
+          "label": "Say so in one line, then carry on",
+          "example": "Session notes the mismatch and does the work anyway",
+          "recommended": false
+        },
+        {
+          "value": "skip",
+          "label": "No rule — I do not tag tasks with models",
+          "example": "Nothing is written; useful if you never use a board",
+          "recommended": false
+        }
+      ],
+      "readMore": "model-routing",
+      "configKey": "modelRouting"
+    },
+    {
+      "id": "docs-mcp",
+      "phase": "you",
+      "kind": "text",
+      "ask": "Which docs-lookup tool should be preferred over training memory for library APIs?",
+      "placeholder": "a connected docs MCP, or \"none\" to skip this rule",
+      "readMore": "docs-lookup",
+      "configKey": "docsMcp"
+    },
+    {
+      "id": "hooks",
+      "phase": "you",
+      "kind": "select",
+      "ask": "Should any of this be enforced by a hook, not just written as a rule?",
+      "options": [
+        {
+          "value": "commit-guard",
+          "label": "Yes — block `git commit`, `git push` and `git add -A`",
+          "example": "The agent tries `git commit`; the hook refuses and prints the two-block ritual",
+          "recommended": true
+        },
+        {
+          "value": "both",
+          "label": "That, plus a session-start banner",
+          "example": "Every session opens with your ledger, your standard, and the top open board row"
+        },
+        {
+          "value": "none",
+          "label": "No hooks — rules only",
+          "example": "Nothing is added to `~/.claude/settings.json`"
+        }
+      ],
+      "readMore": "hooks",
+      "configKey": "hooks"
+    },
+    {
+      "id": "skills",
+      "phase": "you",
+      "kind": "select",
+      "ask": "Should the four workflow skills be installed?",
+      "options": [
+        {
+          "value": "all",
+          "label": "All four — /close-out, /scope, /passoff, /handoff",
+          "example": "You type `/close-out`; the agent runs the whole end-of-work ritual",
+          "recommended": true
+        },
+        {
+          "value": "none",
+          "label": "None",
+          "example": "Nothing is written to `~/.claude/skills/`"
+        }
+      ],
+      "readMore": "skills",
+      "configKey": "skills"
+    },
+    {
+      "id": "keep-existing-global",
+      "phase": "you",
+      "kind": "select",
+      "ask": "Your `~/.claude` already has rules and hooks — what should happen to them?",
+      "options": [
+        {
+          "value": "keep",
+          "label": "Keep every one, untouched",
+          "example": "New rules land beside them as separate files in `~/.claude/rules/`",
+          "recommended": true
+        },
+        {
+          "value": "report",
+          "label": "Keep them, and list any that cover the same ground",
+          "example": "A `CLAUDE.md` \"# Commits\" section is reported so you can delete it yourself",
+          "recommended": false
+        }
+      ],
+      "readMore": "existing-global-config",
+      "configKey": "keepExistingGlobal"
+    },
+    {
+      "id": "projects-dir",
+      "phase": "discover",
+      "kind": "text",
+      "ask": "Which directory holds the repos you want to set up?",
+      "placeholder": "~/Projects",
+      "readMore": "projects-dir",
+      "configKey": "projectsDir"
+    },
+    {
+      "id": "work-profile",
+      "phase": "discover",
+      "kind": "select",
+      "ask": "How does work arrive in this repo?",
+      "options": [
+        {
+          "value": "ledger",
+          "label": "A stream of mostly independent items",
+          "example": "Fix a flaky test, add an endpoint, bump a dep — a ledger and a board",
+          "recommended": true
+        },
+        {
+          "value": "folders",
+          "label": "A few big efforts that each span many sessions",
+          "example": "One \"checkout rewrite\" folder: scope → design → plan → runtime pass",
+          "recommended": false
+        }
+      ],
+      "readMore": "work-profile",
+      "configKey": "workProfile"
+    },
+    {
+      "id": "track-mode",
+      "phase": "discover",
+      "kind": "select",
+      "ask": "Should these files be committed to this repo, or kept private to you?",
+      "options": [
+        {
+          "value": "tracked",
+          "label": "Committed — it is my repo",
+          "example": "`HANDOFF.md` is in `git ls-files`; a teammate or a future you reads it",
+          "recommended": true
+        },
+        {
+          "value": "untracked",
+          "label": "Private — git-ignored",
+          "example": "A course fork or a client repo: files land in `.git/info/exclude`",
+          "recommended": false
+        }
+      ],
+      "readMore": "track-mode",
+      "configKey": "trackMode",
+      "when": {
+        "key": "owned",
+        "isNot": false
+      }
+    },
+    {
+      "id": "archive-home",
+      "phase": "discover",
+      "kind": "text",
+      "ask": "Where should closed work go when it leaves the repo?",
+      "placeholder": "~/Projects/archive/<repo>/, or docs/archive/ to keep closed work in-tree",
+      "readMore": "archive-home",
+      "configKey": "archiveHome"
+    },
+    {
+      "id": "mode",
+      "phase": "discover",
+      "kind": "select",
+      "ask": "Does one person decide things here, or several?",
+      "options": [
+        {
+          "value": "solo",
+          "label": "One person — me",
+          "example": "Questions go to you in chat; the standard ships without its teams part",
+          "recommended": true
+        },
+        {
+          "value": "team",
+          "label": "Several people merge code here",
+          "example": "Questions go to a named decider on a tracker item, not into a doc",
+          "recommended": false
+        }
+      ],
+      "readMore": "mode",
+      "configKey": "mode"
+    },
+    {
+      "id": "tracker",
+      "phase": "discover",
+      "kind": "text",
+      "ask": "Where are items and decisions visible to the team?",
+      "placeholder": "e.g. GitHub Issues on this repo",
+      "readMore": "tracker",
+      "configKey": "tracker",
+      "when": {
+        "key": "mode",
+        "is": "team"
+      }
+    },
+    {
+      "id": "comments",
+      "phase": "practices",
+      "kind": "select",
+      "ask": "What may a code comment say?",
+      "options": [
+        {
+          "value": "why-only",
+          "label": "Why only — never what",
+          "example": "`// the API 404s on an empty cart, so we send one dummy line`",
+          "recommended": true
+        },
+        {
+          "value": "why-plus-headers",
+          "label": "Why, plus section headers in long files",
+          "example": "Same rule, but `// ---- validation ----` banners are allowed"
+        },
+        {
+          "value": "none",
+          "label": "No rule",
+          "example": "Nothing is written; the agent comments as it sees fit"
+        }
+      ],
+      "readMore": "comments",
+      "configKey": "practices.comments"
+    },
+    {
+      "id": "function-length",
+      "phase": "practices",
+      "kind": "select",
+      "ask": "How long may a function get before it is split?",
+      "options": [
+        {
+          "value": "house-6-15",
+          "label": "Roughly 6–15 lines; extract helpers",
+          "example": "A 30-line handler becomes a 10-line handler plus two named helpers",
+          "recommended": true
+        },
+        {
+          "value": "typical-20-ceiling-40",
+          "label": "5–20 typical, 40 a hard ceiling",
+          "example": "Looser: a 35-line reducer is fine, a 45-line one is not"
+        },
+        {
+          "value": "none",
+          "label": "No rule",
+          "example": "Length is left to review"
+        }
+      ],
+      "readMore": "function-length",
+      "configKey": "practices.function-length"
+    },
+    {
+      "id": "exports",
+      "phase": "practices",
+      "kind": "select",
+      "ask": "How is a module’s public surface declared?",
+      "options": [
+        {
+          "value": "named-only",
+          "label": "Named exports; declarations, not const arrows",
+          "example": "`export function Button(props: ButtonProps)` — default only where a framework demands it",
+          "recommended": true
+        },
+        {
+          "value": "default-allowed",
+          "label": "Default exports allowed anywhere",
+          "example": "`export default function Button()` in any file"
+        },
+        {
+          "value": "none",
+          "label": "No rule",
+          "example": "Whatever the file already does"
+        }
+      ],
+      "readMore": "exports",
+      "configKey": "practices.exports"
+    },
+    {
+      "id": "file-naming",
+      "phase": "practices",
+      "kind": "select",
+      "ask": "How are files and folders named?",
+      "options": [
+        {
+          "value": "ecosystem-default",
+          "label": "Whatever the language’s ecosystem does",
+          "example": "kebab-case in TS, snake_case in Go and Python, PascalCase in Swift",
+          "recommended": true
+        },
+        {
+          "value": "kebab-everywhere",
+          "label": "kebab-case everywhere it is legal",
+          "example": "`user-profile.ts`, `user-profile.py` — one rule across the repo"
+        },
+        {
+          "value": "none",
+          "label": "No rule",
+          "example": "Names are left to review"
+        }
+      ],
+      "readMore": "file-naming",
+      "configKey": "practices.file-naming"
+    },
+    {
+      "id": "imports",
+      "phase": "practices",
+      "kind": "select",
+      "ask": "How are imports written and ordered?",
+      "options": [
+        {
+          "value": "no-parent-relative",
+          "label": "No `../`; grouped, blank line between groups",
+          "example": "`./sibling` is fine; reach for an alias instead of `../../lib/x`",
+          "recommended": true
+        },
+        {
+          "value": "grouped-only",
+          "label": "Grouped and sorted, relative paths allowed",
+          "example": "Order is enforced; `../../lib/x` still permitted"
+        },
+        {
+          "value": "none",
+          "label": "No rule",
+          "example": "Import order is left to the formatter"
+        }
+      ],
+      "readMore": "imports",
+      "configKey": "practices.imports"
+    },
+    {
+      "id": "types",
+      "phase": "practices",
+      "kind": "select",
+      "ask": "How strict is the type layer?",
+      "options": [
+        {
+          "value": "strict",
+          "label": "Strict — no escape hatches at a boundary",
+          "example": "No `any`, no `as unknown as`; string-literal unions instead of `enum`",
+          "recommended": true
+        },
+        {
+          "value": "strict-with-escapes",
+          "label": "Strict, but escape hatches allowed with a justification comment",
+          "example": "`any` permitted where a why-comment explains the third-party gap"
+        },
+        {
+          "value": "none",
+          "label": "No rule",
+          "example": "Only what the compiler already enforces"
+        }
+      ],
+      "readMore": "types",
+      "configKey": "practices.types"
+    },
+    {
+      "id": "logic-placement",
+      "phase": "practices",
+      "kind": "select",
+      "ask": "Where does logic live once a view or handler grows?",
+      "options": [
+        {
+          "value": "extract-by-concept",
+          "label": "Extracted into a named unit, one per file",
+          "example": "Two `useState` plus an effect ⇒ a `useMarketCamera` hook in its own file",
+          "recommended": true
+        },
+        {
+          "value": "colocate",
+          "label": "Colocated until it is reused",
+          "example": "Logic stays in the component until a second caller appears"
+        },
+        {
+          "value": "none",
+          "label": "No rule",
+          "example": "Placement is left to review"
+        }
+      ],
+      "readMore": "logic-placement",
+      "configKey": "practices.logic-placement"
+    },
+    {
+      "id": "data-layer",
+      "phase": "practices",
+      "kind": "select",
+      "ask": "How does application code reach the network or the database?",
+      "options": [
+        {
+          "value": "one-client",
+          "label": "One typed client; raw calls banned in app code",
+          "example": "`api.listings.get(id)` — a bare `fetch()` in a component fails review",
+          "recommended": true
+        },
+        {
+          "value": "library-default",
+          "label": "A single agreed library, called directly",
+          "example": "Everyone uses the same fetching library; no wrapper layer"
+        },
+        {
+          "value": "none",
+          "label": "No rule",
+          "example": "Each feature chooses"
+        }
+      ],
+      "readMore": "data-layer",
+      "configKey": "practices.data-layer"
+    },
+    {
+      "id": "states",
+      "phase": "practices",
+      "kind": "select",
+      "ask": "What must a screen that loads data render?",
+      "options": [
+        {
+          "value": "all-three",
+          "label": "Loading, error and empty — all three, mandatory",
+          "example": "One `DataState` wrapper; a screen with no empty state fails review",
+          "recommended": true
+        },
+        {
+          "value": "per-screen",
+          "label": "Required, but each screen writes its own",
+          "example": "No shared component; consistency is a review matter"
+        },
+        {
+          "value": "none",
+          "label": "No rule",
+          "example": "States are added when someone notices"
+        }
+      ],
+      "readMore": "states",
+      "configKey": "practices.states"
+    },
+    {
+      "id": "design-tokens",
+      "phase": "practices",
+      "kind": "select",
+      "ask": "How are colours, spacing and radii written in view code?",
+      "options": [
+        {
+          "value": "tokens-only",
+          "label": "Role-named tokens only; literals banned",
+          "example": "`bg-primary`, `Theme.cardRadius` — never `#5B8C5A` or `radius: 14`",
+          "recommended": true
+        },
+        {
+          "value": "tokens-with-escape",
+          "label": "Tokens, with a documented escape hatch",
+          "example": "A literal is allowed with a comment naming why no token fits"
+        },
+        {
+          "value": "none",
+          "label": "No rule",
+          "example": "Values are written inline"
+        }
+      ],
+      "readMore": "design-tokens",
+      "configKey": "practices.design-tokens"
+    },
+    {
+      "id": "test-policy",
+      "phase": "practices",
+      "kind": "select",
+      "ask": "What does a change owe in tests?",
+      "options": [
+        {
+          "value": "new-file-per-feature",
+          "label": "Pure logic is tested, in a new file named for the feature",
+          "example": "Two sessions adding tests never collide in the same suite file",
+          "recommended": true
+        },
+        {
+          "value": "colocated",
+          "label": "Colocated `foo.test.*` beside the source",
+          "example": "`money.ts` and `money.test.ts` side by side"
+        },
+        {
+          "value": "none",
+          "label": "No rule",
+          "example": "Tests are written when someone decides to"
+        }
+      ],
+      "readMore": "test-policy",
+      "configKey": "practices.test-policy"
+    },
+    {
+      "id": "copy-registers",
+      "phase": "practices",
+      "kind": "select",
+      "ask": "Who picks the words a user reads?",
+      "options": [
+        {
+          "value": "ask-three-registers",
+          "label": "You do — the agent offers 2–3 variations",
+          "example": "\"Couldn’t save\" / \"That didn’t go through — try again\" / \"Save failed\"",
+          "recommended": true
+        },
+        {
+          "value": "agent-picks",
+          "label": "The agent picks and tells you what it chose",
+          "example": "Copy lands in the diff; you change it if you disagree"
+        },
+        {
+          "value": "none",
+          "label": "No rule",
+          "example": "Copy is written like any other code"
+        }
+      ],
+      "readMore": "copy-registers",
+      "configKey": "practices.copy-registers"
+    },
+    {
+      "id": "drive-by-fixes",
+      "phase": "practices",
+      "kind": "select",
+      "ask": "What happens to an unrelated problem found mid-task?",
+      "options": [
+        {
+          "value": "note-and-raise",
+          "label": "Note it and raise it — never fold it in",
+          "example": "A typo found while fixing auth is reported, not committed with the auth fix",
+          "recommended": true
+        },
+        {
+          "value": "trivial-allowed",
+          "label": "Trivial fixes may ride along if named in the hand-back",
+          "example": "A one-line typo is fixed; the hand-back says it was"
+        },
+        {
+          "value": "none",
+          "label": "No rule",
+          "example": "The agent decides what to fold in"
+        }
+      ],
+      "readMore": "drive-by-fixes",
+      "configKey": "practices.drive-by-fixes"
+    },
+    {
+      "id": "commit-policy-practice",
+      "phase": "practices",
+      "kind": "select",
+      "ask": "Who runs `git commit` in this repo?",
+      "options": [
+        {
+          "value": "inherit",
+          "label": "As answered earlier",
+          "example": "Uses your global commit policy"
+        },
+        {
+          "value": "none",
+          "label": "No rule here",
+          "example": "This repo says nothing about commits"
+        }
+      ],
+      "readMore": "commit-policy-practice",
+      "configKey": "practices.commit-policy-practice",
+      "when": {
+        "never": true
+      }
+    }
+  ],
+  "choices": [
+    {
+      "id": "archive-home",
+      "body": "# Where closed work goes\n\n## What this is\n\nA directory where finished documents land when their work is done, with an `INDEX.md` mapping\nwhat is in there. Usually outside the repo; an in-tree `docs/archive/` is the other real answer.\n\n## The defense\n\nAn in-tree `docs/` folder that only grows is a folder nobody reads. Every session pays for it —\nit is in the directory listing, it is in searches, and a closed design doc looks exactly like a\nlive one until you read the date. Moving closed work out and leaving one index line behind keeps\nthe repo's docs to the ones that are still true.\n\nThe index earns its keep on the way in, not on the way out: before a folder moves, you grep for\nwhat still references it, and the difference between a path read at runtime and a bare citation\nin prose is the difference between a broken build and a stale sentence.\n\n## The strongest argument against it\n\nIt puts half your project's history in a directory that is not version-controlled with the\nproject, may not be backed up, and will not follow the repo to another machine or another\nperson. If the archive is lost, the index entries in the repo point at nothing. Keeping closed\nwork in-tree under `docs/archive/` is a real alternative — it costs listing noise and buys\ndurability.\n\n## What it writes and where\n\n`<archive home>/INDEX.md`, seeded with the legend and an empty Closed section. `<repo>` in the\npath you give is replaced with each repo's name, so one answer covers every repo.\n\nTo keep closed work in-tree, answer with an in-tree path such as `docs/archive/`. The standard\ninterpolates this answer into `<archive home>/<slug>/`, so it has to be a path — the word\n`none` would render `none/<slug>/`. Leave it empty and no index is written; the standard's\narchive rules are still there to follow when you want them.\n\n## `doctor` checks it both ways\n\nA folder in the archive with no index line is invisible, and an index line pointing at a folder\nthat is not there is worse than none. `personal-config doctor` reports both.\n\n## How to undo it\n\nDelete the `INDEX.md`. Nothing moves anything on its own — archiving is something you do.\n"
+    },
+    {
+      "id": "attribution",
+      "body": "# Attribution trailers on agent commits\n\n## What this is\n\nWhether commits an agent helps produce carry a line saying so — `Co-Authored-By:` on the commit,\nor a \"Generated with\" line on a pull request description.\n\n## The options\n\n**No trailers.** *Recommended.* The commit message is the message and nothing else.\n\n*The defense.* The history is your record of your own work. An attribution you did not choose\nis a claim you did not make — and it is the kind of claim that shows up in a `git blame` a\nreviewer, an employer or a grader reads later. Harnesses add these by default and sometimes\nre-add them via instructions that claim to override earlier guidance, so the rule is written to\nsay explicitly that it wins.\n\n*The strongest argument against it.* Some teams and some courses genuinely want AI assistance\ndisclosed, and a trailer is the cheapest honest way to do it. If that is your situation, no\ntrailers is the wrong answer and you should say so out loud somewhere else instead.\n\n**Add a `Co-Authored-By:` trailer.** Every agent commit carries it.\n\n*The defense.* Disclosure by default, in a machine-readable place, with no effort.\n\n*The strongest argument against it.* It attributes authorship to a tool on commits you\nreviewed, edited and take responsibility for — and once it is in the history it is effectively\npermanent.\n\n## What it writes and where\n\nA section in `~/.claude/rules/commits.md`, alongside the commit policy.\n\n## How to undo it\n\nDelete `~/.claude/rules/commits.md`, or edit its Attribution section.\n"
+    },
+    {
+      "id": "comments",
+      "body": "# What a code comment may say\n\n## What this is\n\nA rule in `docs/conventions-<lang>.md` — the per-language code standard an agent reads in full\nbefore writing any code, and the file a reviewer checks a diff against — saying what a code\ncomment may contain. It is the rule most often broken by a tidy-up pass, which is why it is\nwritten down rather than assumed.\n\n## The options\n\n**Why only — never what.** *Recommended.* A comment restating the line below it is banned;\nrename or extract instead. A comment recording *why* is required where the reason is not\nderivable from the code.\n\n*The defense.* A \"what\" comment is a second copy of the code that nothing keeps in sync, so it\nis wrong the first time the code changes and misleading forever after. A \"why\" comment holds the\none thing the code genuinely cannot: the constraint, the vendor bug, the decision that was made\nand the one that was rejected.\n\n*The strongest argument against it.* \"Why, never what\" is a judgement call at the margin, and a\nrule that depends on judgement gets applied inconsistently — which can be worse than a blunt\nrule, because now reviewers argue about it.\n\n**Why, plus section headers in long files.** The same rule, but `// ---- validation ----`\nbanners are allowed.\n\n*The defense.* In a 400-line file the banners genuinely help, and banning them pushes people\ntoward worse structure just to satisfy a comment rule.\n\n*The strongest argument against it.* A file that needs banners usually needs splitting, and the\nbanners hide that.\n\n## The part that matters more than the rule\n\n**Never bulk-delete comments**, and never strip one in a protected category: product or design\nrationale, a lint-suppression justification, an external-constraint workaround, or\ndocumentation on a public export. A \"clean up the comments\" pass is one of the most destructive\nthings an agent can be asked to do, because the information exists nowhere else and the diff\nlooks tidy. This is written into the rule whichever option you pick.\n\n## What it writes and where\n\nRule `C1` in `docs/conventions-<lang>.md` for each language found, tagged *review*.\n\n## How to undo it\n\nDelete the rule from the conventions file, or re-run `setup` and answer `No rule`.\n"
+    },
+    {
+      "id": "commit-policy",
+      "body": "# Who runs `git commit`\n\n## What this is\n\nA rule in `~/.claude/rules/commits.md` telling every agent session what it may do with git.\n\n## The options\n\n**Only me — the agent prints the commands.** *Recommended.* The session ends by running\n`git status --short` and printing two copyable blocks: a `git add` naming the exact files it\ntouched, then a `git commit <the same files> -m \"...\"`. You paste them.\n\n*The defense.* If you ever run two agent sessions in one checkout, only you know which\nuncommitted file belongs to which. An agent that commits will sweep up work it cannot see — and\nthe commit still typechecks, because the files are on disk, so nothing catches it. It also keeps\nthe history yours: every commit is one you chose to make.\n\n*The strongest argument against it.* It is friction on every single task, and most of the time\nthere is only one session running and nothing to collide with. If you work alone in one window,\nyou will paste two blocks a hundred times for a collision that never happens.\n\n**The agent may commit, never push.** The agent commits each green slice; you review the log\nand push.\n\n*The defense.* Small, frequent commits are genuinely better than one big one at the end, and an\nagent is more disciplined about making them than a person is. Nothing leaves your machine\nwithout you, so the blast radius is one `git reset`.\n\n*The strongest argument against it.* The collision problem is unchanged — `git add` naming the\nwrong file is just as destructive whether an agent or a person runs it. And a rewritten history\nis a worse recovery than a missing commit.\n\n**No rule.** Nothing is written.\n\n*The defense.* Fewer rules in context, and the agent behaves reasonably by default.\n\n*The strongest argument against it.* \"Reasonably by default\" includes `git add -A`.\n\n## Which commit form this ships, and why\n\n**Both printed blocks name the files.** Not `git add <files>` then a bare `git commit -m \"...\"`,\nwhich is what this shipped before 2026-09-15.\n\nPassing paths to `git commit` implies `--only`: the commit takes exactly those paths and ignores\nthe rest of the index. A bare `git commit` takes the whole index — so if a parallel session\nstaged something between your `git add` and your paste, the bare form commits their work under\nyour message, and it still typechecks, because the files are on disk. That is the same collision\nthis whole question exists to prevent, surviving one step further down the ritual. Naming the\npaths twice looks redundant and is not: the first names what to stage, the second names what to\ntake.\n\nOne consequence comes with it. `--only` silently drops paths git has never seen, so a brand-new\nfile needs `git add -N <path>` first or it is quietly left out of the commit.\n\nThe tradeoff is real but small — a longer line to paste, and a second place to get the file list\nright. The alternative was to keep the short form for a solo checkout and accept that the tool's\nown hook would print a ritual the rule file it writes contradicts. One tool cannot ship two\nanswers to the same question.\n\n## What it writes and where\n\n`~/.claude/rules/commits.md` — a new file. Your own `~/.claude/CLAUDE.md` is never edited. If\nit already has a section covering commits, the wizard says so and leaves it alone; delete it\nyourself if you want only one.\n\nChoosing a hook as well (see `hooks`) adds `~/.claude/hooks/personal-config/commit-guard.sh`\nand an entry in `~/.claude/settings.json`, so the rule is enforced rather than merely written.\n\n## How to undo it\n\nDelete `~/.claude/rules/commits.md`. If the hook was installed, run `personal-config undo` to\nrestore the previous `settings.json`, or remove the `PreToolUse` entry by hand.\n"
+    },
+    {
+      "id": "commit-policy-practice",
+      "body": "# Commit policy, as this repo's Part 11 states it\n\n## Why this is not a question\n\nYou already answered it once, in the `you` phase (see `commit-policy`). Asking again per repo\nis how two answers end up disagreeing, and a rule that disagrees with itself is worse than no\nrule — the agent gets both and you cannot tell which it followed.\n\nSo this area is never asked. It renders the answer you already gave into **Part 11** of each\nrepo's standard copy, which is where the standard itself says owner policy belongs.\n\n## What gets written\n\nIf you chose *only me — the agent prints the commands*, Part 11 gets the full ritual: never\n`git commit` or `git push`; run `git status --short`; print two blocks; never `-A`, never `.`.\n\nIf you chose *the agent may commit, never push*, Part 11 gets the small-slices rule instead —\ncommit after each leg lands rather than holding a multi-file change across a long gate run,\nstill never `-A` or `.`, still never push. Plus the two that hold whoever commits: `git add -N`\nfirst for a file git has never seen, because `--only` silently drops untracked paths and the\ncommit still typechecks; and build HEAD in isolation before pushing, because gates run against\nthe working tree and a partial commit can leave the branch unbuildable while your tree is green.\n\nIf you chose *no rule*, Part 11 says nothing about commits.\n\n## How to undo or change it\n\nRe-run `setup` and answer `commit-policy` differently, or edit Part 11 directly — it is marked\neditable for exactly this reason.\n"
+    },
+    {
+      "id": "copy-registers",
+      "body": "# Who picks the words a user reads\n\n## What this is\n\nA paragraph in Part 11 of your repo's copy of the working standard — the part that holds your\nown policy rather than craft, and the part the standard itself marks as editable — saying who\ndecides the words a user sees on screen. The agent reads it before proposing any user-facing\ntext.\n\n## The options\n\n**You do — the agent offers 2–3 variations in different registers.** *Recommended.* Plain,\nwarm, terse. For example: *\"Couldn't save\"* / *\"That didn't go through — try again\"* /\n*\"Save failed\"*.\n\n*The defense.* Copy is a product decision wearing code's clothes. It is the part of the work\nusers actually read, it is cheap to decide and expensive to notice later, and an agent\ngenuinely cannot know your product's voice. Showing registers rather than a single suggestion\nmakes the decision take five seconds instead of prompting a rewrite.\n\n*The strongest argument against it.* Three variations for every string is a lot of\ninterruptions, and most strings do not deserve one — nobody needs to deliberate over the label\non a Cancel button.\n\n**The agent picks and tells you what it chose.**\n\n*The defense.* The work does not stop, and the copy is right there in the diff where you can\nchange it in one edit.\n\n*The strongest argument against it.* Copy that is already written gets reviewed as *acceptable*\nrather than *chosen*, and acceptable copy is how a product ends up sounding like nothing.\n\n## The qualifier both options carry\n\n**Check first whether it is already settled.** Re-opening decided copy wastes your time and is\na common way for an agent to relitigate something you already answered.\n\n## What it writes and where\n\nA paragraph in Part 11 of the standard copy — the part the standard itself marks as editable\npreference.\n\n## How to undo it\n\nEdit Part 11, or re-run `setup`.\n"
+    },
+    {
+      "id": "data-layer",
+      "body": "# How code reaches the network or the database\n\n## What this is\n\nA rule in `docs/conventions-<lang>.md` — the per-language code standard an agent reads in full\nbefore writing any code, and the file a reviewer checks a diff against — saying how application\ncode is allowed to reach the network or the database. It decides where a new API call goes on\nthe day it is written.\n\n## The options\n\n**One typed client; raw calls banned in app code.** *Recommended.*\n\n*The defense.* One place to add auth, one place to handle a 401, one place where the response\nshape is asserted. When the API changes, the typechecker tells you every call site. A bare\n`fetch` in a component is an untyped boundary in the middle of the UI, and it is where the\n`undefined is not an object` errors come from.\n\n*The strongest argument against it.* It is a layer, and layers get in the way: one endpoint used\nonce now needs a client method, a type and a test. For a small app the wrapper can be more code\nthan the calls it wraps.\n\n**A single agreed library, called directly.**\n\n*The defense.* You get consistency — one caching model, one retry story — without maintaining a\nwrapper.\n\n*The strongest argument against it.* Response shapes stay unasserted, and every call site\nrepeats the error handling.\n\n## The environment-variable half\n\nEnvironment variables are read and validated **once at startup** and passed down — never read\ninline in app code. A missing value read inline surfaces as a runtime `undefined` three layers\naway from its cause; validated at startup it is one clear error before anything runs.\n\n## What it writes and where\n\nRule `D1` in `docs/conventions-typescript.md`, `-go.md` and `-python.md`, tagged *review*.\n\n## How to undo it\n\nDelete the rule, or re-run `setup`.\n"
+    },
+    {
+      "id": "design-tokens",
+      "body": "# How colours, spacing and radii are written\n\n## What this is\n\nA rule in `docs/conventions-<lang>.md` — the per-language code standard an agent reads in full\nbefore writing any code, and the file a reviewer checks a diff against — saying how a colour, a\nspacing value or a corner radius may be written in view code. It is the difference between a\nredesign being one edit and being a repo-wide search.\n\n## The options\n\n**Role-named tokens only; literals banned.** *Recommended.* `bg-primary`, `border-line`,\n`Theme.cardRadius` — never a raw hex or an arbitrary value in view code.\n\n*The defense.* The name is the point, not the indirection. `bg-surface` says what the colour is\n*for*, so the same token works in light and dark mode and a redesign is one edit at one swap\npoint per platform. A hex literal says what the colour *is*, which is the one fact that is\nguaranteed to change.\n\n*The strongest argument against it.* Not everything has a role. A one-off illustration, a\nbrand gradient, a chart series — forcing those into the token vocabulary produces names like\n`accent-7` that carry no meaning and pollute the palette for everything else.\n\n**Tokens, with a documented escape hatch.** A raw value is allowed with a comment naming why no\ntoken fits.\n\n*The defense.* It admits the one-off case without opening the door, and the comments tell you\nwhere the palette is actually missing something.\n\n*The strongest argument against it.* The escape hatch is the easy path under deadline, and a\nrule whose violation is legal-with-a-comment is a rule that erodes.\n\n## The part that is not optional either way\n\nEvery platform in the repo defaults to the OS colour scheme, and **a colour that cannot\nresolve per scheme is not a token**. A palette that only works in light mode is a light-mode palette with extra\nsteps.\n\n## What it writes and where\n\nRule `S1` in `docs/conventions-typescript.md` and `-swift.md`, tagged *review*.\n\n## How to undo it\n\nDelete the rule, or re-run `setup`.\n"
+    },
+    {
+      "id": "docs-lookup",
+      "body": "# Preferring live docs over training memory\n\n## What this is\n\nA rule telling the agent to look a library's API up in a connected documentation tool rather\nthan recalling it, whenever the question is about a specific library, framework, SDK, CLI or\ncloud service.\n\n## Why it exists\n\nA model's knowledge of a library is frozen at its training cutoff, and it does not feel frozen\nfrom the inside — the wrong answer arrives with the same confidence as the right one. The\nfailure mode is specific and expensive: an option that was renamed, a method that moved, a\nconfig key that now lives somewhere else. You lose the time twice, once writing it and once\ndebugging it.\n\n## The options\n\n**Name a connected docs tool.** *Recommended if you have one.* The rule then names that tool and\ntells the agent to reach for it first, one concept per query, using your full question rather\nthan keywords.\n\n*The strongest argument against it.* A lookup costs a round trip and some context on every\nlibrary question, including the ones the model would have got right. And if the tool is not\nactually connected in a given session, a rule that assumes it is can send the agent hunting for\nsomething that is not there — which is why the generated rule says explicitly what to do when\nthe tool is absent: say so, and fall back to the installed package's own README under\n`node_modules/` or its equivalent. Never answer silently from memory.\n\n**`none`.** No rule is written. Choose this if you have no docs MCP connected; you can re-run\n`setup` later when you do.\n\n## What it writes and where\n\n`~/.claude/rules/docs-lookup.md`, naming the tool you gave.\n\n## How to undo it\n\nDelete `~/.claude/rules/docs-lookup.md`.\n"
+    },
+    {
+      "id": "drive-by-fixes",
+      "body": "# What happens to an unrelated problem found mid-task\n\n## What this is\n\nA paragraph in Part 11 of your repo's copy of the working standard — the part that holds your\nown policy rather than craft, and the part the standard itself marks as editable — saying what\nan agent does with a problem it finds that is not the task it was given. It governs what ends up\nin the diff you review.\n\n## The options\n\n**Note it and raise it — never fold it in.** *Recommended.*\n\n*The defense.* An unrelated change hides in the diff, and it hides in the review of that diff.\nWhen the task's own change turns out to be wrong, you cannot revert it without also reverting\nthe drive-by. And when the drive-by is the thing that broke, you will look for the cause in the\ntask's change, because that is what the commit says it was.\n\n*The strongest argument against it.* You are staring at a typo you could fix in four seconds,\nand a rule that makes you write it down instead is a rule that produces a list nobody reads.\nSmall rot compounds, and the moment you noticed it was the cheapest moment to fix it.\n\n**Trivial fixes may ride along if named in the hand-back.**\n\n*The defense.* It keeps the cost of a genuine one-liner near zero while preserving the audit\ntrail, and it is honest about what people do anyway.\n\n*The strongest argument against it.* \"Trivial\" is self-assessed by the party who wants to do it,\nand it expands. A typo becomes a rename becomes a small refactor.\n\n## The other half of the rule\n\n**Descoping is your call.** If you park something, it gets recorded and stops being raised. If\nnothing has been said, a finding still blocks by default — the agent surfaces the judgement\ncall rather than making it, and every finding not fixed appears in the hand-back as either\n`parked by owner <date>` or `open`. None is dropped silently.\n\n## What it writes and where\n\nA paragraph in Part 11 of the standard copy.\n\n## How to undo it\n\nEdit Part 11, or re-run `setup`.\n"
+    },
+    {
+      "id": "existing-global-config",
+      "body": "# What happens to the `~/.claude` config you already have\n\n## What this is\n\nMost people running this already have something in `~/.claude` — rules, hooks, skills, a\n`CLAUDE.md`. This decides how the wizard treats it.\n\n## The invariant, whichever you choose\n\n**Your own `~/.claude/CLAUDE.md` is never edited.** Everything this tool writes goes into\n`~/.claude/rules/<topic>.md`, one file per rule. Claude Code loads `rules/*.md` alongside\n`CLAUDE.md`, so nothing is lost by keeping them apart — and it means a re-run is an overwrite of\na file this tool owns, rather than surgery on a file it does not.\n\n## The options\n\n**Keep every one, untouched.** *Recommended.* New rules land beside what you have.\n\n*The defense.* Your hooks and rules are yours, they probably encode something machine-specific,\nand a tool that a stranger runs should not be in the business of deciding which of them to\nremove.\n\n*The strongest argument against it.* You can end up with two rules about commits — one in your\n`CLAUDE.md` and one in `rules/` — and if they ever disagree, the agent gets both and you will\nnot know which it followed.\n\n**Keep them, and list any that cover the same ground.** The wizard reports overlaps so you can\ndelete them yourself.\n\n*The defense.* It solves the duplicate problem without the tool taking the decision.\n\n*The strongest argument against it.* It is a report you have to act on, and reports you have to\nact on tend not to get acted on.\n\n## What it writes and where\n\nNothing extra either way. The second option only adds lines to the summary at the end of the run.\n\n## How to undo it\n\nNothing to undo — no existing file is modified by this answer.\n"
+    },
+    {
+      "id": "exports",
+      "body": "# How a module's public surface is declared\n\n## What this is\n\nA rule in `docs/conventions-<lang>.md` — the per-language code standard an agent reads in full\nbefore writing any code, and the file a reviewer checks a diff against — saying how a module\ndeclares what other files may import from it. It shapes every `import` line in the repo.\n\n## The options\n\n**Named exports; declarations, not `const` arrows.** *Recommended.* Default exports only where\na framework requires them.\n\n*The defense.* A named export has one spelling, so it is greppable and renameable; a default\nexport has as many names as it has importers. A `function` declaration hoists, names itself in a\nstack trace, and reads as a definition rather than an assignment.\n\n*The strongest argument against it.* Some frameworks want defaults for route files and page\ncomponents, so the rule immediately needs an exception — and a rule with an exception at its\ncentre is one people apply from memory of the exception.\n\n**Default exports allowed anywhere.**\n\n*The defense.* Less ceremony, and it matches what most tutorials and generators produce.\n\n*The strongest argument against it.* Two files importing the same module under two names is a\nreal source of confusion, and no tool will tell you it happened.\n\n## In Go this rule is different\n\nGo has no export keyword — capitalization *is* the mechanism. So the rule becomes \"minimize the\nexported surface\", plus the no-stutter convention: `helpcontent.Load`, not\n`helpcontent.LoadHelpContent`. That is why the generated Go file says something different from\nthe TypeScript one, and why the file extension decides which applies.\n\n## What it writes and where\n\nRule `E1` in `docs/conventions-typescript.md`, `-go.md` and `-swift.md`, tagged *review*.\n\n## How to undo it\n\nDelete the rule, or re-run `setup`.\n"
+    },
+    {
+      "id": "file-naming",
+      "body": "# How files and folders are named\n\n## What this is\n\nA rule in `docs/conventions-<lang>.md` — the per-language code standard an agent reads in full\nbefore writing any code, and the file a reviewer checks a diff against — saying how files and\nfolders are named. It is the first rule a new file meets, and the one a reviewer can check\nwithout opening it.\n\n## The options\n\n**Whatever the language's ecosystem does.** *Recommended.* kebab-case in TypeScript,\nlowercase-with-underscores in Go, snake_case in Python, PascalCase in Swift named for the\nprimary type.\n\n*The defense.* Every one of those is what the language's own tooling, standard library and\ncommunity already do. Matching them means a newcomer to your repo is not also learning your\npersonal convention, and it means generated files already comply.\n\n*The strongest argument against it.* In a polyglot repo you now have three conventions, and\nsomeone moving between them gets it wrong regularly — which is exactly the kind of low-value\nreview comment that wastes everyone's time.\n\n**kebab-case everywhere it is legal.**\n\n*The defense.* One rule, no thinking, consistent in a file tree you read across languages.\n\n*The strongest argument against it.* It fights the toolchain. Go's own convention is\nunderscores; Swift files are conventionally named for the type they hold and the compiler's\ndiagnostics read that way.\n\n## The acronym half of the rule\n\nAcronyms are words, not shouts: `userId`, `apiUrl`, `HttpClient`. **Except in Go**, where\ninitialisms keep uniform case: `userID`, `apiURL`, `HTTPClient` — that is the language's own\nconvention and its linters enforce it. This is a deliberate contradiction between two of your\nconventions files, and both of them say so, because a contradiction that is documented is a\ndecision and an undocumented one is a bug.\n\n## What it writes and where\n\nRule `F1` in each `docs/conventions-<lang>.md`, tagged *review*.\n\n## How to undo it\n\nDelete the rule, or re-run `setup`.\n"
+    },
+    {
+      "id": "function-length",
+      "body": "# How long a function may get\n\n## What this is\n\nA rule in `docs/conventions-<lang>.md` — the per-language code standard an agent reads in full\nbefore writing any code, and the file a reviewer checks a diff against — saying how long a\nfunction may grow before it is split. Nothing enforces it but the person reading the diff.\n\n## The options\n\n**Roughly 6–15 lines; extract helpers.** *Recommended.*\n\n*The defense.* A function that fits on a screen is reviewed at a glance and tested alone. The\nnumber is not the point — the habit of noticing is. Most functions that grow past this are doing\ntwo things, and naming the second one is usually the whole fix.\n\n*The strongest argument against it.* A line count is a proxy, and proxies get gamed: you get\nfour helpers called once each, in an order you now have to reconstruct to read the original\nlogic. Extraction that does not name a *concept* makes code worse while satisfying the rule.\n\n**5–20 typical, 40 a hard ceiling.** Looser; a 35-line reducer is fine.\n\n*The defense.* It leaves room for the genuinely linear function — a parser, a reducer, a switch\nover nine cases — where splitting is pure loss.\n\n*The strongest argument against it.* A 40-line ceiling is high enough that almost nothing hits\nit, so in practice it is no rule at all.\n\n**No rule.** Length is left to review.\n\n## The qualifier both options carry\n\nExtract for a **concept**, not to relocate lines. A helper that needs three parameters to\nexplain itself was the wrong cut. Markup and view bodies are exempt from the count — JSX and\nSwiftUI bodies are declarative and long by nature.\n\n## What it writes and where\n\nRule `L1` in each `docs/conventions-<lang>.md`, tagged *review*.\n\n## How to undo it\n\nDelete the rule, or re-run `setup`.\n"
+    },
+    {
+      "id": "hooks",
+      "body": "# Enforcing a rule with a hook\n\n## What this is\n\nA rule is text in the agent's context; a hook is a script the harness runs whether the agent\nagrees or not. This decides whether the commit policy gets teeth, and whether every session\nopens with a short reminder of where work is written down.\n\n## The options\n\n**Block `git commit`, `git push` and `git add -A`.** *Recommended.* A `PreToolUse` hook reads\nthe command the agent is about to run, and refuses those, printing the two-block ritual to the\nagent instead.\n\n*The defense.* This is the one rule whose violation is hard to undo. A rule in prose is a rule a\nsession can reason its way past — under time pressure, or because the task \"obviously\" wants a\ncommit, or because a later instruction claimed to supersede it. The hook does not reason. It is\nalso the difference between a setup that works for you and one that works for someone who has\nnever read the rule they are relying on.\n\n*The strongest argument against it.* It edits `~/.claude/settings.json`, a file you own and\nprobably already have hooks in, and a bad merge there breaks every session until you fix it.\nThat is why the merge is previewed, confirmed, and backed up, and why declining prints the\nsnippet instead. It also blocks you when *you* asked for a commit, which is annoying the first\ntime and then permanently.\n\n**That, plus a session-start banner.** A `SessionStart` hook reads the repo's\n`.personal-config.json` and prints your ledger, your standard and the top `OPEN` board row.\n\n*The defense.* The files only help if sessions read them, and a session that does not know they\nexist will not. Three lines at startup is the cheapest way to make the habit automatic.\n\n*The strongest argument against it.* It is three lines of noise at the top of every session,\nincluding the ones where you just want to ask a question. And a banner people learn to skip is\nworse than no banner, because it looks like the problem is solved.\n\n**No hooks.** Nothing is added to `settings.json`.\n\n## What the guard catches, and what it does not\n\nIt parses the command out of the tool call with `jq` and walks its words, so it is exact about\nboth halves of the question. **Caught:** `git commit` and `git push` in any form, including\nbehind git's own options (`git -C . commit`, `git -c user.name=x commit`), after another\ncommand (`ls && git commit`), on a later line, and inside a shell wrapper (`sh -c \"git push\"`).\n`git add -A`, `--all`, `-Av` and `git add .` are caught; `git add <named files>` is not,\nbecause that is the ritual.\n\n**Not caught:** a commit a script makes when you run the script, since the hook sees\n`./deploy.sh` and nothing more; a commit written into a heredoc or a file and executed later;\nand any git wrapper of your own under a different name. It is a guard against a session\nreaching for a commit, not against a determined one.\n\nIt needs `jq` on your `PATH`. Without it the hook says so and falls back to matching the raw\npayload, which over-blocks — a `grep` for the phrase gets refused. That is the deliberate\ndirection to fail in: over-blocking costs one message, and a commit you did not make cannot be\ntaken back out of a checkout your other sessions are working in.\n\n## What it writes and where\n\n`~/.claude/hooks/personal-config/commit-guard.sh` and `session-banner.sh`, plus a **merge** into\n`~/.claude/settings.json` — never an overwrite. Existing hooks are preserved; duplicate entries\nare not added. The merge is shown as a diff, confirmed on its own, and the previous file is\nbacked up.\n\n## How to undo it\n\n`personal-config undo` restores the previous `settings.json`. Or remove the `PreToolUse` /\n`SessionStart` entries by hand and delete the scripts.\n"
+    },
+    {
+      "id": "imports",
+      "body": "# How imports are written and ordered\n\n## What this is\n\nA rule in `docs/conventions-<lang>.md` — the per-language code standard an agent reads in full\nbefore writing any code, and the file a reviewer checks a diff against — saying how one file may\nrefer to another. A wrong import style compiles fine and rots slowly, which is why it is written\ndown.\n\n## The options\n\n**No `../`; grouped, blank line between groups.** *Recommended.* `./sibling` is fine; anything\ncontaining `../` is not — use a path alias.\n\n*The defense.* A `../` chain encodes the importing file's position in the tree. Move the file\nand an import breaks that had nothing to do with the move — and the deeper the chain, the less\nany human can tell at a glance what it points at. An alias points at a thing rather than a\nroute to it.\n\n*The strongest argument against it.* Aliases need configuration in the bundler, the typechecker,\nthe test runner and the editor, and when one of those disagrees you get an error that names none\nof them. In a small repo `../lib/x` is honest and works everywhere.\n\n**Grouped and sorted, relative paths allowed.**\n\n*The defense.* You get the readable ordering without the alias configuration.\n\n*The strongest argument against it.* Nothing stops the four-level chains.\n\n## What the formatter probably already does\n\nImport *ordering* is settled by most formatters and by ruff, gofmt and Biome. Where the config\nsettles it, the generated rule says so and the prose stays out of it — a short conventions file\nfor a language with strong tooling is correctly scoped, not missing rules.\n\n## What it writes and where\n\nRule `I1` in `docs/conventions-typescript.md`, `-python.md` and `-swift.md`, tagged *review*.\n\n## How to undo it\n\nDelete the rule, or re-run `setup`.\n"
+    },
+    {
+      "id": "logic-placement",
+      "body": "# Where logic lives once a view or handler grows\n\n## What this is\n\nA rule in `docs/conventions-<lang>.md` — the per-language code standard an agent reads in full\nbefore writing any code, and the file a reviewer checks a diff against — saying where logic\ngoes once a screen or a request handler grows past the trivial. It decides what can be tested\nwithout a network or a browser.\n\n## The options\n\n**Extracted into a named unit, one per file.** *Recommended.* In a React or React Native app:\nextract to a hook when a component has more than two `useState`, any `useEffect` doing real\nwork, or logic another component would want. In Go: SQL lives only in the repository layer, and\nerrors become HTTP status codes in the handler and nowhere else. In Swift: pure logic lives in\na shared core module, away from views. In Python: I/O at the edges, pure functions in the middle.\n\n*The defense.* All four are the same rule in different clothes — **the part you want to test\nshould not be the part that talks to the outside world.** A function that both fetches and\ncomputes cannot be tested without a network, so it does not get tested, so it is where the bugs\nlive.\n\n*The strongest argument against it.* Extracted too early it is pure overhead: a hook used once,\nin a file you now have to open to read the component. The threshold is a guess, and a wrong\nguess in this direction produces an architecture of one-caller abstractions.\n\n**Colocated until it is reused.**\n\n*The defense.* You extract when you have evidence, not when a rule fires. The second caller is\nthe evidence.\n\n*The strongest argument against it.* \"Reused\" never arrives for logic that is hard to reuse\n*because* it is entangled — so the rule quietly protects exactly the code that most needs\nsplitting.\n\n## The qualifier\n\nExtract for a **concept**, not to relocate lines. `useMarketCamera` is a concept;\n`useListingScreenLogic` is a paragraph with a name.\n\n## What it writes and where\n\nRule `L2` in each `docs/conventions-<lang>.md`, tagged *review*.\n\n## How to undo it\n\nDelete the rule, or re-run `setup`.\n"
+    },
+    {
+      "id": "mode",
+      "body": "# One person deciding, or several\n\n## What this is\n\nWhether a decision in this repo can be someone other than the person running the session. It is\nnot about how many people commit — it is about who gets asked.\n\n## The options\n\n**One person — me.** *Recommended for personal repos.*\n\n*The defense.* Everything in the standard was written and measured for one person. Questions go\nto you in chat, in the same turn, batched; answers are recorded in the doc the same turn they\nare given. The teams part of the standard is cut entirely, which removes a whole part from every\nsession's reading.\n\n*The strongest argument against it.* If a second person ever joins, every construct has to move\nat once — and the cut version no longer tells you where. Re-running `setup` restores it, so this\nis cheap to reverse, but it is not free.\n\n**Several people merge code here.**\n\n*The defense.* In a team, a question in a chat log is a question nobody answered. The teams\nmapping moves every construct to where the team can see it: questions become one batched comment\non the item, the board becomes the tracker, the hand-back's three blocks land on items rather\nthan in a transcript, and someone who is not the author walks the runtime pass.\n\n*The strongest argument against it.* It is a whole extra part in every session's context, and\nin a repo where you are in fact the only decider, it adds ceremony that routes your own\nquestions away from the chat where you would actually answer them.\n\n## What it writes and where\n\nSolo cuts Part 12 from the standard copy and writes `none` for the tracker. Team keeps Part 12\nand fills the tracker you name.\n\n## How to undo it\n\nRe-run `setup` with the other answer; the standard copy is stamped and re-rendered.\n"
+    },
+    {
+      "id": "model-routing",
+      "body": "# What a session does when it is running the wrong model\n\n## What this is\n\nTasks get assigned a model on purpose — a board's Model column, a pass-off prompt's\n`**Model: X**` line, a doc that names one. This decides what happens when a session reads such\na task and is not running that model.\n\n## The options\n\n**Delegate to that model, or stop and hand off.** *Recommended.* The check happens first,\nbefore reading the codebase and before planning. If the models match, the session says so in one\nline and carries on. If not, what happens depends on the task: a review or a sweep is delegated\nto a subagent running the assigned model, because its whole output is a verdict or a list and\nthat survives the subagent boundary; a build is handed off — the session stops, writes a\npass-off carrying everything it has already established, and tells you to run it elsewhere.\n\n*The defense.* The assignment is a safety choice, not a preference. The whole point of a Deep\ntier is work whose failure is silent — so a lighter model doing that work produces something\nthat looks fine and is not, which is exactly the outcome the label exists to prevent. \"It turned\nout to be simple\" is a judgement only the assigned model gets to make, because judging it\nrequires doing the work.\n\n*The strongest argument against it.* Every mismatch costs something — a delegated review pays a\nround trip and a second context, a handed-off build pays a session restart — and on a task that\nreally was trivial, that cost buys nothing. The rule accepts the price because \"trivial\" is a\njudgement the assigned model was supposed to make; it is still a real price.\n\n**Say so in one line, then carry on.** The mismatch is noted; the work proceeds.\n\n*The defense.* You keep the information and lose none of the momentum. If you are in the room\nwatching, you can intervene.\n\n*The strongest argument against it.* A line in a transcript you are not reading is not a\nsafeguard. This is very close to having no rule, with extra words.\n\n**No rule.** Skip this if you do not tag tasks with models.\n\n## What it writes and where\n\n`~/.claude/rules/model-routing.md`, which also carries the tier table.\n\n## How to undo it\n\nDelete `~/.claude/rules/model-routing.md`.\n"
+    },
+    {
+      "id": "model-tiers",
+      "body": "# The three model tiers\n\n## What this is\n\nThree names for models you already have access to, so that a task can say which one should run\nit without naming a specific release that will be obsolete in six months.\n\n- **Deep** — the strongest reasoning model you have.\n- **Default** — your everyday model.\n- **Mechanical** — your fastest, cheapest model.\n\n## How to choose which work gets which\n\n**The discriminator is: can the failure be silent?** Not how big or how scary the work feels.\nSizing by fear over-assigns the expensive tier and teaches you to ignore the label.\n\n- **Deep** is for work where a mistake compiles, passes every gate, and is wrong in production:\n  money paths, sync and merge rules, a notification that must never send. Prefer **one narrow\n  Deep review of a short load-bearing path** over a whole Deep phase.\n- **Default** is the right answer for most work — anything where failure is loud. A build\n  break, a red gate, a wrong screen. The gates do that reasoning for you.\n- **Mechanical** is for whole phases that are genuinely mechanical: close-out sweeps, a bounded\n  rename, doc reconciliation. Escalate the moment a gate fails for a non-obvious reason.\n\n## Why the tier also changes the size of the work\n\nA Deep session has roughly half an ordinary session's usable context before it starts\ncompacting. So assigning Deep does not just change who does the work — it means the work has to\nbe cut smaller. That is another reason to prefer one narrow Deep review to a whole Deep phase.\n\n## The argument against having tiers at all\n\nIf you only ever use one model, this is three questions and a table for nothing, and the rule\nthat checks a task's assigned model will never fire. Answer with the same model three times, or\nskip the routing rule — both are reasonable.\n\n## What it writes and where\n\n`~/.claude/rules/model-routing.md` carries the table. Generated boards and pass-off prompts use\nthe Default tier's name in their `**Model:**` headers.\n\n## How to undo it\n\nDelete `~/.claude/rules/model-routing.md`.\n"
+    },
+    {
+      "id": "projects-dir",
+      "body": "# Where your repos live\n\n## What this is\n\nOne directory the wizard scans, one level deep, for git repositories. Nothing outside it is\nread, and nothing is read that is not a git repo.\n\n## What the scan actually does\n\nIt is entirely local and entirely read-only. For each repo it looks at marker files to work out\nwhat it is: `package.json` plus a lockfile for the package manager, `go.mod`, `project.yml` or\n`Package.swift`, `pyproject.toml`, `Cargo.toml`; `.github/workflows` for CI; `migrations/`,\n`supabase/migrations` or `db/migrate` for migrations; existing `HANDOFF.md`, `PASSOFF.md`,\n`docs/incomplete/`, `AGENT-PRACTICES.md`, `CLAUDE.md` or `AGENTS.md`; `git worktree list`; and\nthe origin remote's owner. It shows you a table and you pick which repos to set up.\n\n**Nothing leaves your machine.** No file contents are uploaded, nothing is sent anywhere, and\nno network call is made except the `gh api user` that establishes your GitHub login — and only\nif `gh` is installed.\n\n## Why an existing ledger changes the outcome\n\nIf a repo already has a ledger, a board, or project folders under *any* name, the work profile\nis already chosen and the wizard adopts what is there rather than renaming it. That is the\nstandard's own rule, and it exists because a rename breaks every reference in every other doc.\n\n## The argument against scanning at all\n\nYou may only want one repo set up, and a scan of thirty is noise. Pass `--projects-dir` pointing\nat a directory containing just that repo, or re-run and pick one.\n\n## What it writes and where\n\nNothing. This answer only decides what the wizard looks at.\n\n## How to undo it\n\nNothing to undo.\n"
+    },
+    {
+      "id": "skills",
+      "body": "# The four workflow skills\n\n## What this is\n\nFour skills under `~/.claude/skills/`, each a short document the agent loads when you type its\nname or when the description matches what you asked for.\n\n- **`/close-out`** — the end-of-work ritual: update the record, then post the three hand-back\n  blocks (the next prompt, the runtime entries, the next model).\n- **`/scope`** — open a piece of work properly: ground truth first, then a scope document whose\n  job is to make your decisions cheap, then one batched question.\n- **`/passoff`** — write the next session's first message so it stands alone.\n- **`/handoff`** — read or append to the ledger, including the rules about step numbers.\n\n## The defense\n\nThese are the parts of the working standard that are *rituals* rather than facts — the things\nthat only work if they happen every time. A rule buried on page 40 of a standard is read once;\na skill is invoked by name at the moment it applies. `/close-out` in particular is the one that\nmakes the rest hold: a repo that adopts the documents without the close-out has adopted nothing.\n\n## The strongest argument against it\n\nFour more skills in a list you already scroll past, and their descriptions compete with skills\nyou actually use for the same trigger words. They also duplicate content that is already in the\nstandard, so when you edit the standard they silently go stale — nothing checks that they agree.\n\n## What it writes and where\n\n`~/.claude/skills/<name>/SKILL.md`, one directory each. Existing skills of other names are not\ntouched. If you already have a skill by one of these names, its file is backed up before it is\nreplaced.\n\n## How to undo it\n\nDelete the four directories, or run `personal-config undo` to restore anything overwritten.\n"
+    },
+    {
+      "id": "states",
+      "body": "# What a screen that loads data must render\n\n## What this is\n\nA rule in `docs/conventions-<lang>.md` — the per-language code standard an agent reads in full\nbefore writing any code, and the file a reviewer checks a diff against — saying what a screen that\nloads data must be able to show. It applies to every screen an agent builds, and a reviewer\nchecks it by asking three questions of each.\n\n## The options\n\n**Loading, error and empty — all three, mandatory, through one component.** *Recommended.*\n\n*The defense.* The empty state is the one that gets skipped, and it is the one a new user sees\nfirst — the whole app, on day one, is its empty states. Routing all three through one component\nmeans a screen physically cannot ship with two of them, and it makes \"what does a failure look\nlike here\" a question with one answer rather than one per screen.\n\n*The strongest argument against it.* A shared component ends up with a prop for every variation\nany screen ever needed, and screens that do not fit fight it — so you get the component *plus*\nbespoke handling, which is worse than either alone.\n\n**Required, but each screen writes its own.**\n\n*The defense.* Each screen gets the empty state it actually deserves, which is usually specific\nand often the best copy in the app.\n\n*The strongest argument against it.* Nothing enforces it, so it decays screen by screen, and it\ndecays fastest under deadline — which is when the error states matter most.\n\n## What it writes and where\n\nRule `D2` in `docs/conventions-typescript.md` and `-swift.md`, tagged *review*.\n\n## How to undo it\n\nDelete the rule, or re-run `setup`.\n"
+    },
+    {
+      "id": "test-policy",
+      "body": "# What a change owes in tests\n\n## What this is\n\nA rule in `docs/conventions-<lang>.md` — the per-language code standard an agent reads in full\nbefore writing any code, and the file a reviewer checks a diff against — saying what tests a\nchange owes and where they live. The agent follows it before declaring a change done.\n\n## The options\n\n**Pure logic is tested, in a new file named for the feature.** *Recommended.*\n\n*The defense.* The \"new file\" half is the part that is not obvious: two sessions working in\nparallel that both append to `tests/misc.test.ts` collide in one file, and that is a merge\nconflict in the least interesting place possible. A file per feature also makes the test suite\na map of the features.\n\nThe other half matters more. **Write characterization tests *before* moving logic, not after.**\nA test written after the move proves the new shape works; it says nothing about whether the\nbehaviour survived the move, which is the only thing you actually wanted to know.\n\n*The strongest argument against it.* You get a lot of small files, and \"named for the feature\"\ngoes stale the moment the feature is renamed — so the map is only as good as the last rename.\n\n**Colocated `foo.test.*` beside the source.**\n\n*The defense.* You never wonder where a file's tests are, and deleting a module deletes its\ntests with it.\n\n*The strongest argument against it.* It nudges toward testing every file rather than the logic\nthat matters, and it puts the collision back.\n\n## What it writes and where\n\nRule `X1` in each `docs/conventions-<lang>.md`, tagged *review*.\n\n## How to undo it\n\nDelete the rule, or re-run `setup`.\n"
+    },
+    {
+      "id": "track-mode",
+      "body": "# Committed to the repo, or private to you\n\n## What this is\n\nWhether the ledger, board, standard and router are files the repo contains, or files only you\nsee.\n\n## The guard you cannot turn off\n\nIf the origin remote's owner is not your GitHub login, this question is **not asked** and\nuntracked mode is used. Writing rule files into somebody else's repo is not a thing you should\nhave to remember to decline. Your login comes from `gh api user`, else `git config github.user`,\nelse it asks once and saves the answer.\n\n## The options\n\n**Committed — it is my repo.** *Recommended when you own it.*\n\n*The defense.* These documents are most valuable to the next person to open the repo, and that\nincludes you in four months. A ledger nobody else can see cannot answer \"why is it like this\",\nwhich is the question it exists to answer. Tracked is also what makes a pull request able to\ncite a ledger step.\n\n*The strongest argument against it.* It puts your working process in a public diff, where it\nwill be read by people it was not written for, and it makes every session's scratch notes part\nof the project's permanent record. Some of what belongs in a ledger — what you found confusing,\nwhat you got wrong — is easier to write honestly when it is private.\n\n**Private — git-ignored.**\n\n*The defense.* Right for a course fork, an OSS project, a client repo, or anywhere the\nconventions are not yours to set. You get the whole system with no footprint on someone else's\nproject.\n\n*The strongest argument against it.* It is invisible to every other clone, including your own\non another machine, and it is one `rm -rf` from gone with no backup.\n\n## What it writes and where\n\nTracked: `CLAUDE.md`, `HANDOFF.md`, `PASSOFF.md`, `docs/AGENT-PRACTICES.md`, and\n`.personal-config.json` added to `.gitignore`. Untracked: `CLAUDE.local.md`,\n`AGENT-PRACTICES.local.md`, the same ledger and board, and every one of them added to\n`.git/info/exclude` — **not** `.gitignore`, because that file belongs to the repo.\n\n## How to undo it\n\nDelete the files and remove the lines from `.gitignore` or `.git/info/exclude`.\n"
+    },
+    {
+      "id": "tracker",
+      "body": "# Where items and decisions are visible to the team\n\n## What this is\n\nAsked only in team mode. The place where an item lives when it is not a row in a file — GitHub\nIssues, a Linear project, a Jira board.\n\n## Why it is asked\n\nIn a team, three things change address and all of them need a name for it:\n\n- **A question goes to the decider on the item**, not into a doc and not into a direct message.\n  The work stops there until it is answered. A question written into a document for async review\n  does not get answered.\n- **The board becomes the tracker.** One item per task, carrying the prompt's title, its product\n  reason, its fixed facts and its non-scope list. Lane is a label; \"files it owns\", \"waits on\"\n  and \"decider\" are fields.\n- **The hand-back's three blocks land on items** — the next prompt into the next item, the\n  runtime entries onto this one, the model in the next item's header.\n\nThe ledger does **not** move. It stays a file in the repo, and a pull request links to its step\nrather than replacing it.\n\n## The strongest argument against naming one\n\nIf your team genuinely runs off files in the repo, naming a tracker you do not use writes a\nreference that will rot. `none` is a legitimate answer, and the standard says so: an empty slot\nis information, a token left in place is a bug.\n\n## What it writes and where\n\nFills `{{TRACKER}}` throughout the standard copy's Part 12.\n\n## How to undo it\n\nEdit the standard copy, or re-run `setup`.\n"
+    },
+    {
+      "id": "types",
+      "body": "# How strict the type layer is\n\n## What this is\n\nA rule in `docs/conventions-<lang>.md` — the per-language code standard an agent reads in full\nbefore writing any code, and the file a reviewer checks a diff against — saying how far the type\nsystem may be bypassed. It matters most at the edges — parsed JSON, a third-party library — where\nthe data is least trustworthy.\n\n## The options\n\n**Strict — no escape hatches at a boundary.** *Recommended.*\n\nIn TypeScript: `strict` in one base config, no `any`, no `unknown` in props, no\n`as unknown as`, and string-literal unions rather than `enum`. In Go: no `any` at an API\nboundary, typed string constants for anything crossing a wire or a database. In Python: type\nhints on every public function, checked in CI. In Swift: no force unwraps outside tests.\n\n*The defense.* Every escape hatch is a place where a runtime error was converted into a\ncompile-time success. They cluster at boundaries — exactly where the data is least trustworthy.\n`enum` is banned in TypeScript specifically because it is a runtime value pretending to be a\ntype, with different semantics from every other type-level construct.\n\n*The strongest argument against it.* Third-party libraries ship bad or missing types, and a\nblanket ban means writing an elaborate wrapper to model something you do not control. Sometimes\n`any` plus a comment is the honest answer and the wrapper is the lie.\n\n**Strict, with escape hatches allowed behind a justification comment.**\n\n*The defense.* It keeps the pressure on while admitting the library problem is real, and the\ncomment leaves a searchable record of where the gaps are.\n\n*The strongest argument against it.* \"With a comment\" is a rule that degrades: the comments get\nshorter, then they get copied, then they stop meaning anything.\n\n## What it writes and where\n\nRule `T1` in each `docs/conventions-<lang>.md`, tagged *review*.\n\n## How to undo it\n\nDelete the rule, or re-run `setup`.\n"
+    },
+    {
+      "id": "work-profile",
+      "body": "# How work arrives: a ledger and a board, or project folders\n\n## What this is\n\nTwo shapes for writing work down. Pick by the *shape of the work*, not the size of the repo.\n\n## The options\n\n**A stream of mostly independent items — a ledger and a board.** *Recommended.*\n\n`HANDOFF.md` is what is **true**: environment, settled decisions, a code map, invariants, and a\nnumbered append-only step log. `PASSOFF.md` is what is **next**: a table of items with status,\nmodel, lane and \"files it owns\", plus one standalone prompt per item below it.\n\n*The defense.* Most solo work looks like this — fix a flaky test, add an endpoint, bump a\ndependency. Two files, no ceremony, and the step log gives every piece of work a permanent\naddress (\"HANDOFF 24\") that everything else can cite. The board's \"files it owns\" column is what\nlets several sessions run at once without eating each other's work.\n\n*The strongest argument against it.* It has nowhere to put a decision that needs ratifying\nbefore code. A big effort with real design questions gets crammed into a board row and the\nreasoning ends up in a chat log nobody can find.\n\n**A few big efforts that each span many sessions — project folders.**\n\nOne folder per effort: `SCOPE.md` (options, no decisions) → **you ratify** → `DESIGN.md`\n(decisions, frozen, amended never edited) → `PLAN.md` (phases, done-when, lanes) → **you\napprove** → build → `RUNTIME-PASS.md` → archive.\n\n*The defense.* It puts two explicit gates in front of code, and it separates *what and why*\nfrom *in what order and done when*. For work that touches several subsystems, that separation\nis the difference between a project and a long argument.\n\n*The strongest argument against it.* It is a lot of ceremony for a two-hour task, and a folder\nopened for something small tends to be abandoned half-written — which is worse than a board row,\nbecause a half-written `DESIGN.md` looks authoritative.\n\nThey are not exclusive: a ledger repo opens a folder for the one effort that needs it.\n\n## What it writes and where\n\nLedger: `HANDOFF.md` and `PASSOFF.md` at the repo root. Folders: `docs/incomplete/README.md`\nscaffolding the stages.\n\n## How to undo it\n\nDelete the files. They are documents, not configuration — nothing else depends on them existing.\n"
+    }
+  ]
+}

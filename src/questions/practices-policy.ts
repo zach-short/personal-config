@@ -85,7 +85,7 @@ const COMMIT_POLICY: PracticeArea = {
       },
       { value: 'none', label: 'No rule here', example: 'This repo says nothing about commits' },
     ]),
-    when: () => false,
+    when: { never: true },
   },
   rule: () => null,
   policy: (value) => {
