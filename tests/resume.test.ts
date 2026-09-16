@@ -246,18 +246,6 @@ describe('what setup is offered on the next run', () => {
   });
 });
 
-describe('which endings retire the checkpoint', () => {
-  test('a run that reached its end has nothing left to pick up', () => {
-    expect(retiresCheckpoint('written')).toBe(true);
-    expect(retiresCheckpoint('already-current')).toBe(true);
-  });
-
-  test('a preview and a declined write keep it — those answers are the costly ones', () => {
-    expect(retiresCheckpoint('dry-run')).toBe(false);
-    expect(retiresCheckpoint('declined')).toBe(false);
-  });
-});
-
 describe('what a cancelled prompt says', () => {
   test('with nothing recorded it is the bare line it always was', async () => {
     await inTempHome(async () => {

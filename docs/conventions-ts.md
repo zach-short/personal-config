@@ -57,11 +57,16 @@ a stack trace, and is greppable by one spelling.
 
 *review* · **[OURS]**
 
-`./sibling` and `../lib/x` are fine; a second `../` is not. This tree is four directories deep
-at most, so anything needing two is reaching across a boundary that should be a function call.
+`./sibling` and `../lib/x` are fine; climbing back through a directory you already left, like
+`../../src/lib/x` from inside `src/`, is not — that is reaching across a boundary that should be
+a function call. A file that is one directory deeper than most of its siblings, the way
+`src/doctor/rules/*.ts` sits under `src/doctor/`, genuinely needs `../../lib/x` to reach the same
+`lib/` everything else reaches with one `../`; that second hop is the directory's real depth, not
+a boundary crossed, and is not a violation.
 
 ```ts
 // right: import { stampLine } from '../lib/stamp.ts';
+// right, one level deeper: import type { Finding } from '../../lib/types.ts'; // from src/doctor/rules/
 // wrong: import { stampLine } from '../../src/lib/stamp.ts';
 ```
 
