@@ -12,6 +12,7 @@ import { boardStatus } from './rules/board-status.ts';
 import { ignoredFiles } from './rules/ignored.ts';
 import { placeholders } from './rules/placeholders.ts';
 import { relativeDates } from './rules/relative-dates.ts';
+import { settledSupersession } from './rules/settled-supersession.ts';
 import { stampDrift } from './rules/stamp-drift.ts';
 import { stepNumbers } from './rules/step-numbers.ts';
 import { collectDocs, type Doc } from './scan.ts';
@@ -45,6 +46,10 @@ export async function runDoctorOn(
   const fromCitations = archivedCitations(docs, await archivedInfo(docs));
   const fromIgnore = configured ? await ignoredFiles(root) : [];
 
+  // Not gated on `configured`: R8 guards a decision record, and a repo keeping one has not
+  // necessarily been through this wizard. The git read answers null wherever it cannot apply.
+  const fromSettled = await settledSupersession(root, docs);
+
   return {
     findings: sort([
       ...fromDocs,
@@ -52,6 +57,7 @@ export async function runDoctorOn(
       ...fromStamps,
       ...fromCitations,
       ...fromIgnore,
+      ...fromSettled,
     ]),
     checked: docs.length,
   };

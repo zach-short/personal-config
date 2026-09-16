@@ -126,6 +126,12 @@ whose folder is missing and folders missing from the index; in-tree citations of
 moved to the archive; a generated file whose stamp no longer matches your answers; and personal
 files that git can still see.
 
+One check reads git rather than the files: a line under a `## Settled` heading that your
+uncommitted work *removes or rewrites*, with no supersession stated anywhere in that file's
+diff. Adding an entry is recording a decision and is never flagged; only undoing one is. It is
+silent where it cannot see — a clean tree, a directory that is not a repository, and a ledger
+kept untracked all produce nothing.
+
 ## `passoff`, `handoff` and `archive`
 
 Three commands for the rituals the standard asks for at the start and the end of a piece of

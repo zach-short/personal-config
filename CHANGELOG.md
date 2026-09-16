@@ -3,6 +3,18 @@
 The CLI. The working standard it installs is versioned separately — see
 [`standard/CHANGELOG.md`](standard/CHANGELOG.md).
 
+## Unreleased
+
+### Added
+
+- **`doctor` checks R8: a settled decision is not quietly reversed.** Every other rule reads a
+  file; this one reads `git diff HEAD`, because a quiet reversal is invisible in the file it
+  lands in. A hunk that removes or rewrites a line under a `## Settled` heading is a finding
+  unless the same file's diff states a supersession. Adding an entry under Settled is recording
+  a decision, not reopening one, and is never flagged. It cannot see an untracked ledger, by
+  construction — under the untracked work profile there is no diff of it to read, so R8 stays a
+  reader's rule there.
+
 ## 0.2.0 — 2026-09-16
 
 ### Added

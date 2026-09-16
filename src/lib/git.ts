@@ -96,6 +96,16 @@ export async function trackedReferrers(dir: string, needle: string): Promise<str
   return out === null || out === '' ? [] : out.split('\n').filter(Boolean);
 }
 
+/**
+ * R8's left-hand side: staged and unstaged work against the last commit, which is the change
+ * about to be handed back. `-U0` because the rule asks which lines a hunk touched, not what
+ * surrounds them, and `--relative` so a scan rooted in a subdirectory gets paths it can join to
+ * the docs it has already read. Null on a repo with no commit, where `HEAD` resolves to nothing.
+ */
+export async function diffAgainstHead(dir: string): Promise<string | null> {
+  return git(dir, ['diff', 'HEAD', '-U0', '--relative', '--', '.']);
+}
+
 /** `git mv`, which keeps the rename in history. Only valid inside one repository. */
 export async function gitMove(dir: string, from: string, to: string): Promise<boolean> {
   return (await git(dir, ['mv', from, to])) !== null;
