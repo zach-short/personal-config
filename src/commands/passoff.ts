@@ -12,6 +12,7 @@ import {
   withStatus,
 } from '../lib/board.ts';
 import { today } from '../lib/date.ts';
+import { exists, readText } from '../lib/disk.ts';
 import { numberedSection } from '../lib/markdown.ts';
 import { readDocNames } from '../lib/repo-config.ts';
 import type { Cli } from '../lib/types.ts';
@@ -42,12 +43,11 @@ export async function runPassoff(cli: Cli): Promise<number> {
 async function loadBoard(root: string): Promise<Loaded | string> {
   const { board: name } = await readDocNames(root);
   const path = join(root, name);
-  const file = Bun.file(path);
-  if (!(await file.exists())) {
+  if (!(await exists(path))) {
     return `${short(path)} is not there — this repo keeps no board, or \`personal-config setup\` has not run here.`;
   }
 
-  const text = await file.text();
+  const text = await readText(path);
   const board = parseBoard(text);
   if (!board || board.rows.length === 0) {
     return `${short(path)} has no board table — §2.1 opens it with a \`| # | Task | Status | … |\` header.`;

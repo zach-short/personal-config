@@ -19,3 +19,47 @@ jobs:
       - run: bun test
       # The repo has to pass its own doctor, on itself and on the examples it ships.
       - run: bun run doctor . examples
+
+  # The gates above all run under bun, so they cannot see the one thing a published package has
+  # to do: run on a machine that has only Node. Packing and installing the tarball is the only
+  # check that exercises the real bin, the real `files` list and the real `repoRoot()` layout.
+  pack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.9
+      - run: bun install --frozen-lockfile
+      # `prepack` builds dist/, so this also proves the bundle builds.
+      - run: npm pack
+      - run: tar -tzf personal-config-*.tgz | grep -qx 'package/dist/cli.js'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tarball
+          path: personal-config-*.tgz
+
+  node-install:
+    needs: pack
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The floor claimed by `engines.node`, and the two LTS lines above it.
+        node: ['20', '22', '24']
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: tarball
+      # No checkout and no setup-bun in this job on purpose: `command -v bun` must find nothing,
+      # or the run below proves only that bun was available, which is the bug this job exists for.
+      - run: if command -v bun; then echo "bun is on PATH — this job proves nothing"; exit 1; fi
+      - run: npm install -g ./personal-config-*.tgz
+      - run: personal-config --version
+      - run: personal-config help
+      # doctor reads standard/, templates/ and catalog.json through repoRoot(); a wrong root
+      # resolves into node_modules/ and fails here rather than in a user's terminal.
+      - run: mkdir -p probe && cd probe && personal-config doctor .

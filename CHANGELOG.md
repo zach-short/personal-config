@@ -3,6 +3,43 @@
 The CLI. The working standard it installs is versioned separately — see
 [`standard/CHANGELOG.md`](standard/CHANGELOG.md).
 
+## Unreleased
+
+### Changed
+
+- **It runs on Node now, so `npx personal-config` works without Bun installed.** The bin was
+  `src/cli.ts` behind a `#!/usr/bin/env bun` shebang, which made npm a working *installer* and
+  Bun a hard *runtime* requirement: `npx personal-config@0.2.2 --version` printed the version on
+  a machine that happened to have Bun on its `PATH`, and died with `env: bun: No such file or
+  directory` on one that did not. The package now ships `dist/cli.js`, a `bun build
+  --target=node` bundle with a `node` shebang, and `engines` asks for `node >= 20` instead of
+  `bun >= 1.2.0`.
+
+  Shipping the TypeScript and letting Node strip the types is not an option and never was: Node
+  refuses to strip types under `node_modules` — `ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING` —
+  which is exactly where an installed package lives. Pointing Node at a *checkout* does work,
+  which is what makes it easy to conclude the opposite.
+
+  Bun is still the dev runtime. `bun test`, `bun run typecheck`, `bun run lint` and
+  `bun run build` are unchanged, and `bunx personal-config` still works.
+
+- **All 48 `Bun.*` calls became `node:` builtins**, behind one new module, `src/lib/disk.ts`, for
+  the file reads and writes. Two behaviours were preserved deliberately rather than inherited by
+  accident: `exists()` reports a *regular file*, because `Bun.file().exists()` answered `false`
+  for a directory and `discover.ts` and `isGitRepo` are both built on that; and `writeText()`
+  creates parent directories, because `Bun.write` did.
+
+- **`repoRoot()` walks up to the nearest `package.json`** instead of counting two `..` segments
+  from its own location. The bundle sits at `dist/cli.js` and a checkout runs from `src/lib/`, so
+  a fixed count is wrong in one of them — and wrong resolved into `node_modules/`, which would
+  have surfaced as a missing profile or template long after startup rather than as a crash.
+
+### Added
+
+- **CI packs the tarball and runs it on Node 20, 22 and 24 with no Bun on `PATH`.** Every gate
+  before this ran under Bun, so none of them could see the one thing a published package has to
+  do. The job fails if `bun` is findable, because a pass under Bun would prove nothing.
+
 ## 0.2.2 — 2026-09-16
 
 ### Fixed

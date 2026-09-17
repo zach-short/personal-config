@@ -1,5 +1,6 @@
 import { mkdir, readdir } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
+import { copyTo, exists, readJson, writeText } from './disk.ts';
 import { backupsDir } from './paths.ts';
 
 export type BackupEntry = { original: string; stored: string };
@@ -20,16 +21,15 @@ export async function backupFiles(paths: string[], stamp = timestampDir()): Prom
   const entries: BackupEntry[] = [];
 
   for (const [index, original] of paths.entries()) {
-    if (!(await Bun.file(original).exists())) continue;
+    if (!(await exists(original))) continue;
     const stored = join(dir, 'files', `${index}-${original.replaceAll('/', '_')}`);
-    await mkdir(dirname(stored), { recursive: true });
-    await Bun.write(stored, Bun.file(original));
+    await copyTo(original, stored);
     entries.push({ original, stored });
   }
 
   const manifest: Manifest = { timestamp: stamp, entries };
   await mkdir(dir, { recursive: true });
-  await Bun.write(join(dir, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
+  await writeText(join(dir, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
   return manifest;
 }
 
@@ -37,16 +37,15 @@ export async function latestManifest(): Promise<Manifest | null> {
   const dirs = await readdir(backupsDir()).catch(() => []);
   const newest = dirs.sort().at(-1);
   if (!newest) return null;
-  const file = Bun.file(join(backupsDir(), newest, 'manifest.json'));
-  return (await file.exists()) ? ((await file.json()) as Manifest) : null;
+  const path = join(backupsDir(), newest, 'manifest.json');
+  return (await exists(path)) ? ((await readJson(path)) as Manifest) : null;
 }
 
 export async function restore(manifest: Manifest): Promise<string[]> {
   const restored: string[] = [];
   for (const entry of manifest.entries) {
-    if (!(await Bun.file(entry.stored).exists())) continue;
-    await mkdir(dirname(entry.original), { recursive: true });
-    await Bun.write(entry.original, Bun.file(entry.stored));
+    if (!(await exists(entry.stored))) continue;
+    await copyTo(entry.stored, entry.original);
     restored.push(entry.original);
   }
   return restored;

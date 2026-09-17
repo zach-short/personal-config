@@ -1,7 +1,7 @@
 import { readdir } from 'node:fs/promises';
 import { join } from 'node:path';
-
 import { configHash, loadConfig } from '../lib/config.ts';
+import { exists } from '../lib/disk.ts';
 import { expandHome } from '../lib/paths.ts';
 import type { Cli, Finding } from '../lib/types.ts';
 import { standardVersion } from '../render/standard.ts';
@@ -41,7 +41,7 @@ export async function runDoctorOn(
   // Drift and ignore-coverage are only meaningful in a repo this tool actually configured.
   // Without a `.personal-config.json` there is no config for a stamp to have drifted from,
   // and a `PART0-PROMPT.md` sitting in, say, a docs folder is not a personal file at all.
-  const configured = await Bun.file(join(root, '.personal-config.json')).exists();
+  const configured = await exists(join(root, '.personal-config.json'));
   const fromStamps = configured ? docs.flatMap((doc) => stampDrift(doc, expectation)) : [];
   const fromCitations = archivedCitations(docs, await archivedInfo(docs));
   const fromIgnore = configured ? await ignoredFiles(root) : [];

@@ -1,7 +1,6 @@
-import { mkdir } from 'node:fs/promises';
-import { dirname } from 'node:path';
 import { backupFiles, type Manifest } from './backup.ts';
 import { diffSummary } from './diff.ts';
+import { exists, readText, writeText } from './disk.ts';
 import { isOurs } from './stamp.ts';
 import type { PlannedFile } from './types.ts';
 
@@ -21,8 +20,7 @@ export async function resolvePlan(files: PlannedFile[]): Promise<PlannedChange[]
 }
 
 async function resolveOne(file: PlannedFile): Promise<PlannedChange> {
-  const handle = Bun.file(file.path);
-  const before = (await handle.exists()) ? await handle.text() : '';
+  const before = (await exists(file.path)) ? await readText(file.path) : '';
   const guard = stampGuard(file, before);
   const after = guard === 'none' ? applyStrategy(file, before) : before;
   return { file, before, after, guard, summary: diffSummary(before, after) };
@@ -108,8 +106,7 @@ export async function commitPlan(changes: PlannedChange[]): Promise<WriteResult>
   const manifest = overwritten.length > 0 ? await backupFiles(overwritten) : null;
 
   for (const change of real) {
-    await mkdir(dirname(change.file.path), { recursive: true });
-    await Bun.write(change.file.path, change.after);
+    await writeText(change.file.path, change.after);
   }
 
   return {

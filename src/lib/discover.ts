@@ -1,5 +1,6 @@
 import { readdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
+import { exists as isFile } from './disk.ts';
 import { isGitRepo, ownerFromRemote, remoteUrl, worktreeCount } from './git.ts';
 import { expandHome } from './paths.ts';
 import { type DocNames, readDocNames } from './repo-config.ts';
@@ -121,8 +122,8 @@ async function detectPresent(path: string, names: string[]): Promise<string[]> {
 }
 
 async function exists(path: string): Promise<boolean> {
-  if (await Bun.file(path).exists()) return true;
-  // Bun.file().exists() is false for directories, so probe for a directory separately.
+  if (await isFile(path)) return true;
+  // `isFile` is false for a directory, so probe for one separately.
   return readdir(path)
     .then(() => true)
     .catch(() => false);

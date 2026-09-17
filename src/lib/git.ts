@@ -1,20 +1,30 @@
+import { execFile } from 'node:child_process';
 import { join } from 'node:path';
+import { promisify } from 'node:util';
+import { exists } from './disk.ts';
+
+const run = promisify(execFile);
+
+/**
+ * `maxBuffer` well above the 1 MB default: `trackedReferrers` runs `git grep` over a whole repo,
+ * and overrunning the buffer rejects — which this function turns into `null`, i.e. "no hits" in
+ * every caller. A silent wrong answer on big repos only, so it is set once, here.
+ */
+const MAX_OUTPUT = 64 * 1024 * 1024;
 
 /** Every git read is best-effort: a directory that is not a repo must not crash a scan. */
 async function git(cwd: string, args: string[]): Promise<string | null> {
   try {
-    const proc = Bun.spawn(['git', ...args], { cwd, stdout: 'pipe', stderr: 'ignore' });
-    const out = await new Response(proc.stdout).text();
-    return (await proc.exited) === 0 ? out.trim() : null;
+    const { stdout } = await run('git', args, { cwd, maxBuffer: MAX_OUTPUT });
+    return stdout.trim();
   } catch {
     return null;
   }
 }
 
+/** A worktree's `.git` is a file rather than a directory, so both spellings count. */
 export async function isGitRepo(dir: string): Promise<boolean> {
-  return await Bun.file(join(dir, '.git', 'HEAD'))
-    .exists()
-    .then((hit) => hit || Bun.file(join(dir, '.git')).exists());
+  return (await exists(join(dir, '.git', 'HEAD'))) || (await exists(join(dir, '.git')));
 }
 
 export async function remoteUrl(dir: string): Promise<string | null> {
@@ -39,14 +49,11 @@ export async function worktreeCount(dir: string): Promise<number> {
  */
 export async function githubLogin(): Promise<string | null> {
   try {
-    const proc = Bun.spawn(['gh', 'api', 'user', '--jq', '.login'], {
-      stdout: 'pipe',
-      stderr: 'ignore',
-    });
-    const out = (await new Response(proc.stdout).text()).trim();
-    if ((await proc.exited) === 0 && out) return out;
+    const { stdout } = await run('gh', ['api', 'user', '--jq', '.login']);
+    const out = stdout.trim();
+    if (out) return out;
   } catch {
-    // gh is not installed; fall through to git config.
+    // gh is not installed, or nobody is signed in; fall through to git config.
   }
   return git(process.cwd(), ['config', 'github.user']);
 }

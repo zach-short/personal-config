@@ -1,4 +1,5 @@
 import { join } from 'node:path';
+import { exists, readText } from './disk.ts';
 import { repoRoot } from './paths.ts';
 
 /**
@@ -11,9 +12,9 @@ export function fill(text: string, vars: Record<string, string>): string {
 }
 
 export async function template(name: string): Promise<string> {
-  const file = Bun.file(join(repoRoot(), 'templates', name));
-  if (!(await file.exists())) throw new Error(`Missing template: templates/${name}`);
-  return file.text();
+  const path = join(repoRoot(), 'templates', name);
+  if (!(await exists(path))) throw new Error(`Missing template: templates/${name}`);
+  return readText(path);
 }
 
 export async function filledTemplate(

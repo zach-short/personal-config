@@ -13,9 +13,10 @@
   },
   "type": "module",
   "bin": {
-    "personal-config": "src/cli.ts"
+    "personal-config": "dist/cli.js"
   },
   "files": [
+    "dist",
     "src",
     "catalog.json",
     "standard",
@@ -24,6 +25,8 @@
     "docs"
   ],
   "scripts": {
+    "build": "bun build src/cli.ts --target=node --packages=external --outfile dist/cli.js",
+    "prepack": "bun run build",
     "setup": "bun run src/cli.ts setup",
     "catalog": "bun run src/cli.ts catalog",
     "doctor": "bun run src/cli.ts doctor",
@@ -43,6 +46,6 @@
     "typescript": "5.9.2"
   },
   "engines": {
-    "bun": ">=1.2.0"
+    "node": ">=20"
   }
 }

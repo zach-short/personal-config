@@ -1,4 +1,5 @@
 import { basename, resolve } from 'node:path';
+import { readText } from '../lib/disk.ts';
 import { isGitRepo } from '../lib/git.ts';
 import { fillWorktree, recipeBlocks, UNFILLED } from '../lib/recipe.ts';
 import { readStandardPath, readWorktreePath } from '../lib/repo-config.ts';
@@ -57,9 +58,7 @@ async function findStandard(root: string): Promise<Found> {
   }
 
   const path = resolve(root, relative);
-  const text = await Bun.file(path)
-    .text()
-    .catch(() => null);
+  const text = await readText(path).catch(() => null);
   if (text === null) {
     return {
       ok: false,

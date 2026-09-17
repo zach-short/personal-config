@@ -1,6 +1,7 @@
 import { stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { today } from '../lib/date.ts';
+import { exists, readText } from '../lib/disk.ts';
 import { currentBranch } from '../lib/git.ts';
 import {
   duplicateSteps,
@@ -30,10 +31,9 @@ export async function runHandoff(cli: Cli): Promise<number> {
   const root = process.cwd();
   const { ledger } = await readDocNames(root);
   const path = join(root, ledger);
-  const file = Bun.file(path);
-  if (!(await file.exists())) return refuse(noLedger(path));
+  if (!(await exists(path))) return refuse(noLedger(path));
 
-  const steps = ledgerSteps(await file.text());
+  const steps = ledgerSteps(await readText(path));
   await report(root, path, steps);
   return 0;
 }

@@ -1,4 +1,5 @@
 import { join } from 'node:path';
+import { readText } from '../lib/disk.ts';
 import { claudeDir, claudeSettingsFile, repoRoot } from '../lib/paths.ts';
 import { template } from '../lib/template.ts';
 import type { PlannedFile } from '../lib/types.ts';
@@ -32,7 +33,7 @@ async function scriptFile(
   name: string,
   label: string,
 ): Promise<PlannedFile> {
-  const source = await Bun.file(join(repoRoot(), 'templates', 'hooks', name)).text();
+  const source = await readText(join(repoRoot(), 'templates', 'hooks', name));
   return planned(ctx, join(HOOKS_DIR, name), label, source, { extension: 'sh' });
 }
 

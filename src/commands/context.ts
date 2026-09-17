@@ -1,4 +1,5 @@
 import { basename } from 'node:path';
+import { readText } from '../lib/disk.ts';
 import { claudeProjectsDir } from '../lib/paths.ts';
 import { contextSize, findBySentinel, transcripts } from '../lib/transcript.ts';
 import type { Cli } from '../lib/types.ts';
@@ -32,7 +33,7 @@ export async function runContext(cli: Cli): Promise<number> {
 }
 
 async function report(path: string): Promise<number> {
-  const size = contextSize(await Bun.file(path).text());
+  const size = contextSize(await readText(path));
   if (size === null) return refuse(`${basename(path)}: no usage records yet`);
   say(`${basename(path)}  context: ${commas(size)} tokens`);
   return 0;

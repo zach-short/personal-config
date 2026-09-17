@@ -1,5 +1,6 @@
 import { readdir, stat } from 'node:fs/promises';
 import { join } from 'node:path';
+import { readText } from './disk.ts';
 
 /**
  * Reading the harness's own session transcripts, which is the only way an agent can learn its
@@ -34,9 +35,7 @@ export async function findBySentinel(
   sentinel: string,
 ): Promise<string | null> {
   for (const path of files) {
-    const text = await Bun.file(path)
-      .text()
-      .catch(() => '');
+    const text = await readText(path).catch(() => '');
     if (text.includes(sentinel)) return path;
   }
   return null;

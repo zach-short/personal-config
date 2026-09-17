@@ -2,6 +2,7 @@ import { mkdir, readdir, rename, stat } from 'node:fs/promises';
 import { dirname, join, relative } from 'node:path';
 import { confirmWrite } from '../lib/ask.ts';
 import { today } from '../lib/date.ts';
+import { readText } from '../lib/disk.ts';
 import {
   gitMove,
   isGitRepo,
@@ -180,9 +181,7 @@ async function topicOf(target: Target): Promise<string> {
       : ['SCOPE.md', 'README.md', 'DESIGN.md'].map((name) => join(target.path, name));
 
   for (const path of candidates) {
-    const text = await Bun.file(path)
-      .text()
-      .catch(() => '');
+    const text = await readText(path).catch(() => '');
     const heading = text.split('\n').find((line) => line.startsWith('# '));
     if (heading) return heading.slice(2).trim();
   }
@@ -414,7 +413,7 @@ async function indexEdits(root: string, plan: Plan): Promise<PlannedFile[]> {
 /** Step 4: topic, what it was, last commit, date verified. */
 async function archiveIndexEdit(plan: Plan): Promise<PlannedFile[]> {
   const path = join(plan.archiveHome, 'INDEX.md');
-  const text = await Bun.file(path).text();
+  const text = await readText(path);
   const slash = plan.target.files.length === 0 ? '' : '/';
   if (text.includes(`**${plan.target.name}${slash}**`)) return [];
 
@@ -443,9 +442,7 @@ function withIndexLine(text: string, entry: string): string {
  */
 async function docsIndexEdit(root: string, plan: Plan): Promise<PlannedFile[]> {
   const path = join(root, 'docs', 'README.md');
-  const text = await Bun.file(path)
-    .text()
-    .catch(() => null);
+  const text = await readText(path).catch(() => null);
   if (text === null) return [];
 
   const updated = withDocsNote(text, plan);

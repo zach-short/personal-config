@@ -1,4 +1,4 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 import { runArchive } from './commands/archive.ts';
 import { runCatalog } from './commands/catalog.ts';
 import { runContext } from './commands/context.ts';
@@ -42,7 +42,7 @@ profile you ask for. Every run previews the whole file tree before writing, back
 overwrites, and can be undone.`;
 
 async function main(): Promise<number> {
-  const cli = parseCli(Bun.argv.slice(2));
+  const cli = parseCli(process.argv.slice(2));
 
   if (cli.command === 'version') {
     console.log(await version());

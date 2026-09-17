@@ -1,5 +1,6 @@
 import { join } from 'node:path';
 import * as p from '@clack/prompts';
+import { exists, readText } from './disk.ts';
 import { repoRoot } from './paths.ts';
 import { answerTape, hasCheckpoint, type ResumeEntry } from './resume.ts';
 import type { AnswerValue, Question } from './types.ts';
@@ -183,9 +184,9 @@ function wantsBack(answer: unknown): boolean {
 }
 
 export async function readMore(id: string): Promise<string> {
-  const file = Bun.file(join(repoRoot(), 'docs', 'choices', `${id}.md`));
-  if (!(await file.exists())) return `No long form written yet for "${id}".`;
-  return (await file.text()).trim();
+  const path = join(repoRoot(), 'docs', 'choices', `${id}.md`);
+  if (!(await exists(path))) return `No long form written yet for "${id}".`;
+  return (await readText(path)).trim();
 }
 
 function unwrap<T>(value: T | symbol): T {

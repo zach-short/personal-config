@@ -1,5 +1,7 @@
+import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import { ALL_QUESTIONS, readMoreIds } from '../questions/index.ts';
+import { exists, readText } from './disk.ts';
 import { repoRoot } from './paths.ts';
 import type { Catalog, CatalogChoice, Question } from './types.ts';
 import { version } from './version.ts';
@@ -51,9 +53,8 @@ async function readChoices(): Promise<CatalogChoice[]> {
 
 async function readChoice(id: string): Promise<CatalogChoice> {
   const path = join(repoRoot(), 'docs', 'choices', `${id}.md`);
-  const file = Bun.file(path);
-  if (!(await file.exists())) throw new Error(`No long form for "${id}" — expected ${path}`);
-  return { id, body: await file.text() };
+  if (!(await exists(path))) throw new Error(`No long form for "${id}" — expected ${path}`);
+  return { id, body: await readText(path) };
 }
 
 /**
@@ -65,6 +66,6 @@ async function catalogVersion(
   choices: CatalogChoice[],
 ): Promise<string> {
   const stable = JSON.stringify({ questions, choices });
-  const digest = new Bun.CryptoHasher('sha256').update(stable).digest('hex');
+  const digest = createHash('sha256').update(stable).digest('hex');
   return `${await version()}+${digest.slice(0, 8)}`;
 }

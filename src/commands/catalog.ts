@@ -1,4 +1,5 @@
 import { buildCatalog, catalogPath, serializeCatalog } from '../lib/catalog.ts';
+import { writeText } from '../lib/disk.ts';
 import { say, short } from '../lib/ui.ts';
 
 /**
@@ -8,7 +9,7 @@ import { say, short } from '../lib/ui.ts';
 export async function runCatalog(): Promise<number> {
   const catalog = await buildCatalog();
   const path = catalogPath();
-  await Bun.write(path, serializeCatalog(catalog));
+  await writeText(path, serializeCatalog(catalog));
 
   const counts = countByPhase(catalog);
   say(`Wrote ${short(path)} — ${catalog.catalogVersion}`);

@@ -1,3 +1,4 @@
+import { spawn } from 'node:child_process';
 import * as p from '@clack/prompts';
 import {
   cancelMessage,
@@ -336,14 +337,28 @@ async function copyPart0(changes: PlannedChange[]): Promise<void> {
   const part0 = changes.find((c) => c.file.path.endsWith('PART0-PROMPT.md'));
   if (!part0) return;
   try {
-    const proc = Bun.spawn(['pbcopy'], { stdin: 'pipe' });
-    proc.stdin.write(part0.after);
-    await proc.stdin.end();
-    await proc.exited;
+    await toClipboard(part0.after);
     say(
       `\n${short(part0.file.path)} is on your clipboard — paste it into a fresh session in that repo.`,
     );
   } catch {
     say(`\nPaste ${short(part0.file.path)} into a fresh session in that repo.`);
   }
+}
+
+/**
+ * Rejects rather than hanging when `pbcopy` is absent, which is every non-macOS machine: a
+ * missing binary surfaces as an `error` event, not a throw from `spawn`, so the caller's
+ * `try/catch` only sees it because this waits on both events.
+ */
+async function toClipboard(text: string): Promise<void> {
+  const proc = spawn('pbcopy', { stdio: ['pipe', 'ignore', 'ignore'] });
+  const finished = new Promise<void>((resolve, reject) => {
+    proc.on('error', reject);
+    proc.on('close', (code) =>
+      code === 0 ? resolve() : reject(new Error(`pbcopy exited ${code}`)),
+    );
+  });
+  proc.stdin?.end(text);
+  await finished;
 }

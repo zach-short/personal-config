@@ -1,4 +1,5 @@
 import { join } from 'node:path';
+import { exists, readJson } from './disk.ts';
 
 /** The ledger and board filenames for one repo. */
 export type DocNames = { ledger: string; board: string };
@@ -51,9 +52,9 @@ export async function readArchiveHome(repoDir: string): Promise<string | null> {
 
 /** One read of the file every reader here shares, so they cannot disagree about its shape. */
 async function readRepoJson(repoDir: string): Promise<unknown> {
-  const file = Bun.file(join(repoDir, '.personal-config.json'));
-  if (!(await file.exists())) return null;
-  return file.json().catch(() => null);
+  const path = join(repoDir, '.personal-config.json');
+  if (!(await exists(path))) return null;
+  return readJson(path).catch(() => null);
 }
 
 /** `NOTES.md` is cited as "NOTES 12", the way the default is cited as "HANDOFF 24". */

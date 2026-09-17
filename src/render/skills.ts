@@ -1,4 +1,5 @@
 import { join } from 'node:path';
+import { readText } from '../lib/disk.ts';
 import { claudeSkillsDir, repoRoot } from '../lib/paths.ts';
 import { stampLine } from '../lib/stamp.ts';
 import type { PlannedFile } from '../lib/types.ts';
@@ -27,7 +28,7 @@ function selected(ctx: RenderContext): string[] {
 }
 
 async function renderSkill(ctx: RenderContext, name: string): Promise<PlannedFile> {
-  const source = await Bun.file(join(repoRoot(), 'templates', 'skills', `${name}.md`)).text();
+  const source = await readText(join(repoRoot(), 'templates', 'skills', `${name}.md`));
   return planned(
     ctx,
     join(claudeSkillsDir(), name, 'SKILL.md'),

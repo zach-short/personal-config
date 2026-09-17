@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { today } from './date.ts';
+import { exists, readJson, writeText } from './disk.ts';
 import { configDir } from './paths.ts';
 import type { AnswerValue } from './types.ts';
 import { version } from './version.ts';
@@ -35,10 +36,10 @@ export function checkpointFile(): string {
  * than a question asked twice.
  */
 export async function readCheckpoint(): Promise<ResumeOffer> {
-  const file = Bun.file(checkpointFile());
-  if (!(await file.exists())) return { kind: 'none' };
+  const path = checkpointFile();
+  if (!(await exists(path))) return { kind: 'none' };
 
-  const checkpoint = parseCheckpoint(await file.json().catch(() => null));
+  const checkpoint = parseCheckpoint(await readJson(path).catch(() => null));
   if (checkpoint === null || checkpoint.entries.length === 0) return { kind: 'none' };
   if (checkpoint.version !== (await version())) {
     return { kind: 'stale', version: checkpoint.version };
@@ -55,7 +56,7 @@ export async function writeCheckpoint(entries: ResumeEntry[]): Promise<void> {
   const checkpoint: Checkpoint = { version: await version(), date: today(), entries };
   try {
     await mkdir(configDir(), { recursive: true });
-    await Bun.write(checkpointFile(), `${JSON.stringify(checkpoint, null, 2)}\n`);
+    await writeText(checkpointFile(), `${JSON.stringify(checkpoint, null, 2)}\n`);
   } catch {
     // Nothing to report it to — the caller is between two questions and the run goes on.
   }

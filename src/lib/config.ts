@@ -1,4 +1,6 @@
+import { createHash } from 'node:crypto';
 import { join } from 'node:path';
+import { exists, readJson as readJsonFile } from './disk.ts';
 import { configFile, repoRoot } from './paths.ts';
 import { loadProfileFrom } from './profile-source.ts';
 import type { Answers, Cli, Config } from './types.ts';
@@ -47,9 +49,8 @@ async function readProfile(name: string): Promise<Partial<Config>> {
 }
 
 async function readJson(path: string): Promise<Partial<Config>> {
-  const file = Bun.file(path);
-  if (!(await file.exists())) return {};
-  return (await file.json()) as Partial<Config>;
+  if (!(await exists(path))) return {};
+  return (await readJsonFile(path)) as Partial<Config>;
 }
 
 function cliLayer(cli: Cli): Partial<Config> {
@@ -160,6 +161,6 @@ export async function configHash(config: Config): Promise<string> {
     answers: hashedAnswers(config.answers),
     archiveHome: config.archiveHome,
   });
-  const digest = new Bun.CryptoHasher('sha256').update(stable).digest('hex');
+  const digest = createHash('sha256').update(stable).digest('hex');
   return digest.slice(0, 8);
 }

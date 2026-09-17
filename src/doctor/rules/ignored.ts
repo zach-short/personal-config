@@ -1,4 +1,5 @@
 import { join } from 'node:path';
+import { exists, readText } from '../../lib/disk.ts';
 import type { Finding } from '../../lib/types.ts';
 
 const PERSONAL = ['.personal-config.json', 'PART0-PROMPT.md'];
@@ -13,7 +14,7 @@ export async function ignoredFiles(repoRoot: string, extra: string[] = []): Prom
   const wanted = [...PERSONAL, ...extra];
 
   const present = await Promise.all(
-    wanted.map(async (name) => ((await Bun.file(join(repoRoot, name)).exists()) ? name : null)),
+    wanted.map(async (name) => ((await exists(join(repoRoot, name))) ? name : null)),
   );
 
   return present
@@ -32,7 +33,7 @@ export async function ignoredFiles(repoRoot: string, extra: string[] = []): Prom
 async function readBoth(repoRoot: string): Promise<string> {
   const files = [join(repoRoot, '.gitignore'), join(repoRoot, '.git', 'info', 'exclude')];
   const texts = await Promise.all(
-    files.map(async (f) => ((await Bun.file(f).exists()) ? Bun.file(f).text() : '')),
+    files.map(async (f) => ((await exists(f)) ? readText(f) : '')),
   );
   return texts.join('\n');
 }

@@ -1,4 +1,5 @@
 import { join } from 'node:path';
+import { exists, readText } from '../lib/disk.ts';
 import { repoRoot } from '../lib/paths.ts';
 import { fill } from '../lib/template.ts';
 import type { PlannedFile } from '../lib/types.ts';
@@ -6,12 +7,12 @@ import { PRACTICE_AREAS } from '../questions/index.ts';
 import { answer, planned, type RenderContext, standardPath } from './context.ts';
 
 export async function standardVersion(): Promise<string> {
-  const file = Bun.file(join(repoRoot(), 'standard', 'VERSION'));
-  return (await file.exists()) ? (await file.text()).trim() : '0.0.0';
+  const path = join(repoRoot(), 'standard', 'VERSION');
+  return (await exists(path)) ? (await readText(path)).trim() : '0.0.0';
 }
 
 async function boilerplate(): Promise<string> {
-  return Bun.file(join(repoRoot(), 'standard', 'AGENT-PRACTICES.boilerplate.md')).text();
+  return readText(join(repoRoot(), 'standard', 'AGENT-PRACTICES.boilerplate.md'));
 }
 
 /**

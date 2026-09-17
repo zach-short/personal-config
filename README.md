@@ -19,15 +19,15 @@ writes the first draft of them, correctly, for your repo.
 
 ## Requirements
 
-[Bun](https://bun.sh) 1.2 or newer. That is all — Bun runs the TypeScript directly, so there is
-no build step.
+[Node](https://nodejs.org) 20 or newer. Nothing else — the published package is a bundle, so
+npm, pnpm and yarn all work and Bun is not needed to run it.
 
 ```bash
-bunx personal-config setup
+npx personal-config setup
 ```
 
-`bunx`, not `npx` — the bin is TypeScript, and only Bun runs that directly. Or from a clone,
-which is also how you run this repo's own tests and doctor:
+`bunx personal-config setup` works the same way if you prefer Bun. Or from a clone, which is
+also how you run this repo's own tests and doctor:
 
 ```bash
 git clone https://github.com/zach-short/personal-config
@@ -36,7 +36,9 @@ bun install
 bun run setup
 ```
 
-Optionally `bun link` to get `personal-config` on your `PATH`.
+The clone is the one place Bun is required: it is the dev runtime, and `bun test`,
+`bun run typecheck` and `bun run build` all go through it. Optionally `bun link` to get
+`personal-config` on your `PATH`.
 
 ## What it asks
 

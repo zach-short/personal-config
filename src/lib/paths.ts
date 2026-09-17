@@ -1,5 +1,7 @@
+import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 /**
  * `$HOME` wins over `os.homedir()`, which is what a POSIX CLI is expected to do — and it is
@@ -49,9 +51,26 @@ export function claudeSettingsFile(): string {
   return join(claudeDir(), 'settings.json');
 }
 
-/** The directory this CLI was installed into — where `standard/` and `templates/` live. */
+/**
+ * The directory this CLI was installed into — where `standard/` and `templates/` live.
+ *
+ * Found by walking up to the nearest `package.json` rather than by counting `..` segments,
+ * because the two layouts sit at different depths: a checkout runs this file from `src/lib/`,
+ * and the published bin is one bundled file at `dist/cli.js`. A fixed count is wrong in one of
+ * them, and wrong here resolves to `node_modules/` — which surfaces much later as a missing
+ * profile or template rather than as a crash at startup.
+ *
+ * `import.meta.url` rather than `import.meta.dir`: the latter is Bun's, and this runs on Node.
+ */
 export function repoRoot(): string {
-  return resolve(import.meta.dir, '..', '..');
+  const start = dirname(fileURLToPath(import.meta.url));
+  let dir = start;
+  while (!existsSync(join(dir, 'package.json'))) {
+    const parent = dirname(dir);
+    if (parent === dir) throw new Error(`No package.json above ${start}`);
+    dir = parent;
+  }
+  return dir;
 }
 
 /**

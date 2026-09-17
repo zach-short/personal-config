@@ -19,3 +19,6 @@ tests/fixtures/
 !templates/CLAUDE.local.md
 !templates/skills/handoff.md
 !templates/skills/passoff.md
+
+# The published bundle — built by `bun run build`, never committed.
+dist/

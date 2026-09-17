@@ -1,4 +1,5 @@
 import { join } from 'node:path';
+import { exists, readJson } from './disk.ts';
 import { expandHome, repoRoot } from './paths.ts';
 import type { Config } from './types.ts';
 
@@ -34,9 +35,8 @@ export async function loadProfileFrom(value: string): Promise<Partial<Config>> {
 }
 
 async function readProfileFile(path: string): Promise<Partial<Config>> {
-  const file = Bun.file(path);
-  if (!(await file.exists())) throw new Error(`No profile at ${path} — --from found no file`);
-  return asProfile(await file.json(), path);
+  if (!(await exists(path))) throw new Error(`No profile at ${path} — --from found no file`);
+  return asProfile(await readJson(path), path);
 }
 
 async function fetchProfile(url: string, given: string): Promise<Partial<Config>> {
@@ -64,7 +64,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 /** `homepage` is the package's own field; S1 keeps the string out of `src/`. */
 async function origin(): Promise<string> {
-  const pkg = (await Bun.file(join(repoRoot(), 'package.json')).json()) as {
+  const pkg = (await readJson(join(repoRoot(), 'package.json'))) as {
     homepage?: string;
   };
   if (pkg.homepage === undefined)

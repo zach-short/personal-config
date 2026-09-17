@@ -1,5 +1,6 @@
 import { readdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
+import { readText } from '../lib/disk.ts';
 import { type Line, eachLine as linesOf, proseLines as proseOf } from '../lib/markdown.ts';
 import { DEFAULT_DOC_NAMES, type DocNames, docStem, readDocNames } from '../lib/repo-config.ts';
 
@@ -109,7 +110,7 @@ export async function collectDocs(root: string, depth = 4): Promise<Doc[]> {
   const ledgerStem = docStem(names.ledger);
   return Promise.all(
     paths.map(async (path) => {
-      const text = await Bun.file(path).text();
+      const text = await readText(path);
       return {
         path,
         kind: kindOf(path, names),
