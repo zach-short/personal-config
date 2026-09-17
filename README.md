@@ -288,7 +288,7 @@ bun run catalog
 Writes `catalog.json` in the repo root: every question the wizard asks — its text, its options
 with their examples, and the condition deciding whether it is asked at all — plus the long forms
 from [`docs/choices/`](docs/choices), keyed by the id each question cites. Thirty questions and
-twenty-eight long forms as of `0.2.4+39bbcb0e`.
+twenty-eight long forms as of `0.2.5+39bbcb0e`.
 
 It exists so another surface can ask the same questions without importing the wizard, which is
 not browser-safe. The stamp is the package version plus a hash of the questions it was built

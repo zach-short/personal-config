@@ -1,5 +1,5 @@
 {
-  "catalogVersion": "0.2.4+39bbcb0e",
+  "catalogVersion": "0.2.5+39bbcb0e",
   "questions": [
     {
       "id": "commit-policy",
