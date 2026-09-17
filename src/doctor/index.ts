@@ -4,12 +4,13 @@ import { configHash, loadConfig } from '../lib/config.ts';
 import { exists } from '../lib/disk.ts';
 import { expandHome } from '../lib/paths.ts';
 import type { Cli, Finding } from '../lib/types.ts';
+import { commitPlan, resolvePlan } from '../lib/write-plan.ts';
 import { standardVersion } from '../render/standard.ts';
 import { absenceEvidence } from './rules/absence-evidence.ts';
 import { archiveIndex } from './rules/archive-index.ts';
 import { archivedCitations } from './rules/archived-citations.ts';
 import { boardStatus } from './rules/board-status.ts';
-import { ignoredFiles } from './rules/ignored.ts';
+import { ignoredFiles, ignoreFix, ignoreTarget } from './rules/ignored.ts';
 import { placeholders } from './rules/placeholders.ts';
 import { relativeDates } from './rules/relative-dates.ts';
 import { settledSupersession } from './rules/settled-supersession.ts';
@@ -106,11 +107,36 @@ export async function runDoctor(cli: Cli): Promise<number> {
     };
     const report = await runDoctorOn(root, expectation);
     printReport(root, report);
-    total += report.findings.length;
+    total += report.findings.length - (await fixIfAsked(cli, root, report.findings));
   }
 
   console.log(total === 0 ? '\ndoctor: no findings.' : `\ndoctor: ${total} finding(s).`);
   return total === 0 ? 0 : 1;
+}
+
+/**
+ * `--fix` applies only what a rule marked `fixable`, which today is one rule: a personal file
+ * git can still see. It goes through the same `resolvePlan`/`commitPlan` as every other write
+ * this tool makes, so the ignore file is backed up before it is touched and `personal-config
+ * undo` puts it back. It returns how many findings it cleared, because the exit code has to
+ * answer for what is left rather than for what was found.
+ */
+async function fixIfAsked(cli: Cli, root: string, findings: Finding[]): Promise<number> {
+  const fixable = findings.filter((finding) => finding.fixable);
+  if (!cli.fix || fixable.length === 0) return 0;
+
+  const target = await ignoreTarget(root);
+  // `--dry-run` writes nothing, whatever else is asked for. It is the guarantee that makes the
+  // flag worth having, and `--fix` is not an exception to it.
+  if (cli.dryRun) {
+    console.log(`  would fix ${fixable.length} — ${target}, but --dry-run writes nothing`);
+    return 0;
+  }
+
+  const { written } = await commitPlan(await resolvePlan([ignoreFix(root, target, fixable)]));
+  if (written.length === 0) return 0;
+  console.log(`  fixed ${fixable.length} — appended to ${target}`);
+  return fixable.length;
 }
 
 function printReport(root: string, report: DoctorReport): void {

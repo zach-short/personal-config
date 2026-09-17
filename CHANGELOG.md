@@ -3,6 +3,32 @@
 The CLI. The working standard it installs is versioned separately — see
 [`standard/CHANGELOG.md`](standard/CHANGELOG.md).
 
+## Unreleased
+
+### Fixed
+
+- **`doctor --fix` applies the fixes it advertises.** The flag was in the help text and in the
+  argument parser, and `Finding.fixable` was set by every rule — and nothing anywhere read
+  either one. `doctor --fix` printed the same report as `doctor` and wrote nothing. The one rule
+  that marks its findings mechanical, a personal file git can still see, now gets its line, and
+  the exit code answers for what is *left* rather than for what was found, so a run that fixed
+  everything exits 0.
+
+  The write goes through `resolvePlan`/`commitPlan` like every other write this tool makes, so
+  the ignore file is backed up before it is touched and `personal-config undo` puts it back. It
+  lands in `.gitignore` for a tracked repo and `.git/info/exclude` for an untracked one — the
+  same choice `setup` made, read back from `.personal-config.json` rather than guessed — and the
+  line is anchored with a leading `/`, for the reason the renderer anchors its own: a bare
+  `PART0-PROMPT.md` matches at every depth. `--dry-run` reports what it would append and writes
+  nothing, as it does everywhere else.
+
+- **The ignore rule locates `.git/info/exclude` by asking git rather than by spelling it out.** A
+  linked worktree's `.git` is a file, not a directory, so the spelled path does not exist there
+  and every personal file already excluded read as uncovered. With `--fix` wired up that would
+  have appended a line the rule could never see, once per run, forever. The detector and the fix
+  now take the same `git rev-parse --git-path info/exclude` answer, which is correct in both
+  layouts.
+
 ## 0.2.3 — 2026-09-16
 
 ### Changed

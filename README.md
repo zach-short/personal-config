@@ -160,6 +160,19 @@ diff. Adding an entry is recording a decision and is never flagged; only undoing
 silent where it cannot see — a clean tree, a directory that is not a repository, and a ledger
 kept untracked all produce nothing.
 
+```bash
+bun run doctor . --fix    # apply the mechanical fixes
+```
+
+`--fix` applies only what a rule marks mechanical, which today is one thing: a personal file git
+can still see gets an anchored line in your ignore file — `.gitignore` where you track this
+repo's documents and `.git/info/exclude` where you do not, the same choice `setup` made, read
+back rather than guessed. Everything else is reported and left alone, because a relative date, a
+missing archive folder and a board row pointing at no ledger step are decisions rather than
+edits. The write goes the same way every other one does: backed up before it is touched, and
+`personal-config undo` puts it back. `--dry-run` says what it would append and writes nothing.
+The exit code answers for what is left, so a run that fixed everything exits 0.
+
 ## `passoff`, `handoff` and `archive`
 
 Three commands for the rituals the standard asks for at the start and the end of a piece of

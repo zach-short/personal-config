@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { promisify } from 'node:util';
 import { exists } from './disk.ts';
 
@@ -25,6 +25,18 @@ async function git(cwd: string, args: string[]): Promise<string | null> {
 /** A worktree's `.git` is a file rather than a directory, so both spellings count. */
 export async function isGitRepo(dir: string): Promise<boolean> {
   return (await exists(join(dir, '.git', 'HEAD'))) || (await exists(join(dir, '.git')));
+}
+
+/**
+ * Where git actually keeps this checkout's exclude file. A linked worktree's `.git` is a file
+ * rather than a directory, so `<root>/.git/info/exclude` is not a path that can be created
+ * there at all; `rev-parse` answers correctly in both layouts. The plain spelling is the
+ * fallback for the one case it cannot answer — a directory that is not a repository — where
+ * nothing is going to be written anyway.
+ */
+export async function excludeFile(dir: string): Promise<string> {
+  const out = await git(dir, ['rev-parse', '--git-path', 'info/exclude']);
+  return out ? resolve(dir, out) : join(dir, '.git', 'info', 'exclude');
 }
 
 export async function remoteUrl(dir: string): Promise<string | null> {

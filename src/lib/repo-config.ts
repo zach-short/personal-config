@@ -50,6 +50,17 @@ export async function readArchiveHome(repoDir: string): Promise<string | null> {
   return stringAt(await readRepoJson(repoDir), 'archiveHome');
 }
 
+/**
+ * Tracked or untracked, as `setup` recorded it. `doctor --fix` reads it so its one write lands
+ * in the file `setup` would have chosen: a repo you own keeps its entries in `.gitignore`, and
+ * a repo you do not is kept out of `.git/info/exclude`, which is not yours to commit. Null
+ * where the file says nothing, and the caller treats that as untracked — the safer of the two.
+ */
+export async function readTrackMode(repoDir: string): Promise<'tracked' | 'untracked' | null> {
+  const value = stringAt(await readRepoJson(repoDir), 'trackMode');
+  return value === 'tracked' || value === 'untracked' ? value : null;
+}
+
 /** One read of the file every reader here shares, so they cannot disagree about its shape. */
 async function readRepoJson(repoDir: string): Promise<unknown> {
   const path = join(repoDir, '.personal-config.json');
