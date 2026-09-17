@@ -63,3 +63,25 @@ jobs:
       # doctor reads standard/, templates/ and catalog.json through repoRoot(); a wrong root
       # resolves into node_modules/ and fails here rather than in a user's terminal.
       - run: mkdir -p probe && cd probe && personal-config doctor .
+      # `doctor` above never reaches profiles/ (loadConfig, src/lib/config.ts) or docs/choices/
+      # (readMore/readChoices, src/lib/ask.ts + src/lib/catalog.ts) — both are only on the
+      # `setup` and `catalog` paths, so a `files`-list or repoRoot() regression there would ship
+      # to npm without any job noticing. Assert on printed content, not exit code alone, since a
+      # silently-empty plan would still exit 0.
+      - name: setup --dry-run exercises profiles/
+        run: |
+          mkdir -p probe/empty-projects
+          cd probe
+          personal-config setup --profile starter --yes --dry-run --projects-dir empty-projects | tee setup-output.txt
+          grep -q 'commits.md' setup-output.txt
+          # profiles/starter.json answers "skills": "none". If profiles/ failed to resolve, the
+          # question's own recommended default takes over and renders skill files instead — so
+          # their absence is what proves the profile, not just the templates, was read.
+          if grep -q 'skills' setup-output.txt; then
+            echo "profiles/starter.json's skills:none answer was not honored — profiles/ may not have resolved"
+            exit 1
+          fi
+      - name: catalog exercises docs/choices/
+        run: |
+          personal-config catalog | tee catalog-output.txt
+          grep -qE '[1-9][0-9]* long form\(s\)' catalog-output.txt
