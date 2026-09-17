@@ -3,6 +3,28 @@
 The CLI. The working standard it installs is versioned separately — see
 [`standard/CHANGELOG.md`](standard/CHANGELOG.md).
 
+## Unreleased
+
+### Fixed
+
+- **`setup --from` checks every redirect hop, not just the URL you typed.** The https rule was
+  applied once, to the address given, and then `fetch` was left to follow redirects on its own —
+  so a server answering `302 Location: http://…` got its plain-http request sent anyway. The
+  promise this tool makes is about the request it sends, so redirects are now followed by hand
+  and each hop is checked before it is requested. A chain that never lands stops after five hops
+  instead of looping.
+
+- **`setup --from` gives up on a server that never answers.** There was no deadline on the
+  request, so a host that accepted the connection and then went quiet hung `setup` indefinitely
+  with nothing on screen. It now waits ten seconds and reports `no answer in 10s`. A connection
+  that is refused outright reports one line too, rather than a raw network error.
+
+- **A command that fails prints its reason, not a stack trace.** Anything a command threw
+  reached Node's default handler, which printed the error class, its frames and the path of the
+  installed file — the same wall of text `personal-config doctor --dryrun` produced before 0.2.4.
+  Every one of the `--from` failures above arrived that way. The message is the part anyone can
+  act on, so that is what prints, prefixed `personal-config:` and on stderr, with exit `1`.
+
 ## 0.2.4 — 2026-09-16
 
 ### Fixed

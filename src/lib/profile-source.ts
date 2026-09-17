@@ -39,14 +39,66 @@ async function readProfileFile(path: string): Promise<Partial<Config>> {
   return asProfile(await readJson(path), path);
 }
 
+/** Generous for one small JSON document, and short enough that a dead server is not a hang. */
+const FETCH_TIMEOUT_MS = 10_000;
+
+/** Room for an apex/www or trailing-slash hop, few enough that a redirect loop terminates. */
+const MAX_REDIRECTS = 5;
+
 async function fetchProfile(url: string, given: string): Promise<Partial<Config>> {
+  const { response, from } = await followSecurely(url, given);
+  if (!response.ok) throw new Error(`--from ${given} → HTTP ${response.status} from ${from}`);
+  return asProfile(await response.json(), from);
+}
+
+/**
+ * Redirects are followed by hand so that every hop is checked rather than only the URL typed.
+ * `fetch`'s own following would take a 302 from https down to http and send the request anyway:
+ * the protocol check ran once, against the URL given, and the promise this tool makes is about
+ * the request it sends.
+ */
+async function followSecurely(
+  start: string,
+  given: string,
+): Promise<{ response: Response; from: string }> {
+  let from = start;
+  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+    requireSecure(from, given);
+    const response = await get(from, given);
+    const next = redirectTarget(response, from);
+    if (next === null) return { response, from };
+    from = next;
+  }
+  throw new Error(`--from ${given} redirected more than ${MAX_REDIRECTS} times`);
+}
+
+function requireSecure(url: string, given: string): void {
   const parsed = new URL(url);
   if (parsed.protocol !== 'https:' && parsed.hostname !== 'localhost') {
     throw new Error(`--from ${given} is not https — a profile is only fetched over https`);
   }
-  const response = await fetch(url, { headers: { accept: 'application/json' } });
-  if (!response.ok) throw new Error(`--from ${given} → HTTP ${response.status} from ${url}`);
-  return asProfile(await response.json(), url);
+}
+
+/** Without a deadline a server that accepts and never answers hangs `setup` with no message. */
+async function get(url: string, given: string): Promise<Response> {
+  try {
+    return await fetch(url, {
+      headers: { accept: 'application/json' },
+      redirect: 'manual',
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    });
+  } catch (error) {
+    const timedOut = error instanceof Error && error.name === 'TimeoutError';
+    const reason = timedOut ? `no answer in ${FETCH_TIMEOUT_MS / 1000}s` : 'the request failed';
+    throw new Error(`--from ${given} → ${reason} (${url})`);
+  }
+}
+
+/** A 3xx without a `location` is not a redirect anyone can follow; let it fail as a status. */
+function redirectTarget(response: Response, from: string): string | null {
+  if (response.status < 300 || response.status >= 400) return null;
+  const location = response.headers.get('location');
+  return location === null ? null : new URL(location, from).toString();
 }
 
 /** Parsed JSON is `unknown` until something narrows it — T1's rule at a real boundary. */

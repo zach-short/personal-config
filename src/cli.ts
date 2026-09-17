@@ -77,4 +77,19 @@ async function main(): Promise<number> {
   return 1;
 }
 
-process.exit(await main());
+/**
+ * A command that throws used to reach Node's default handler, which prints the error class, its
+ * frames and the path of the installed file — the same wall of text the argument layer produced
+ * before `checkUsage`. `--from` reaching a server that redirects or never answers is the common
+ * way to get here, and the message is the only part of that output a person can act on.
+ */
+async function run(): Promise<number> {
+  try {
+    return await main();
+  } catch (error) {
+    console.error(`personal-config: ${error instanceof Error ? error.message : String(error)}`);
+    return 1;
+  }
+}
+
+process.exit(await run());
