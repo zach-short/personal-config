@@ -54,7 +54,11 @@ export async function runSetup(cli: Cli): Promise<number> {
   await askPhase('practices', prompter, answers, config);
 
   const changes = await planEverything(config, answers, repos);
-  return finish(cli, changes, prompter, interactive);
+  // The batch confirm is not one of the questions, so it must not ride on the question
+  // prompter: under `--yes` that is `defaultsPrompter`, which would answer it `true` without a
+  // person ever seeing it — a confirm in name only. `confirmBatch` returns early where there is
+  // no TTY, so this is never asked of a terminal that is not there.
+  return finish(cli, changes, clackPrompter());
 }
 
 /**
@@ -258,12 +262,7 @@ function modelsFrom(answers: Answers, config: Config): Config['models'] {
   };
 }
 
-async function finish(
-  cli: Cli,
-  changes: PlannedChange[],
-  prompter: Prompter,
-  interactive: boolean,
-): Promise<number> {
+async function finish(cli: Cli, changes: PlannedChange[], prompter: Prompter): Promise<number> {
   const real = changes.filter((c) => c.before !== c.after);
   const guarded = changes.filter((c) => c.guard === 'no-stamp');
 
@@ -284,7 +283,7 @@ async function finish(
 
   // Declining the preview keeps the checkpoint on purpose, so say so rather than implying the
   // thirty answers behind this confirmation went with it.
-  if (interactive && !(await confirmBatch(real, prompter))) {
+  if (!(await confirmBatch(cli, real, prompter))) {
     say(cancelMessage());
     const hookHelp = declinedHookHelp(changes.map((c) => c.file.path));
     if (hookHelp !== null) say(hookHelp);
@@ -325,7 +324,26 @@ function leftAlone(guarded: PlannedChange[]): string {
   ].join('\n');
 }
 
-async function confirmBatch(real: PlannedChange[], prompter: Prompter): Promise<boolean> {
+/**
+ * The gate in front of the batch write, and the only one — `finish` calls it unconditionally.
+ *
+ * `--force` skips it, and with no TTY there is nobody to ask, so the preview printed above is
+ * the whole contract. That is the rule `confirmWrite` already states for `archive` and
+ * `passoff`. `setup` was the one command that never read `--force` at all: it gated the confirm
+ * on `interactive`, which is `isTTY && !cli.yes`. So `--yes` alone skipped this entirely —
+ * contradicting its own help text, "still previews, still confirms" — and `--force` changed
+ * nothing here at all. Both found 2026-09-17.
+ *
+ * It takes `cli` rather than a bare `force` so a test can drive real flag combinations through
+ * it, and the prompter stays a parameter rather than a `clackPrompter()` reached for in here,
+ * so the seam can be answered without a raw TTY.
+ */
+export async function confirmBatch(
+  cli: Cli,
+  real: PlannedChange[],
+  prompter: Prompter,
+): Promise<boolean> {
+  if (cli.force || process.stdout.isTTY !== true) return true;
   const seeDiffs = await prompter.confirm('Show the per-file diff first?', false);
   if (seeDiffs) {
     for (const change of real) {

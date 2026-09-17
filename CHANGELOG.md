@@ -24,6 +24,24 @@ The CLI. The working standard it installs is versioned separately — see
   path. `hookSnippet` is the fourth, and it is wired up rather than deleted — see above. No
   change to anything the CLI does apart from that error text.
 
+### Fixed
+
+- **`setup --force` now skips the confirm, which its help text has always said it does.**
+  `--force` is documented as "skip the confirm (implies you have read the preview)", and
+  `archive` and `passoff` both honour it by threading it into `confirmWrite`. `setup` was the one
+  command that never read it at all — the confirm in front of the batch write was gated on an
+  `interactive` flag instead — so `--force` in a terminal confirmed anyway, and the flag did
+  nothing on the command it matters most on. Found 2026-09-17, by running `setup` for real.
+
+- **`setup --yes` now still confirms, which its help text has always said it does.** `--yes` is
+  documented as "accept every default without asking (still previews, still confirms)", but
+  `interactive` was `isTTY && !cli.yes` and the confirm hung off it — so `--yes` alone, with no
+  `--force`, skipped the confirm entirely and wrote without ever asking. The two flags now mean
+  two separate things: `--yes` answers the *questions* from defaults, `--force` skips the
+  *confirm*, and `--yes --force` together is the unattended run. Where there is no TTY there is
+  still nobody to ask, so the preview remains the whole contract there — unchanged, and the same
+  rule `confirmWrite` states for the other commands.
+
 ## 0.2.5 — 2026-09-16
 
 ### Fixed
