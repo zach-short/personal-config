@@ -74,9 +74,27 @@ async function followSecurely(
 
 function requireSecure(url: string, given: string): void {
   const parsed = new URL(url);
-  if (parsed.protocol !== 'https:' && parsed.hostname !== 'localhost') {
+  if (parsed.protocol !== 'https:' && !isLoopback(parsed.hostname)) {
     throw new Error(`--from ${given} is not https — a profile is only fetched over https`);
   }
+}
+
+/**
+ * The carve-out is an address, not a spelling. It exists for developing the site that hands out
+ * ids — "my own machine, not the network" — and comparing against the literal `localhost` read
+ * that rule as a string, so `127.0.0.1` was refused while `localhost` was allowed. Widened to
+ * every loopback form by owner decision, 2026-09-17.
+ *
+ * `0.0.0.0` is deliberately not loopback: it is the unspecified address, and so is outside what
+ * was decided. Private and internal ranges are a materially larger trust call, ruled out here.
+ *
+ * `new URL` has already canonicalized the host, which is why matching is this plain: `127.1` and
+ * a bare decimal both arrive as a dotted quad whose octets parsed in range, and every spelling
+ * of the IPv6 loopback arrives as `[::1]`, brackets included.
+ */
+function isLoopback(hostname: string): boolean {
+  const host = hostname.startsWith('[') ? hostname.slice(1, -1) : hostname;
+  return host === 'localhost' || host === '::1' || /^127\.\d+\.\d+\.\d+$/.test(host);
 }
 
 /** Without a deadline a server that accepts and never answers hangs `setup` with no message. */

@@ -271,8 +271,8 @@ bun run setup --from k3f9d2ab                         # or just the id a site ha
 Three forms, told apart by shape: eight characters of `[a-z0-9]` with no `/` and no `.` is an
 id, anything with a scheme is a URL, everything else is a path. An id resolves against the
 `homepage` field in `package.json` as `/p/<id>` — so a fork pointed at its own site hands out
-its own ids. A URL is fetched over https and nothing else, the one exception being `localhost`,
-for developing the site that hands out the ids.
+its own ids. A URL is fetched over https and nothing else, the one exception being a loopback
+address — `localhost`, `127.0.0.1` or `[::1]` — for developing the site that hands out the ids.
 
 `--from` sits *above* the saved config and the repo file, unlike `--profile`, which sits below
 them. It carries answers given seconds ago, and the failure worth preventing is those losing

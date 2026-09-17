@@ -109,8 +109,43 @@ describe('--from reads a profile over https', () => {
     }
   });
 
-  test('a non-https origin that is not localhost is refused before the request', async () => {
-    expect(loadProfileFrom('http://example.com/p/ab12cd34')).rejects.toThrow('is not https');
+  test('a non-https origin that is not loopback is refused before the request', async () => {
+    const refused = loadProfileFrom('http://example.com/p/ab12cd34');
+    await expect(refused).rejects.toThrow('is not https');
+  });
+
+  // Until 2026-09-17 this spelling was refused while `localhost` was allowed, though the two
+  // name the same machine to everyone except a string comparison.
+  test('127.0.0.1 is the same carve-out as localhost, and loads', async () => {
+    const server = Bun.serve({
+      port: 0,
+      fetch: (request) =>
+        new URL(request.url).pathname === '/p/ab12cd34'
+          ? Response.json(PROFILE)
+          : new Response('no', { status: 404 }),
+    });
+    try {
+      const from = `http://127.0.0.1:${server.port}/p/ab12cd34`;
+      expect(await loadProfileFrom(from)).toEqual(PROFILE);
+    } finally {
+      await server.stop(true);
+    }
+  });
+
+  test('the IPv6 loopback literal gets past the check and is requested', async () => {
+    // Nothing is listening, so reaching the network error is itself the proof: a refusal is
+    // thrown before any request is sent, and this one got as far as being refused out there.
+    const server = Bun.serve({ port: 0, fetch: () => new Response('no', { status: 404 }) });
+    const { port } = server;
+    await server.stop(true);
+
+    const attempted = loadProfileFrom(`http://[::1]:${port}/p/ab12cd34`);
+    await expect(attempted).rejects.toThrow('the request failed');
+  });
+
+  test('0.0.0.0 is the unspecified address, not a loopback one, and stays refused', async () => {
+    const refused = loadProfileFrom('http://0.0.0.0:8080/p/ab12cd34');
+    await expect(refused).rejects.toThrow('is not https');
   });
 });
 
