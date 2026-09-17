@@ -85,3 +85,16 @@ jobs:
         run: |
           personal-config catalog | tee catalog-output.txt
           grep -qE '[1-9][0-9]* long form\(s\)' catalog-output.txt
+      # A mistyped command used to print help and exit 0, so a typo passed as a successful run.
+      # Asserted on the installed artifact because that is the copy a person mistypes at.
+      - name: a bad command and a bad flag fail loudly
+        run: |
+          if personal-config setpu; then echo "a mistyped command exited 0"; exit 1; fi
+          if personal-config doctor --dryrun; then echo "a mistyped flag exited 0"; exit 1; fi
+          personal-config setpu > cmd.txt 2>&1 || true
+          personal-config doctor --dryrun > flag.txt 2>&1 || true
+          grep -q "unknown command 'setpu'" cmd.txt
+          grep -q "Unknown option '--dryrun'" flag.txt
+          # Written as an explicit failure, not `grep -qv`: that succeeds whenever any one line
+          # lacks the word, which is every multi-line output, and so asserts nothing.
+          if grep -q 'TypeError' cmd.txt flag.txt; then echo "a stack trace reached the user"; exit 1; fi

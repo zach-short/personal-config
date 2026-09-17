@@ -3,6 +3,27 @@
 The CLI. The working standard it installs is versioned separately — see
 [`standard/CHANGELOG.md`](standard/CHANGELOG.md).
 
+## Unreleased
+
+### Fixed
+
+- **A mistyped command no longer exits 0.** `personal-config setpu` printed the help text and
+  exited `0`, because the parser resolved anything it did not recognize to `help` — so a typo was
+  indistinguishable from a run that did the work, and in a script or a CI job
+  `personal-config doctorr` passed. An unrecognized command is now named, every command that can
+  be run is listed, and the exit code is `1`. A bare `personal-config` still prints help and still
+  exits 0: that one is an invitation, not a mistake.
+
+- **A mistyped flag no longer prints a stack trace.** `personal-config doctor --dryrun` died with
+  a raw `TypeError: Unknown option '--dryrun'`, its source frames, the path of the installed file,
+  and `parseArgs`'s standard advice to write `-- "--dryrun"` — which is the wrong fix for every
+  mistake anyone actually makes here. The same held for a flag missing its value, such as
+  `setup --profile` with nothing after it. Both now print one line naming the problem and a
+  pointer to `--help`, on stderr, and exit `1`.
+
+  Errors go to stderr rather than stdout so that redirecting a command's output does not swallow
+  the reason it failed.
+
 ## 0.2.4 — 2026-09-16
 
 ### Fixed

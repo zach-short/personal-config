@@ -93,7 +93,10 @@ describe('argument parsing', () => {
     expect(cli).toMatchObject({ command: 'setup', yes: true, dryRun: true, profile: 'zach' });
   });
 
-  test('an unknown command falls back to help rather than running something', () => {
+  // `parseCli` is total by design: it answers with a shape for any argv, and `checkUsage` is
+  // what refuses a bad one. So this fallback is not the tool accepting `nonsense` — see
+  // tests/usage.test.ts, where that same argv exits 1.
+  test('an unknown command still resolves to a help-shaped Cli rather than an invalid one', () => {
     expect(parseCli(['nonsense']).command).toBe('help');
     expect(parseCli([]).command).toBe('help');
   });

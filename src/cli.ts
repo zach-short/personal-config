@@ -8,7 +8,7 @@ import { runSetup } from './commands/setup.ts';
 import { runUndo } from './commands/undo.ts';
 import { runWorktree } from './commands/worktree.ts';
 import { runDoctor } from './doctor/index.ts';
-import { parseCli } from './lib/args.ts';
+import { checkUsage, parseCli } from './lib/args.ts';
 import { version } from './lib/version.ts';
 
 const HELP = `personal-config — set up an agent-driven working style in your repos
@@ -42,7 +42,18 @@ profile you ask for. Every run previews the whole file tree before writing, back
 overwrites, and can be undone.`;
 
 async function main(): Promise<number> {
-  const cli = parseCli(process.argv.slice(2));
+  const argv = process.argv.slice(2);
+
+  // A mistyped command used to print help and exit 0, so a typo was indistinguishable from a
+  // successful run — in a script, `personal-config doctorr` passed. Errors go to stderr so a
+  // redirected stdout does not swallow them.
+  const problem = checkUsage(argv);
+  if (problem !== null) {
+    console.error(problem);
+    return 1;
+  }
+
+  const cli = parseCli(argv);
 
   if (cli.command === 'version') {
     console.log(await version());
@@ -61,6 +72,8 @@ async function main(): Promise<number> {
   if (cli.command === 'handoff') return runHandoff(cli);
   if (cli.command === 'worktree') return runWorktree(cli);
   if (cli.command === 'context') return runContext(cli);
+  // Unreachable: `checkUsage` has already refused anything not in COMMANDS. Kept as a non-zero
+  // backstop, because the one thing this must never do again is exit 0 without running.
   return 1;
 }
 
