@@ -28,6 +28,14 @@ The CLI. The working standard it installs is versioned separately — see
 
 ### Fixed
 
+- **`setup --from` trusts any loopback address, not just the spelling `localhost`.** The https
+  carve-out compared `hostname` against the literal string `localhost`, so `127.0.0.1` and `[::1]`
+  were refused as plain-http while `localhost` was let through — the same machine, treated two
+  different ways depending on which name you typed. The check is now against the address: any
+  `127.0.0.0/8` form and `::1`, bracketed or not, count as loopback alongside `localhost`.
+  `0.0.0.0` and private/internal ranges are deliberately excluded — a materially larger trust call
+  than "my own machine, not the network."
+
 - **`setup --from` checks every redirect hop, not just the URL you typed.** The https rule was
   applied once, to the address given, and then `fetch` was left to follow redirects on its own —
   so a server answering `302 Location: http://…` got its plain-http request sent anyway. The
