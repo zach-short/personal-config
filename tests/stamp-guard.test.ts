@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { join } from 'node:path';
 import { stampDrift } from '../src/doctor/rules/stamp-drift.ts';
 import { kindOf } from '../src/doctor/scan.ts';
-import { latestManifest, restore } from '../src/lib/backup.ts';
+import { latestBackup, restore } from '../src/lib/backup.ts';
 import { isOurs, readStamp, type StampParts, withStamp } from '../src/lib/stamp.ts';
 import type { PlannedFile } from '../src/lib/types.ts';
 import { commitPlan, resolvePlan } from '../src/lib/write-plan.ts';
@@ -94,9 +94,11 @@ describe('the stamp guard', () => {
 
       // The decision this pins: nothing in a stamp records the bytes we wrote, so a hand edit
       // to a stamped file is invisible here. It is recoverable rather than preserved.
-      const manifest = await latestManifest();
-      expect(manifest?.entries.map((e) => e.original)).toContain(target);
-      await restore(manifest ?? { timestamp: '', entries: [] });
+      const backup = await latestBackup();
+      expect(backup?.manifest.entries.map((e) => e.original)).toContain(target);
+      await restore(
+        backup ?? { dir, manifest: { timestamp: '', entries: [] }, restoredAt: null },
+      );
       expect(await Bun.file(target).text()).toBe(edited);
     } finally {
       await cleanup(dir);

@@ -43,6 +43,10 @@ async function resolveOne(file: PlannedFile): Promise<PlannedChange> {
  * overwrite is backed up and `personal-config undo` restores it. Deleting the stamp line is how
  * a generated file is taken back for good — which is what Part 0 adaptation does to the
  * documents it rewrites.
+ *
+ * This one keys on *content* on purpose, unlike `onDiskNow` below, which had to stop. An empty
+ * file carries no stamp and no bytes to lose, and refusing it would make `touch` a way to block
+ * a generated file for good — a second, undocumented spelling of the one deliberate way out.
  */
 function stampGuard(file: PlannedFile, before: string): PlannedChange['guard'] {
   if (before.length === 0) return 'none';
@@ -102,7 +106,7 @@ export type WriteResult = { written: string[]; skipped: string[]; manifest: Mani
 /** Nothing here runs until the batch has been confirmed; `--dry-run` never reaches it. */
 export async function commitPlan(changes: PlannedChange[]): Promise<WriteResult> {
   const real = changes.filter((c) => c.before !== c.after);
-  const overwritten = real.filter((c) => c.before.length > 0).map((c) => c.file.path);
+  const overwritten = await onDiskNow(real);
   const manifest = overwritten.length > 0 ? await backupFiles(overwritten) : null;
 
   for (const change of real) {
@@ -114,4 +118,28 @@ export async function commitPlan(changes: PlannedChange[]): Promise<WriteResult>
     skipped: changes.filter((c) => c.before === c.after).map((c) => c.file.path),
     manifest,
   };
+}
+
+/**
+ * Which of these paths has a file behind it to lose — asked of the disk, here, in the moment
+ * before the writes. Two of row 39's four findings were the one line this replaced
+ * (`overwritten = real.filter((c) => c.before.length > 0)`, 2026-09-17).
+ *
+ * *Existence and content are separate facts.* That gate read a fact about content and answered
+ * with it a question about existence, and the two part company for a file that is there and
+ * empty: `resolveOne` gives an absent path and a zero-byte one the same `''`, so a pre-existing
+ * empty file was overwritten with no backup and no manifest entry, and `undo` afterwards
+ * described it as a file this tool had created new.
+ *
+ * *And the answer goes stale.* The set used to be fixed in `resolveOne`, before the preview was
+ * printed and the confirm opened. A file created while that prompt sat open — another session in
+ * the same checkout, which is this repo's own working norm, or an editor writing a file out — was
+ * overwritten minutes later against a set decided without it. Asking again costs one `stat` per
+ * planned file and closes the window to the width of the write loop.
+ */
+async function onDiskNow(real: PlannedChange[]): Promise<string[]> {
+  const checked = await Promise.all(
+    real.map(async (c) => ((await exists(c.file.path)) ? c.file.path : null)),
+  );
+  return checked.filter((path): path is string => path !== null);
 }
