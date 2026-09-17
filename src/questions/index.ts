@@ -25,10 +25,6 @@ export function askable(questions: Question[], answers: Answers): Question[] {
   return questions.filter((q) => matchesWhen(q.when, answers));
 }
 
-export function findQuestion(id: string): Question | undefined {
-  return ALL_QUESTIONS.find((q) => q.id === id);
-}
-
 /** Every question's long form must exist; `doctor` and a test both check this list. */
 export function readMoreIds(): string[] {
   return [...new Set(ALL_QUESTIONS.map((q) => q.readMore))];

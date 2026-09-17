@@ -27,6 +27,7 @@ import { version } from '../lib/version.ts';
 import { commitPlan, type PlannedChange, resolvePlan } from '../lib/write-plan.ts';
 import { askPhase } from '../phases/run.ts';
 import type { RenderContext } from '../render/context.ts';
+import { declinedHookHelp } from '../render/hooks.ts';
 import { renderAll } from '../render/index.ts';
 import { standardVersion } from '../render/standard.ts';
 
@@ -285,6 +286,8 @@ async function finish(
   // thirty answers behind this confirmation went with it.
   if (interactive && !(await confirmBatch(real, prompter))) {
     say(cancelMessage());
+    const hookHelp = declinedHookHelp(changes.map((c) => c.file.path));
+    if (hookHelp !== null) say(hookHelp);
     return endRun('declined');
   }
 

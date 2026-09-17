@@ -3,6 +3,27 @@
 The CLI. The working standard it installs is versioned separately — see
 [`standard/CHANGELOG.md`](standard/CHANGELOG.md).
 
+## Unreleased
+
+### Added
+
+- **Declining a run now hands over the hook snippet, as the long form has always said it would.**
+  `docs/choices/hooks.md` answers the risk it names — that installing hooks edits a
+  `settings.json` you already have hooks in — with "declining prints the snippet instead". It did
+  not: declining printed the cancel line and stopped. It prints the `settings.json` entries the
+  run would have merged, so you can add them by hand. The confirm covers the whole batch, so the
+  scripts are unwritten too, and the text says so rather than pointing at files that are not
+  there.
+
+### Changed
+
+- **Three unused exports removed, and a fourth put to work.** `repoRelative`, `findQuestion` and
+  `hookScriptSource` had no callers anywhere, tests included. The first two are gone. The third
+  was the better of two ways to read a hook template, so `scriptFile` now uses it instead of a
+  bare read: a missing template names itself rather than surfacing a raw `ENOENT` and an absolute
+  path. `hookSnippet` is the fourth, and it is wired up rather than deleted — see above. No
+  change to anything the CLI does apart from that error text.
+
 ## 0.2.5 — 2026-09-16
 
 ### Fixed

@@ -1,4 +1,3 @@
-import { relative } from 'node:path';
 import { diffLines } from './diff.ts';
 import { contractHome } from './paths.ts';
 import type { PlannedChange } from './write-plan.ts';
@@ -55,9 +54,4 @@ export function renderDiff(change: PlannedChange, maxLines = 40): string {
   const rest = lines.length - shown.length;
   const tail = rest > 0 ? [`… ${rest} more lines`] : [];
   return [`--- ${short(change.file.path)}`, ...shown, ...tail].join('\n');
-}
-
-export function repoRelative(root: string, path: string): string {
-  const rel = relative(root, path);
-  return rel.startsWith('..') ? short(path) : rel;
 }
