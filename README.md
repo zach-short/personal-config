@@ -7,7 +7,8 @@ conventions, and the rules your coding agent reads before it touches anything. I
 repo first and shapes the output to what is actually there.
 
 Nothing leaves your machine, nothing is written until you have seen the whole file tree and
-confirmed it, and every run can be undone.
+confirmed it, and anything a run overwrites is backed up first — `personal-config undo` puts the
+last run's files back, once.
 
 ## Why
 
@@ -89,8 +90,15 @@ fictional repo — that is what these look like after a few weeks of real use.
 - **Preview.** Every run prints the full file tree and a per-file diff before writing anything.
 - **One confirm** for the batch, with a per-file expansion if you want it.
 - **`--dry-run`** writes nothing at all.
-- **Backups.** Anything overwritten is copied to `~/.config/personal-config/backups/<timestamp>/`
-  with a manifest, and `personal-config undo` restores the last run.
+- **Backups.** Anything overwritten is copied to
+  `~/.config/personal-config/backups/<timestamp>-<n>/` with a manifest, and `personal-config undo`
+  restores the last run. The counter is there because two runs can start inside one second, and
+  each needs a directory of its own.
+- **`undo` is one-shot and one-way**, and says so before it acts. It lists the files it would put
+  back and asks first; it restores a given backup once and refuses it after that, rather than
+  applying the same files a second time over whatever you have changed since. What it does not do
+  is back itself up: an edit made *after* a run is overwritten by the `undo` of that run and is
+  gone. It also never deletes a file the run created new — it says which, and leaves them to you.
 - **A wrong answer is fixable in place.** `← back` re-asks the previous question rather than
   making you finish the run and start another — and the correction *replaces* the answer it
   corrects, so an interrupted run picks up the answer you meant rather than the one you fixed.
@@ -287,8 +295,9 @@ bun run catalog
 
 Writes `catalog.json` in the repo root: every question the wizard asks — its text, its options
 with their examples, and the condition deciding whether it is asked at all — plus the long forms
-from [`docs/choices/`](docs/choices), keyed by the id each question cites. Thirty questions and
-twenty-eight long forms as of `0.2.5+39bbcb0e`.
+from [`docs/choices/`](docs/choices), keyed by the id each question cites. Thirty-five questions
+and thirty-three long forms as of `0.2.6+cd3836bf` — and nobody is asked all thirty-five, because
+eleven of them are asked only of someone whose work is code.
 
 It exists so another surface can ask the same questions without importing the wizard, which is
 not browser-safe. The stamp is the package version plus a hash of the questions it was built

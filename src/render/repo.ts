@@ -172,6 +172,12 @@ function renderRepoConfig(ctx: RenderContext): PlannedFile {
       boardFile: ctx.repo?.workProfile === 'folders' ? '' : boardFile(ctx),
       standardPath: standardPath(ctx),
       archiveHome: ctx.repo?.archiveHome ?? '',
+      // The completion-gate hook's command, and the one key here nothing asks for. It is
+      // written empty on purpose: no question knows a repo's gate command — only Part 0's
+      // adaptation session does, after running every gate once — and guessing one from the
+      // package manager would have the hook running a command nobody chose. Empty means the
+      // gate skips that check, which is the direction a hook has to fail in.
+      gateCommand: '',
       models: ctx.config.models,
       answers: hashedAnswers(ctx.config.answers),
     },

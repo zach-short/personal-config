@@ -3,9 +3,36 @@
 The CLI. The working standard it installs is versioned separately — see
 [`standard/CHANGELOG.md`](standard/CHANGELOG.md).
 
-## Unreleased
+## 0.2.6 — 2026-09-17
 
 ### Added
+
+- **Three questions open the run, and they decide how much of the rest applies.** Whether your
+  work is code or something else, whether you want the full configuration or a lighter one, and
+  whether your work lives in git. Answering *other work* skips the eleven code-practice
+  questions; answering *no* to git skips the branch-tracking question. Thirty-five questions
+  exist and nobody is asked all of them, which is the point — the wizard stopped assuming its
+  reader writes code.
+
+- **A completion gate, installed on every track.** A `Stop` hook that refuses a turn ending on
+  visibly unfinished work. It scans the source files the tree has changed for the markers left
+  when a sketch is handed back in place of the work — `... existing code ...`, "rest of the
+  file", "omitted for brevity", "your code here" — and then runs the repo's own gate command.
+  That command comes from `.personal-config.json`'s new `gateCommand` key, written empty because
+  only Part 0's adaptation session knows what a repo's gates are; an empty key skips the check
+  rather than failing it. Anything the hook cannot check, it does not block on. `TODO: implement`
+  and `not implemented` are deliberately absent from the marker set: a deferred task is not an
+  unfinished turn, and both would fire on work that is finished.
+
+- **An output-style answer that reaches the harness**, and a proof line per target. The style is
+  written into the user config only when the answer is not the documented default, so the
+  recommended answer adds nothing. The proof line is what stands in for "the gates are green" on
+  a track that has no gates to point at.
+
+- **`setup` finds plain directories, not only git repos.** A candidate was dropped unless it was
+  a git repo, so a folder of work that is not code was invisible to the wizard. Directories are
+  found and tagged by kind, and the questions that only make sense in a repo are not asked of
+  them.
 
 - **Declining a run now hands over the hook snippet, as the long form has always said it would.**
   `docs/choices/hooks.md` answers the risk it names — that installing hooks edits a
@@ -17,6 +44,11 @@ The CLI. The working standard it installs is versioned separately — see
 
 ### Changed
 
+- **`catalog.json` carries a new `when` form, `all:`** — a condition that holds only when several
+  answers agree, which is the first thing the question set has needed one for. A surface that
+  renders the catalog has to understand `all:` before it pins a version carrying one, or it will
+  ask a question the terminal skips.
+
 - **Three unused exports removed, and a fourth put to work.** `repoRelative`, `findQuestion` and
   `hookScriptSource` had no callers anywhere, tests included. The first two are gone. The third
   was the better of two ways to read a hook template, so `scriptFile` now uses it instead of a
@@ -25,6 +57,24 @@ The CLI. The working standard it installs is versioned separately — see
   change to anything the CLI does apart from that error text.
 
 ### Fixed
+
+- **`undo` is one-shot, one-way, and says so before it acts.** It lists the files it would put
+  back and asks first; a backup already spent is refused with the date and place it was used,
+  instead of quietly restoring the same manifest over whatever changed since. What it does not do
+  is snapshot the state it overwrites — an edit made after a run is gone when that run is undone,
+  which the README states rather than leaving true and unsaid.
+
+- **Two backups claimed inside one second no longer collide, and a file created while the confirm
+  sits open is backed up rather than overwritten.** The timestamp directory is claimed with a
+  non-recursive `mkdir` plus a fixed-width counter, and `commitPlan` asks the disk which paths
+  exist immediately before each write instead of trusting what was true when the plan was built.
+  A pre-existing empty file is backed up too; it used to count as absent.
+
+- **`doctor`'s board rules stopped passing on shape alone.** `DONE — HANDOFF n` is checked against
+  the ledger beside the board rather than against any citation of that shape; a `SUPERSEDED` row
+  can no longer satisfy the rule by naming its replacement in its own title; `HELD` has to name
+  what it waits on; `SETTLED AS NO` has to give a reason rather than merely a paragraph. The step
+  parser recognises all four heading shapes a ledger step is written in.
 
 - **`setup --force` now skips the confirm, which its help text has always said it does.**
   `--force` is documented as "skip the confirm (implies you have read the preview)", and

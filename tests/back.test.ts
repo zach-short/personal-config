@@ -33,7 +33,7 @@ function ids(prompter: { asked: Array<{ id: string }> }): string[] {
   return prompter.asked.map((a) => a.id);
 }
 
-/** The `you` phase exactly as `setup` asks it — ten real questions, no terminal. */
+/** The `you` phase exactly as `setup` asks it — every real question, no terminal. */
 async function runYou(prompter: Prompter): Promise<Answers> {
   const config = await loadConfig(parseCli(['setup']), null);
   const answers: Answers = { ...config.answers };
@@ -48,6 +48,18 @@ function youId(index: number): string {
   const id = YOU[index];
   if (id === undefined) throw new Error(`the you phase has no question ${index}`);
   return id;
+}
+
+/**
+ * The answer key of the nth question, by position. These tests are about *walking* the phase,
+ * so what they assert has to be positional too — naming `attribution` or `models.deep` made
+ * them assertions about which question happens to be third, and they went red when three
+ * questions were added at the head of the phase on 2026-09-17.
+ */
+function youKey(index: number): string {
+  const question = questionsFor('you')[index];
+  if (!question) throw new Error(`the you phase has no question ${index}`);
+  return question.configKey;
 }
 
 /** The first `select` in the catalog, which is the only kind that carries an option list. */
@@ -92,20 +104,20 @@ describe('which questions offer a way back', () => {
 
 describe('walking backwards', () => {
   test('picking it re-asks the previous question, and keeps the corrected answer', async () => {
-    const prompter = scripted(['print-blocks', 'none', BACK, 'agent-commits']);
+    const prompter = scripted(['first', 'second', BACK, 'corrected']);
     const answers = await runYou(prompter);
 
     // q1, q2, q3 → back, then q2 again, then forward from q3.
     expect(ids(prompter).slice(0, 5)).toEqual([...YOU.slice(0, 3), ...YOU.slice(1, 3)]);
-    expect(answers.attribution).toBe('agent-commits');
+    expect(answers[youKey(1)]).toBe('corrected');
   });
 
   test('the answer to the question stepped back from is not kept', async () => {
-    // `model-deep` is question three; the run steps off it before answering, then answers it.
-    const prompter = scripted(['print-blocks', 'none', BACK, 'none', 'Second Deep']);
+    // The run steps off question three before answering it, corrects two, then answers three.
+    const prompter = scripted(['first', 'second', BACK, 'second-again', 'third']);
     const answers = await runYou(prompter);
 
-    expect(answers['models.deep']).toBe('Second Deep');
+    expect(answers[youKey(2)]).toBe('third');
   });
 
   test('two backs in a row walk two questions, not one', async () => {
@@ -128,13 +140,16 @@ describe('walking backwards', () => {
 
 describe('a question its `when` skipped', () => {
   /**
-   * `track-mode` is not asked when the repo is not the person's, so stepping back from
-   * `archive-home` has to land on `work-profile`. An `index - 1` would have shown them a
+   * `track-mode` is not asked when the repo is not the person's, so stepping back from the
+   * question after it has to land on `work-profile`. An `index - 1` would have shown them a
    * question they never saw as the one they came from.
+   *
+   * `usesGit` is seeded because `track-mode` now needs the target owned *and* git in play; the
+   * `you` phase has always answered it by the time `discover` runs.
    */
   async function runDiscover(prompter: Prompter, owned: boolean): Promise<Answers> {
     const config = await loadConfig(parseCli(['setup']), null);
-    const answers: Answers = { ...config.answers, owned };
+    const answers: Answers = { ...config.answers, owned, usesGit: 'yes' };
     await askPhase('discover', prompter, answers, config, undefined, ['projects-dir']);
     return answers;
   }
@@ -143,7 +158,7 @@ describe('a question its `when` skipped', () => {
     const prompter = scripted(['ledger', BACK]);
     await runDiscover(prompter, false);
 
-    expect(ids(prompter).slice(0, 3)).toEqual(['work-profile', 'archive-home', 'work-profile']);
+    expect(ids(prompter).slice(0, 3)).toEqual(['work-profile', 'proof-line', 'work-profile']);
   });
 
   test('is still asked when it applies, so the trail is not simply shorter', async () => {

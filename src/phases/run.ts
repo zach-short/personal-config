@@ -1,4 +1,5 @@
 import { BACK, type Prompter } from '../lib/ask.ts';
+import { storedProfileDefault } from '../lib/stored-profile-defaults.ts';
 import type { Answers, Config, Phase, Question } from '../lib/types.ts';
 import { askable, questionsFor } from '../questions/index.ts';
 
@@ -48,9 +49,18 @@ export async function askPhase(
   }
 }
 
-function defaultFor(question: Question, answers: Answers, config: Config) {
+/**
+ * Exported as an internal seam, not as API: it is the one place DIAL-7's promise is kept, and
+ * the promise is that the explicit reading beats the option list — which cannot be observed
+ * from outside, because the two agree for every question in the catalog today. A test hands it
+ * a question whose `recommended` says the opposite. `src/cli.ts` is this package's only public
+ * surface and nothing here widens it.
+ */
+export function defaultFor(question: Question, answers: Answers, config: Config) {
   const existing = answers[question.configKey];
   if (existing !== undefined) return existing;
+  const stored = storedProfileDefault(question.configKey);
+  if (stored !== null) return stored;
   const fromModels = modelDefault(question.configKey, config);
   if (fromModels !== null) return fromModels;
   if (question.configKey === 'projectsDir') return config.projectsDir;

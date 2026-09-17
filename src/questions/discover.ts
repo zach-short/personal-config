@@ -57,7 +57,34 @@ export const DISCOVER_QUESTIONS: Question[] = [
         recommended: false,
       },
     ],
-    when: { key: 'owned', isNot: false },
+    // Owned *and* git: the ownership guard was always the first half, and the git question
+    // (setup-tracks `DESIGN.md` D4) is the second — there is no `.git/info/exclude` to write to
+    // when the work is a plain folder, so the question has no referent. `owned` is derived from
+    // the remote by `planRepo` and is `undefined` in a browser, which is why its half stays
+    // `isNot: false` rather than `is: true`.
+    when: {
+      all: [
+        { key: 'owned', isNot: false },
+        { key: 'usesGit', is: 'yes' },
+      ],
+    },
+  },
+  {
+    /**
+     * The proof line (D7). It renders where "the gates are green" renders for a code repo, and
+     * it is asked on every track rather than only the ones with no gates: the standard's own
+     * rule is that a done-when which is only "gates pass" is not a done-when, which is as true
+     * of a repo with CI as of a folder without. Conditioning it would need "non-code **or**
+     * light", and `WhenSpec` has `all:` and deliberately no `any:`.
+     */
+    id: 'proof-line',
+    phase: 'discover',
+    kind: 'text',
+    ask: 'What proves work here is sound?',
+    configKey: 'proofLine',
+    readMore: 'proof-line',
+    placeholder:
+      'e.g. the reconciliation balances to the bank statement, or someone who didn’t write it read it',
   },
   {
     id: 'archive-home',

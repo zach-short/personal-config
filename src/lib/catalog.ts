@@ -8,7 +8,7 @@ import { version } from './version.ts';
 
 /**
  * The browser cannot import `src/phases/run.ts` — line 1 pulls in clack — and cannot read the
- * 28 markdown long forms off a disk it does not have. So the wizard emits both, once, as a
+ * 33 markdown long forms off a disk it does not have. So the wizard emits both, once, as a
  * committed artifact the site pins (D6). This module builds it; `commands/catalog.ts` writes it.
  */
 export async function buildCatalog(): Promise<Catalog> {

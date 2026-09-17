@@ -58,8 +58,11 @@ describe('a declined run hands over the hook snippet it did not merge', () => {
 /**
  * The gap the tests above cannot see: `setup` passes the paths its plan actually holds, and this
  * helper matches on paths it builds itself. If the renderer ever spells one differently, every
- * test above still passes and a declined run silently prints nothing. There is no test that
- * drives the real confirm — clack needs a raw TTY — so this is what stands in for it.
+ * test above still passes and a declined run silently prints nothing.
+ *
+ * These stood in for the real confirm while nothing could drive it. `tests/decline-seam.test.ts`
+ * drives it now, through the `finish` seam, and these stay: it declines a plan holding a hook
+ * path, where this pair is what proves that path is the one `renderHooks` would really plan.
  */
 describe('the paths the renderer plans are the paths this matches on', () => {
   test.each([

@@ -1,5 +1,6 @@
 import { diffLines } from './diff.ts';
 import { contractHome } from './paths.ts';
+import type { RepoScan } from './types.ts';
 import type { PlannedChange } from './write-plan.ts';
 
 /** Console output lives here alone, so every other module stays testable without capture. */
@@ -9,6 +10,65 @@ export function say(line = ''): void {
 
 export function short(path: string): string {
   return contractHome(path);
+}
+
+/** DIAL-10: how many plain directories the listing prints before it summarises the rest. */
+const FOLDER_LIST_MAX = 12;
+
+/**
+ * What discovery found, as the person reads it before picking targets.
+ *
+ * Git repos are listed in full; plain directories are capped at `FOLDER_LIST_MAX` and the rest
+ * are counted (setup-tracks `DESIGN.md` DIAL-10). Dropping the `isGitRepo` filter means a scan
+ * pointed somewhere broad finds every folder under it, and an uncapped list buries the repos
+ * above it in a screen nobody reads.
+ *
+ * **The cap is on folders alone, not on the listing as a whole.** A git-only scan therefore
+ * renders byte-identical to 0.2.6 — including a scan of fifty repos, which was already
+ * fifty rows and is not this item's to change. `tests/setup-tracks.test.ts` pins that.
+ */
+export function targetList(scans: RepoScan[], where: string, max = FOLDER_LIST_MAX): string {
+  const repos = scans.filter((s) => s.kind === 'git');
+  const folders = scans.filter((s) => s.kind === 'folder');
+  const sections = [
+    ...(repos.length > 0 ? [scanTable('repo', repos)] : []),
+    ...(folders.length > 0 ? [folderSection(folders, max)] : []),
+  ];
+  // The sections are separated by a blank line and the header by one newline, so a git-only
+  // listing is exactly the two `say()` calls this replaced.
+  return [`\n${foundLine(repos.length, folders.length, where)}\n`, sections.join('\n\n')].join(
+    '\n',
+  );
+}
+
+/** "0 repo(s)" is the one honest reading of an empty scan, so it survives when nothing is found. */
+function foundLine(repos: number, folders: number, where: string): string {
+  const counted = [
+    ...(repos > 0 || folders === 0 ? [`${repos} repo(s)`] : []),
+    ...(folders > 0 ? [`${folders} folder(s)`] : []),
+  ];
+  return `Found ${counted.join(' and ')} under ${where}:`;
+}
+
+function folderSection(folders: RepoScan[], max: number): string {
+  const shown = folders.slice(0, max);
+  const rest = folders.length - shown.length;
+  const table = scanTable('folder', shown);
+  return rest > 0 ? `${table}\n  … and ${rest} more` : table;
+}
+
+function scanTable(heading: string, scans: RepoScan[]): string {
+  const rows = scans.map((s) => {
+    const langs = s.languages.join('+') || '—';
+    const docs = s.existingDocs.length > 0 ? s.existingDocs.join(',') : '—';
+    return `  ${s.name.padEnd(22)} ${langs.padEnd(18)} ${(s.packageManager ?? '—').padEnd(6)} ${
+      s.hasCi ? 'CI' : '  '
+    }  ${docs}`;
+  });
+  return [
+    `  ${heading.padEnd(22)} ${'languages'.padEnd(18)} ${'pm'.padEnd(6)}      existing`,
+    ...rows,
+  ].join('\n');
 }
 
 /** The preview tree: every file this run would touch, grouped by where it lands. */

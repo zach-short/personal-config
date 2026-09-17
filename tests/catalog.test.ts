@@ -28,12 +28,16 @@ describe('the freshness test — a question change without a regenerated catalog
 });
 
 describe('the catalog carries the whole question set', () => {
-  test('30 questions, phased 10 / 6 / 14', async () => {
+  // 30 → 35 on 2026-09-17: four track questions at the head of `you` (work kind, config
+  // weight, git, output style) and one per-target question in `discover` (the proof line).
+  // The numbers are moved rather than loosened into a range — a count that cannot go red is
+  // not a count.
+  test('35 questions, phased 14 / 7 / 14', async () => {
     const catalog = await committed();
     const byPhase: Record<string, number> = {};
     for (const q of catalog.questions) byPhase[q.phase] = (byPhase[q.phase] ?? 0) + 1;
-    expect(catalog.questions.length).toBe(30);
-    expect(byPhase).toEqual({ you: 10, discover: 6, practices: 14 });
+    expect(catalog.questions.length).toBe(35);
+    expect(byPhase).toEqual({ you: 14, discover: 7, practices: 14 });
   });
 
   test('every question the wizard asks is present, in the wizard`s order', async () => {
@@ -55,25 +59,59 @@ describe('the catalog carries the whole question set', () => {
   });
 });
 
-describe('the two conditionals and the one hidden question survive the trip', () => {
+describe('the conditionals and the one hidden question survive the trip', () => {
   test('their conditions are carried as data, not lost with the closure', async () => {
     const catalog = await committed();
     const conditions = Object.fromEntries(
       catalog.questions.filter((q) => q.when).map((q) => [q.id, q.when]),
     );
+    // Written out rather than derived from the catalog: a condition added or dropped by
+    // accident is exactly what this is here to catch, and a loop over the same source would
+    // agree with itself either way.
+    const codeOnly = { key: 'workKind', is: 'code' };
     expect(conditions).toEqual({
-      'track-mode': { key: 'owned', isNot: false },
+      'track-mode': {
+        all: [
+          { key: 'owned', isNot: false },
+          { key: 'usesGit', is: 'yes' },
+        ],
+      },
       tracker: { key: 'mode', is: 'team' },
       'commit-policy-practice': { never: true },
+      comments: codeOnly,
+      'function-length': codeOnly,
+      exports: codeOnly,
+      'file-naming': codeOnly,
+      imports: codeOnly,
+      types: codeOnly,
+      'logic-placement': codeOnly,
+      'data-layer': codeOnly,
+      states: codeOnly,
+      'design-tokens': codeOnly,
+      'test-policy': codeOnly,
     });
   });
 
-  test('track-mode is asked when the repo is owned, and skipped when it is not', async () => {
+  test('track-mode needs the repo owned *and* git in play, not either one', async () => {
     const catalog = await committed();
     const question = catalog.questions.find((q) => q.id === 'track-mode');
-    expect(matchesWhen(question?.when, { owned: true })).toBe(true);
-    expect(matchesWhen(question?.when, {})).toBe(true);
-    expect(matchesWhen(question?.when, { owned: false })).toBe(false);
+    expect(matchesWhen(question?.when, { owned: true, usesGit: 'yes' })).toBe(true);
+    // `owned` is derived from a git remote, so a browser never has it — and must still ask.
+    expect(matchesWhen(question?.when, { usesGit: 'yes' })).toBe(true);
+    expect(matchesWhen(question?.when, { owned: false, usesGit: 'yes' })).toBe(false);
+    expect(matchesWhen(question?.when, { owned: true, usesGit: 'no' })).toBe(false);
+  });
+
+  test('the code-conventions questions are skipped for non-code work', async () => {
+    const catalog = await committed();
+    const asked = (workKind: string) =>
+      catalog.questions
+        .filter((q) => q.phase === 'practices' && matchesWhen(q.when, { workKind }))
+        .map((q) => q.id);
+
+    expect(asked('code')).toHaveLength(13);
+    // Copy registers and drive-by fixes survive: neither is a rule about source code.
+    expect(asked('non-code')).toEqual(['copy-registers', 'drive-by-fixes']);
   });
 
   test('tracker is asked for a team and skipped for a solo', async () => {
@@ -96,10 +134,19 @@ describe('the two conditionals and the one hidden question survive the trip', ()
 
   test('the catalog and the wizard skip the same questions for the same answers', async () => {
     const catalog = await committed();
-    const answers: Answers = { owned: false, mode: 'solo' };
-    const wizard = askable(ALL_QUESTIONS, answers).map((q) => q.id);
-    const site = catalog.questions.filter((q) => matchesWhen(q.when, answers)).map((q) => q.id);
-    expect(site).toEqual(wizard);
+    const probes: Answers[] = [
+      { owned: false, mode: 'solo' },
+      // The one the `all:` form exists for, and the one the site actually sees: no `owned`.
+      { mode: 'solo', workKind: 'non-code', usesGit: 'no' },
+      { owned: true, mode: 'team', workKind: 'code', usesGit: 'yes' },
+    ];
+    for (const answers of probes) {
+      const wizard = askable(ALL_QUESTIONS, answers).map((q) => q.id);
+      const site = catalog.questions
+        .filter((q) => matchesWhen(q.when, answers))
+        .map((q) => q.id);
+      expect(site).toEqual(wizard);
+    }
   });
 });
 

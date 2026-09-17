@@ -3,8 +3,86 @@ import type { Question } from '../lib/types.ts';
 /**
  * Phase 1 — what is true of *you*, across every repo. These become files in
  * `~/.claude/rules/`, so they are asked once and reused everywhere.
+ *
+ * The first three are the track axes (setup-tracks `DESIGN.md` D1, D4, D13): what kind of work
+ * this is, how much of the method you want, and whether git is involved. They are three
+ * questions rather than one combined setup name so that every combination stays reachable —
+ * including the programmer who wants the light config — and they sit here rather than in a
+ * phase of their own because work kind and git use are exactly what `you` means: facts about
+ * the person that hold across every target. A new `Phase` value would also be a runtime
+ * `undefined` read on the site, which reads `PHASE_COPY[question.phase]` unchecked.
+ *
+ * The recommended option of each is the **first**, and is the one that preserves the behaviour
+ * at 0.2.6 (DIAL-1/2/3). Nothing reads these answers yet — the renderers are their own board
+ * items — so a run that takes the recommended three writes exactly what it wrote before.
  */
 export const YOU_QUESTIONS: Question[] = [
+  {
+    id: 'work-kind',
+    phase: 'you',
+    kind: 'select',
+    ask: 'Is this for code, or for other kinds of work?',
+    configKey: 'workKind',
+    readMore: 'work-kind',
+    options: [
+      {
+        value: 'code',
+        label: 'Code',
+        example: 'repos, builds, pull requests',
+        recommended: true,
+      },
+      {
+        value: 'non-code',
+        label: 'Other work',
+        example: 'writing, research, teaching, accounting, ops',
+        recommended: false,
+      },
+    ],
+  },
+  {
+    id: 'config-weight',
+    phase: 'you',
+    kind: 'select',
+    ask: 'Do you want the whole method, or a lighter setup?',
+    configKey: 'configWeight',
+    readMore: 'config-weight',
+    options: [
+      {
+        value: 'full',
+        label: 'The whole method',
+        example: 'every document, every skill',
+        recommended: true,
+      },
+      {
+        value: 'light',
+        label: 'Lighter',
+        example: 'fewer files, less to read at the start of each session',
+        recommended: false,
+      },
+    ],
+  },
+  {
+    id: 'uses-git',
+    phase: 'you',
+    kind: 'select',
+    ask: 'Do you keep this work in git?',
+    configKey: 'usesGit',
+    readMore: 'uses-git',
+    options: [
+      {
+        value: 'yes',
+        label: 'Yes, in git repos',
+        example: 'commits, branches, history',
+        recommended: true,
+      },
+      {
+        value: 'no',
+        label: 'No, just folders',
+        example: 'the files live on disk and that’s it',
+        recommended: false,
+      },
+    ],
+  },
   {
     id: 'commit-policy',
     phase: 'you',
@@ -145,6 +223,34 @@ export const YOU_QUESTIONS: Question[] = [
         value: 'none',
         label: 'No hooks — rules only',
         example: 'Nothing is added to `~/.claude/settings.json`',
+      },
+    ],
+  },
+  {
+    // Sits beside `hooks` because both answers end up in the same `~/.claude/settings.json`.
+    // It is a question rather than a constant for the reason every other default here is one:
+    // an output style changes how an agent behaves in every session, and a behaviour change
+    // with no question behind it has no long form and no argument against it either.
+    // `check-first` is recommended because it is what 0.2.6 does — it writes no output style
+    // at all — not because it is the better of the two.
+    id: 'output-style',
+    phase: 'you',
+    kind: 'select',
+    ask: 'How should your agent handle unclear decisions?',
+    configKey: 'outputStyle',
+    readMore: 'output-style',
+    options: [
+      {
+        value: 'check-first',
+        label: 'Check first',
+        example: 'pauses on anything unclear',
+        recommended: true,
+      },
+      {
+        value: 'proactive',
+        label: 'Act',
+        example: 'makes reasonable calls and keeps going',
+        recommended: false,
       },
     ],
   },

@@ -1,6 +1,72 @@
 {
-  "catalogVersion": "0.2.5+39bbcb0e",
+  "catalogVersion": "0.2.6+cd3836bf",
   "questions": [
+    {
+      "id": "work-kind",
+      "phase": "you",
+      "kind": "select",
+      "ask": "Is this for code, or for other kinds of work?",
+      "options": [
+        {
+          "value": "code",
+          "label": "Code",
+          "example": "repos, builds, pull requests",
+          "recommended": true
+        },
+        {
+          "value": "non-code",
+          "label": "Other work",
+          "example": "writing, research, teaching, accounting, ops",
+          "recommended": false
+        }
+      ],
+      "readMore": "work-kind",
+      "configKey": "workKind"
+    },
+    {
+      "id": "config-weight",
+      "phase": "you",
+      "kind": "select",
+      "ask": "Do you want the whole method, or a lighter setup?",
+      "options": [
+        {
+          "value": "full",
+          "label": "The whole method",
+          "example": "every document, every skill",
+          "recommended": true
+        },
+        {
+          "value": "light",
+          "label": "Lighter",
+          "example": "fewer files, less to read at the start of each session",
+          "recommended": false
+        }
+      ],
+      "readMore": "config-weight",
+      "configKey": "configWeight"
+    },
+    {
+      "id": "uses-git",
+      "phase": "you",
+      "kind": "select",
+      "ask": "Do you keep this work in git?",
+      "options": [
+        {
+          "value": "yes",
+          "label": "Yes, in git repos",
+          "example": "commits, branches, history",
+          "recommended": true
+        },
+        {
+          "value": "no",
+          "label": "No, just folders",
+          "example": "the files live on disk and that’s it",
+          "recommended": false
+        }
+      ],
+      "readMore": "uses-git",
+      "configKey": "usesGit"
+    },
     {
       "id": "commit-policy",
       "phase": "you",
@@ -142,6 +208,28 @@
       "configKey": "hooks"
     },
     {
+      "id": "output-style",
+      "phase": "you",
+      "kind": "select",
+      "ask": "How should your agent handle unclear decisions?",
+      "options": [
+        {
+          "value": "check-first",
+          "label": "Check first",
+          "example": "pauses on anything unclear",
+          "recommended": true
+        },
+        {
+          "value": "proactive",
+          "label": "Act",
+          "example": "makes reasonable calls and keeps going",
+          "recommended": false
+        }
+      ],
+      "readMore": "output-style",
+      "configKey": "outputStyle"
+    },
+    {
       "id": "skills",
       "phase": "you",
       "kind": "select",
@@ -237,9 +325,26 @@
       "readMore": "track-mode",
       "configKey": "trackMode",
       "when": {
-        "key": "owned",
-        "isNot": false
+        "all": [
+          {
+            "key": "owned",
+            "isNot": false
+          },
+          {
+            "key": "usesGit",
+            "is": "yes"
+          }
+        ]
       }
+    },
+    {
+      "id": "proof-line",
+      "phase": "discover",
+      "kind": "text",
+      "ask": "What proves work here is sound?",
+      "placeholder": "e.g. the reconciliation balances to the bank statement, or someone who didn’t write it read it",
+      "readMore": "proof-line",
+      "configKey": "proofLine"
     },
     {
       "id": "archive-home",
@@ -309,7 +414,11 @@
         }
       ],
       "readMore": "comments",
-      "configKey": "practices.comments"
+      "configKey": "practices.comments",
+      "when": {
+        "key": "workKind",
+        "is": "code"
+      }
     },
     {
       "id": "function-length",
@@ -335,7 +444,11 @@
         }
       ],
       "readMore": "function-length",
-      "configKey": "practices.function-length"
+      "configKey": "practices.function-length",
+      "when": {
+        "key": "workKind",
+        "is": "code"
+      }
     },
     {
       "id": "exports",
@@ -361,7 +474,11 @@
         }
       ],
       "readMore": "exports",
-      "configKey": "practices.exports"
+      "configKey": "practices.exports",
+      "when": {
+        "key": "workKind",
+        "is": "code"
+      }
     },
     {
       "id": "file-naming",
@@ -387,7 +504,11 @@
         }
       ],
       "readMore": "file-naming",
-      "configKey": "practices.file-naming"
+      "configKey": "practices.file-naming",
+      "when": {
+        "key": "workKind",
+        "is": "code"
+      }
     },
     {
       "id": "imports",
@@ -413,7 +534,11 @@
         }
       ],
       "readMore": "imports",
-      "configKey": "practices.imports"
+      "configKey": "practices.imports",
+      "when": {
+        "key": "workKind",
+        "is": "code"
+      }
     },
     {
       "id": "types",
@@ -439,7 +564,11 @@
         }
       ],
       "readMore": "types",
-      "configKey": "practices.types"
+      "configKey": "practices.types",
+      "when": {
+        "key": "workKind",
+        "is": "code"
+      }
     },
     {
       "id": "logic-placement",
@@ -465,7 +594,11 @@
         }
       ],
       "readMore": "logic-placement",
-      "configKey": "practices.logic-placement"
+      "configKey": "practices.logic-placement",
+      "when": {
+        "key": "workKind",
+        "is": "code"
+      }
     },
     {
       "id": "data-layer",
@@ -491,7 +624,11 @@
         }
       ],
       "readMore": "data-layer",
-      "configKey": "practices.data-layer"
+      "configKey": "practices.data-layer",
+      "when": {
+        "key": "workKind",
+        "is": "code"
+      }
     },
     {
       "id": "states",
@@ -517,7 +654,11 @@
         }
       ],
       "readMore": "states",
-      "configKey": "practices.states"
+      "configKey": "practices.states",
+      "when": {
+        "key": "workKind",
+        "is": "code"
+      }
     },
     {
       "id": "design-tokens",
@@ -543,7 +684,11 @@
         }
       ],
       "readMore": "design-tokens",
-      "configKey": "practices.design-tokens"
+      "configKey": "practices.design-tokens",
+      "when": {
+        "key": "workKind",
+        "is": "code"
+      }
     },
     {
       "id": "test-policy",
@@ -569,7 +714,11 @@
         }
       ],
       "readMore": "test-policy",
-      "configKey": "practices.test-policy"
+      "configKey": "practices.test-policy",
+      "when": {
+        "key": "workKind",
+        "is": "code"
+      }
     },
     {
       "id": "copy-registers",
@@ -669,6 +818,10 @@
       "body": "# Commit policy, as this repo's Part 11 states it\n\n## Why this is not a question\n\nYou already answered it once, in the `you` phase (see `commit-policy`). Asking again per repo\nis how two answers end up disagreeing, and a rule that disagrees with itself is worse than no\nrule — the agent gets both and you cannot tell which it followed.\n\nSo this area is never asked. It renders the answer you already gave into **Part 11** of each\nrepo's standard copy, which is where the standard itself says owner policy belongs.\n\n## What gets written\n\nIf you chose *only me — the agent prints the commands*, Part 11 gets the full ritual: never\n`git commit` or `git push`; run `git status --short`; print two blocks; never `-A`, never `.`.\n\nIf you chose *the agent may commit, never push*, Part 11 gets the small-slices rule instead —\ncommit after each leg lands rather than holding a multi-file change across a long gate run,\nstill never `-A` or `.`, still never push. Plus the two that hold whoever commits: `git add -N`\nfirst for a file git has never seen, because `--only` silently drops untracked paths and the\ncommit still typechecks; and build HEAD in isolation before pushing, because gates run against\nthe working tree and a partial commit can leave the branch unbuildable while your tree is green.\n\nIf you chose *no rule*, Part 11 says nothing about commits.\n\n## How to undo or change it\n\nRe-run `setup` and answer `commit-policy` differently, or edit Part 11 directly — it is marked\neditable for exactly this reason.\n"
     },
     {
+      "id": "config-weight",
+      "body": "# The whole method, or a lighter setup\n\n## What this is\n\nHow much of the method you want installed. The full setup is every document and every skill —\na standard of about 1,100 lines, a ledger, a board, a router, four workflow skills, a set of\nglobal rules and a model-routing rule with three tiers in it. The lighter setup is the same\nmethod with the machinery that assumes a large context budget taken out.\n\nIt is a separate question from what kind of work this is, deliberately, so that any combination\nstays reachable — including the programmer who wants the light config, which a single combined\n\"setup type\" could not express without inventing a name for it.\n\n**Status, 2026-09-17.** The question is in place and is recorded with your other answers. What a\nlight run actually writes differently is the next piece of work. Answering \"Lighter\" today\nchanges nothing about the files you get.\n\n## The options\n\n**The whole method.** *Recommended, and it is what this tool did before the question existed.*\n\n*The defense.* The parts fit together. The router points at the standard, the standard's Part 0\ntells a session how to adapt itself, the skills know how to work the ledger and the board, and\nthe model-routing rule is what stops a mechanical sweep running on the expensive tier. Take\npieces out and the remaining pieces cite documents that are not there.\n\n*The strongest argument against it.* The standard's own Part 0 says adapting it costs roughly\n40,000 to 80,000 tokens of context and warns against doing feature work in the same session.\nThat is a real bill, and it is charged at the start of every session that reads it. If your\nbudget is small, the method's advice to delegate work to a second agent is not merely unhelpful\n— it is the most expensive thing on the page.\n\n**Lighter.** *Fewer files, less to read at the start of each session.*\n\n*The defense.* Most of the value is in three habits: write down what is true, write down what is\nnext, and say what \"done\" means before starting. Those survive at a tenth of the size. The cut\nis aimed at exactly the parts that assume budget — one model instead of three tiers, no\nmodel-routing rule, a short standard, a shorter router, a ledger and no board, and the two\nworkflow skills that work without gates and commits rather than all four.\n\n*The strongest argument against it.* This is the option with the most conditionals behind it,\nand every conditional is a branch that can drift from what this page promises. A light run that\nstill writes the model-routing rule, or a short standard that still talks about diffs, is a\ndocument that renders cleanly, passes every check, and is quietly wrong for its reader.\n\nThere is a second cost worth naming: the board is where work running in parallel gets\nserialized, so a light setup has no rule for two sessions colliding. The answer to that is that\nyou have moved off \"lighter\" by then, not that \"lighter\" should carry a board.\n\n## What it writes and where\n\nToday: nothing on its own. It is saved with your other answers into `.personal-config.json` and\ninto your user config, so a second run does not re-ask it.\n\n## How to undo it\n\nRun `personal-config setup` again and answer the other way. Every run previews the full list of\nfiles before writing, and `personal-config undo` restores anything an accepted run overwrote.\nGoing from lighter to the whole method adds files; going the other way leaves the extra files on\ndisk, so delete the ones you no longer want.\n"
+    },
+    {
       "id": "copy-registers",
       "body": "# Who picks the words a user reads\n\n## What this is\n\nA paragraph in Part 11 of your repo's copy of the working standard — the part that holds your\nown policy rather than craft, and the part the standard itself marks as editable — saying who\ndecides the words a user sees on screen. The agent reads it before proposing any user-facing\ntext.\n\n## The options\n\n**You do — the agent offers 2–3 variations in different registers.** *Recommended.* Plain,\nwarm, terse. For example: *\"Couldn't save\"* / *\"That didn't go through — try again\"* /\n*\"Save failed\"*.\n\n*The defense.* Copy is a product decision wearing code's clothes. It is the part of the work\nusers actually read, it is cheap to decide and expensive to notice later, and an agent\ngenuinely cannot know your product's voice. Showing registers rather than a single suggestion\nmakes the decision take five seconds instead of prompting a rewrite.\n\n*The strongest argument against it.* Three variations for every string is a lot of\ninterruptions, and most strings do not deserve one — nobody needs to deliberate over the label\non a Cancel button.\n\n**The agent picks and tells you what it chose.**\n\n*The defense.* The work does not stop, and the copy is right there in the diff where you can\nchange it in one edit.\n\n*The strongest argument against it.* Copy that is already written gets reviewed as *acceptable*\nrather than *chosen*, and acceptable copy is how a product ends up sounding like nothing.\n\n## The qualifier both options carry\n\n**Check first whether it is already settled.** Re-opening decided copy wastes your time and is\na common way for an agent to relitigate something you already answered.\n\n## What it writes and where\n\nA paragraph in Part 11 of the standard copy — the part the standard itself marks as editable\npreference.\n\n## How to undo it\n\nEdit Part 11, or re-run `setup`.\n"
     },
@@ -706,7 +859,7 @@
     },
     {
       "id": "hooks",
-      "body": "# Enforcing a rule with a hook\n\n## What this is\n\nA rule is text in the agent's context; a hook is a script the harness runs whether the agent\nagrees or not. This decides whether the commit policy gets teeth, and whether every session\nopens with a short reminder of where work is written down.\n\n## The options\n\n**Block `git commit`, `git push` and `git add -A`.** *Recommended.* A `PreToolUse` hook reads\nthe command the agent is about to run, and refuses those, printing the two-block ritual to the\nagent instead.\n\n*The defense.* This is the one rule whose violation is hard to undo. A rule in prose is a rule a\nsession can reason its way past — under time pressure, or because the task \"obviously\" wants a\ncommit, or because a later instruction claimed to supersede it. The hook does not reason. It is\nalso the difference between a setup that works for you and one that works for someone who has\nnever read the rule they are relying on.\n\n*The strongest argument against it.* It edits `~/.claude/settings.json`, a file you own and\nprobably already have hooks in, and a bad merge there breaks every session until you fix it.\nThat is why the merge is previewed, confirmed, and backed up, and why declining prints the\nsnippet instead. It also blocks you when *you* asked for a commit, which is annoying the first\ntime and then permanently.\n\n**That, plus a session-start banner.** A `SessionStart` hook reads the repo's\n`.personal-config.json` and prints your ledger, your standard and the top `OPEN` board row.\n\n*The defense.* The files only help if sessions read them, and a session that does not know they\nexist will not. Three lines at startup is the cheapest way to make the habit automatic.\n\n*The strongest argument against it.* It is three lines of noise at the top of every session,\nincluding the ones where you just want to ask a question. And a banner people learn to skip is\nworse than no banner, because it looks like the problem is solved.\n\n**No hooks.** Nothing is added to `settings.json`.\n\n## What the guard catches, and what it does not\n\nIt parses the command out of the tool call with `jq` and walks its words, so it is exact about\nboth halves of the question. **Caught:** `git commit` and `git push` in any form, including\nbehind git's own options (`git -C . commit`, `git -c user.name=x commit`), after another\ncommand (`ls && git commit`), on a later line, and inside a shell wrapper (`sh -c \"git push\"`).\n`git add -A`, `--all`, `-Av` and `git add .` are caught; `git add <named files>` is not,\nbecause that is the ritual.\n\n**Not caught:** a commit a script makes when you run the script, since the hook sees\n`./deploy.sh` and nothing more; a commit written into a heredoc or a file and executed later;\nand any git wrapper of your own under a different name. It is a guard against a session\nreaching for a commit, not against a determined one.\n\nIt needs `jq` on your `PATH`. Without it the hook says so and falls back to matching the raw\npayload, which over-blocks — a `grep` for the phrase gets refused. That is the deliberate\ndirection to fail in: over-blocking costs one message, and a commit you did not make cannot be\ntaken back out of a checkout your other sessions are working in.\n\n## What it writes and where\n\n`~/.claude/hooks/personal-config/commit-guard.sh` and `session-banner.sh`, plus a **merge** into\n`~/.claude/settings.json` — never an overwrite. Existing hooks are preserved; duplicate entries\nare not added. The merge is shown as a diff, confirmed on its own, and the previous file is\nbacked up.\n\n## How to undo it\n\n`personal-config undo` restores the previous `settings.json`. Or remove the `PreToolUse` /\n`SessionStart` entries by hand and delete the scripts.\n"
+      "body": "# Enforcing a rule with a hook\n\n## What this is\n\nA rule is text in the agent's context; a hook is a script the harness runs whether the agent\nagrees or not. This decides whether the commit policy gets teeth, and whether every session\nopens with a short reminder of where work is written down.\n\n## The options\n\n**Block `git commit`, `git push` and `git add -A`.** *Recommended.* A `PreToolUse` hook reads\nthe command the agent is about to run, and refuses those, printing the two-block ritual to the\nagent instead.\n\n*The defense.* This is the one rule whose violation is hard to undo. A rule in prose is a rule a\nsession can reason its way past — under time pressure, or because the task \"obviously\" wants a\ncommit, or because a later instruction claimed to supersede it. The hook does not reason. It is\nalso the difference between a setup that works for you and one that works for someone who has\nnever read the rule they are relying on.\n\n*The strongest argument against it.* It edits `~/.claude/settings.json`, a file you own and\nprobably already have hooks in, and a bad merge there breaks every session until you fix it.\nThat is why the merge is previewed, confirmed, and backed up, and why declining prints the\nsnippet instead. It also blocks you when *you* asked for a commit, which is annoying the first\ntime and then permanently.\n\n**That, plus a session-start banner.** A `SessionStart` hook reads the repo's\n`.personal-config.json` and prints your ledger, your standard and the top `OPEN` board row.\n\n*The defense.* The files only help if sessions read them, and a session that does not know they\nexist will not. Three lines at startup is the cheapest way to make the habit automatic.\n\n*The strongest argument against it.* It is three lines of noise at the top of every session,\nincluding the ones where you just want to ask a question. And a banner people learn to skip is\nworse than no banner, because it looks like the problem is solved.\n\n**No hooks.** No hook is added to `settings.json`. (The output-style question writes to the same\nfile, and answering \"Act\" there still adds its one key — see `output-style.md`.)\n\n## The completion gate, which comes with either option\n\nBoth answers above also install a **`Stop` hook**: a script that runs when your agent tries to\nend its turn, and refuses the ending if the work looks unfinished. It is not a third option\nbecause it is not a third kind of decision — if you want hooks at all, this is the one that\naddresses the complaint people actually have.\n\n*The defense.* The documented failure here is not laziness, it is that **\"looks done\" is the\nonly signal an agent has when nothing checks**. A gate is that check. It costs nothing to run —\na shell script spends no context, which is why it is installed on the lighter setup too, where\nevery other hook is cut for exactly that reason.\n\n*The strongest argument against it.* **A grep-and-run-the-gates script cannot judge intent, only\nrun checks.** It will not catch work that is shallow rather than visibly unfinished — a function\nthat is written, compiles, passes, and does the wrong thing sails straight through. And it runs\nyour gate command on *every* stop, so a repo whose suite is red for a reason you already know\nabout will argue with you until the cap below ends the turn.\n\n**The cap matters, and it is the reason this is safe to install.** Claude Code overrides a\n`Stop` hook after **8 consecutive blocks** and ends the turn with a warning. So the worst case\nis an argument, not a lock-out. `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` raises that ceiling if you\nwant a stricter gate; nothing lowers it, so if 8 rounds of a wrong block is too many, remove the\nhook rather than tuning it. The script also reads `stop_hook_active` and stands down when a turn\nis already continuing because of it, so it never argues with itself.\n\n## What the gate checks, and what it cannot\n\n**Placeholder markers**, in the source files your working tree has changed — under git that is\nwhat `git status` reports, and in a plain folder it is the directory, minus the usual vendored\ntrees. Four patterns, chosen small on purpose, because a marker that fires on ordinary text\nteaches you to ignore the hook:\n\n| Matched | Why |\n|---|---|\n| `rest of the file` / `code` / `implementation` / `function` / `method` / `class` | The canonical elision, in each spelling. The broadest of the four. |\n| `... existing code ...` | A file summarised instead of edited. |\n| `unchanged` / `omitted` / `elided` / `truncated` **for brevity** | The same thing, said politely. |\n| `your code here`, `code goes here`, `implementation goes here` | A scaffold handed back with the hole still in it. |\n\n**Deliberately not matched:** `TODO: implement`, because a deferred task is not an unfinished\nturn and a line-by-line scan cannot tell them apart; and `not implemented`, because throwing it\nis a legitimate idiom for an abstract method.\n\n**Only code files are scanned**, and never one under a `hooks/` directory. These are code\nmarkers, and prose legitimately says \"the rest of the file is unchanged\" — so scanning `.md`\nwould flag documents for being documents, including this page.\n\n**Your gate command**, read from `gateCommand` in the repo's own `.personal-config.json` — never\na constant, because one hook has to serve every repo and `bun test` is one repo's answer. It is\nwritten **empty**, because no question knows what proves a change in your repo; Part 0's\nadaptation session finds the gates by running them, and writes the one that proves the whole\nrepo into that key. **An empty value means the gate runs nothing** and never blocks on it. That\nis the deliberate direction: a hook that refused every stop because it could not find a command\nis a hook you would uninstall before it ever caught anything.\n\nKeep it to one plain command with no quotes inside it — it is read with `sed`, not a JSON\nparser. And a suite slower than the hook's 120-second timeout never blocks at all: a killed hook\nis a failed hook, not a refusal.\n\n## What the guard catches, and what it does not\n\nIt parses the command out of the tool call with `jq` and walks its words, so it is exact about\nboth halves of the question. **Caught:** `git commit` and `git push` in any form, including\nbehind git's own options (`git -C . commit`, `git -c user.name=x commit`), after another\ncommand (`ls && git commit`), on a later line, and inside a shell wrapper (`sh -c \"git push\"`).\n`git add -A`, `--all`, `-Av` and `git add .` are caught; `git add <named files>` is not,\nbecause that is the ritual.\n\n**Not caught:** a commit a script makes when you run the script, since the hook sees\n`./deploy.sh` and nothing more; a commit written into a heredoc or a file and executed later;\nand any git wrapper of your own under a different name. It is a guard against a session\nreaching for a commit, not against a determined one.\n\nIt needs `jq` on your `PATH`. Without it the hook says so and falls back to matching the raw\npayload, which over-blocks — a `grep` for the phrase gets refused. That is the deliberate\ndirection to fail in: over-blocking costs one message, and a commit you did not make cannot be\ntaken back out of a checkout your other sessions are working in.\n\n## What it writes and where\n\n`~/.claude/hooks/personal-config/commit-guard.sh`, `session-banner.sh` and\n`completion-gate.sh` — whichever of the three your answer installs — plus a **merge** into\n`~/.claude/settings.json` giving each one a `PreToolUse`, `SessionStart` or `Stop` entry. Never\nan overwrite: existing hooks are preserved, and duplicate entries are not added. The merge is\nshown as a diff, confirmed on its own, and the previous file is backed up.\n\nThe lighter setup installs the completion gate **only** — no commit guard, because that one is\ngit-specific and whether you use git is its own question, and no banner.\n\n## How to undo it\n\n`personal-config undo` restores the previous `settings.json`. Or remove the entries by hand and\ndelete the scripts: the `PreToolUse` entry is the commit guard, `SessionStart` the banner, and\n`Stop` the completion gate. Removing just the `Stop` entry leaves the other two working, which\nis the one to reach for if the gate argues with you about a repo whose gates you already know\nare red.\n\nTo keep the gate but stop it running your suite, clear `gateCommand` in that repo's\n`.personal-config.json`: the placeholder scan still runs, and nothing else does.\n"
     },
     {
       "id": "imports",
@@ -729,8 +882,16 @@
       "body": "# The three model tiers\n\n## What this is\n\nThree names for models you already have access to, so that a task can say which one should run\nit without naming a specific release that will be obsolete in six months.\n\n- **Deep** — the strongest reasoning model you have.\n- **Default** — your everyday model.\n- **Mechanical** — your fastest, cheapest model.\n\n## How to choose which work gets which\n\n**The discriminator is: can the failure be silent?** Not how big or how scary the work feels.\nSizing by fear over-assigns the expensive tier and teaches you to ignore the label.\n\n- **Deep** is for work where a mistake compiles, passes every gate, and is wrong in production:\n  money paths, sync and merge rules, a notification that must never send. Prefer **one narrow\n  Deep review of a short load-bearing path** over a whole Deep phase.\n- **Default** is the right answer for most work — anything where failure is loud. A build\n  break, a red gate, a wrong screen. The gates do that reasoning for you.\n- **Mechanical** is for whole phases that are genuinely mechanical: close-out sweeps, a bounded\n  rename, doc reconciliation. Escalate the moment a gate fails for a non-obvious reason.\n\n## Why the tier also changes the size of the work\n\nA Deep session has roughly half an ordinary session's usable context before it starts\ncompacting. So assigning Deep does not just change who does the work — it means the work has to\nbe cut smaller. That is another reason to prefer one narrow Deep review to a whole Deep phase.\n\n## The argument against having tiers at all\n\nIf you only ever use one model, this is three questions and a table for nothing, and the rule\nthat checks a task's assigned model will never fire. Answer with the same model three times, or\nskip the routing rule — both are reasonable.\n\n## What it writes and where\n\n`~/.claude/rules/model-routing.md` carries the table. Generated boards and pass-off prompts use\nthe Default tier's name in their `**Model:**` headers.\n\n## How to undo it\n\nDelete `~/.claude/rules/model-routing.md`.\n"
     },
     {
+      "id": "output-style",
+      "body": "# Whether your agent acts, or checks first\n\n## What this is\n\nWhat an agent should do when it reaches something the task did not settle. Two shapes of the\nsame session: one makes a reasonable call and keeps going, telling you afterwards what it\ndecided; the other stops and asks before doing anything it is not sure about.\n\nThe answer becomes an output style in the generated `~/.claude/settings.json`. It is a question\nrather than a default because it changes how your agent behaves in every session you ever run —\nwhich is exactly the class of thing that should carry an argument against it rather than being\nchosen for you silently.\n\n**Status, 2026-09-17.** Both halves are in place: the question is asked, and the answer is\nwritten. \"Check first\" still produces the file it always did — it writes no output style at all,\nbecause an absent one is the harness's own default and there is no documented style name that\nmeans \"ask first\" to write instead. So the recommended answer is still exactly what this tool\ndid before the question existed.\n\n## The options\n\n**Check first.** *Recommended, because it is what your agent already does with no key set.*\n\n*The defense.* An agent that asks is an agent whose mistakes are cheap. You see the fork before\nit is taken rather than reading about it in a summary afterwards, and on work where a wrong turn\nis expensive to unwind — anything touching money, published output, or other people's files —\nthat is worth several interruptions. It is also the behaviour every other default here is tuned\naround: the confirm before writing, the preview of every file, the commit ritual that prints\ncommands rather than running them.\n\n*The strongest argument against it.* It is the documented cause of the complaint people\nactually have, which is an agent that replies with a plan instead of doing the work, or stops\nhalf way to ask whether to continue. If you have to answer four questions to get one file\nedited, the tool is spending your attention to avoid spending its own judgement.\n\n**Act.** *Makes reasonable calls and keeps going.*\n\n*The defense.* Most forks in a well-scoped task have an obvious answer, and a session that takes\nit and reports what it took is strictly faster than one that asks. Where the work is reversible\nand previewed — which is nearly all of it here — the cost of a wrong call is one correction,\nagainst a cost of one interruption per question for the whole session.\n\n*The strongest argument against it.* \"Reasonable\" is the agent's judgement, not yours, and you\nfind out what it thought was reasonable after the fact. On anything where the failure is quiet\nrather than loud, that is the wrong trade: the call that compiles, passes every check and is\nwrong is exactly the one you wanted to be asked about.\n\n## What it writes and where\n\n**Act** writes one key into `~/.claude/settings.json`:\n\n```json\n\"outputStyle\": \"Proactive\"\n```\n\n**Check first** writes nothing at all — no key, no second style name. That is deliberate rather\nthan unfinished: an absent `outputStyle` *is* the default behaviour, so writing a value for the\nrecommended answer would change how every session behaves for everyone who re-runs the wizard\nand answers the way they always had. It would also mean inventing a style name the\ndocumentation does not have.\n\nThe key goes in by the same **merge** every hook entry uses — never an overwrite — so an\n`outputStyle` you set yourself is replaced only when you answer this question, and everything\nelse in the file is preserved. The merge is shown as a diff, confirmed on its own, and the\nprevious file is backed up.\n\nIt applies to every session on your machine, not to one repo: `~/.claude/settings.json` is the\nuser-level file. And it is independent of permission mode — an agent in `plan` mode still plans,\nwhichever answer you give here, because that is a different setting doing a different job.\n\n## How to undo it\n\n`personal-config undo` restores the previous `settings.json` after an accepted run. Or run\n`personal-config setup` again and answer the other way, or open `~/.claude/settings.json` and\ndelete the `\"outputStyle\"` line by hand — it is one key, and removing it returns your agent to\nits default behaviour.\n"
+    },
+    {
       "id": "projects-dir",
       "body": "# Where your repos live\n\n## What this is\n\nOne directory the wizard scans, one level deep, for git repositories. Nothing outside it is\nread, and nothing is read that is not a git repo.\n\n## What the scan actually does\n\nIt is entirely local and entirely read-only. For each repo it looks at marker files to work out\nwhat it is: `package.json` plus a lockfile for the package manager, `go.mod`, `project.yml` or\n`Package.swift`, `pyproject.toml`, `Cargo.toml`; `.github/workflows` for CI; `migrations/`,\n`supabase/migrations` or `db/migrate` for migrations; existing `HANDOFF.md`, `PASSOFF.md`,\n`docs/incomplete/`, `AGENT-PRACTICES.md`, `CLAUDE.md` or `AGENTS.md`; `git worktree list`; and\nthe origin remote's owner. It shows you a table and you pick which repos to set up.\n\n**Nothing leaves your machine.** No file contents are uploaded, nothing is sent anywhere, and\nno network call is made except the `gh api user` that establishes your GitHub login — and only\nif `gh` is installed.\n\n## Why an existing ledger changes the outcome\n\nIf a repo already has a ledger, a board, or project folders under *any* name, the work profile\nis already chosen and the wizard adopts what is there rather than renaming it. That is the\nstandard's own rule, and it exists because a rename breaks every reference in every other doc.\n\n## The argument against scanning at all\n\nYou may only want one repo set up, and a scan of thirty is noise. Pass `--projects-dir` pointing\nat a directory containing just that repo, or re-run and pick one.\n\n## What it writes and where\n\nNothing. This answer only decides what the wizard looks at.\n\n## How to undo it\n\nNothing to undo.\n"
+    },
+    {
+      "id": "proof-line",
+      "body": "# What proves work here is sound\n\n## What this is\n\nOne line, in your own words, naming the thing that has to be true before work here counts as\nfinished. It is asked once for each repo or folder you set up, because the answer is a property\nof the work, not of you.\n\nExamples of the shape:\n\n- *the reconciliation balances to the bank statement*\n- *someone who didn't write it read it*\n- *the test suite and the type check are green, and the new behaviour has a test*\n- *the figures in the summary match the figures in the source table*\n\n## Why it is asked at all\n\nThe method's own rule is that a done-when which is only \"the gates pass\" is not a done-when.\nFor a repo with a test suite that rule is a warning; for work with no gates at all it is the\nwhole problem. Without this line, a session finishing non-code work has nothing to check itself\nagainst, and \"looks done\" becomes the only signal available — which is a documented way for an\nagent to stop early on work that is not actually finished.\n\nIt is asked on every track, not only the ones without gates, for the same reason: a repo with\nCI still owes an answer to \"and what makes it *right*\", and CI does not answer that.\n\n## What makes a good one\n\nIt is a **test somebody could run**, not a value. \"Accurate\" is not a proof line; \"the totals\nagree with the source of truth\" is. Prefer something that fails visibly when it is false, and\nthat a person other than you could apply without asking what you meant.\n\nOne line, one test. Two obligations joined by \"and\" read fine in a document and are useless in a\ncheck, because half of it passing looks the same as all of it passing.\n\n## The argument against it\n\nIt is one more question, on a flow that is otherwise trying to get shorter, and a bad answer is\nworse than none: a proof line that is vague (\"it works\") or unfalsifiable (\"it is correct\") gets\ncited by the end-of-work ritual as though it meant something, and lends the appearance of a\ncheck to work nothing checked. Leaving it empty is a legitimate answer, and an honest one, if\nyou do not have a real test to name yet.\n\n## What it writes and where\n\nToday: nothing. The answer is recorded with the rest of that target's answers in its\n`.personal-config.json`. Rendering it where \"the gates are green\" renders, so the end-of-work\nritual can cite it, is a separate piece of work.\n\n## How to undo it\n\nRun `personal-config setup` again in that repo or folder and give a different line, or an empty\none to remove it. Nothing else depends on the wording, so there is no other file to clean up;\n`personal-config undo` restores anything an accepted run overwrote.\n"
     },
     {
       "id": "skills",
@@ -755,6 +916,14 @@
     {
       "id": "types",
       "body": "# How strict the type layer is\n\n## What this is\n\nA rule in `docs/conventions-<lang>.md` — the per-language code standard an agent reads in full\nbefore writing any code, and the file a reviewer checks a diff against — saying how far the type\nsystem may be bypassed. It matters most at the edges — parsed JSON, a third-party library — where\nthe data is least trustworthy.\n\n## The options\n\n**Strict — no escape hatches at a boundary.** *Recommended.*\n\nIn TypeScript: `strict` in one base config, no `any`, no `unknown` in props, no\n`as unknown as`, and string-literal unions rather than `enum`. In Go: no `any` at an API\nboundary, typed string constants for anything crossing a wire or a database. In Python: type\nhints on every public function, checked in CI. In Swift: no force unwraps outside tests.\n\n*The defense.* Every escape hatch is a place where a runtime error was converted into a\ncompile-time success. They cluster at boundaries — exactly where the data is least trustworthy.\n`enum` is banned in TypeScript specifically because it is a runtime value pretending to be a\ntype, with different semantics from every other type-level construct.\n\n*The strongest argument against it.* Third-party libraries ship bad or missing types, and a\nblanket ban means writing an elaborate wrapper to model something you do not control. Sometimes\n`any` plus a comment is the honest answer and the wrapper is the lie.\n\n**Strict, with escape hatches allowed behind a justification comment.**\n\n*The defense.* It keeps the pressure on while admitting the library problem is real, and the\ncomment leaves a searchable record of where the gaps are.\n\n*The strongest argument against it.* \"With a comment\" is a rule that degrades: the comments get\nshorter, then they get copied, then they stop meaning anything.\n\n## What it writes and where\n\nRule `T1` in each `docs/conventions-<lang>.md`, tagged *review*.\n\n## How to undo it\n\nDelete the rule, or re-run `setup`.\n"
+    },
+    {
+      "id": "uses-git",
+      "body": "# Whether this work lives in git\n\n## What this is\n\nWhether the work you are setting up is kept in git repositories, or in plain folders on disk.\n\nIt is its own question rather than something inferred from what kind of work this is, because\nthe two really are independent: plenty of non-code work lives in git, and plenty of a working\nlife — drafts, records, notes, a folder of spreadsheets — does not. Some people have both, which\nis exactly why this is asked once about you rather than guessed per folder.\n\n**Status, 2026-09-17.** Answering \"No, just folders\" stops one question being asked — whether\nthese files should be committed or kept private, which has no meaning where there is no\nrepository. The discovery step still only finds git repositories; teaching it to accept plain\nfolders is the next piece of work, not this one.\n\n## The options\n\n**Yes, in git repos.** *Recommended, and it is what this tool assumed before the question\nexisted.*\n\n*The defense.* Git is what makes most of this checkable. Whether a file is committed or ignored\nis a real distinction, `git status` is how the commit ritual knows which files a session\ntouched, and a ledger in a tracked file can be cited from a pull request. The ownership guard —\nwhich refuses to write rule files into somebody else's repository — reads the origin remote, so\nit only exists at all when there is one.\n\n*The strongest argument against it.* It is an assumption, and until this question existed it was\nan unstated one: work not in a repository was simply invisible to the setup run. Answering \"yes\"\nwhen half your work is loose folders gets you a configuration for the half git can see.\n\n**No, just folders.** *The files live on disk and that's it.*\n\n*The defense.* It is the honest answer for a great deal of real work, and it removes a question\nthat cannot be answered sensibly without a repository: there is no `.git/info/exclude` to write\nto, so \"committed or private\" has no referent. Saying so up front is better than being asked and\nhaving the answer quietly discarded.\n\n*The strongest argument against it.* You lose the things git was carrying. Nothing records when\na document changed or why, nothing stops an agent overwriting a day's work, and the backup this\ntool keeps is the only way back from an accepted run. A folder is one deletion from gone.\n\n## What it writes and where\n\nToday: nothing on its own. It is saved with your other answers, and it gates one question — the\ncommitted-or-private question for each target, which is now asked only when the target is both\nyours and in git.\n\n## How to undo it\n\nRun `personal-config setup` again and answer the other way. Answering \"yes\" on a later run\nbrings the committed-or-private question back; answering \"no\" only stops it being asked, and\nleaves any files an earlier run already wrote exactly where they are. `personal-config undo`\nrestores anything an accepted run overwrote.\n"
+    },
+    {
+      "id": "work-kind",
+      "body": "# Code, or other kinds of work\n\n## What this is\n\nWhether the documents this tool writes are about writing software — repos, builds, pull\nrequests — or about some other kind of work that an agent helps with: writing, research,\nteaching, operations, bookkeeping.\n\nIt is asked first because it decides which of the later questions are worth your time. The\neleven questions about exports, imports, type strictness, data layers, loading states and design\ntokens are all rules about source code, and a person doing non-code work is not asked any of\nthem.\n\n**Status, 2026-09-17.** This answer is recorded and it already decides which questions you are\nasked. The documents it selects — a standard written for non-code work rather than the long one\nwritten for programmers — are the next piece of work, not this one. Answering \"Other work\"\ntoday gets you the shorter interview; it does not yet get you a different standard.\n\n## The options\n\n**Code.** *Recommended, and it is what this tool did before the question existed.*\n\n*The defense.* Everything here was built for software first and is battle-tested there. The\nconventions file, the commit ritual, the gates-green done-when, the router that names which\ndocument answers which question — all of it was written against real repos and has been run\nagainst them for months. Choosing this gets the version that has been wrong and been fixed.\n\n*The strongest argument against it.* It is the only shape that existed, which is not the same as\nbeing the right shape. If most of your work is not code, answering \"Code\" hands you a thirty-\nscreen interview about type strictness and design tokens to reach four documents whose examples\nare all diffs, and then a 1,100-line standard whose Part 6 is about git worktrees.\n\n**Other work.** *Writing, research, teaching, accounting, ops.*\n\n*The defense.* The method is not really about code. A ledger of what is true, a board of what is\nnext, a standard that says what \"done\" means, and a proof line that says what makes work sound —\nnone of those are properties of a programming language. Stripping the code-specific parts leaves\nsomething that still works, and that a person who has never opened a terminal can answer.\n\n*The strongest argument against it.* Two documents drift, and only one of them is battle-tested.\nThe short standard written for non-code work starts life with none of the corrections the long\none has accumulated, and every branch that produces it is a place where what you are told you\nwill get can quietly stop matching what you get.\n\n## A worked example\n\n*One person's case, recorded here rather than in the question text, because the question is\ngeneral and this is not.* Somebody keeping a small set of books wanted the same working setup:\na record of what was decided and why, a list of what is next, and a rule an agent follows for\nwhat counts as finished. None of the code questions applied — there are no exports, no imports,\nno design tokens — and the one thing that mattered most had no equivalent in the code track at\nall: what proves a month's figures are right. That is the question this answer unlocks, and it\nis why \"Other work\" is not just \"Code with parts deleted\".\n\n## What it writes and where\n\nToday: nothing on its own. It is saved with your other answers into the repo's or folder's\n`.personal-config.json`, and it decides which questions the rest of the run asks — answering\n\"Other work\" skips the eleven code-conventions questions in the practices phase.\n\n## How to undo it\n\nRun `personal-config setup` again and answer the other way; the run previews every file before\nit writes anything, and `personal-config undo` restores whatever an accepted run overwrote.\nSince this answer currently writes no file of its own, changing it changes only which questions\nyou are asked next time.\n"
     },
     {
       "id": "work-profile",

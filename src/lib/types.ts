@@ -22,10 +22,21 @@ export type QuestionKind = 'select' | 'multiselect' | 'text' | 'confirm';
  * A question's condition, as data rather than a predicate. It is data because `catalog.json`
  * has to carry it to a browser that cannot serialize a closure (D6) — and because one
  * declarative form is the only way the catalog cannot drift from what the wizard asks.
+ *
+ * `all` is a conjunction, and nesting is allowed: `{ all: [spec, spec] }` holds when every
+ * member holds. It exists because one question can need two conditions — `track-mode` is asked
+ * only when the target is owned *and* git is in play (setup-tracks `DESIGN.md` D14/O3a) — and a
+ * derived composite key was rejected because the browser has no repos to derive one from.
+ *
+ * `any:` and `not:` are deliberately absent: every form that crosses the npm pin costs a
+ * publish, and neither has a caller (setup-tracks `DESIGN.md` §8).
  */
 export type WhenSpec =
   /** Never asked: the value is derived elsewhere. */
-  { never: true } | { key: string; is: AnswerValue } | { key: string; isNot: AnswerValue };
+  | { never: true }
+  | { key: string; is: AnswerValue }
+  | { key: string; isNot: AnswerValue }
+  | { all: WhenSpec[] };
 
 export type Question = {
   id: string;
@@ -68,10 +79,19 @@ export type ModelTiers = {
   fast: string;
 };
 
+/**
+ * What discovery found a target to be. A git repo carries a remote, an exclude file and a
+ * history; a plain folder carries none of the three, and a renderer that assumes otherwise
+ * writes into a `.git` that is not there (setup-tracks `DESIGN.md` D5).
+ */
+export type TargetKind = 'git' | 'folder';
+
 /** A repo found by discovery. Everything here is read off the disk, never asked. */
 export type RepoScan = {
   path: string;
   name: string;
+  /** Git repo or plain directory. Set by the scan, never asked, never inferred later. */
+  kind: TargetKind;
   languages: string[];
   packageManager: string | null;
   hasCi: boolean;
@@ -88,7 +108,13 @@ export type RepoScan = {
 
 export type WorkProfile = 'ledger' | 'folders';
 
-export type TrackMode = 'tracked' | 'untracked';
+/**
+ * `n/a` is a folder target's answer, not a missing one (setup-tracks `DESIGN.md` DIAL-11).
+ * There is no `.git/info/exclude` to write to, so the question has no referent and is never
+ * asked — but it is recorded rather than left out, so a renderer reads a value that says *why*
+ * there is no mode instead of an absence it has to guess at.
+ */
+export type TrackMode = 'tracked' | 'untracked' | 'n/a';
 
 /** Per-repo answers, merged from discovery plus the `discover` phase's questions. */
 export type RepoPlan = {

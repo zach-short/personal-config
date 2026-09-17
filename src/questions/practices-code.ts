@@ -23,13 +23,35 @@ function pairFor(pairs: PairsByLanguage, language: string): Pair | null {
   return pairs[language] ?? pairs.generic ?? null;
 }
 
+/**
+ * Every area in this file is a rule about source code, and every one of them renders into
+ * `docs/conventions-<language>.md`. So the condition is applied here, once, rather than copied
+ * onto eleven questions: an area added to this file later cannot forget it.
+ *
+ * The judgement is per question and was made from the options, not the title — `file-naming`
+ * ("How are files and folders named?") reads domain-neutral until you read its options, which
+ * are kebab-case in TypeScript and initialisms in Go, and `test-policy` reads like a general
+ * proof obligation until you read its options, which are `foo.test.ts` and `func TestApplyTax`.
+ * Someone doing non-code work answers neither. What they still get asked is
+ * `src/questions/practices-policy.ts`, which is unconditioned because copy registers and
+ * drive-by fixes are true of a chapter and a spreadsheet as much as of a diff.
+ */
 function question(
   id: string,
   ask: string,
   options: Question['options'],
   configKey = `practices.${id}`,
 ): Question {
-  return { id, phase: 'practices', kind: 'select', ask, options, readMore: id, configKey };
+  return {
+    id,
+    phase: 'practices',
+    kind: 'select',
+    ask,
+    options,
+    readMore: id,
+    configKey,
+    when: { key: 'workKind', is: 'code' },
+  };
 }
 
 function ruleFrom(

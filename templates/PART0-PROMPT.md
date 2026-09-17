@@ -28,6 +28,10 @@ Answer these, with citations:
 
 1. **What are the gates?** The exact commands that prove a change is sound. **Run every one
    once before you write it down.** The build command among them becomes `{{BUILD_CMD_TOKEN}}`.
+   Put the one command that proves the whole repo — what you would run before handing work
+   back — into `.personal-config.json` as `gateCommand`. It is written empty because only this
+   session knows it, and the completion-gate hook runs whatever is there and nothing when it is
+   empty. One plain command, no quotes inside it: it is read with `sed`, not a JSON parser.
 2. **Which gates can lie?** A checker that skips silently when an env var is missing; a lint
    run where everything is a warning; a suite that prints `ok` having run nothing.
 3. **What does a fresh checkout not have?** Gitignored-but-required files. That block becomes

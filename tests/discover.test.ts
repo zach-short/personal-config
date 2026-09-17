@@ -66,11 +66,24 @@ describe('discovery', () => {
     expect(repo.languages.sort()).toEqual(['python', 'typescript']);
   });
 
-  test('a non-repo directory is not scanned', async () => {
+  test('every fixture repo is tagged as one', () => {
+    expect(scans.map((s) => s.kind)).toEqual(scans.map(() => 'git'));
+  });
+
+  /**
+   * Was `a non-repo directory is not scanned` until 2026-09-17. D5 reverses it: a plain
+   * directory is a target now, tagged `folder`, because some of a person's work is in git and
+   * some of it is not. The assertion is kept the other way up rather than deleted, so the
+   * reversal is visible to anybody who greps for why discovery stopped filtering.
+   */
+  test('a non-repo directory is scanned, tagged as a folder', async () => {
     const root = join(import.meta.dir, 'fixtures');
     await Bun.write(join(root, 'not-a-repo', 'package.json'), '{}');
     const rescanned = await scanProjectsDir(root);
-    expect(rescanned.map((s) => s.name)).not.toContain('not-a-repo');
+    const found = rescanned.find((s) => s.name === 'not-a-repo');
+    expect(found?.kind).toBe('folder');
+    expect(found?.languages).toEqual(['typescript']);
+    expect(found?.remoteOwner).toBeNull();
   });
 });
 

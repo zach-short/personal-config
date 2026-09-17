@@ -386,7 +386,7 @@ describe('going back, and what the checkpoint does about it', () => {
 });
 
 describe('the real question chain', () => {
-  /** The `you` phase exactly as `setup` asks it, defaults and all — ten questions, no TTY. */
+  /** The `you` phase exactly as `setup` asks it, defaults and all — no TTY. */
   async function youPhase(prompter: Prompter): Promise<Answers> {
     const config = await loadConfig(parseCli(['setup']), null);
     const answers: Answers = { ...config.answers };
@@ -411,9 +411,17 @@ describe('the real question chain', () => {
       const second = recording('second');
       const answers = await youPhase(checkpointing(second, offer.checkpoint.entries));
 
+      // Named by position rather than by question id: the ids at the head and tail of `you`
+      // move whenever a question is added, and what this pins is that the first three answers
+      // came from the interrupted run and everything after it from the second.
+      const questions = questionsFor('you');
+      const head = questions[0];
+      const tail = questions.at(-1);
+      if (!head || !tail) throw new Error('the you phase is empty');
+
       expect(second.asked).toEqual(ids.slice(3));
-      expect(answers.commitPolicy).toBe('first-commit-policy');
-      expect(answers.keepExistingGlobal).toBe('second-keep-existing-global');
+      expect(answers[head.configKey]).toBe(`first-${head.id}`);
+      expect(answers[tail.configKey]).toBe(`second-${tail.id}`);
     });
   });
 });

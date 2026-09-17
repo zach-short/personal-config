@@ -1,6 +1,7 @@
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import type { Prompter } from '../src/lib/ask.ts';
 import { emptyConfig } from '../src/lib/config.ts';
 import { configFile } from '../src/lib/paths.ts';
 import type { Answers, Config, RepoPlan, RepoScan } from '../src/lib/types.ts';
@@ -25,10 +26,58 @@ export async function clearSavedAnswers(): Promise<void> {
   await Bun.write(configFile(), '{}');
 }
 
+/**
+ * `process.stdout.isTTY` is the only thing `confirmBatch` reads from outside its arguments, and
+ * under `bun test` stdout is a pipe. Without this a test takes the no-TTY early return and pins
+ * nothing — which is exactly how "`--force` skips the confirm" can be asserted outside a
+ * terminal and still pass against code that never reads `--force` at all.
+ *
+ * The original descriptor is put back rather than assigned over, because on a pipe the property
+ * is absent and `isTTY = undefined` is a different shape from absent.
+ *
+ * Shared rather than copied into each file that needs it: the descriptor dance is the part a
+ * later reader would simplify into a plain assignment, and one copy is one place to say why not.
+ */
+export async function withTty<T>(isTty: boolean, run: () => Promise<T>): Promise<T> {
+  const original = Object.getOwnPropertyDescriptor(process.stdout, 'isTTY');
+  Object.defineProperty(process.stdout, 'isTTY', { value: isTty, configurable: true });
+  try {
+    return await run();
+  } finally {
+    if (original) Object.defineProperty(process.stdout, 'isTTY', original);
+    else Reflect.deleteProperty(process.stdout, 'isTTY');
+  }
+}
+
+/** One thing a prompter was asked, in the order it was asked. */
+export type Asked = { message: string; fallback: boolean };
+
+/**
+ * A real `Prompter` that records what it was asked and answers from a script, rather than a mock
+ * of one: what a confirm is driven through here is the same interface `clackPrompter` implements,
+ * which is the whole reason the prompter is a parameter and not a `clackPrompter()` reached for
+ * inside the gate.
+ */
+export function recordingPrompter(script: boolean[]): { prompter: Prompter; asked: Asked[] } {
+  const asked: Asked[] = [];
+  const queue = [...script];
+  const prompter: Prompter = {
+    async ask(_question, fallback) {
+      return fallback;
+    },
+    async confirm(message, fallback) {
+      asked.push({ message, fallback });
+      return queue.shift() ?? fallback;
+    },
+  };
+  return { prompter, asked };
+}
+
 export function testScan(overrides: Partial<RepoScan> = {}): RepoScan {
   return {
     path: '/tmp/example',
     name: 'example',
+    kind: 'git',
     languages: ['typescript'],
     packageManager: 'bun',
     hasCi: true,

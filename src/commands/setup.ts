@@ -21,8 +21,8 @@ import {
   readCheckpoint,
   retiresCheckpoint,
 } from '../lib/resume.ts';
-import type { Answers, Cli, Config, RepoPlan, RepoScan } from '../lib/types.ts';
-import { previewTree, renderDiff, say, short } from '../lib/ui.ts';
+import type { Answers, Cli, Config, RepoPlan, RepoScan, TrackMode } from '../lib/types.ts';
+import { previewTree, renderDiff, say, short, targetList } from '../lib/ui.ts';
 import { version } from '../lib/version.ts';
 import { commitPlan, type PlannedChange, resolvePlan } from '../lib/write-plan.ts';
 import { askPhase } from '../phases/run.ts';
@@ -108,12 +108,13 @@ async function chooseRepos(
   const scans = await scanProjectsDir(dir);
 
   if (scans.length === 0) {
-    say(`No git repos found one level under ${short(expandHome(dir))}.`);
+    // Not "no git repos": discovery looks for plain directories too now (D5), so naming only
+    // the half that was searched would send someone off to `git init` a folder that qualifies.
+    say(`No repos or folders found one level under ${short(expandHome(dir))}.`);
     return [];
   }
 
-  say(`\nFound ${scans.length} repo(s) under ${short(expandHome(dir))}:\n`);
-  say(repoTable(scans));
+  say(targetList(scans, short(expandHome(dir))));
 
   const picked = interactive ? await pickRepos(scans) : scans.slice(0, 1);
   // Everything after this is asked once per repo under the same question ids, so a resumed run
@@ -136,24 +137,16 @@ function repoKey(scans: RepoScan[]): string {
     .join(',');
 }
 
-function repoTable(scans: RepoScan[]): string {
-  const rows = scans.map((s) => {
-    const langs = s.languages.join('+') || '—';
-    const docs = s.existingDocs.length > 0 ? s.existingDocs.join(',') : '—';
-    return `  ${s.name.padEnd(22)} ${langs.padEnd(18)} ${(s.packageManager ?? '—').padEnd(6)} ${
-      s.hasCi ? 'CI' : '  '
-    }  ${docs}`;
-  });
-  return [
-    `  ${'repo'.padEnd(22)} ${'languages'.padEnd(18)} ${'pm'.padEnd(6)}      existing`,
-    ...rows,
-  ].join('\n');
-}
-
 async function pickRepos(scans: RepoScan[]): Promise<RepoScan[]> {
   const chosen = await p.multiselect({
     message: 'Which repos should be set up?',
-    options: scans.map((s) => ({ value: s.path, label: s.name, hint: s.languages.join(', ') })),
+    // A folder says so in its hint: the list is otherwise name-only, and a folder's languages
+    // and package manager are usually both empty, so nothing else here distinguishes the two.
+    options: scans.map((s) => ({
+      value: s.path,
+      label: s.name,
+      hint: [...(s.kind === 'folder' ? ['folder'] : []), ...s.languages].join(', '),
+    })),
     required: false,
   });
   if (p.isCancel(chosen)) cancelRun();
@@ -164,15 +157,36 @@ async function pickRepos(scans: RepoScan[]): Promise<RepoScan[]> {
  * The ownership guard. A remote whose owner is not the signed-in login forces untracked mode
  * and the tracked question is never asked — writing a rule file into someone else's repo is
  * not a thing the user should have to remember to decline.
+ *
+ * **A plain folder is `owned`, and that is a decision rather than a fallthrough** (D5, and the
+ * same class of problem DIAL-11 names). `ownsRepo(login, null)` answers `false` for a folder,
+ * because a folder has no remote and `ownsRepo`'s contract is that ownership needs proof — but
+ * that `false` would mean "someone else's", print `remote owner unknown ≠ you` at a directory
+ * that has no remote to have an owner, and force a `trackMode` that DIAL-11 says has no
+ * referent here. The evidence that makes a target *not* yours is a remote naming somebody
+ * else, and a folder cannot acquire one. So the guard is answered rather than left to decide a
+ * case it was not written for.
+ *
+ * `track-mode` is then skipped by id rather than by its `when`. Its condition is
+ * `owned && usesGit` (D14), and `usesGit` is a fact about the *person* from the `you` phase —
+ * true of them while still being false of this one target. A per-target derived key would have
+ * to be read by the browser too, which has no filesystem to derive it from, so the skip lives
+ * here, where the target is.
+ *
+ * Exported as an internal seam, not as API: DIAL-11's whole claim is about what is asked and
+ * what is recorded for one target, and neither is observable from `runSetup`, which needs a
+ * scanned directory and a terminal. Every input is already a parameter, `src/cli.ts` stays this
+ * package's only public surface, and `tests/folder-targets.test.ts` is the caller.
  */
-async function planRepo(
+export async function planRepo(
   scan: RepoScan,
   login: string | null,
   answers: Answers,
   config: Config,
   prompter: Prompter,
 ): Promise<RepoPlan> {
-  const owned = ownsRepo(login, scan.remoteOwner);
+  const folder = scan.kind === 'folder';
+  const owned = folder ? true : ownsRepo(login, scan.remoteOwner);
   const perRepo: Answers = { ...answers, owned };
 
   if (scan.impliedProfile) {
@@ -181,6 +195,10 @@ async function planRepo(
       `  ${scan.name}: existing ${scan.existingDocs.join(', ')} — keeping that shape, not renaming.`,
     );
   }
+  if (folder) {
+    perRepo.trackMode = 'n/a';
+    say(`  ${scan.name}: a folder, not a repo — nothing to track or exclude.`);
+  }
   if (!owned) {
     perRepo.trackMode = 'untracked';
     say(
@@ -188,16 +206,23 @@ async function planRepo(
     );
   }
 
-  await askPhase('discover', prompter, perRepo, config, undefined, ['projects-dir']);
+  const unasked = folder ? ['projects-dir', 'track-mode'] : ['projects-dir'];
+  await askPhase('discover', prompter, perRepo, config, undefined, unasked);
   Object.assign(answers, pickShared(perRepo));
 
   return {
     scan,
     workProfile: perRepo.workProfile === 'folders' ? 'folders' : 'ledger',
-    trackMode: perRepo.trackMode === 'untracked' ? 'untracked' : 'tracked',
+    trackMode: trackModeFor(perRepo, folder),
     archiveHome: archiveFor(perRepo, scan.name),
     owned,
   };
+}
+
+/** A folder's mode is settled by what it is, so no answer can have overwritten it (DIAL-11). */
+function trackModeFor(perRepo: Answers, folder: boolean): TrackMode {
+  if (folder) return 'n/a';
+  return perRepo.trackMode === 'untracked' ? 'untracked' : 'tracked';
 }
 
 /** Answers that are about the person, not the repo, flow back so they are asked once. */
@@ -262,7 +287,24 @@ function modelsFrom(answers: Answers, config: Config): Config['models'] {
   };
 }
 
-async function finish(cli: Cli, changes: PlannedChange[], prompter: Prompter): Promise<number> {
+/**
+ * The end of a run: preview, confirm, write — or decline and write nothing. The decline is the
+ * one path that must never reach `commitPlan`, and it was the one path nothing drove end to end,
+ * because a terminal run cannot be driven from a test: clack reads raw key input that a pipe
+ * does not satisfy.
+ *
+ * So this carries an `export` it has no production caller for. It is an internal seam, not API —
+ * the bin in `src/cli.ts` is this package's only public surface and nothing here widens it. No
+ * restructuring was needed to open it: every input the decline depends on is already a
+ * parameter, including the prompter, and the one thing it reads from the world outside them is
+ * `process.stdout.isTTY`, which a test can define over. `tests/decline-seam.test.ts` is the
+ * caller, and what it pins is that the confirm happens at all — see `confirmBatch` below.
+ */
+export async function finish(
+  cli: Cli,
+  changes: PlannedChange[],
+  prompter: Prompter,
+): Promise<number> {
   const real = changes.filter((c) => c.before !== c.after);
   const guarded = changes.filter((c) => c.guard === 'no-stamp');
 
@@ -337,6 +379,11 @@ function leftAlone(guarded: PlannedChange[]): string {
  * It takes `cli` rather than a bare `force` so a test can drive real flag combinations through
  * it, and the prompter stays a parameter rather than a `clackPrompter()` reached for in here,
  * so the seam can be answered without a raw TTY.
+ *
+ * "Unconditionally" is the half of that first line that `tests/confirm-gate.test.ts` cannot see,
+ * because it calls this directly: an `interactive &&` back in front of the call in `finish`
+ * leaves every case there green. `tests/decline-seam.test.ts` is what pins it, by declining a
+ * `--yes` run through `finish` — the exact combination the old gate let through unasked.
  */
 export async function confirmBatch(
   cli: Cli,

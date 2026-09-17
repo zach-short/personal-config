@@ -8,6 +8,9 @@ import type { Answers, AnswerValue, WhenSpec } from './types.ts';
 export function matchesWhen(spec: WhenSpec | undefined, answers: Answers): boolean {
   if (spec === undefined) return true;
   if ('never' in spec) return false;
+  // An empty `all` holds — `every` says so, and "no conditions" is the same claim as no `when`
+  // at all. Pinned by `tests/when-all.test.ts` so it stays a decision rather than a side effect.
+  if ('all' in spec) return spec.all.every((inner) => matchesWhen(inner, answers));
   const actual = answers[spec.key];
   return 'is' in spec ? sameAnswer(actual, spec.is) : !sameAnswer(actual, spec.isNot);
 }
