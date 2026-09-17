@@ -42,7 +42,9 @@ describe('§2.3 — a status outside the vocabulary', () => {
       '| 2 | B | `IN FLIGHT` | D | A | — | — |',
       '| 3 | C | `DONE — HANDOFF 4` | D | A | — | — |',
       '| 4 | D | `HELD` | D | A | item 1 | — |',
-      '| 5 | E — superseded by item 1 | `SUPERSEDED` | — | — | — | — |',
+      // The replacement is named outside the title on purpose: a title carrying the word
+      // satisfied this check by existing, which `board-status-shapes.test.ts` now pins.
+      '| 5 | E | `SUPERSEDED` | — | — | **replaced by item 1** | — |',
     ];
     expect(messages(board(...rows))).toEqual([]);
   });

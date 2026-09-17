@@ -9,9 +9,20 @@ import { proseLines } from './markdown.ts';
  * exists to prevent, reintroduced by the tool that automates it.
  */
 
-/** `**12. Built the thing.** Done 2026-09-15, …` — the step log's one shape. */
-const STEP = /^\*\*(\d+)\.\s/;
-const TITLED = /^\*\*(\d+)\.\s+(.*?)\*\*/;
+/**
+ * A step heading, in every shape a hand-written log uses: `**12. Built it.** …`, `**12.** Built
+ * it …` where the bold stops after the number, the same line indented, and a list-item step
+ * `- **12. Built it.**`. They are one kind of thing, and reading only the first made a duplicate
+ * written in any of the other three invisible — to `doctor`, and to the `nextFreeStep` that
+ * `handoff step` hands out, which would then be a number the log had already taken.
+ */
+const STEP = /^\s*(?:[-*+]\s+)?\*\*(\d+)\.(?:\*\*)?\s/;
+
+/** `**12. Built it.**` — the bold closes after the title, so the bold carries it. */
+const BOLD_TITLE = /^\s*(?:[-*+]\s+)?\*\*(?:\d+)\.\s+(.*?)\*\*/;
+
+/** `**12.** Built it. Done …` — the bold closed early, so the title is the sentence after it. */
+const PLAIN_TITLE = /^\s*(?:[-*+]\s+)?\*\*(?:\d+)\.\*\*\s+([^.]*\.?)/;
 
 export type LedgerStep = { number: number; line: number; title: string };
 
@@ -26,7 +37,7 @@ export function ledgerSteps(markdown: string): LedgerStep[] {
 }
 
 function titleOf(text: string): string {
-  return (text.match(TITLED)?.[2] ?? '').trim();
+  return (text.match(BOLD_TITLE)?.[1] ?? text.match(PLAIN_TITLE)?.[1] ?? '').trim();
 }
 
 /**

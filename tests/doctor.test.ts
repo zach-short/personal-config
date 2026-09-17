@@ -87,6 +87,14 @@ describe('§2.1 — ledger step numbers', () => {
     });
     expect(found).not.toContain('step-numbers');
   });
+
+  test('flags a duplicate written as a list item, not only as a bold heading', async () => {
+    const found = await findingsFor({
+      'HANDOFF.md':
+        '## Step log\n\n**1. One.** Done 2026-09-14.\n\n- **1. Again.** Done 2026-09-15.\n',
+    });
+    expect(found).toContain('step-numbers');
+  });
 });
 
 describe('§2.3 — board status obligations', () => {
@@ -104,6 +112,15 @@ describe('§2.3 — board status obligations', () => {
       'PASSOFF.md': `${header}| 1 | X | \`DONE — HANDOFF 2\` | D | — |\n`,
     });
     expect(found).not.toContain('board-status');
+  });
+
+  test('DONE pointing at a step the ledger beside it does not have', async () => {
+    const found = await findingsFor({
+      'PASSOFF.md': `${header}| 1 | X | \`DONE — HANDOFF 999\` | D | — |\n`,
+      'HANDOFF.md':
+        '## Step log\n\n**1. One.** Done 2026-09-14.\n\n**2. Two.** Done 2026-09-15.\n',
+    });
+    expect(found).toContain('board-status');
   });
 
   test('HELD with nothing to wait on', async () => {
