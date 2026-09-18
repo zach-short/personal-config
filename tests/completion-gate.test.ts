@@ -18,7 +18,7 @@ const REST_OF = `// ... ${'rest'} of the ${'implementation'}`;
 const ELIDED = `// ${'...'} existing ${'code'} ...`;
 const PROSE = `the ${'rest'} of the ${'file'} is unchanged, as documents often are`;
 
-type Fired = { code: number; stderr: string };
+type Fired = { code: number; stdout: string; stderr: string };
 
 /** A Stop payload, as the harness sends it. Only `stop_hook_active` is read. */
 function payload(active: boolean): string {
@@ -37,8 +37,11 @@ async function fire(dir: string, active = false): Promise<Fired> {
     stdout: 'pipe',
     stderr: 'pipe',
   });
-  const stderr = await new Response(proc.stderr).text();
-  return { code: await proc.exited, stderr };
+  const [stdout, stderr] = await Promise.all([
+    new Response(proc.stdout).text(),
+    new Response(proc.stderr).text(),
+  ]);
+  return { code: await proc.exited, stdout, stderr };
 }
 
 async function run(dir: string, args: string[]): Promise<void> {

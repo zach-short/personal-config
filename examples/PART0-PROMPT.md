@@ -1,7 +1,7 @@
 <!-- personal-config v0.1.0 · 2026-09-15 · config e3a91f04 · standard v1.0.0 -->
 # Adapt the working standard to leaflet
 
-**Model: Default.** Run this once, in a fresh session, in `~/Projects/leaflet`. Do no feature
+**Model: Default.** Run this once, in a fresh session, in `~/code/leaflet`. Do no feature
 work in the same session: adaptation cost 40–80k of context in the two repos the standard was
 written from (2026-09-14), and you want the whole budget for it.
 

@@ -17,7 +17,7 @@ import type { Prompter } from '../src/lib/ask.ts';
 import { scanProjectsDir } from '../src/lib/discover.ts';
 import type { Answers, AnswerValue, Question, RepoScan } from '../src/lib/types.ts';
 import { targetList } from '../src/lib/ui.ts';
-import { cleanup, DEFAULT_ANSWERS, tempDir, testConfig, testScan } from './helpers.ts';
+import { cleanup, DEFAULT_ANSWERS, pickAll, tempDir, testConfig, testScan } from './helpers.ts';
 
 /** A folder with one file in it, which is the whole of what the admission rule asks for. */
 async function folder(root: string, name: string, file = 'notes.md'): Promise<void> {
@@ -35,6 +35,7 @@ function tracingPrompter(): { prompter: Prompter; asked: string[] } {
     async confirm(_message: string, fallback: boolean) {
       return fallback;
     },
+    pick: pickAll,
   };
   return { prompter, asked };
 }

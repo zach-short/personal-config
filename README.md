@@ -23,6 +23,11 @@ writes the first draft of them, correctly, for your repo.
 [Node](https://nodejs.org) 20 or newer. Nothing else — the published package is a bundle, so
 npm, pnpm and yarn all work and Bun is not needed to run it.
 
+**Platforms.** CI runs the gates on Linux and macOS; both are supported. The optional hooks
+(`commit-guard.sh`, `completion-gate.sh`, `session-banner.sh`) are bash scripts, so on Windows
+you need a POSIX shell to run them — WSL or Git Bash. Everything else the wizard writes is plain
+text and works anywhere Node does.
+
 ```bash
 npx personal-config setup
 ```

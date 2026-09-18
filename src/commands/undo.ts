@@ -52,7 +52,7 @@ function preview(backup: Backup): string {
  * there because this one has to be answerable by a prompter a test hands it.
  */
 async function confirmed(prompter: Prompter, backup: Backup): Promise<boolean> {
-  if (process.stdout.isTTY !== true) return true;
+  if (process.stdin.isTTY !== true) return true;
   return prompter.confirm(`Restore these ${backup.manifest.entries.length} file(s)?`, true);
 }
 

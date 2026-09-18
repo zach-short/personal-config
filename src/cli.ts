@@ -28,8 +28,9 @@ Options
   --profile <name>     start from profiles/<name>.json          (default: starter)
   --from <src>         setup only: start from a profile you already have —
                        ./profile.json, an https URL, or the 8-character id the site gives you
-  --projects-dir <dir> where to look for repos                  (default: ~/Projects)
+  --projects-dir <dir> where to look for repos                  (default: profiles/starter.json)
   --yes                accept every default without asking       (still previews, still confirms)
+                       setup: configures every target found under --projects-dir
   --dry-run            print the preview and write nothing
   --force              skip the confirm (implies you have read the preview)
   --fix                doctor only: apply the mechanical fixes

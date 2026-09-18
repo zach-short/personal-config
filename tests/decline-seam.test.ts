@@ -5,12 +5,12 @@ import { join } from 'node:path';
 import { finish } from '../src/commands/setup.ts';
 import { parseCli } from '../src/lib/args.ts';
 import { cancelMessage } from '../src/lib/ask.ts';
-import { claudeDir } from '../src/lib/paths.ts';
+import { claudeHooksDir } from '../src/lib/paths.ts';
 import type { PlannedChange } from '../src/lib/write-plan.ts';
 import { declinedHookHelp } from '../src/render/hooks.ts';
 import { cleanup, recordingPrompter, tempDir, withTty } from './helpers.ts';
 
-const HOOKS_DIR = join(claudeDir(), 'hooks', 'personal-config');
+const HOOKS_DIR = claudeHooksDir();
 const GUARD = join(HOOKS_DIR, 'commit-guard.sh');
 
 /** A new file, which is what a first run plans: nothing on disk, and something to write. */

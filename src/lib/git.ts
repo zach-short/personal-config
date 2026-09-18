@@ -43,6 +43,24 @@ export async function remoteUrl(dir: string): Promise<string | null> {
   return git(dir, ['remote', 'get-url', 'origin']);
 }
 
+/**
+ * Whether git itself would ignore this path — its own rule resolution across `.gitignore` at
+ * every level, `.git/info/exclude` and core excludes — rather than a text search over those
+ * files' raw contents. A `.gitignore` *comment* that happens to mention the filename is not a
+ * pattern, and only `check-ignore` knows the difference. Exit 1 means "no pattern matched",
+ * which `execFile` treats as a rejection; anything else (no match, or the directory is not a
+ * repository) is read the same conservative way `git()` above reads every other failure: not
+ * proven ignored, so the finding still surfaces rather than silently disappearing.
+ */
+export async function isIgnored(dir: string, path: string): Promise<boolean> {
+  try {
+    await run('git', ['check-ignore', '-q', '--', path], { cwd: dir, maxBuffer: MAX_OUTPUT });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** `git@github.com:owner/repo.git` and `https://github.com/owner/repo` both yield `owner`. */
 export function ownerFromRemote(url: string | null): string | null {
   if (!url) return null;

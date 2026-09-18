@@ -1,7 +1,7 @@
 import { backupFiles, type Manifest } from './backup.ts';
 import { diffSummary } from './diff.ts';
 import { exists, readText, writeText } from './disk.ts';
-import { isOurs } from './stamp.ts';
+import { isOurs, sameButForStampDate } from './stamp.ts';
 import type { PlannedFile } from './types.ts';
 
 export type PlannedChange = {
@@ -22,7 +22,11 @@ export async function resolvePlan(files: PlannedFile[]): Promise<PlannedChange[]
 async function resolveOne(file: PlannedFile): Promise<PlannedChange> {
   const before = (await exists(file.path)) ? await readText(file.path) : '';
   const guard = stampGuard(file, before);
-  const after = guard === 'none' ? applyStrategy(file, before) : before;
+  const rendered = guard === 'none' ? applyStrategy(file, before) : before;
+  // What is on disk wins a date-only difference, rather than the render winning it. The bytes
+  // are the same either way; the stamp date is the one field they disagree about, and the
+  // truthful value is when the file last actually changed, not when a run last looked at it.
+  const after = sameButForStampDate(before, rendered) ? before : rendered;
   return { file, before, after, guard, summary: diffSummary(before, after) };
 }
 

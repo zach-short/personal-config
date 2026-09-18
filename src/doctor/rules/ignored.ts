@@ -1,27 +1,28 @@
 import { join, relative } from 'node:path';
-import { exists, readText } from '../../lib/disk.ts';
-import { excludeFile } from '../../lib/git.ts';
+import { exists } from '../../lib/disk.ts';
+import { excludeFile, isIgnored } from '../../lib/git.ts';
 import { readTrackMode } from '../../lib/repo-config.ts';
 import type { Finding, PlannedFile } from '../../lib/types.ts';
 
 const PERSONAL = ['.personal-config.json', 'PART0-PROMPT.md'];
 
 /**
- * A personal file that git can see is a personal file about to be swept into a commit. This
- * checks both ignore mechanisms, because untracked mode deliberately uses `.git/info/exclude`
- * rather than editing a repo-owned `.gitignore`.
+ * A personal file that git can see is a personal file about to be swept into a commit. Coverage
+ * is asked of git itself — `check-ignore` already resolves `.gitignore` at every level,
+ * `.git/info/exclude` and core excludes together, because untracked mode deliberately uses the
+ * exclude file rather than editing a repo-owned `.gitignore` and either can cover a name.
  */
 export async function ignoredFiles(repoRoot: string, extra: string[] = []): Promise<Finding[]> {
-  const ignoreText = await readBoth(repoRoot);
   const wanted = [...PERSONAL, ...extra];
 
   const present = await Promise.all(
     wanted.map(async (name) => ((await exists(join(repoRoot, name))) ? name : null)),
   );
+  const candidates = present.filter((name): name is string => name !== null);
+  const covered = await Promise.all(candidates.map((name) => isIgnored(repoRoot, name)));
 
-  return present
-    .filter((name): name is string => name !== null)
-    .filter((name) => !ignoreText.includes(name))
+  return candidates
+    .filter((_, i) => !covered[i])
     .map((name) => ({
       rule: 'ignored',
       standardId: null,
@@ -30,21 +31,6 @@ export async function ignoredFiles(repoRoot: string, extra: string[] = []): Prom
       message: `personal file is not covered by .gitignore or .git/info/exclude`,
       fixable: true,
     }));
-}
-
-/**
- * Both ignore files, and the exclude one is located by asking git rather than by spelling
- * `.git/info/exclude` out. A linked worktree's `.git` is a file, so the spelled path does not
- * exist there and every already-excluded file reads as uncovered — and `--fix` would then
- * append a line this would never see, once per run, forever. The detector and the fix have to
- * agree about which file they are talking about.
- */
-async function readBoth(repoRoot: string): Promise<string> {
-  const files = [join(repoRoot, '.gitignore'), await excludeFile(repoRoot)];
-  const texts = await Promise.all(
-    files.map(async (f) => ((await exists(f)) ? readText(f) : '')),
-  );
-  return texts.join('\n');
 }
 
 /**

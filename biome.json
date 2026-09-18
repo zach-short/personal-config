@@ -2,7 +2,14 @@
   "$schema": "https://biomejs.dev/schemas/2.2.4/schema.json",
   "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
   "files": {
-    "includes": ["src/**/*.ts", "tests/**/*.ts", "profiles/**/*.json"]
+    "includes": [
+      "src/**/*.ts",
+      "tests/**/*.ts",
+      "profiles/**/*.json",
+      "tools/**/*.js",
+      "tools/**/*.mjs",
+      "!tools/board-sweep.js"
+    ]
   },
   "formatter": {
     "enabled": true,
@@ -26,7 +33,8 @@
         "useConst": "error",
         "useImportType": "error",
         "noParameterAssign": "error",
-        "useNodejsImportProtocol": "error"
+        "useNodejsImportProtocol": "error",
+        "noNonNullAssertion": "error"
       },
       "suspicious": {
         "noExplicitAny": "error",
@@ -42,7 +50,13 @@
   },
   "overrides": [
     {
-      "includes": ["tests/**/*.ts", "src/lib/ui.ts", "src/cli.ts", "src/doctor/index.ts"],
+      "includes": [
+        "tests/**/*.ts",
+        "src/lib/ui.ts",
+        "src/cli.ts",
+        "src/doctor/index.ts",
+        "tools/**"
+      ],
       "linter": { "rules": { "suspicious": { "noConsole": "off" } } }
     }
   ]

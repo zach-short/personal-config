@@ -22,7 +22,7 @@ import type { Answers, AnswerValue, Question } from '../src/lib/types.ts';
 import { version } from '../src/lib/version.ts';
 import { askPhase } from '../src/phases/run.ts';
 import { questionsFor } from '../src/questions/index.ts';
-import { cleanup, tempDir } from './helpers.ts';
+import { cleanup, pickAll, tempDir } from './helpers.ts';
 
 /** `X2`: `home()` reads `$HOME` on every call, so a test can own one and take it away again. */
 async function inTempHome<T>(body: () => Promise<T>): Promise<T> {
@@ -53,6 +53,7 @@ function recording(prefix = 'live'): Prompter & { asked: string[] } {
     async confirm(_message, fallback) {
       return fallback;
     },
+    pick: pickAll,
   };
 }
 
@@ -68,6 +69,7 @@ function interruptedAfter(count: number, prefix: string): Prompter & { asked: st
     async confirm(message, fallback) {
       return inner.confirm(message, fallback);
     },
+    pick: pickAll,
   };
 }
 
@@ -116,6 +118,7 @@ describe('recording answers', () => {
         async confirm(_message, fallback) {
           return fallback;
         },
+        pick: pickAll,
       };
       const prompter = checkpointing(empty);
       await prompter.ask(question('skills', 'multiselect'), '');
@@ -289,6 +292,7 @@ describe('going back, and what the checkpoint does about it', () => {
       async confirm(_message, fallback) {
         return fallback;
       },
+      pick: pickAll,
     };
   }
 

@@ -52,6 +52,18 @@ export function claudeSettingsFile(): string {
 }
 
 /**
+ * Where the generated hook scripts go. A function like every other path here, and for the same
+ * reason: `home()` reads `$HOME` at call time. `src/render/hooks.ts` held this as a
+ * module-level `const` until 2026-09-17, which froze it against whatever `$HOME` was when the
+ * module graph first loaded — so a caller that moved `$HOME` afterwards, which is exactly what
+ * the suite's `inTempHome` does, kept writing to the old one. Harmless while the old one was
+ * also a sandbox, and an `X2` breach the first time it was not.
+ */
+export function claudeHooksDir(): string {
+  return join(claudeDir(), 'hooks', 'personal-config');
+}
+
+/**
  * The directory this CLI was installed into — where `standard/` and `templates/` live.
  *
  * Found by walking up to the nearest `package.json` rather than by counting `..` segments,

@@ -34,7 +34,7 @@ export function emptyConfig(profile: string): Config {
     identity: { githubLogin: null },
     models: { deep: '', default: '', fast: '' },
     answers: {},
-    projectsDir: '~/Projects',
+    projectsDir: '',
     archiveHome: '',
   };
 }

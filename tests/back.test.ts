@@ -11,6 +11,7 @@ import { loadConfig } from '../src/lib/config.ts';
 import type { Answers, AnswerValue, Question } from '../src/lib/types.ts';
 import { askPhase } from '../src/phases/run.ts';
 import { questionsFor } from '../src/questions/index.ts';
+import { pickAll } from './helpers.ts';
 
 /** One entry per *ask*, so a question asked twice consumes two of them. */
 function scripted(script: AnswerValue[]): Prompter & {
@@ -26,6 +27,7 @@ function scripted(script: AnswerValue[]): Prompter & {
     async confirm(_message, fallback) {
       return fallback;
     },
+    pick: pickAll,
   };
 }
 

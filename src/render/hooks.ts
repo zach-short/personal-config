@@ -1,10 +1,8 @@
 import { join } from 'node:path';
-import { claudeDir, claudeSettingsFile, contractHome } from '../lib/paths.ts';
+import { claudeHooksDir, claudeSettingsFile, contractHome } from '../lib/paths.ts';
 import { template } from '../lib/template.ts';
 import type { PlannedFile } from '../lib/types.ts';
 import { answer, planned, type RenderContext } from './context.ts';
-
-const HOOKS_DIR = join(claudeDir(), 'hooks', 'personal-config');
 
 /** Which of the three hook scripts a run installs. */
 type HookSet = { guard: boolean; banner: boolean; gate: boolean };
@@ -75,7 +73,7 @@ async function scriptFile(
   // `template()` rather than a bare read: a missing file names itself, where `readText` would
   // surface a raw ENOENT and a long absolute path through the CLI's error line.
   const source = await template(join('hooks', name));
-  return planned(ctx, join(HOOKS_DIR, name), label, source, { extension: 'sh' });
+  return planned(ctx, join(claudeHooksDir(), name), label, source, { extension: 'sh' });
 }
 
 /**
@@ -86,7 +84,7 @@ async function scriptFile(
  * setup, and it belongs to whoever fixes the missing executable bit at the source.
  */
 function gateCommand(): string {
-  return `bash "${join(HOOKS_DIR, 'completion-gate.sh')}"`;
+  return `bash "${join(claudeHooksDir(), 'completion-gate.sh')}"`;
 }
 
 function settingsMerge(ctx: RenderContext, want: HookSet, style: string | null): PlannedFile {
@@ -95,7 +93,7 @@ function settingsMerge(ctx: RenderContext, want: HookSet, style: string | null):
     hooks.PreToolUse = [
       {
         matcher: 'Bash',
-        hooks: [{ type: 'command', command: `${join(HOOKS_DIR, 'commit-guard.sh')}` }],
+        hooks: [{ type: 'command', command: `${join(claudeHooksDir(), 'commit-guard.sh')}` }],
       },
     ];
   }
@@ -104,7 +102,11 @@ function settingsMerge(ctx: RenderContext, want: HookSet, style: string | null):
       {
         matcher: 'startup|resume',
         hooks: [
-          { type: 'command', command: `${join(HOOKS_DIR, 'session-banner.sh')}`, timeout: 5 },
+          {
+            type: 'command',
+            command: `${join(claudeHooksDir(), 'session-banner.sh')}`,
+            timeout: 5,
+          },
         ],
       },
     ];
@@ -150,9 +152,9 @@ function settingsLabel(hasHooks: boolean, hasStyle: boolean): string {
  */
 export function declinedHookHelp(plannedPaths: string[]): string | null {
   const want = {
-    guard: plannedPaths.includes(join(HOOKS_DIR, 'commit-guard.sh')),
-    banner: plannedPaths.includes(join(HOOKS_DIR, 'session-banner.sh')),
-    gate: plannedPaths.includes(join(HOOKS_DIR, 'completion-gate.sh')),
+    guard: plannedPaths.includes(join(claudeHooksDir(), 'commit-guard.sh')),
+    banner: plannedPaths.includes(join(claudeHooksDir(), 'session-banner.sh')),
+    gate: plannedPaths.includes(join(claudeHooksDir(), 'completion-gate.sh')),
   };
   if (!want.guard && !want.banner && !want.gate) return null;
   return [
@@ -161,7 +163,7 @@ export function declinedHookHelp(plannedPaths: string[]): string | null {
     '',
     hookSnippet(want),
     '',
-    `Its scripts are written to ${contractHome(HOOKS_DIR)} when you accept a run.`,
+    `Its scripts are written to ${contractHome(claudeHooksDir())} when you accept a run.`,
   ].join('\n');
 }
 
@@ -169,12 +171,12 @@ function hookSnippet(want: HookSet): string {
   const parts: string[] = [];
   if (want.guard) {
     parts.push(
-      `  "PreToolUse": [\n    { "matcher": "Bash", "hooks": [{ "type": "command", "command": "${join(HOOKS_DIR, 'commit-guard.sh')}" }] }\n  ]`,
+      `  "PreToolUse": [\n    { "matcher": "Bash", "hooks": [{ "type": "command", "command": "${join(claudeHooksDir(), 'commit-guard.sh')}" }] }\n  ]`,
     );
   }
   if (want.banner) {
     parts.push(
-      `  "SessionStart": [\n    { "matcher": "startup|resume", "hooks": [{ "type": "command", "command": "${join(HOOKS_DIR, 'session-banner.sh')}", "timeout": 5 }] }\n  ]`,
+      `  "SessionStart": [\n    { "matcher": "startup|resume", "hooks": [{ "type": "command", "command": "${join(claudeHooksDir(), 'session-banner.sh')}", "timeout": 5 }] }\n  ]`,
     );
   }
   if (want.gate) {

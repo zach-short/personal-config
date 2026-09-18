@@ -27,8 +27,8 @@ export async function clearSavedAnswers(): Promise<void> {
 }
 
 /**
- * `process.stdout.isTTY` is the only thing `confirmBatch` reads from outside its arguments, and
- * under `bun test` stdout is a pipe. Without this a test takes the no-TTY early return and pins
+ * `process.stdin.isTTY` is the only thing `confirmBatch` reads from outside its arguments, and
+ * under `bun test` stdin is a pipe. Without this a test takes the no-TTY early return and pins
  * nothing — which is exactly how "`--force` skips the confirm" can be asserted outside a
  * terminal and still pass against code that never reads `--force` at all.
  *
@@ -39,14 +39,23 @@ export async function clearSavedAnswers(): Promise<void> {
  * later reader would simplify into a plain assignment, and one copy is one place to say why not.
  */
 export async function withTty<T>(isTty: boolean, run: () => Promise<T>): Promise<T> {
-  const original = Object.getOwnPropertyDescriptor(process.stdout, 'isTTY');
-  Object.defineProperty(process.stdout, 'isTTY', { value: isTty, configurable: true });
+  const original = Object.getOwnPropertyDescriptor(process.stdin, 'isTTY');
+  Object.defineProperty(process.stdin, 'isTTY', { value: isTty, configurable: true });
   try {
     return await run();
   } finally {
-    if (original) Object.defineProperty(process.stdout, 'isTTY', original);
-    else Reflect.deleteProperty(process.stdout, 'isTTY');
+    if (original) Object.defineProperty(process.stdin, 'isTTY', original);
+    else Reflect.deleteProperty(process.stdin, 'isTTY');
   }
+}
+
+/**
+ * How a prompter that is not exercising the target picker answers it: take everything found,
+ * which is what `defaultsPrompter` — and so `--yes` — does. A test that is about the picker
+ * supplies its own instead of borrowing this.
+ */
+export async function pickAll(scans: RepoScan[]): Promise<RepoScan[]> {
+  return scans;
 }
 
 /** One thing a prompter was asked, in the order it was asked. */
@@ -69,6 +78,7 @@ export function recordingPrompter(script: boolean[]): { prompter: Prompter; aske
       asked.push({ message, fallback });
       return queue.shift() ?? fallback;
     },
+    pick: pickAll,
   };
   return { prompter, asked };
 }

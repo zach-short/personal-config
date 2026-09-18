@@ -139,13 +139,19 @@ describe('the question catalog', () => {
 });
 
 describe('the engine carries no personal strings', () => {
-  test('grep for a name across src, templates and standard', async () => {
-    const proc = Bun.spawn(['grep', '-rni', 'zach', 'src/', 'templates/', 'standard/'], {
-      cwd: repoRoot(),
-      stdout: 'pipe',
-      stderr: 'ignore',
-    });
-    const out = await new Response(proc.stdout).text();
-    expect(out.trim()).toBe('');
-  });
+  const SCOPE = ['src/', 'templates/', 'standard/', 'examples/'];
+  const PATTERNS = ['zach', '~/Projects'];
+
+  test.each(PATTERNS)(
+    'grep for %s across src, templates, standard and examples',
+    async (pattern) => {
+      const proc = Bun.spawn(['grep', '-rni', '-F', pattern, ...SCOPE], {
+        cwd: repoRoot(),
+        stdout: 'pipe',
+        stderr: 'ignore',
+      });
+      const out = await new Response(proc.stdout).text();
+      expect(out.trim()).toBe('');
+    },
+  );
 });

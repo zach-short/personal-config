@@ -20,6 +20,29 @@ async function findingsFor(files: Record<string, string>): Promise<string[]> {
   }
 }
 
+/**
+ * A real `git init`, because the `ignored` rule now asks `git check-ignore` rather than
+ * substring-matching the ignore files' text, and a directory that is not a repository answers
+ * every query "not ignored" — a different code path from the one every real repo is on.
+ */
+async function findingsForGitRepo(files: Record<string, string>): Promise<string[]> {
+  const dir = await tempDir();
+  try {
+    await Bun.spawn(['git', 'init', '--quiet'], {
+      cwd: dir,
+      stdout: 'ignore',
+      stderr: 'ignore',
+    }).exited;
+    for (const [path, contents] of Object.entries(files)) {
+      await Bun.write(join(dir, path), contents);
+    }
+    const report = await runDoctorOn(dir, EXPECTATION);
+    return report.findings.map((f) => f.rule);
+  } finally {
+    await cleanup(dir);
+  }
+}
+
 function doc(text: string) {
   return {
     path: 'x.md',
@@ -196,16 +219,32 @@ describe('stamp drift', () => {
 
 describe('ignored personal files', () => {
   test('flags a personal file git can see', async () => {
-    const found = await findingsFor({ '.personal-config.json': '{}\n' });
+    const found = await findingsForGitRepo({ '.personal-config.json': '{}\n' });
     expect(found).toContain('ignored');
   });
 
   test('passes when .git/info/exclude covers it', async () => {
-    const found = await findingsFor({
+    const found = await findingsForGitRepo({
       '.personal-config.json': '{}\n',
       '.git/info/exclude': '.personal-config.json\n',
     });
     expect(found).not.toContain('ignored');
+  });
+
+  test('passes when .gitignore covers it', async () => {
+    const found = await findingsForGitRepo({
+      '.personal-config.json': '{}\n',
+      '.gitignore': '.personal-config.json\n',
+    });
+    expect(found).not.toContain('ignored');
+  });
+
+  test('a .gitignore comment mentioning the filename does not cover it', async () => {
+    const found = await findingsForGitRepo({
+      '.personal-config.json': '{}\n',
+      '.gitignore': '# .personal-config.json is written by personal-config\nnode_modules/\n',
+    });
+    expect(found).toContain('ignored');
   });
 });
 

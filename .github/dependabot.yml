@@ -1,0 +1,25 @@
+# Dependency updates, proposed as PRs rather than discovered when a gate breaks.
+#
+# Both ecosystems, because both can rot silently: a `@biomejs/biome` minor changes what `lint`
+# accepts, and a pinned `actions/checkout@v4` keeps working until the day it does not. Grouped
+# and monthly on purpose — this repo has three dev dependencies and one runtime dependency, so
+# a weekly per-package PR stream would be noise around a signal that moves a few times a year.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 5
+    groups:
+      dev-tooling:
+        patterns: ['*']
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ['*']

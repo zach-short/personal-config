@@ -1,0 +1,52 @@
+[
+ {
+  "id": "35",
+  "title": "`setup` ignores `--force`, and `--yes` skips the confirm the help promises",
+  "model": "Opus 5",
+  "lane": "A",
+  "waitsOn": [],
+  "kind": "build",
+  "prompt": "<prompt for item 35>"
+ },
+ {
+  "id": "37",
+  "title": "Give the decline path in `setup` a testable seam",
+  "model": "Opus 5",
+  "lane": "A",
+  "waitsOn": [
+   "35"
+  ],
+  "kind": "build",
+  "prompt": "<prompt for item 37>"
+ },
+ {
+  "id": "36",
+  "title": "Cut `0.2.6`",
+  "model": "Opus 5",
+  "lane": "A",
+  "waitsOn": [
+   "35",
+   "37"
+  ],
+  "kind": "build",
+  "prompt": "<prompt for item 36>"
+ },
+ {
+  "id": "38",
+  "title": "Decide and implement how `requireSecure` treats loopback addresses",
+  "model": "Opus 5",
+  "lane": "B",
+  "waitsOn": [],
+  "kind": "build",
+  "prompt": "<prompt for item 38>"
+ },
+ {
+  "id": "39",
+  "title": "Narrow review: does every path through `commitPlan()` really go through backup first",
+  "model": "Fable 5.1",
+  "lane": "C",
+  "waitsOn": [],
+  "kind": "review",
+  "prompt": "<prompt for item 39>"
+ }
+]

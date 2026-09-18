@@ -1,5 +1,5 @@
 {
-  "catalogVersion": "0.2.6+cd3836bf",
+  "catalogVersion": "0.2.6+a27d3dce",
   "questions": [
     {
       "id": "work-kind",
@@ -277,7 +277,7 @@
       "phase": "discover",
       "kind": "text",
       "ask": "Which directory holds the repos you want to set up?",
-      "placeholder": "~/Projects",
+      "placeholder": ".",
       "readMore": "projects-dir",
       "configKey": "projectsDir"
     },
@@ -351,7 +351,7 @@
       "phase": "discover",
       "kind": "text",
       "ask": "Where should closed work go when it leaves the repo?",
-      "placeholder": "~/Projects/archive/<repo>/, or docs/archive/ to keep closed work in-tree",
+      "placeholder": "~/archive/<repo>/, or docs/archive/ to keep closed work in-tree",
       "readMore": "archive-home",
       "configKey": "archiveHome"
     },

@@ -12,7 +12,7 @@ export const DISCOVER_QUESTIONS: Question[] = [
     ask: 'Which directory holds the repos you want to set up?',
     configKey: 'projectsDir',
     readMore: 'projects-dir',
-    placeholder: '~/Projects',
+    placeholder: '.',
   },
   {
     id: 'work-profile',
@@ -93,7 +93,7 @@ export const DISCOVER_QUESTIONS: Question[] = [
     ask: 'Where should closed work go when it leaves the repo?',
     configKey: 'archiveHome',
     readMore: 'archive-home',
-    placeholder: '~/Projects/archive/<repo>/, or docs/archive/ to keep closed work in-tree',
+    placeholder: '~/archive/<repo>/, or docs/archive/ to keep closed work in-tree',
   },
   {
     id: 'mode',

@@ -1,10 +1,10 @@
 import { describe, expect, test } from 'bun:test';
 import { join } from 'node:path';
-import { claudeDir, claudeSettingsFile } from '../src/lib/paths.ts';
+import { claudeDir, claudeHooksDir, claudeSettingsFile } from '../src/lib/paths.ts';
 import { declinedHookHelp, renderHooks } from '../src/render/hooks.ts';
 import { DEFAULT_ANSWERS, testContext } from './helpers.ts';
 
-const HOOKS_DIR = join(claudeDir(), 'hooks', 'personal-config');
+const HOOKS_DIR = claudeHooksDir();
 const GUARD = join(HOOKS_DIR, 'commit-guard.sh');
 const BANNER = join(HOOKS_DIR, 'session-banner.sh');
 const UNRELATED = join(claudeDir(), 'CLAUDE.md');
@@ -77,10 +77,12 @@ describe('the paths the renderer plans are the paths this matches on', () => {
     expect(help).toContain(expected as string);
   });
 
+  // `renderHooks(... hooks: 'none' ...) === []` is pinned in `tests/completion-gate.test.ts`
+  // ("passes: answering no hooks still means no hooks, on either track"); what this test adds
+  // is that `declinedHookHelp` reads that real, empty plan as nothing to hand over too.
   test('answering hooks=none produces a plan with nothing to hand over', async () => {
     const ctx = testContext({ ...DEFAULT_ANSWERS, hooks: 'none' });
     const planned = await renderHooks(ctx);
-    expect(planned).toEqual([]);
     expect(declinedHookHelp(planned.map((f) => f.path))).toBeNull();
   });
 });

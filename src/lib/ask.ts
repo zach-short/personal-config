@@ -3,7 +3,7 @@ import * as p from '@clack/prompts';
 import { exists, readText } from './disk.ts';
 import { repoRoot } from './paths.ts';
 import { answerTape, hasCheckpoint, type ResumeEntry } from './resume.ts';
-import type { AnswerValue, Question } from './types.ts';
+import type { AnswerValue, Question, RepoScan } from './types.ts';
 
 export const READ_MORE = '__read_more__';
 
@@ -28,6 +28,13 @@ export type Prompter = {
   ask(question: Question, fallback: AnswerValue, canGoBack?: boolean): Promise<AnswerValue>;
   confirm(message: string, fallback: boolean): Promise<boolean>;
   /**
+   * Which of the discovered targets to configure. Required, not optional like `mark`: every
+   * prompter has to answer it, and the one that did not used to be `setup` itself, which
+   * reached past this interface to `p.multiselect` and left the non-interactive answer as an
+   * untested `slice(0, 1)` in a ternary.
+   */
+  pick(scans: RepoScan[]): Promise<RepoScan[]>;
+  /**
    * Records something the run settled that was not a question — today, which repos were
    * picked. A prompter that keeps no record of the run leaves it undefined.
    */
@@ -43,6 +50,16 @@ export function defaultsPrompter(scripted: Record<string, AnswerValue> = {}): Pr
     async confirm(_message, fallback) {
       return fallback;
     },
+    /**
+     * Every target that was found. `--yes` says it accepts every default, and for a question of
+     * the form "which of these" the default is all of them — not the first one alphabetically,
+     * which is what this answered until 2026-09-17 and which nobody's mental model contains.
+     * The preview still lists every file and the confirm still runs; `--force` is the documented
+     * way past that, and it says in the help text what it implies.
+     */
+    async pick(scans) {
+      return scans;
+    },
   };
 }
 
@@ -54,7 +71,31 @@ export function clackPrompter(): Prompter {
     async confirm(message, fallback) {
       return unwrap<boolean>(await p.confirm({ message, initialValue: fallback }));
     },
+    async pick(scans) {
+      return pickInteractively(scans);
+    },
   };
+}
+
+/**
+ * Lived in `src/commands/setup.ts` and called `p.multiselect` there directly, which is the one
+ * place a question was asked without going through this interface — so the non-interactive half
+ * of that decision was a ternary nobody could drive from a test.
+ */
+async function pickInteractively(scans: RepoScan[]): Promise<RepoScan[]> {
+  const chosen = await p.multiselect({
+    message: 'Which repos should be set up?',
+    // A folder says so in its hint: the list is otherwise name-only, and a folder's languages
+    // and package manager are usually both empty, so nothing else here distinguishes the two.
+    options: scans.map((s) => ({
+      value: s.path,
+      label: s.name,
+      hint: [...(s.kind === 'folder' ? ['folder'] : []), ...s.languages].join(', '),
+    })),
+    required: false,
+  });
+  if (p.isCancel(chosen)) cancelRun();
+  return scans.filter((s) => (chosen as string[]).includes(s.path));
 }
 
 /**
@@ -86,6 +127,9 @@ export function checkpointing(inner: Prompter, replay: ResumeEntry[] = []): Prom
     },
     async confirm(message, fallback) {
       return inner.confirm(message, fallback);
+    },
+    async pick(scans) {
+      return inner.pick(scans);
     },
     async mark(id, value) {
       if (tape.replayed(id, value) !== null) return;
@@ -226,6 +270,6 @@ export function cancelMessage(): string {
  * does for `setup`.
  */
 export async function confirmWrite(message: string, force: boolean): Promise<boolean> {
-  if (force || process.stdout.isTTY !== true) return true;
+  if (force || process.stdin.isTTY !== true) return true;
   return clackPrompter().confirm(message, true);
 }

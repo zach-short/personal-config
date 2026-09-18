@@ -6,8 +6,17 @@ on:
   pull_request:
 
 jobs:
+  # Both runners, because what this repo writes into a person's machine is bash: two hook
+  # scripts and a completion gate. macOS ships bash 3.2 and BSD userland (`sed -i` takes an
+  # argument, `grep` has no `-P`), so a hook written against GNU tooling passes every Linux job
+  # and fails in the terminal of the person who runs `setup` — and the only macOS verification
+  # this ever had was somebody running it locally and remembering to say so.
   gates:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
@@ -98,3 +107,38 @@ jobs:
           # Written as an explicit failure, not `grep -qv`: that succeeds whenever any one line
           # lacks the word, which is every multi-line output, and so asserts nothing.
           if grep -q 'TypeError' cmd.txt flag.txt; then echo "a stack trace reached the user"; exit 1; fi
+
+  # CLAUDE.md's own rule for `standard/`: "byte-for-byte except its version line." Nothing before
+  # this enforced it — a content edit that forgot to bump `standard/VERSION` and note itself in
+  # `standard/CHANGELOG.md` passed silently, and every repo already adapted from the boilerplate
+  # had no way to tell its copy had drifted from the one this repo ships.
+  boilerplate-version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: a boilerplate change without a version bump is a red build
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+          else
+            base="${{ github.event.before }}"
+          fi
+          # The first push on a new branch, or to an empty repo, has no base to diff against.
+          if [ -z "$base" ] || ! git cat-file -e "$base" 2>/dev/null; then
+            echo "no base commit to diff against — skipping"
+            exit 0
+          fi
+          changed=$(git diff --name-only "$base" "${{ github.sha }}")
+          if echo "$changed" | grep -qx 'standard/AGENT-PRACTICES.boilerplate.md'; then
+            if ! echo "$changed" | grep -qx 'standard/VERSION'; then
+              echo "standard/AGENT-PRACTICES.boilerplate.md changed but standard/VERSION did not."
+              echo "CLAUDE.md: the boilerplate is byte-for-byte except its version line."
+              exit 1
+            fi
+            if ! echo "$changed" | grep -qx 'standard/CHANGELOG.md'; then
+              echo "standard/AGENT-PRACTICES.boilerplate.md changed but standard/CHANGELOG.md did not."
+              exit 1
+            fi
+          fi

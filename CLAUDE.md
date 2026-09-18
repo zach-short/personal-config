@@ -37,9 +37,10 @@ ledger, a board or a model tier.
 
 ## Stack
 
-Bun 1.2.9 · TypeScript 5.9.2 (`strict`, `noUncheckedIndexedAccess`) · `@clack/prompts` 1.8.1 ·
-Biome 2.2.4 · `bun test`. No build step: Bun runs the TypeScript directly, and `src/cli.ts` is
-the bin with a `#!/usr/bin/env bun` shebang.
+Bun 1.2.9 (build tool and test runner) · TypeScript 5.9.2 (`strict`, `noUncheckedIndexedAccess`) ·
+`@clack/prompts` 1.8.1 · Biome 2.2.4 · `bun test`. The published bin is Node, not Bun:
+`bun run build` compiles `src/cli.ts` into `dist/cli.js` (`#!/usr/bin/env node`), and Bun-only
+APIs are deliberately kept out of `src/` so it runs under plain Node — see `src/lib/disk.ts`.
 
 ## Architecture
 
@@ -58,6 +59,7 @@ the bin with a `#!/usr/bin/env bun` shebang.
 
 | Path | Belongs here | Does not |
 |---|---|---|
+| `src/commands/` | One module per CLI subcommand (`setup`, `doctor`, `undo`, `archive`, `passoff`, `handoff`, `worktree`, `context`, `catalog`), each exporting a `run*()` that `src/cli.ts` dispatches to | Question text, rendering, the argument parser itself |
 | `src/lib/` | Pure logic: config merge, paths, stamps, diff, write plan, discovery | Prompts, console output (except `ui.ts`) |
 | `src/questions/` | Question definitions and the practices catalog | Rendering, file paths |
 | `src/phases/` | The runner that asks a phase's questions | Question text |

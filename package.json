@@ -2,6 +2,17 @@
   "name": "personal-config",
   "version": "0.2.6",
   "description": "A terminal wizard that sets up an agent-driven working style in your repos — a ledger, a board, a working standard, and the rules your agent reads before it writes code.",
+  "keywords": [
+    "cli",
+    "agent",
+    "coding-agent",
+    "claude-code",
+    "ledger",
+    "handoff",
+    "working-standard",
+    "setup-wizard"
+  ],
+  "author": "Zach Short (https://zacharyshort.com)",
   "license": "MIT",
   "homepage": "https://zacharyshort.com",
   "repository": {
@@ -22,7 +33,7 @@
     "standard",
     "templates",
     "profiles",
-    "docs"
+    "docs/choices"
   ],
   "scripts": {
     "build": "bun build src/cli.ts --target=node --packages=external --outfile dist/cli.js",
@@ -34,8 +45,8 @@
     "test": "bun test",
     "fixtures": "bun run tests/make-fixtures.ts",
     "typecheck": "tsc --noEmit",
-    "lint": "biome check src tests",
-    "format": "biome format --write src tests"
+    "lint": "biome check src tests tools",
+    "format": "biome format --write src tests tools"
   },
   "dependencies": {
     "@clack/prompts": "1.8.1"
@@ -45,6 +56,7 @@
     "@types/bun": "^1.4.2",
     "typescript": "5.9.2"
   },
+  "packageManager": "bun@1.2.9",
   "engines": {
     "node": ">=20"
   }

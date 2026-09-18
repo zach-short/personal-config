@@ -2,7 +2,6 @@ import { spawn } from 'node:child_process';
 import * as p from '@clack/prompts';
 import {
   cancelMessage,
-  cancelRun,
   checkpointing,
   clackPrompter,
   defaultsPrompter,
@@ -32,7 +31,7 @@ import { renderAll } from '../render/index.ts';
 import { standardVersion } from '../render/standard.ts';
 
 export async function runSetup(cli: Cli): Promise<number> {
-  const interactive = process.stdout.isTTY === true && !cli.yes;
+  const interactive = process.stdin.isTTY === true && !cli.yes;
   const asking: Prompter = interactive ? clackPrompter() : defaultsPrompter();
 
   if (interactive) p.intro('personal-config — setup');
@@ -46,7 +45,7 @@ export async function runSetup(cli: Cli): Promise<number> {
   const prompter = interactive ? checkpointing(asking, await offerResume(asking)) : asking;
 
   await askPhase('you', prompter, answers, config);
-  const repos = await chooseRepos(cli, config, answers, prompter, interactive);
+  const repos = await chooseRepos(cli, config, answers, prompter);
   if (repos.length === 0) {
     say('No repos selected — global rules only.');
   }
@@ -101,7 +100,6 @@ async function chooseRepos(
   config: Config,
   answers: Answers,
   prompter: Prompter,
-  interactive: boolean,
 ): Promise<RepoPlan[]> {
   await askPhase('discover', prompter, answers, config, ['projects-dir']);
   const dir = cli.projectsDir ?? String(answers.projectsDir ?? config.projectsDir);
@@ -116,7 +114,10 @@ async function chooseRepos(
 
   say(targetList(scans, short(expandHome(dir))));
 
-  const picked = interactive ? await pickRepos(scans) : scans.slice(0, 1);
+  // Through the prompter, not around it. `--yes` takes every target found, which is what
+  // "accept every default" means for a question of this shape; a terminal asks.
+  const picked = await prompter.pick(scans);
+  say(`Configuring ${picked.length} of ${scans.length} found.`);
   // Everything after this is asked once per repo under the same question ids, so a resumed run
   // that picked a different set here must stop replaying rather than answer for the wrong repo.
   await prompter.mark?.('repos', repoKey(picked));
@@ -135,22 +136,6 @@ function repoKey(scans: RepoScan[]): string {
     .map((s) => s.path)
     .sort()
     .join(',');
-}
-
-async function pickRepos(scans: RepoScan[]): Promise<RepoScan[]> {
-  const chosen = await p.multiselect({
-    message: 'Which repos should be set up?',
-    // A folder says so in its hint: the list is otherwise name-only, and a folder's languages
-    // and package manager are usually both empty, so nothing else here distinguishes the two.
-    options: scans.map((s) => ({
-      value: s.path,
-      label: s.name,
-      hint: [...(s.kind === 'folder' ? ['folder'] : []), ...s.languages].join(', '),
-    })),
-    required: false,
-  });
-  if (p.isCancel(chosen)) cancelRun();
-  return scans.filter((s) => (chosen as string[]).includes(s.path));
 }
 
 /**
@@ -297,7 +282,7 @@ function modelsFrom(answers: Answers, config: Config): Config['models'] {
  * the bin in `src/cli.ts` is this package's only public surface and nothing here widens it. No
  * restructuring was needed to open it: every input the decline depends on is already a
  * parameter, including the prompter, and the one thing it reads from the world outside them is
- * `process.stdout.isTTY`, which a test can define over. `tests/decline-seam.test.ts` is the
+ * `process.stdin.isTTY`, which a test can define over. `tests/decline-seam.test.ts` is the
  * caller, and what it pins is that the confirm happens at all — see `confirmBatch` below.
  */
 export async function finish(
@@ -390,7 +375,7 @@ export async function confirmBatch(
   real: PlannedChange[],
   prompter: Prompter,
 ): Promise<boolean> {
-  if (cli.force || process.stdout.isTTY !== true) return true;
+  if (cli.force || process.stdin.isTTY !== true) return true;
   const seeDiffs = await prompter.confirm('Show the per-file diff first?', false);
   if (seeDiffs) {
     for (const change of real) {
