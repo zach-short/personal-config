@@ -2,6 +2,7 @@ import { readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { configHash, loadConfig } from '../lib/config.ts';
 import { exists } from '../lib/disk.ts';
+import { isGitRepo } from '../lib/git.ts';
 import { expandHome } from '../lib/paths.ts';
 import type { Cli, Finding } from '../lib/types.ts';
 import { commitPlan, resolvePlan } from '../lib/write-plan.ts';
@@ -45,7 +46,10 @@ export async function runDoctorOn(
   const configured = await exists(join(root, '.personal-config.json'));
   const fromStamps = configured ? docs.flatMap((doc) => stampDrift(doc, expectation)) : [];
   const fromCitations = archivedCitations(docs, await archivedInfo(docs));
-  const fromIgnore = configured ? await ignoredFiles(root) : [];
+  // Ignore coverage is a question for git, and a plain folder (setup-tracks `DESIGN.md` D5) has
+  // none to ask: `check-ignore` there resolves whatever repository *encloses* the folder, if any,
+  // and would report a personal file as unignored by a `.gitignore` that is not this target's.
+  const fromIgnore = configured && (await isGitRepo(root)) ? await ignoredFiles(root) : [];
 
   // Not gated on `configured`: R8 guards a decision record, and a repo keeping one has not
   // necessarily been through this wizard. The git read answers null wherever it cannot apply.

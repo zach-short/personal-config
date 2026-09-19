@@ -28,15 +28,18 @@ export type Doc = {
 };
 
 /**
- * `templates/` exists to hold `{{TOKENS}}`, and the boilerplate standard quotes R1's own
- * trigger words while defining R1. Checking either for filled-ness is checking a stencil for
- * being a drawing. An *adapted* copy in a real repo is still checked.
+ * `templates/` exists to hold `{{TOKENS}}`, and both standards under `standard/` quote R1's own
+ * trigger words while defining R1 — the short one carries tokens as well, since it has no Part 0
+ * and is filled entirely at render time. Checking any of them for filled-ness is checking a
+ * stencil for being a drawing. An *adapted* copy in a real repo is still checked.
  */
 export function isTemplateSource(path: string): boolean {
   const normalized = path.replaceAll('\\', '/');
   return (
     normalized.startsWith('templates/') ||
     normalized.includes('/templates/') ||
+    normalized.startsWith('standard/') ||
+    normalized.includes('/standard/') ||
     normalized.includes('.boilerplate.')
   );
 }
@@ -58,7 +61,7 @@ export function proseLines(doc: Doc): Line[] {
 const NAMES: Array<[RegExp, DocKind]> = [
   [/^HANDOFF\.md$/, 'ledger'],
   [/^PASSOFF\.md$/, 'board'],
-  [/^AGENT-PRACTICES(\.local|\.boilerplate)?\.md$/, 'standard'],
+  [/^AGENT-PRACTICES(\.local|\.boilerplate|\.short)?\.md$/, 'standard'],
   [/^agent-practices.*\.md$/, 'standard'],
   [/^conventions-.*\.md$/, 'conventions'],
   [/^INDEX\.md$/, 'archive-index'],

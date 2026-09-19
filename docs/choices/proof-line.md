@@ -43,9 +43,15 @@ you do not have a real test to name yet.
 
 ## What it writes and where
 
-Today: nothing. The answer is recorded with the rest of that target's answers in its
-`.personal-config.json`. Rendering it where "the gates are green" renders, so the end-of-work
-ritual can cite it, is a separate piece of work.
+The line is rendered where the gate commands go in a code setup, so the end-of-work ritual has
+something to check against: in the short standard's section on what "done" means here, in the
+router under *What proves work here is sound*, and as the first row of the ledger's facts table.
+On the whole-method code track it is added to the Part 0 prompt, for the adaptation session to
+put beside the gates it finds.
+
+It is saved with that target's other answers in `.personal-config.json` and hashed into the stamp
+on every generated file there, so changing it and re-running `setup` re-renders them. Left empty,
+the documents say it is not yet written and make writing it the first session's job — with you.
 
 ## How to undo it
 

@@ -9,11 +9,6 @@ the two really are independent: plenty of non-code work lives in git, and plenty
 life — drafts, records, notes, a folder of spreadsheets — does not. Some people have both, which
 is exactly why this is asked once about you rather than guessed per folder.
 
-**Status, 2026-09-17.** Answering "No, just folders" stops one question being asked — whether
-these files should be committed or kept private, which has no meaning where there is no
-repository. The discovery step still only finds git repositories; teaching it to accept plain
-folders is the next piece of work, not this one.
-
 ## The options
 
 **Yes, in git repos.** *Recommended, and it is what this tool assumed before the question
@@ -42,9 +37,18 @@ tool keeps is the only way back from an accepted run. A folder is one deletion f
 
 ## What it writes and where
 
-Today: nothing on its own. It is saved with your other answers, and it gates one question — the
-committed-or-private question for each target, which is now asked only when the target is both
-yours and in git.
+**Yes** writes the git rules where they apply: the global `commits.md` for code work, the commit
+policy inside the short standard for other work, the commit line in the router, and the ignore
+entries that keep the personal files out of the repository.
+
+**No** writes none of those — no `commits.md`, no ignore entries anywhere, no git section in the
+short standard — and on the code track the long standard's owner-policy part carries no commit
+paragraph while the Part 0 prompt names Part 6 (parallel sessions, worktrees, the commit rules) as
+a candidate to cut whole.
+
+It also gates one question, the committed-or-private question for each target, which is asked
+only when the target is both yours and in git. Discovery finds plain folders as well as
+repositories, so a folder of files is a target whichever way this is answered.
 
 ## How to undo it
 

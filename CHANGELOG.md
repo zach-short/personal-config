@@ -3,6 +3,34 @@
 The CLI. The working standard it installs is versioned separately — see
 [`standard/CHANGELOG.md`](standard/CHANGELOG.md).
 
+## [Unreleased]
+
+### Added
+
+- **A light run renders lightly, and other work gets a standard written for it.** The three
+  questions that opened a run since 0.3.0 now decide what is written, not only what is asked.
+  *Other work* or *lighter* gets the **short form of the working standard** — under 200 lines,
+  written for a reader who does not commit code, with the owner's proof line where a code setup
+  has gate commands, and no Part 0 because nothing in it is left to fill in — plus a router and a
+  ledger shaped the same way. *Lighter* also drops the board, two of the four skills, the
+  model-routing rule and every hook but the completion gate. *Other work* never gets a
+  per-language code standard, `commits.md` or `docs-lookup.md`. *No* to git drops the commit rules
+  and the ignore entries everywhere they were written. Code with the whole method renders exactly
+  what 0.3.0 rendered, and a snapshot test holds it to that byte for byte.
+- **The proof line is now read.** Asked per target since 0.3.0 and then dropped before any file
+  saw it, it is carried on the plan, rendered into the short standard, the router and the ledger,
+  added to the Part 0 prompt on the code track, and saved and hashed with the target's answers so
+  `doctor` sees a change to it as drift.
+- **A plain folder is planned as a folder.** Its router and standard take the plain names rather
+  than the untracked ones, and no ignore entries are planned for a `.git` it does not have.
+  `doctor` asks git about ignore coverage only in a repository.
+
+### Changed
+
+- **`standard/VERSION` is 1.1.0.** One number covers both forms of the standard, so every file
+  generated before this reports a standard behind the current one until `setup` is re-run — the
+  same as any standard bump, and by design.
+
 ## 0.3.0 — 2026-09-18
 
 ### Added

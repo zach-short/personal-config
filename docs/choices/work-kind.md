@@ -11,11 +11,6 @@ eleven questions about exports, imports, type strictness, data layers, loading s
 tokens are all rules about source code, and a person doing non-code work is not asked any of
 them.
 
-**Status, 2026-09-17.** This answer is recorded and it already decides which questions you are
-asked. The documents it selects — a standard written for non-code work rather than the long one
-written for programmers — are the next piece of work, not this one. Answering "Other work"
-today gets you the shorter interview; it does not yet get you a different standard.
-
 ## The options
 
 **Code.** *Recommended, and it is what this tool did before the question existed.*
@@ -54,13 +49,24 @@ is why "Other work" is not just "Code with parts deleted".
 
 ## What it writes and where
 
-Today: nothing on its own. It is saved with your other answers into the repo's or folder's
-`.personal-config.json`, and it decides which questions the rest of the run asks — answering
-"Other work" skips the eleven code-conventions questions in the practices phase.
+**Code** writes the documents exactly as this tool wrote them before the question existed.
+
+**Other work** writes the short form of the standard in place of the long one — written for work
+that is not code, with the owner's proof line where a code setup has gate commands — a router
+with no stack, architecture or command sections, and a ledger whose facts table asks what proves
+work here is sound rather than for build, test, lint and typecheck commands. It never writes a
+per-language code standard, `commits.md` or `docs-lookup.md`: those are about source code and
+library APIs. If the work is kept in git, the commit policy you chose renders inside the short
+standard instead of as a global rule.
+
+The answer is saved with the rest of that target's answers into `.personal-config.json`, and it
+decides which questions the rest of the run asks — answering "Other work" skips the eleven
+code-conventions questions in the practices phase.
 
 ## How to undo it
 
-Run `personal-config setup` again and answer the other way; the run previews every file before
-it writes anything, and `personal-config undo` restores whatever an accepted run overwrote.
-Since this answer currently writes no file of its own, changing it changes only which questions
-you are asked next time.
+Run `personal-config setup` again and answer the other way; the run previews every file before it
+writes anything, and `personal-config undo` restores whatever an accepted run overwrote. Switching
+to "Code" replaces the short standard, router and ledger with the long forms and adds the code
+standard and the two code-specific rules; switching to "Other work" replaces them the other way and
+leaves the code standard and the two rules on disk for you to delete.

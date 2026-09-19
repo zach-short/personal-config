@@ -20,7 +20,7 @@ here, and the adapted copy is built on the answer. If an installer put this file
 left a prompt saying which of Part 0's steps are already done; follow that prompt rather than
 this paragraph.
 
-**Standard version: 1.0.3**
+**Standard version: 1.1.0**
 
 **Adapted: not yet — run Part 0.**
 

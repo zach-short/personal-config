@@ -4,7 +4,14 @@ import { repoRoot } from '../lib/paths.ts';
 import { fill } from '../lib/template.ts';
 import type { PlannedFile } from '../lib/types.ts';
 import { PRACTICE_AREAS } from '../questions/index.ts';
-import { answer, planned, type RenderContext, standardPath } from './context.ts';
+import {
+  answer,
+  planned,
+  type RenderContext,
+  standardPath,
+  trackOf,
+  workRecordShape,
+} from './context.ts';
 
 export async function standardVersion(): Promise<string> {
   const path = join(repoRoot(), 'standard', 'VERSION');
@@ -55,31 +62,53 @@ function placeholders(ctx: RenderContext, mode: string): Record<string, string> 
 
 /** Part 11 is the one part the standard marks as editable preference — so we write it. */
 function replacePartEleven(text: string, ctx: RenderContext): string {
-  const paragraphs = PRACTICE_AREAS.filter((area) => area.policy)
-    .map((area) => area.policy?.(policyAnswer(ctx, area.question.configKey)))
-    .filter((p): p is string => Boolean(p));
-
-  const interactive =
-    '**The owner is interactive.** When a decision is theirs, ask before building it, in chat, in\nthe same turn, batched. A decision built on a guess is built twice.';
-
   const replacement = [
     '# Part 11 — Owner policy',
     '',
     'Everything above is craft. This part is preference. It was written from the answers given to',
     `\`personal-config\` on ${ctx.date}; edit it freely — it is yours.`,
     '',
-    interactive,
+    OWNER_IS_INTERACTIVE,
     '',
-    ...paragraphs.flatMap((p) => [p, '']),
+    ...policyParagraphs(ctx).flatMap((p) => [p.text, '']),
   ].join('\n');
 
   return replaceSection(text, '# Part 11 —', '# Part 12 —', replacement);
 }
 
-/** The commit-policy area reads the `you` answer; every other policy area has its own. */
+export const OWNER_IS_INTERACTIVE =
+  '**The owner is interactive.** When a decision is theirs, ask before building it, in chat, in\nthe same turn, batched. A decision built on a guess is built twice.';
+
+/** The `configKey` of the one policy area that reads a `you` answer rather than its own. */
+export const COMMIT_POLICY_KEY = 'practices.commit-policy-practice';
+
+/**
+ * The owner-policy paragraphs, one per policy area with an answer, keyed so the short standard
+ * can place the commit paragraph in its git section and the rest under its preferences. One
+ * source for both documents, so an answer cannot mean one thing in the long one and another in
+ * the short.
+ */
+export function policyParagraphs(
+  ctx: RenderContext,
+): Array<{ configKey: string; text: string }> {
+  return PRACTICE_AREAS.filter((area) => area.policy)
+    .map((area) => ({
+      configKey: area.question.configKey,
+      text: area.policy?.(policyAnswer(ctx, area.question.configKey)) ?? null,
+    }))
+    .filter((p): p is { configKey: string; text: string } => p.text !== null);
+}
+
+/**
+ * The commit-policy area reads the `you` answer; every other policy area has its own. Work kept
+ * out of git has no commit policy to state (setup-tracks `DESIGN.md` §3.1, row 2), so that one
+ * answer reads as `none` there rather than rendering a ritual for a repository that is not one.
+ */
 function policyAnswer(ctx: RenderContext, configKey: string): string {
-  if (configKey === 'practices.commit-policy-practice')
+  if (configKey === COMMIT_POLICY_KEY) {
+    if (!trackOf(ctx).usesGit) return 'none';
     return answer(ctx, 'commitPolicy', 'print-blocks');
+  }
   return answer(ctx, configKey, 'none');
 }
 
@@ -105,7 +134,7 @@ function header(text: string, ctx: RenderContext, mode: string): string {
     '',
     `**Pre-filled by \`personal-config\` on ${ctx.date}.** Appendix A is filled, except the two`,
     'slots only this repo can answer — the fresh-checkout recipe and the build command — which Part 0',
-    `produces. The profile is chosen (${ctx.repo?.workProfile === 'folders' ? 'Profile P — project folders' : 'Profile L — ledger + board'}),`,
+    `produces. The profile is chosen (${workRecordShape(ctx) === 'folders' ? 'Profile P — project folders' : 'Profile L — ledger + board'}),`,
     mode === 'solo'
       ? 'and Part 12 (teams) was cut because one person decides here.'
       : 'and Part 12 (teams) was kept.',

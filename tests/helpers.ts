@@ -109,6 +109,7 @@ export function testRepoPlan(overrides: Partial<RepoPlan> = {}): RepoPlan {
     trackMode: 'tracked',
     archiveHome: '',
     owned: true,
+    proofLine: '',
     ...overrides,
   };
 }

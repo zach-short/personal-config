@@ -25,7 +25,7 @@ import { previewTree, renderDiff, say, short, targetList } from '../lib/ui.ts';
 import { version } from '../lib/version.ts';
 import { commitPlan, type PlannedChange, resolvePlan, willWrite } from '../lib/write-plan.ts';
 import { askPhase } from '../phases/run.ts';
-import type { RenderContext } from '../render/context.ts';
+import { type RenderContext, targetAnswers } from '../render/context.ts';
 import { declinedHookHelp } from '../render/hooks.ts';
 import { renderAll } from '../render/index.ts';
 import { standardVersion } from '../render/standard.ts';
@@ -201,6 +201,10 @@ export async function planRepo(
     trackMode: trackModeFor(perRepo, folder),
     archiveHome: archiveFor(perRepo, scan.name),
     owned,
+    // Asked into `perRepo` and, until 2026-09-19, left there: `pickShared` copies back only what
+    // is about the person, and the plan carried no slot for it, so the answer never reached a
+    // renderer or the saved record. It rides on the plan because it is this target's.
+    proofLine: String(perRepo.proofLine ?? '').trim(),
   };
 }
 
@@ -244,14 +248,19 @@ async function contextFor(
   answers: Answers,
   repo: RepoPlan | null,
 ): Promise<RenderContext> {
-  const config: Config = repo ? { ...merged, archiveHome: repo.archiveHome } : merged;
+  // The per-target answers are hashed and saved along with the shared ones, so the stamp on a
+  // repo's files answers for the proof line that rendered them (D7) and `doctor` can rebuild it.
+  const forTarget = targetAnswers(answers, repo);
+  const config: Config = repo
+    ? { ...merged, archiveHome: repo.archiveHome, answers: forTarget }
+    : merged;
   const stamp = {
     version: await version(),
     date: today(),
     configHash: await configHash(config),
     standardVersion: await standardVersion(),
   };
-  return { config, answers, stamp, date: today(), repo };
+  return { config, answers: forTarget, stamp, date: today(), repo };
 }
 
 /** Global files are produced once per repo context; the first wins, the rest are identical. */

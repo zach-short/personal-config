@@ -123,6 +123,11 @@ export type RepoPlan = {
   trackMode: TrackMode;
   archiveHome: string;
   owned: boolean;
+  /**
+   * What proves work here is sound, in the owner's words (setup-tracks `DESIGN.md` D7); empty
+   * until they write one. Per target, because it is a property of the work, not of the person.
+   */
+  proofLine: string;
 };
 
 export type Config = {

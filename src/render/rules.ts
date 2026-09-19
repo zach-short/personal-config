@@ -1,17 +1,30 @@
 import { join } from 'node:path';
 import { claudeRulesDir } from '../lib/paths.ts';
 import type { PlannedFile } from '../lib/types.ts';
-import { answer, planned, type RenderContext } from './context.ts';
+import { answer, planned, type RenderContext, trackOf } from './context.ts';
 
 /**
  * One file per rule under `~/.claude/rules/`, never a managed section spliced into the user's
  * own `CLAUDE.md`. Claude Code loads both, so nothing is lost — and a re-run becomes an
  * overwrite of a file this tool owns rather than surgery on a file it does not.
+ *
+ * Which rules a track gets is setup-tracks `DESIGN.md` §3.1, resting on G4. `commits.md` is
+ * entirely git and written for a shared code checkout, so it goes only to code work kept in
+ * git; a non-code target that is in git gets its commit policy inside the short standard
+ * instead, where the wording is the target's own. `docs-lookup.md` is entirely library APIs and
+ * goes to code work only. `model-routing.md` is domain-neutral but a light setup cuts it (D6):
+ * on a small budget its advice — delegate to a subagent, or stop and hand off — is the most
+ * expensive thing on the page. Each question's own `skip`, `none` or `no-rule` answer still
+ * cuts its rule on every track, below.
  */
 export function renderGlobalRules(ctx: RenderContext): PlannedFile[] {
-  return [commitRule(ctx), modelRoutingRule(ctx), docsRule(ctx)].filter(
-    (f): f is PlannedFile => f !== null,
-  );
+  const track = trackOf(ctx);
+  const code = track.workKind === 'code';
+  return [
+    code && track.usesGit ? commitRule(ctx) : null,
+    track.weight === 'full' ? modelRoutingRule(ctx) : null,
+    code ? docsRule(ctx) : null,
+  ].filter((f): f is PlannedFile => f !== null);
 }
 
 function rulePath(name: string): string {

@@ -3,9 +3,16 @@ import { readText } from '../lib/disk.ts';
 import { claudeSkillsDir, repoRoot } from '../lib/paths.ts';
 import { stampLine } from '../lib/stamp.ts';
 import type { PlannedFile } from '../lib/types.ts';
-import { answer, planned, type RenderContext } from './context.ts';
+import { answer, planned, type RenderContext, trackOf } from './context.ts';
 
 const SKILLS = ['close-out', 'scope', 'passoff', 'handoff'] as const;
+
+/**
+ * DIAL-6: the two that work without gates, commits or a board. `/scope` opens a project folder
+ * and `/passoff` writes a board row, and a light setup writes neither (D6, D9) — a skill for a
+ * file that is not there misleads the first time it fires.
+ */
+const LIGHT_SKILLS = ['close-out', 'handoff'] as const;
 
 /**
  * One directory per skill under `~/.claude/skills/<name>/SKILL.md`, matching the layout the
@@ -16,14 +23,14 @@ export async function renderSkills(ctx: RenderContext): Promise<PlannedFile[]> {
   const choice = answer(ctx, 'skills', 'none');
   if (choice === 'none') return [];
 
-  const wanted = choice === 'all' ? [...SKILLS] : selected(ctx);
+  const offered: readonly string[] = trackOf(ctx).weight === 'light' ? LIGHT_SKILLS : SKILLS;
+  const wanted = choice === 'all' ? [...offered] : selected(ctx, offered);
   return Promise.all(wanted.map((name) => renderSkill(ctx, name)));
 }
 
-function selected(ctx: RenderContext): string[] {
+function selected(ctx: RenderContext, offered: readonly string[]): string[] {
   const value = ctx.answers.skills;
-  if (Array.isArray(value))
-    return value.filter((v) => (SKILLS as readonly string[]).includes(v));
+  if (Array.isArray(value)) return value.filter((v) => offered.includes(v));
   return [];
 }
 

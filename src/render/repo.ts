@@ -8,12 +8,17 @@ import {
   boardFile,
   commitRuleLine,
   conventionsPath,
+  hasBoard,
+  isShortTrack,
   ledgerFile,
   planned,
   projectName,
+  proofLine,
   type RenderContext,
   routerFile,
   standardPath,
+  trackOf,
+  workRecordShape,
 } from './context.ts';
 
 export async function renderRepoFiles(
@@ -33,9 +38,16 @@ export async function renderRepoFiles(
   return files.filter((f): f is PlannedFile => f !== null);
 }
 
+/** D6's "shorter router" goes wherever the short standard goes; the two are read together. */
 async function renderRouter(ctx: RenderContext, languages: string[]): Promise<PlannedFile> {
+  return isShortTrack(ctx)
+    ? renderShortRouter(ctx, languages)
+    : renderFullRouter(ctx, languages);
+}
+
+async function renderFullRouter(ctx: RenderContext, languages: string[]): Promise<PlannedFile> {
   const repoPath = ctx.repo?.scan.path ?? '';
-  const tracked = ctx.repo?.trackMode === 'tracked';
+  const untracked = ctx.repo?.trackMode === 'untracked';
   const vars = {
     PROJECT_NAME: projectName(ctx),
     STANDARD_PATH: standardPath(ctx),
@@ -47,14 +59,97 @@ async function renderRouter(ctx: RenderContext, languages: string[]): Promise<Pl
     BROKEN_RULES: '',
     WORK_RECORD: workRecordLines(ctx),
   };
-  const name = routerFile(ctx);
-  const body = await filledTemplate(tracked ? 'CLAUDE.md' : 'CLAUDE.local.md', vars);
-  return planned(
-    ctx,
-    join(repoPath, name),
-    tracked ? 'router (tracked)' : 'personal router (untracked)',
-    body,
-  );
+  const body = await filledTemplate(untracked ? 'CLAUDE.local.md' : 'CLAUDE.md', vars);
+  return planned(ctx, join(repoPath, routerFile(ctx)), routerLabel(ctx), body);
+}
+
+/**
+ * The router for the short track. It carries no stack, architecture or gate sections — those
+ * are what Part 0 fills for a code repo, and this track has no Part 0 — and puts the proof line
+ * (D7) where the gate commands would have gone, because that is what "done" checks against here.
+ * A code repo on the light track still gets its per-language standard named, since the
+ * conventions renderer still writes one for every language it finds.
+ */
+async function renderShortRouter(
+  ctx: RenderContext,
+  languages: string[],
+): Promise<PlannedFile> {
+  const repoPath = ctx.repo?.scan.path ?? '';
+  const untracked = ctx.repo?.trackMode === 'untracked';
+  // A folder of non-code work can still carry a `package.json`; the languages the scan found
+  // describe a code standard this track never writes, so neither line is shown for it.
+  const code = trackOf(ctx).workKind === 'code' && languages.length > 0;
+  const vars = {
+    PROJECT_NAME: projectName(ctx),
+    TITLE_SUFFIX: untracked ? ' — personal router (not repo policy — untracked)' : '',
+    STANDARD_PATH: standardPath(ctx),
+    LEDGER_FILE: ledgerFile(ctx),
+    CONVENTIONS_NOTE: code ? codeStandardNote(languages) : '',
+    PRECEDENCE: untracked ? PRECEDENCE : '',
+    WORK_RECORD: workRecordLines(ctx),
+    PROOF_BLOCK: proofBlock(ctx),
+    STACK_LINE: code ? stackLine(ctx) : '',
+    COMMIT_LINE: commitLine(ctx),
+  };
+  const body = tidy(await filledTemplate('CLAUDE.short.md', vars));
+  return planned(ctx, join(repoPath, routerFile(ctx)), routerLabel(ctx), body);
+}
+
+/** A folder is neither tracked nor untracked (DIAL-11), so its label claims neither. */
+function routerLabel(ctx: RenderContext): string {
+  const mode = ctx.repo?.trackMode;
+  if (mode === 'untracked') return 'personal router (untracked)';
+  if (mode === 'tracked') return 'router (tracked)';
+  return 'router';
+}
+
+function codeStandardNote(languages: string[]): string {
+  return [
+    '',
+    '> **Before writing or editing any code, read the matching code standard in full —',
+    `> ${conventionsList(languages)}. Not optional, not conditional on task size.**`,
+    '',
+  ].join('\n');
+}
+
+/** What `CLAUDE.local.md` says about whose rules win, for a short router in a repo not yours. */
+const PRECEDENCE = [
+  '## Precedence',
+  '',
+  "1. **The repo's own rules** — its `CONTRIBUTING.md`, `AGENTS.md`/`CLAUDE.md`, and any other",
+  '   convention file it keeps.',
+  '2. **This file**, only where those are silent.',
+  '3. Nothing else.',
+  '',
+  "Where 1 and 2 disagree, 1 wins and 2 is amended. **This repo's conventions are not mine to",
+  'set — never edit its own rule files to suit a personal preference.**',
+  '',
+].join('\n');
+
+/**
+ * The proof line as the router shows it. Empty is a real state — the owner has not written one
+ * yet — and it is written as an instruction to the first session rather than left blank, so the
+ * gap is a task and not a hole.
+ */
+function proofBlock(ctx: RenderContext): string {
+  const line = proofLine(ctx);
+  if (line) {
+    return `> ${line}\n\nA session says work here is done only after applying that test and saying what it saw.`;
+  }
+  return [
+    '<!-- Not yet written. The first session writes it with the owner: one test somebody could run,',
+    '     never a value — "the totals agree with the source table", "someone who did not write it',
+    '     read it" — then puts it here and in the standard. -->',
+  ].join('\n');
+}
+
+/**
+ * An optional block that filled with nothing leaves a blank line behind, and two blank lines in a
+ * row read as a hole. Only the short track's templates go through this: the full track's output
+ * is pinned byte for byte and is never reformatted.
+ */
+function tidy(text: string): string {
+  return `${text.replaceAll(/\n{3,}/g, '\n\n').replace(/\n+$/, '')}\n`;
 }
 
 function conventionsList(languages: string[]): string {
@@ -75,22 +170,30 @@ function stackLine(ctx: RenderContext): string {
   return `Detected ${ctx.date}: ${parts.join(' · ')}. <!-- Verify and expand — versions where they matter. -->`;
 }
 
+/** Work kept out of git has no commit rule to restate (setup-tracks `DESIGN.md` §3.1, row 2). */
+function commitRule(ctx: RenderContext): string {
+  return trackOf(ctx).usesGit ? commitRuleLine(ctx.answers) : '';
+}
+
 function commitLine(ctx: RenderContext): string {
-  const line = commitRuleLine(ctx.answers);
+  const line = commitRule(ctx);
   return line ? `- ${line}` : '';
 }
 
 function workRecordLines(ctx: RenderContext): string {
-  if (ctx.repo?.workProfile === 'folders') {
-    return `- \`docs/incomplete/<slug>/\` — one folder per open effort: \`SCOPE.md\` → \`DESIGN.md\` → \`PLAN.md\` → \`RUNTIME-PASS.md\`.\n- Closed efforts move to \`${ctx.repo.archiveHome || 'the archive'}\`.`;
+  if (workRecordShape(ctx) === 'folders') {
+    return `- \`docs/incomplete/<slug>/\` — one folder per open effort: \`SCOPE.md\` → \`DESIGN.md\` → \`PLAN.md\` → \`RUNTIME-PASS.md\`.\n- Closed efforts move to \`${ctx.repo?.archiveHome || 'the archive'}\`.`;
   }
-  return `- \`${ledgerFile(ctx)}\` — what is true: environment, settled decisions, the step log. Read first.\n- \`${boardFile(ctx)}\` — what is next, one standalone prompt per item.`;
+  const ledger = `- \`${ledgerFile(ctx)}\` — what is true: environment, settled decisions, the step log. Read first.`;
+  const board = `- \`${boardFile(ctx)}\` — what is next, one standalone prompt per item.`;
+  return hasBoard(ctx) ? `${ledger}\n${board}` : ledger;
 }
 
 async function renderWorkRecord(ctx: RenderContext): Promise<PlannedFile[]> {
-  return ctx.repo?.workProfile === 'folders' ? renderFolders(ctx) : renderLedgerAndBoard(ctx);
+  return workRecordShape(ctx) === 'folders' ? renderFolders(ctx) : renderLedgerAndBoard(ctx);
 }
 
+/** D9: the board is written on the full track only; the ledger on both. */
 async function renderLedgerAndBoard(ctx: RenderContext): Promise<PlannedFile[]> {
   const repoPath = ctx.repo?.scan.path ?? '';
   const vars = {
@@ -104,13 +207,18 @@ async function renderLedgerAndBoard(ctx: RenderContext): Promise<PlannedFile[]> 
     CONVENTIONS_NOTE: conventionsNote(ctx),
   };
 
+  const ledger = isShortTrack(ctx)
+    ? await renderShortLedger(ctx)
+    : planned(
+        ctx,
+        join(repoPath, ledgerFile(ctx)),
+        'the ledger — what is true',
+        await filledTemplate('HANDOFF.md', vars),
+      );
+  if (!hasBoard(ctx)) return [ledger];
+
   return [
-    planned(
-      ctx,
-      join(repoPath, ledgerFile(ctx)),
-      'the ledger — what is true',
-      await filledTemplate('HANDOFF.md', vars),
-    ),
+    ledger,
     planned(
       ctx,
       join(repoPath, boardFile(ctx)),
@@ -118,6 +226,31 @@ async function renderLedgerAndBoard(ctx: RenderContext): Promise<PlannedFile[]> 
       await filledTemplate('PASSOFF.md', vars),
     ),
   ];
+}
+
+/**
+ * The short track's ledger. Same shape as the full one — orientation, standing sections, an
+ * append-only step log the same `doctor` rules read — but its facts table asks what proves work
+ * sound here rather than for build, test, lint and typecheck commands, and it names no code
+ * standard, because on this track there may be none.
+ */
+async function renderShortLedger(ctx: RenderContext): Promise<PlannedFile> {
+  const repoPath = ctx.repo?.scan.path ?? '';
+  const vars = {
+    PROJECT_NAME: projectName(ctx),
+    DATE: ctx.date,
+    ROUTER_FILE: routerFile(ctx),
+    STANDARD_PATH: standardPath(ctx),
+    READ_NEXT: hasBoard(ctx) ? `\`${boardFile(ctx)}\` (what is next) → ` : '',
+    PROOF_LINE:
+      proofLine(ctx) || '*(not yet written — the first session writes it with the owner)*',
+  };
+  return planned(
+    ctx,
+    join(repoPath, ledgerFile(ctx)),
+    'the ledger — what is true',
+    tidy(await filledTemplate('HANDOFF.short.md', vars)),
+  );
 }
 
 function conventionsNote(ctx: RenderContext): string {
@@ -161,15 +294,20 @@ async function renderArchiveIndex(ctx: RenderContext): Promise<PlannedFile | nul
  * repo reported drift the moment it was rendered (fixed 2026-09-15). `hashedAnswers()` owns
  * the set, so what is saved and what is hashed cannot fall out of step. It sits last because
  * the banner hook greps this file line by line for the flat keys above it.
+ *
+ * `workProfile` records the shape that was *rendered*, and `boardFile` is empty where no board
+ * was written (D9): the banner and `doctor` read these to find files, and a name for a file
+ * that is not there would send both looking for it.
  */
 function renderRepoConfig(ctx: RenderContext): PlannedFile {
+  const shape = workRecordShape(ctx);
   const body = `${JSON.stringify(
     {
       profile: ctx.config.profile,
-      workProfile: ctx.repo?.workProfile,
+      workProfile: shape,
       trackMode: ctx.repo?.trackMode,
-      ledgerFile: ctx.repo?.workProfile === 'folders' ? '' : ledgerFile(ctx),
-      boardFile: ctx.repo?.workProfile === 'folders' ? '' : boardFile(ctx),
+      ledgerFile: shape === 'folders' ? '' : ledgerFile(ctx),
+      boardFile: shape === 'folders' || !hasBoard(ctx) ? '' : boardFile(ctx),
       standardPath: standardPath(ctx),
       archiveHome: ctx.repo?.archiveHome ?? '',
       // The completion-gate hook's command, and the one key here nothing asks for. It is
@@ -199,15 +337,23 @@ function renderRepoConfig(ctx: RenderContext): PlannedFile {
  * Untracked mode writes to `.git/info/exclude` rather than `.gitignore`: the repo is not the
  * user's, and adding personal filenames to a tracked ignore file is an edit to someone else's
  * repo. Tracked mode only needs `.personal-config.json` kept out.
+ *
+ * A folder gets neither (DIAL-11): there is no `.git` to write into, and `writeText` creates
+ * parent directories, so planning the exclude file would have *created* a `.git/` inside a
+ * directory that was never a repository (found 2026-09-17, `tests/folder-render.test.ts`). Nor
+ * does a person who keeps no work in git — nothing of theirs is git's to see.
  */
 function renderIgnore(ctx: RenderContext): PlannedFile | null {
   const repo = ctx.repo;
   if (!repo) return null;
+  if (repo.trackMode === 'n/a' || !trackOf(ctx).usesGit) return null;
 
-  const personal = ['.personal-config.json', 'PART0-PROMPT.md'];
+  // Only names this run actually plans: the short track writes no Part 0 prompt and, when light,
+  // no board, and an ignore line for a file that is never written is a claim about a file.
+  const personal = ['.personal-config.json', ...(isShortTrack(ctx) ? [] : ['PART0-PROMPT.md'])];
   const untracked = [
     ledgerFile(ctx),
-    boardFile(ctx),
+    ...(hasBoard(ctx) ? [boardFile(ctx)] : []),
     'CLAUDE.local.md',
     'AGENT-PRACTICES.local.md',
   ];
@@ -228,9 +374,15 @@ function renderIgnore(ctx: RenderContext): PlannedFile | null {
   });
 }
 
+/**
+ * Part 0 is the long standard's adaptation protocol, and the short standard has none: nothing in
+ * it is left for a later session to fill, so there is no prompt to hand over and no 40–80k
+ * session to spend on it (D6). The short track's first-session instructions live in the
+ * standard itself.
+ */
 export async function renderPart0(ctx: RenderContext): Promise<PlannedFile | null> {
   const repo = ctx.repo;
-  if (!repo) return null;
+  if (!repo || isShortTrack(ctx)) return null;
 
   const body = await filledTemplate('PART0-PROMPT.md', {
     PROJECT_NAME: projectName(ctx),
@@ -239,7 +391,7 @@ export async function renderPart0(ctx: RenderContext): Promise<PlannedFile | nul
     STANDARD_PATH: standardPath(ctx),
     ROUTER_FILE: routerFile(ctx),
     WORK_PROFILE:
-      repo.workProfile === 'folders'
+      workRecordShape(ctx) === 'folders'
         ? 'Profile P — project folders'
         : 'Profile L — ledger + board',
     MODE: answer(ctx, 'mode', 'solo'),
@@ -248,7 +400,7 @@ export async function renderPart0(ctx: RenderContext): Promise<PlannedFile | nul
     DISCOVERY_SUMMARY: discoverySummary(ctx),
     CUT_HINTS: cutHints(ctx),
     WRITTEN_FILES: '(filled at write time)',
-    COMMIT_RULE: commitRuleLine(ctx.answers),
+    COMMIT_RULE: commitRule(ctx),
   });
 
   return planned(
@@ -262,6 +414,7 @@ export async function renderPart0(ctx: RenderContext): Promise<PlannedFile | nul
 function discoverySummary(ctx: RenderContext): string {
   const scan = ctx.repo?.scan;
   if (!scan) return '- nothing scanned.';
+  const line = proofLine(ctx);
   return [
     `- Languages detected from marker files: ${scan.languages.join(', ') || 'none'}.`,
     `- Package manager from the lockfile: ${scan.packageManager ?? 'none found'}.`,
@@ -270,6 +423,13 @@ function discoverySummary(ctx: RenderContext): string {
     `- Existing docs: ${scan.existingDocs.join(', ') || 'none'}.`,
     // `git worktree list` includes the checkout being set up, so a count of 1 means none extra.
     `- Extra worktrees beyond this checkout: ${Math.max(scan.worktrees - 1, 0)}.`,
+    // D7 on the full track: the owner's own test of soundness rides beside the gates rather
+    // than replacing them. Absent when empty, so a run that never answered it renders as before.
+    ...(line
+      ? [
+          `- The owner's proof line — what proves work here is sound: "${line}". Put it in the router's Commands section beside the gates.`,
+        ]
+      : []),
   ].join('\n');
 }
 
@@ -287,6 +447,10 @@ function cutHints(ctx: RenderContext): string {
   if (answer(ctx, 'mode', 'solo') === 'solo')
     hints.push(
       "Part 12 is already cut; its cross-references (`grep -n 'Part 12'`) are still yours to fix here.",
+    );
+  if (!trackOf(ctx).usesGit)
+    hints.push(
+      'This work is not kept in git, so Part 6 — parallel sessions, worktrees and the commit rules — is a candidate to cut whole; keep only what a plain folder can honour.',
     );
   return hints.length > 0 ? hints.join(' ') : 'Verify each before cutting.';
 }

@@ -131,14 +131,18 @@ jobs:
             exit 0
           fi
           changed=$(git diff --name-only "$base" "${{ github.sha }}")
-          if echo "$changed" | grep -qx 'standard/AGENT-PRACTICES.boilerplate.md'; then
-            if ! echo "$changed" | grep -qx 'standard/VERSION'; then
-              echo "standard/AGENT-PRACTICES.boilerplate.md changed but standard/VERSION did not."
-              echo "CLAUDE.md: the boilerplate is byte-for-byte except its version line."
-              exit 1
+          # Both forms of the standard share one VERSION (setup-tracks DESIGN.md D10), so a
+          # change to either owes the bump and the changelog line.
+          for doc in standard/AGENT-PRACTICES.boilerplate.md standard/AGENT-PRACTICES.short.md; do
+            if echo "$changed" | grep -qx "$doc"; then
+              if ! echo "$changed" | grep -qx 'standard/VERSION'; then
+                echo "$doc changed but standard/VERSION did not."
+                echo "CLAUDE.md: the standard is byte-for-byte except its version line."
+                exit 1
+              fi
+              if ! echo "$changed" | grep -qx 'standard/CHANGELOG.md'; then
+                echo "$doc changed but standard/CHANGELOG.md did not."
+                exit 1
+              fi
             fi
-            if ! echo "$changed" | grep -qx 'standard/CHANGELOG.md'; then
-              echo "standard/AGENT-PRACTICES.boilerplate.md changed but standard/CHANGELOG.md did not."
-              exit 1
-            fi
-          fi
+          done

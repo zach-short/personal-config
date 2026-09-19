@@ -11,10 +11,6 @@ It is a separate question from what kind of work this is, deliberately, so that 
 stays reachable — including the programmer who wants the light config, which a single combined
 "setup type" could not express without inventing a name for it.
 
-**Status, 2026-09-17.** The question is in place and is recorded with your other answers. What a
-light run actually writes differently is the next piece of work. Answering "Lighter" today
-changes nothing about the files you get.
-
 ## The options
 
 **The whole method.** *Recommended, and it is what this tool did before the question existed.*
@@ -49,12 +45,26 @@ you have moved off "lighter" by then, not that "lighter" should carry a board.
 
 ## What it writes and where
 
-Today: nothing on its own. It is saved with your other answers into `.personal-config.json` and
-into your user config, so a second run does not re-ask it.
+**The whole method** writes every document: the long standard (about 1,100 lines, with a Part 0
+prompt for the session that adapts it), the router, the ledger and the board, the four skills, the
+global rules including model routing, and whichever hooks you chose.
+
+**Lighter** writes the short form of the standard in its place — `docs/AGENT-PRACTICES.md`,
+under 200 lines, with no Part 0 because nothing in it is left to fill in — a shorter router, the
+ledger and **no board**, two skills (`/handoff` and `/close-out`) instead of four, **no
+`model-routing.md`**, and of the hooks only the completion gate. Everything else you answered is
+written as it would be otherwise: a code repo on the lighter setup still gets its per-language
+code standard and, if it is in git, its commit rule.
+
+Either answer is recorded with the rest of that target's answers in `.personal-config.json`.
+A second run asks the question again, with the answer you gave before as the default only where a
+saved profile supplies it.
 
 ## How to undo it
 
 Run `personal-config setup` again and answer the other way. Every run previews the full list of
 files before writing, and `personal-config undo` restores anything an accepted run overwrote.
-Going from lighter to the whole method adds files; going the other way leaves the extra files on
-disk, so delete the ones you no longer want.
+Going from lighter to the whole method replaces the short standard and router with the long ones
+and adds the board, the two other skills and the routing rule. Going the other way replaces the
+standard and the router and leaves the board, the extra skills and `model-routing.md` on disk —
+delete the ones you no longer want.

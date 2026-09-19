@@ -77,14 +77,14 @@ session in that repo.
 | File | Where | What it is |
 |---|---|---|
 | `commits.md`, `model-routing.md`, `docs-lookup.md` | `~/.claude/rules/` | One file per rule. Your own `~/.claude/CLAUDE.md` is **never** edited. |
-| `SKILL.md` ×4 | `~/.claude/skills/` | `/close-out`, `/scope`, `/passoff`, `/handoff` |
-| `commit-guard.sh`, `session-banner.sh` | `~/.claude/hooks/personal-config/` | Optional. Merged into `settings.json`, never overwritten. |
+| `SKILL.md` ×4 | `~/.claude/skills/` | `/close-out`, `/scope`, `/passoff`, `/handoff` — the lighter setup installs the first and last only |
+| `commit-guard.sh`, `session-banner.sh`, `completion-gate.sh` | `~/.claude/hooks/personal-config/` | Optional. Merged into `settings.json`, never overwritten. The lighter setup installs the gate alone. |
 | `CLAUDE.md` *or* `CLAUDE.local.md` | repo root | The router every session reads |
-| `HANDOFF.md`, `PASSOFF.md` | repo root | The ledger and the board |
-| `docs/AGENT-PRACTICES.md` | repo | The working standard, placeholders filled |
-| `docs/conventions-<lang>.md` | repo | One per language actually found |
+| `HANDOFF.md`, `PASSOFF.md` | repo root | The ledger and the board — no board on the lighter setup |
+| `docs/AGENT-PRACTICES.md` | repo | The working standard, placeholders filled — the long form for code with the whole method, the short form (under 200 lines, no Part 0) for other work or the lighter setup |
+| `docs/conventions-<lang>.md` | repo | One per language actually found, for code work only |
 | `INDEX.md` | your archive directory | Seed for closed work |
-| `PART0-PROMPT.md` | repo root | The prompt that finishes the job |
+| `PART0-PROMPT.md` | repo root | The prompt that finishes the job — the long standard only; the short form has nothing left to fill |
 | `.personal-config.json` | repo root | Your answers, so a re-run is deterministic |
 
 See [`examples/`](examples) for a filled ledger, board, archive index and Part 0 prompt from a

@@ -1,9 +1,29 @@
 # Standard changelog
 
-The version of `AGENT-PRACTICES.boilerplate.md`, which is versioned separately from the CLI
-that renders it (see the root `CHANGELOG.md` for that). An adapted copy in another repo carries
-the version it was adapted from; `personal-config doctor` reports a copy whose stamp is older
-than `standard/VERSION`.
+The version of the working standard — `AGENT-PRACTICES.boilerplate.md`, and from 1.1.0 its short
+form `AGENT-PRACTICES.short.md` beside it. One number covers both: a stamp records the standard's
+version and not which document a file was rendered from, so the two cannot be versioned apart.
+The CLI that renders them is versioned separately (see the root `CHANGELOG.md`). An adapted copy
+in another repo carries the version it was adapted from; `personal-config doctor` reports a copy
+whose stamp is older than `standard/VERSION`.
+
+## 1.1.0 — 2026-09-19
+
+One document added. Nothing in the long one changed but its version line.
+
+- **`AGENT-PRACTICES.short.md`, the short form**, for work that is not code and for anyone who
+  chose the lighter setup. Written for its reader rather than cut from the long one: the twelve
+  rules of Part 1 kept under their own numbers, translated where they spoke of diffs and greps;
+  the ledger, the pass-off prompt, the close-out ritual and the context budget in a paragraph
+  each; **a proof line in place of the gates** — the owner's own test of what makes work here
+  sound, which is what "done" means on a track that has no test suite; and a preferences section
+  written from the same answers Part 11 is. It has no Part 0: every slot is filled at render time,
+  and its first-session instructions are a section of the document itself, deleted once run. Two
+  sections are conditional — the board, present only with the whole method, and the git rules,
+  present only where the work is kept in git. Under 200 lines by design, so a session pays a
+  tenth of what adopting the long one costs.
+- **Which document a setup gets** is decided by two answers and never by a name: *other work*
+  or *lighter* gets the short form; *code* with *the whole method* gets the long one, unchanged.
 
 ## 1.0.3 — 2026-09-16
 

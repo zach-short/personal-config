@@ -1,7 +1,7 @@
 import { join } from 'node:path';
 import type { ConventionRule, PlannedFile } from '../lib/types.ts';
 import { PRACTICE_AREAS } from '../questions/index.ts';
-import { answer, conventionsPath, planned, type RenderContext } from './context.ts';
+import { answer, conventionsPath, planned, type RenderContext, trackOf } from './context.ts';
 
 const LANGUAGE_LABELS: Record<string, string> = {
   typescript: 'TypeScript',
@@ -22,10 +22,18 @@ const TOOLING_NOTE: Record<string, string> = {
   rust: 'rustfmt and clippy settle formatting and the common lints; this file does not restate them.',
 };
 
-/** One file per language, and the file extension decides which applies (standard §8.1). */
+/**
+ * One file per language, and the file extension decides which applies (standard §8.1).
+ *
+ * Code work only (setup-tracks `DESIGN.md` §3.1, row 4). The eleven conventions questions are not
+ * *asked* of non-code work, but the merged config still carries a profile's defaults for them —
+ * `profiles/starter.json` answers every one — so reading the answers alone would write a
+ * TypeScript standard into a folder of accounts that happens to hold a `package.json`. Found
+ * 2026-09-19 by `tests/tracks.test.ts`; the gate is the work-kind answer, not the language scan.
+ */
 export function renderConventions(ctx: RenderContext, languages: string[]): PlannedFile[] {
   const root = ctx.repo?.scan.path;
-  if (!root) return [];
+  if (!root || trackOf(ctx).workKind !== 'code') return [];
 
   return languages
     .map((language) => {
