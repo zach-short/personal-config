@@ -1,6 +1,11 @@
 import { describe, expect, test } from 'bun:test';
+import { chmod, rm, stat } from 'node:fs/promises';
 import { join } from 'node:path';
-import { cleanup, tempDir } from './helpers.ts';
+import { exists, readText, writeText } from '../src/lib/disk.ts';
+import { claudeHooksDir, claudeSettingsFile } from '../src/lib/paths.ts';
+import { commitPlan, resolvePlan, willWrite } from '../src/lib/write-plan.ts';
+import { renderHooks } from '../src/render/hooks.ts';
+import { cleanup, DEFAULT_ANSWERS, tempDir, testContext } from './helpers.ts';
 
 const HOOKS = join(import.meta.dir, '..', 'templates', 'hooks');
 
@@ -126,5 +131,154 @@ describe('the session banner announces a board row', () => {
     const out = await banner(null);
     expect(out).toContain('Ledger: HANDOFF.md');
     expect(out).not.toContain('Board:');
+  });
+});
+
+/**
+ * Everything above spawns `['bash', <template>]`, which is why the suite was green for a year
+ * while no installed hook had ever fired: `bash <path>` never reads the executable bit, and
+ * `settings.json` invokes two of the three by **bare path**, which does. These drive the real
+ * pipeline — `renderHooks` → `resolvePlan` → `commitPlan` — and then run what it wrote the way
+ * the harness runs it.
+ *
+ * This is the one file in the suite that writes into the sandbox `$HOME`, and it puts back what
+ * it found: `tests/decline-seam.test.ts` asserts these exact paths are absent after a decline,
+ * and would fail on leftovers from here whenever the runner ordered it second.
+ */
+const INSTALLED = join(claudeHooksDir(), 'commit-guard.sh');
+
+async function modeOf(path: string): Promise<number> {
+  return (await stat(path)).mode & 0o777;
+}
+
+/** The real plan a `hooks: both` run produces, minus the `settings.json` merge. */
+async function installScripts(): Promise<string[]> {
+  const files = await renderHooks(testContext({ ...DEFAULT_ANSWERS, hooks: 'both' }));
+  const scripts = files.filter((f) => f.path.endsWith('.sh'));
+  await commitPlan(await resolvePlan(scripts));
+  return scripts.map((f) => f.path);
+}
+
+/** Run an installed hook the way a `command` entry does: the path itself, nothing in front. */
+async function runByBarePath(path: string, payload: unknown): Promise<number> {
+  const proc = Bun.spawn([path], {
+    stdin: new TextEncoder().encode(JSON.stringify(payload)),
+    stdout: 'pipe',
+    stderr: 'pipe',
+  });
+  return proc.exited;
+}
+
+async function clearInstalled(): Promise<void> {
+  await rm(claudeHooksDir(), { recursive: true, force: true });
+}
+
+describe('a hook a run installs actually runs', () => {
+  /**
+   * The test that would have caught the bug. Before the fix the scripts landed 0644 and this
+   * threw `EACCES` from `posix_spawn` rather than returning an exit code at all — measured
+   * 2026-09-18, alongside exit 126 for the same file run through a shell.
+   */
+  test('violates the old behaviour: the written commit guard blocks by bare path', async () => {
+    try {
+      const paths = await installScripts();
+      expect(paths).toContain(INSTALLED);
+      for (const path of paths) expect(await modeOf(path)).toBe(0o755);
+
+      const blocked = await runByBarePath(INSTALLED, {
+        tool_name: 'Bash',
+        tool_input: { command: 'git commit -m x' },
+      });
+      expect(blocked).toBe(BLOCKED);
+
+      const allowed = await runByBarePath(INSTALLED, {
+        tool_name: 'Bash',
+        tool_input: { command: 'git status --short' },
+      });
+      expect(allowed).toBe(ALLOWED);
+    } finally {
+      await clearInstalled();
+    }
+  });
+
+  /**
+   * The install everybody already has: right bytes, wrong bits. Nothing about the contents
+   * changes, so a plan that compared only contents called it current and left it unrunnable —
+   * which is why "has never fired" was true for existing installs and not only for new ones.
+   */
+  test('violates the old behaviour: a re-run repairs a hook installed 0644', async () => {
+    try {
+      await installScripts();
+      await chmod(INSTALLED, 0o644);
+      await expect(
+        runByBarePath(INSTALLED, { tool_name: 'Bash', tool_input: { command: 'git push' } }),
+      ).rejects.toThrow();
+
+      const files = await renderHooks(testContext({ ...DEFAULT_ANSWERS, hooks: 'both' }));
+      const changes = await resolvePlan(files.filter((f) => f.path.endsWith('.sh')));
+      const guard = changes.find((c) => c.file.path === INSTALLED);
+      expect(guard?.before).toBe(guard?.after ?? '');
+      expect(guard && willWrite(guard)).toBe(true);
+
+      expect((await commitPlan(changes)).written).toContain(INSTALLED);
+      expect(await modeOf(INSTALLED)).toBe(0o755);
+      expect(
+        await runByBarePath(INSTALLED, {
+          tool_name: 'Bash',
+          tool_input: { command: 'git push' },
+        }),
+      ).toBe(BLOCKED);
+    } finally {
+      await clearInstalled();
+    }
+  });
+
+  test('passes: a second run over a good install writes nothing at all', async () => {
+    try {
+      await installScripts();
+      const files = await renderHooks(testContext({ ...DEFAULT_ANSWERS, hooks: 'both' }));
+      const changes = await resolvePlan(files.filter((f) => f.path.endsWith('.sh')));
+
+      expect(changes.filter(willWrite)).toEqual([]);
+      expect((await commitPlan(changes)).written).toEqual([]);
+    } finally {
+      await clearInstalled();
+    }
+  });
+});
+
+/**
+ * Why `gateCommand()` still returns `bash "<path>"` now that the bit is guaranteed. The entry
+ * is merged into `settings.json`, and `mergeArrays` de-duplicates by exact JSON — so changing
+ * the command string would not replace the installed entry, it would sit beside it and the gate
+ * would fire twice for everyone who already ran `setup`. What this pins is the property, not
+ * the spelling: whatever the renderer emits has to re-merge into itself as a no-op.
+ */
+describe('the settings merge is idempotent against what a previous run wrote', () => {
+  test('passes: re-merging the planned hooks adds no second entry', async () => {
+    const previous = (await exists(claudeSettingsFile()))
+      ? await readText(claudeSettingsFile())
+      : null;
+    try {
+      const [merge] = (
+        await renderHooks(testContext({ ...DEFAULT_ANSWERS, hooks: 'both' }))
+      ).filter((f) => f.strategy === 'merge-json');
+      expect(merge).toBeDefined();
+
+      // What an install already holds, written by a previous run of this same renderer.
+      await writeText(claudeSettingsFile(), (merge as NonNullable<typeof merge>).contents);
+      const [change] = await resolvePlan([merge as NonNullable<typeof merge>]);
+      const after = JSON.parse(change?.after ?? '{}') as {
+        hooks: Record<string, unknown[]>;
+      };
+
+      for (const [event, entries] of Object.entries(after.hooks)) {
+        expect([event, entries.length]).toEqual([event, 1]);
+      }
+      expect(change?.before).toBe(change?.after ?? '');
+    } finally {
+      if (previous === null) await rm(claudeSettingsFile(), { force: true });
+      else await writeText(claudeSettingsFile(), previous);
+    }
   });
 });

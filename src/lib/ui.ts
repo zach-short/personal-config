@@ -92,7 +92,17 @@ export function previewTree(changes: PlannedChange[]): string {
 /** The bracket. A refusal outranks any diff: there is no change to summarize behind it. */
 function markOf(change: PlannedChange): string {
   if (change.guard === 'no-stamp') return 'no stamp — left alone';
-  return change.before.length === 0 ? 'new' : change.summary;
+  if (change.before.length === 0) return 'new';
+  if (change.before === change.after) return modeMark(change);
+  return change.summary;
+}
+
+/**
+ * What a file with the right bytes and the wrong bits says. Without this the preview called it
+ * `unchanged` and then changed it, which is the one thing a preview may not do.
+ */
+function modeMark(change: PlannedChange): string {
+  return change.chmod === undefined ? change.summary : `mode → ${change.chmod.toString(8)}`;
 }
 
 function groupOf(path: string): string {
@@ -108,10 +118,17 @@ function leafOf(path: string): string {
 /** The per-file expansion behind the single batch confirm. */
 export function renderDiff(change: PlannedChange, maxLines = 40): string {
   if (change.guard === 'no-stamp') return `${short(change.file.path)}: no stamp — left alone`;
-  if (change.before === change.after) return `${short(change.file.path)}: unchanged`;
+  if (change.before === change.after)
+    return `${short(change.file.path)}: ${unchangedNote(change)}`;
   const lines = diffLines(change.before, change.after);
   const shown = lines.slice(0, maxLines).map((l) => `${l.kind} ${l.text}`);
   const rest = lines.length - shown.length;
   const tail = rest > 0 ? [`… ${rest} more lines`] : [];
   return [`--- ${short(change.file.path)}`, ...shown, ...tail].join('\n');
+}
+
+/** The expansion's version of `modeMark`: there is no diff to show, so the bits are the news. */
+function unchangedNote(change: PlannedChange): string {
+  if (change.chmod === undefined) return 'unchanged';
+  return `contents unchanged; mode → ${change.chmod.toString(8)}`;
 }

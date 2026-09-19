@@ -29,7 +29,41 @@ export function stampLine(parts: StampParts, extension = 'md'): string {
 }
 
 export function withStamp(contents: string, parts: StampParts, extension = 'md'): string {
-  return `${stampLine(parts, extension)}\n${contents}`;
+  return stampAfterShebang(contents, stampLine(parts, extension));
+}
+
+/**
+ * A `#!` line is only a shebang on line 1 — the kernel reads the first two bytes of the file and
+ * nowhere else — so a stamp prepended above one does not push the interpreter down, it deletes
+ * it. Every hook script this tool wrote was in that state until 2026-09-18.
+ *
+ * **Do not "correct" this back after observing that the hooks work.** On a Mac they do, and the
+ * reason is a fallback, not a shebang. Three things measured 2026-09-18, on this machine:
+ *
+ * - `posix_spawn` on a stamped 0755 script fails outright with `ENOEXEC`. No fallback exists at
+ *   that layer, so anything that execs the path directly — as `tests/hooks.test.ts` now does —
+ *   cannot run the hook at all.
+ * - A *shell* asked to run the same file gets `ENOEXEC` and quietly re-runs it under the
+ *   system's `/bin/sh`. On macOS `/bin/sh` is bash 3.2, so the bashisms survive and nothing
+ *   looks wrong. That is what has been hiding this.
+ * - `dash -c 'set -euo pipefail'` exits 2 with "Illegal option -o pipefail", and all three hook
+ *   scripts open with that line.
+ *
+ * So on any box where `/bin/sh` is dash — most Linux distributions — the fallback interpreter
+ * rejects line 1 of the script and the hook exits 2. For a `PreToolUse` hook, exit 2 is not
+ * "failed", it is **"blocked"**: a displaced shebang there would refuse every Bash tool call
+ * with an unexplained error. Restoring the shebang to line 1 is what keeps the script's declared
+ * interpreter its actual one, rather than whatever the caller happens to be.
+ *
+ * The same shape, and the same reason, as `stampAfterFrontmatter` in `render/skills.ts`: a
+ * format that reserves line 1 gets the stamp on line 2. Kept here rather than keyed on the
+ * `sh` extension because the constraint belongs to the `#!`, not to the file's name.
+ */
+function stampAfterShebang(contents: string, stamp: string): string {
+  if (!contents.startsWith('#!')) return `${stamp}\n${contents}`;
+  const end = contents.indexOf('\n');
+  if (end === -1) return `${contents}\n${stamp}\n`;
+  return `${contents.slice(0, end + 1)}${stamp}\n${contents.slice(end + 1)}`;
 }
 
 const STAMP_PATTERN =

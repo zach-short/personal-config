@@ -23,7 +23,7 @@ import {
 import type { Answers, Cli, Config, RepoPlan, RepoScan, TrackMode } from '../lib/types.ts';
 import { previewTree, renderDiff, say, short, targetList } from '../lib/ui.ts';
 import { version } from '../lib/version.ts';
-import { commitPlan, type PlannedChange, resolvePlan } from '../lib/write-plan.ts';
+import { commitPlan, type PlannedChange, resolvePlan, willWrite } from '../lib/write-plan.ts';
 import { askPhase } from '../phases/run.ts';
 import type { RenderContext } from '../render/context.ts';
 import { declinedHookHelp } from '../render/hooks.ts';
@@ -290,7 +290,10 @@ export async function finish(
   changes: PlannedChange[],
   prompter: Prompter,
 ): Promise<number> {
-  const real = changes.filter((c) => c.before !== c.after);
+  // `willWrite`, not a contents comparison of its own: a hook whose bytes are already current
+  // but whose executable bit is missing is a file to write, and a local filter here would have
+  // reported it as current and returned before `commitPlan` could repair it.
+  const real = changes.filter(willWrite);
   const guarded = changes.filter((c) => c.guard === 'no-stamp');
 
   say('\nThis run would write:\n');

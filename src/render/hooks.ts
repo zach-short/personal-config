@@ -77,11 +77,24 @@ async function scriptFile(
 }
 
 /**
- * `bash <path>`, quoted, rather than the bare path the other two entries use. Nothing here
- * chmods what it writes — `writeText` creates a 0644 file — so a hook invoked by path alone is
- * a permission error the harness reports as a failed hook rather than a block. The other two
- * entries are left exactly as they are: changing them is a behaviour change to an installed
- * setup, and it belongs to whoever fixes the missing executable bit at the source.
+ * `bash <path>`, quoted, rather than the bare path the other two entries use.
+ *
+ * It was written this way to dodge a real bug — `writeText` created every file 0644, so a hook
+ * invoked by path alone was a permission error the harness reported as a failed hook rather
+ * than a block. **That bug is fixed at the source**: a planned `.sh` carries `0o755` and a
+ * re-run repairs the bit on scripts installed before it did (`planned()` in `render/context.ts`,
+ * `pendingMode` in `lib/write-plan.ts`). So this form is no longer load-bearing.
+ *
+ * It stays anyway, and normalising it would be the worse change. `settings.json` is merged, and
+ * `mergeArrays` de-duplicates by exact JSON: a changed command string is a *new* entry beside
+ * the old one, not a replacement. Measured 2026-09-18 — merging a bare-path `Stop` entry into a
+ * settings file holding this one leaves **two**, and the gate then runs twice on every Stop for
+ * everyone who already ran `setup`. The cost of keeping it is one inconsistent-looking line;
+ * the cost of fixing it is a duplicated hook in installs nobody can reach to clean up.
+ *
+ * The one thing that must not change is the string itself. Whatever this returns has to keep
+ * matching what previous versions wrote, byte for byte, or a re-run doubles the entry —
+ * `tests/hooks.test.ts` pins that a re-merge adds nothing.
  */
 function gateCommand(): string {
   return `bash "${join(claudeHooksDir(), 'completion-gate.sh')}"`;

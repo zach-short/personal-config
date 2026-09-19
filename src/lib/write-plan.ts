@@ -1,6 +1,6 @@
 import { backupFiles, type Manifest } from './backup.ts';
 import { diffSummary } from './diff.ts';
-import { exists, readText, writeText } from './disk.ts';
+import { exists, modeOf, readText, setMode, writeText } from './disk.ts';
 import { isOurs, sameButForStampDate } from './stamp.ts';
 import type { PlannedFile } from './types.ts';
 
@@ -13,6 +13,12 @@ export type PlannedChange = {
   summary: string;
   /** Why nothing is written, where the stamp guard refused it; `none` everywhere else. */
   guard: 'none' | 'no-stamp';
+  /**
+   * Permission bits to set once the bytes are down, absent where the file already carries them.
+   * Present is the whole signal: a change with identical contents and a `chmod` is still work,
+   * which is how a re-run repairs a hook installed before this existed.
+   */
+  chmod?: number;
 };
 
 export async function resolvePlan(files: PlannedFile[]): Promise<PlannedChange[]> {
@@ -27,7 +33,36 @@ async function resolveOne(file: PlannedFile): Promise<PlannedChange> {
   // are the same either way; the stamp date is the one field they disagree about, and the
   // truthful value is when the file last actually changed, not when a run last looked at it.
   const after = sameButForStampDate(before, rendered) ? before : rendered;
-  return { file, before, after, guard, summary: diffSummary(before, after) };
+  const chmod = guard === 'none' ? await pendingMode(file) : undefined;
+  return { file, before, after, guard, chmod, summary: diffSummary(before, after) };
+}
+
+/**
+ * The mode to set, or undefined where there is nothing to set. Read off the disk rather than
+ * assumed from whether the file is new, because the case that matters most is the one where
+ * nothing else changes: a hook installed by an older version has the right bytes and the wrong
+ * bits, so a plan that only compared contents would call it current and leave it unrunnable.
+ *
+ * Exact equality, not "executable enough": the mode of a generated file is this tool's to own,
+ * the same way its bytes are. Someone who tightens a hook to 0700 gets it set back to 0755 on
+ * the next run — visibly, in the preview — and the one way to take a generated file back for
+ * good is still the documented one, deleting its stamp line.
+ *
+ * Nothing calls this for a stamp-guarded file. A file we have refused to write is a file we
+ * have refused to touch, and changing its bits would be exactly the write the guard declined.
+ */
+async function pendingMode(file: PlannedFile): Promise<number | undefined> {
+  if (file.mode === undefined) return undefined;
+  return (await modeOf(file.path)) === file.mode ? undefined : file.mode;
+}
+
+/**
+ * Whether this change does anything — the one definition of "a file to write", so the preview,
+ * the confirm count and the commit cannot disagree about it. A mode is on the near side of that
+ * line: setting it is a write to the filesystem, and it goes through the same confirm.
+ */
+export function willWrite(change: PlannedChange): boolean {
+  return change.before !== change.after || change.chmod !== undefined;
 }
 
 /**
@@ -109,17 +144,24 @@ export type WriteResult = { written: string[]; skipped: string[]; manifest: Mani
 
 /** Nothing here runs until the batch has been confirmed; `--dry-run` never reaches it. */
 export async function commitPlan(changes: PlannedChange[]): Promise<WriteResult> {
-  const real = changes.filter((c) => c.before !== c.after);
-  const overwritten = await onDiskNow(real);
+  const real = changes.filter(willWrite);
+  // A mode-only change is deliberately not backed up: the bytes are identical, so a copy of them
+  // restores nothing, and `restore` copies over a file that already exists — which leaves that
+  // file's bits alone anyway. There is nothing here for `undo` to put back.
+  const overwritten = await onDiskNow(real.filter((c) => c.before !== c.after));
   const manifest = overwritten.length > 0 ? await backupFiles(overwritten) : null;
 
   for (const change of real) {
-    await writeText(change.file.path, change.after);
+    if (change.before !== change.after) {
+      await writeText(change.file.path, change.after, change.chmod);
+    } else if (change.chmod !== undefined) {
+      await setMode(change.file.path, change.chmod);
+    }
   }
 
   return {
     written: real.map((c) => c.file.path),
-    skipped: changes.filter((c) => c.before === c.after).map((c) => c.file.path),
+    skipped: changes.filter((c) => !willWrite(c)).map((c) => c.file.path),
     manifest,
   };
 }

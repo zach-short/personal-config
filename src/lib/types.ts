@@ -159,6 +159,13 @@ export type PlannedFile = {
   label: string;
   /** JSON merge rather than overwrite (settings.json), or append (ignore files). */
   strategy: 'overwrite' | 'merge-json' | 'append-lines';
+  /**
+   * Permission bits this file needs, absent where the filesystem default will do. Set for the
+   * hook scripts, which `settings.json` registers by bare path: a `command` entry invoking a
+   * 0644 file exits 126 rather than running (verified 2026-09-18), so the bit is the difference
+   * between an installed hook and one that has never fired.
+   */
+  mode?: number;
 };
 
 export type Finding = {

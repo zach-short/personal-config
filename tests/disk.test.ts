@@ -1,7 +1,15 @@
 import { describe, expect, test } from 'bun:test';
-import { mkdir } from 'node:fs/promises';
+import { chmod, mkdir, stat } from 'node:fs/promises';
 import { join } from 'node:path';
-import { copyTo, exists, readJson, readText, writeText } from '../src/lib/disk.ts';
+import {
+  copyTo,
+  exists,
+  modeOf,
+  readJson,
+  readText,
+  setMode,
+  writeText,
+} from '../src/lib/disk.ts';
 import { repoRoot } from '../src/lib/paths.ts';
 import { cleanup, tempDir } from './helpers.ts';
 
@@ -32,6 +40,73 @@ describe('disk', () => {
       const target = join(dir, 'one', 'two', 'three.md');
       await writeText(target, 'deep\n');
       expect(await readText(target)).toBe('deep\n');
+    } finally {
+      await cleanup(dir);
+    }
+  });
+
+  /**
+   * `writeText`'s third argument, and the two facts behind it, measured 2026-09-18 rather than
+   * assumed: a 0644 file run as a command fails, and `writeFile`'s own `mode` option would not
+   * have fixed it — the option is honoured only when the call *creates* the file, so it is
+   * silently ignored for exactly the install that needs repairing. Hence the explicit `chmod`.
+   */
+  test('writeText applies a mode, and applies it to a file that already exists', async () => {
+    const dir = await tempDir();
+    try {
+      const target = join(dir, 'hook.sh');
+      await writeText(target, '#!/usr/bin/env bash\necho hi\n', 0o755);
+      expect(await modeOf(target)).toBe(0o755);
+
+      await chmod(target, 0o644);
+      await writeText(target, '#!/usr/bin/env bash\necho again\n', 0o755);
+      expect(await modeOf(target)).toBe(0o755);
+      expect((await stat(target)).mode & 0o111).not.toBe(0);
+    } finally {
+      await cleanup(dir);
+    }
+  });
+
+  /** The other ~44 call sites: no third argument, no permission change, not even on a re-write. */
+  test('writeText without a mode leaves permissions to the filesystem', async () => {
+    const dir = await tempDir();
+    try {
+      const target = join(dir, 'notes.md');
+      await writeText(target, 'plain\n');
+      expect((await stat(target)).mode & 0o111).toBe(0);
+
+      await chmod(target, 0o600);
+      await writeText(target, 'plain again\n');
+      expect(await modeOf(target)).toBe(0o600);
+    } finally {
+      await cleanup(dir);
+    }
+  });
+
+  test('modeOf masks off the file type, and answers null for a path that is not there', async () => {
+    const dir = await tempDir();
+    try {
+      const target = join(dir, 'a-file');
+      await writeText(target, 'x');
+      await chmod(target, 0o640);
+
+      expect(await modeOf(target)).toBe(0o640);
+      expect(await modeOf(join(dir, 'not-there'))).toBeNull();
+    } finally {
+      await cleanup(dir);
+    }
+  });
+
+  test('setMode changes bits on a file whose bytes are already right', async () => {
+    const dir = await tempDir();
+    try {
+      const target = join(dir, 'hook.sh');
+      await writeText(target, 'body\n');
+      await chmod(target, 0o644);
+
+      await setMode(target, 0o755);
+      expect(await modeOf(target)).toBe(0o755);
+      expect(await readText(target)).toBe('body\n');
     } finally {
       await cleanup(dir);
     }

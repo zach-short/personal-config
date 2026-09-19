@@ -29,8 +29,23 @@ export function planned(
     path,
     label,
     strategy,
+    mode: modeFor(extension),
     contents: stamp ? withStamp(contents, ctx.stamp, extension) : contents,
   };
+}
+
+/**
+ * Executability is derived from the extension rather than asked for at the call site, because
+ * every shell script this tool writes is written to be run: they are hook scripts, and
+ * `settings.json` registers them as `command` entries invoked by bare path. Without the bit
+ * those entries exit 126 and the harness reports a failed hook, which is why the commit guard
+ * and the session banner had never fired for anyone who installed them (found 2026-09-17).
+ *
+ * Keyed on `sh` and not on the comment style, which `yml` shares with it: a rendered `.yml` is
+ * data and has no business being executable.
+ */
+function modeFor(extension: string): number | undefined {
+  return extension === 'sh' ? 0o755 : undefined;
 }
 
 /**
