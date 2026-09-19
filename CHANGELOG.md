@@ -3,7 +3,7 @@
 The CLI. The working standard it installs is versioned separately — see
 [`standard/CHANGELOG.md`](standard/CHANGELOG.md).
 
-## 0.2.6 — 2026-09-17
+## 0.3.0 — 2026-09-18
 
 ### Added
 
@@ -57,6 +57,21 @@ The CLI. The working standard it installs is versioned separately — see
   change to anything the CLI does apart from that error text.
 
 ### Fixed
+
+- **The hooks this tool installs had never once run.** Every hook script was written without the
+  executable bit, so the harness that was supposed to run it silently did nothing — the commit
+  guard never guarded a commit, and the session banner never printed. Underneath that sat a second
+  bug the bit alone would not have fixed: the stamp line marking a file as generated was written
+  *above* `#!/usr/bin/env bash`, and a `#!` only means anything on the very first line of a file.
+  So every hook ever installed was, in effect, a script that never said which interpreter to run
+  it with. On macOS that is invisible — the fallback interpreter happens to be bash, so the script
+  works anyway — but where the fallback is `dash`, the first line of all three scripts is rejected
+  and the hook exits with status 2. For a hook that runs *before* a tool call, status 2 does not
+  mean "failed", it means "blocked", so a misplaced stamp there would have refused every shell
+  command the agent tried to run. Scripts are now written executable with the shebang first and
+  the stamp on the line below it. **If you have run `setup` before, run it again**: it detects the
+  wrong permissions on the installed hooks and repairs them, and the preview says so instead of
+  reporting the files as unchanged.
 
 - **`undo` is one-shot, one-way, and says so before it acts.** It lists the files it would put
   back and asks first; a backup already spent is refused with the date and place it was used,

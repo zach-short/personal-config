@@ -301,7 +301,7 @@ bun run catalog
 Writes `catalog.json` in the repo root: every question the wizard asks — its text, its options
 with their examples, and the condition deciding whether it is asked at all — plus the long forms
 from [`docs/choices/`](docs/choices), keyed by the id each question cites. Thirty-five questions
-and thirty-three long forms as of `0.2.6+cd3836bf` — and nobody is asked all thirty-five, because
+and thirty-three long forms as of `0.3.0+a27d3dce` — and nobody is asked all thirty-five, because
 eleven of them are asked only of someone whose work is code.
 
 It exists so another surface can ask the same questions without importing the wizard, which is

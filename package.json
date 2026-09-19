@@ -1,6 +1,6 @@
 {
   "name": "personal-config",
-  "version": "0.2.6",
+  "version": "0.3.0",
   "description": "A terminal wizard that sets up an agent-driven working style in your repos — a ledger, a board, a working standard, and the rules your agent reads before it writes code.",
   "keywords": [
     "cli",
