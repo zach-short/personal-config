@@ -15,15 +15,21 @@ One document added. Nothing in the long one changed but its version line.
   chose the lighter setup. Written for its reader rather than cut from the long one: the twelve
   rules of Part 1 kept under their own numbers, translated where they spoke of diffs and greps;
   the ledger, the pass-off prompt, the close-out ritual and the context budget in a paragraph
-  each; **a proof line in place of the gates** — the owner's own test of what makes work here
+  each; the one discipline kept from Part 8's doc craft — **the argument that lost is written beside
+  the one that won**, in the ledger's Settled sections, because unrecorded it comes back as a new
+  objection; **a proof line in place of the gates** — the owner's own test of what makes work here
   sound, which is what "done" means on a track that has no test suite; and a preferences section
   written from the same answers Part 11 is. It has no Part 0: every slot is filled at render time,
   and its first-session instructions are a section of the document itself, deleted once run. Two
   sections are conditional — the board, present only with the whole method, and the git rules,
-  present only where the work is kept in git. Under 200 lines by design, so a session pays a
-  tenth of what adopting the long one costs.
+  present only where the work is kept in git. Under 200 lines by design, so a session pays a tenth
+  of what adopting the long one costs.
 - **Which document a setup gets** is decided by two answers and never by a name: *other work*
   or *lighter* gets the short form; *code* with *the whole method* gets the long one, unchanged.
+
+Amended 2026-09-22, before 1.1.0 had shipped in any CLI release, so the number did not move: the
+Settled bullet gained Part 8.4's counter-argument rule — the one discipline the owner brought back
+when the short form's table of contents was ratified. Part 8 is otherwise not in the short form.
 
 ## 1.0.3 — 2026-09-16
 

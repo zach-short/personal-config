@@ -84,7 +84,9 @@ is not in git, it is also the only history there is. Sections, in this order:
 - **Orientation.** What this work is, who decides, what they know, and how to reach them.
 - **How things are here.** The tools, where the files live, and **what an agent cannot check from
   here** — a bank statement, a person's approval, a printed copy — with what to do instead.
-- **Settled.** One dated section per decided topic. Nothing under it is re-asked (R8).
+- **Settled.** One dated section per decided topic, each carrying **the argument that lost beside
+  the one that won** — unrecorded, it returns in three weeks as a new objection. Nothing under it
+  is re-asked (R8).
 - **Known facts and quirks.** What was learned the hard way, with sources.
 - **The step log.** Numbered and append-only: `**N. Title.** Done <date>.` then what changed, why,
   what is now settled, and how the proof line was applied. A step is addressable forever — "step
