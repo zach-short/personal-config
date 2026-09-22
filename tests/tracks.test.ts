@@ -105,8 +105,14 @@ const COMMIT_PARAGRAPH = '**Commits are the owner’s.**';
  * `$HOME` inside the hook paths, and the standard's own version line, which moves with every
  * `standard/VERSION` bump and did so at 1.0.2 → 1.0.3 with no complaint. Everything else has to
  * match exactly, and a mismatch names the file.
+ *
+ * **One file has moved since, deliberately: `skills/close-out/SKILL.md` (item 51, 2026-09-22).**
+ * It told every reader to post the runtime-pass entries and offered a project-folder branch, and
+ * the target here keeps a ledger and has neither — false in this shape, not only in the new ones,
+ * which is why it was corrected rather than branched away from. `skills/handoff/SKILL.md` renders
+ * the bytes it rendered at 0.3.0 and the assertion below is what proves it.
  */
-describe('§3.1 row 1 — code + full + git is the 0.3.0 output, byte for byte', () => {
+describe('§3.1 row 1 — code + full + git is the 0.3.0 output, byte for byte bar one skill', () => {
   const FULL = answersFor(CODE_FULL_GIT);
   const VARIANTS: Record<string, { answers: Answers; plan: RepoPlan }> = {
     tracked: { answers: FULL, plan: testRepoPlan({ archiveHome: '~/archive/example' }) },

@@ -25,6 +25,17 @@ The CLI. The working standard it installs is versioned separately — see
   than the untracked ones, and no ignore entries are planned for a `.git` it does not have.
   `doctor` asks git about ignore coverage only in a repository.
 
+### Fixed
+
+- **`/close-out` and `/handoff` say what is true of the setup that installed them.** Both skills
+  were written for a reader with a board, a code map, gate commands and a commit to land the
+  record in, and a lighter or non-code setup installs exactly these two. They now render against
+  the answers: no "in the same commit as the code" where the work is not in git, the proof line
+  where a code setup has "gates green", the ledger's own section names rather than the full
+  ledger's, and no board where none was written. A code setup with the whole method in git reads
+  what it read before, except that the hand-back no longer asks a ledger for the runtime-pass
+  entries only a project-folder setup ever had.
+
 ### Changed
 
 - **`standard/VERSION` is 1.1.0.** One number covers both forms of the standard, so every file
