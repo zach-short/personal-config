@@ -11,6 +11,7 @@ import {
   hasBoard,
   isShortTrack,
   ledgerFile,
+  offLimits,
   planned,
   projectName,
   proofLine,
@@ -91,6 +92,7 @@ async function renderShortRouter(
     PROOF_BLOCK: proofBlock(ctx),
     STACK_LINE: code ? stackLine(ctx) : '',
     COMMIT_LINE: commitLine(ctx),
+    OFF_LIMITS_LINE: offLimitsLine(ctx),
   };
   const body = tidy(await filledTemplate('CLAUDE.short.md', vars));
   return planned(ctx, join(repoPath, routerFile(ctx)), routerLabel(ctx), body);
@@ -184,6 +186,37 @@ function commitLine(ctx: RenderContext): string {
   return line ? `- ${line}` : '';
 }
 
+/**
+ * What the agent must not read or copy, beside the commit line under `## Never do this` (D23).
+ * An empty answer is a complete one and renders nothing — not "none named", which would be a
+ * line claiming the question was considered where it may simply have been skipped. `tidy`
+ * closes the blank line an empty token leaves behind.
+ *
+ * A rule is not a guard, and this is the boundary where that matters most: a `grep -r` reads
+ * the material before any rule is consulted. What makes it worth writing is that the router is
+ * read before the folder is touched. The enforcement this could grow into —
+ * `permissions.deny` on a `Read` pattern in the project's own settings — is reserved and
+ * deliberately not built (§10.6): it is a second write target with its own merge, preview and
+ * undo, and the question has to exist before that is worth wiring.
+ */
+function offLimitsLine(ctx: RenderContext): string {
+  const named = offLimits(ctx);
+  return named ? `- Never read, copy or quote from \`${named}\`.` : '';
+}
+
+/**
+ * The same answer as a row in the short ledger's facts table, under the proof line's row.
+ *
+ * It carries its own leading newline and the template appends it to the end of the row above,
+ * rather than sitting on a line of its own: a token alone on a line leaves an empty line behind
+ * when it renders nothing, and one empty line inside a markdown table splits it into two
+ * tables. `tidy` cannot help — it collapses three newlines or more, and this would be two.
+ */
+function offLimitsRow(ctx: RenderContext): string {
+  const named = offLimits(ctx);
+  return named ? `\n| Not to be read or copied | \`${named}\` | the owner |` : '';
+}
+
 function workRecordLines(ctx: RenderContext): string {
   if (workRecordShape(ctx) === 'folders') {
     return `- \`docs/incomplete/<slug>/\` — one folder per open effort: \`SCOPE.md\` → \`DESIGN.md\` → \`PLAN.md\` → \`RUNTIME-PASS.md\`.\n- Closed efforts move to \`${ctx.repo?.archiveHome || 'the archive'}\`.`;
@@ -248,6 +281,7 @@ async function renderShortLedger(ctx: RenderContext): Promise<PlannedFile> {
     READ_NEXT: hasBoard(ctx) ? `\`${boardFile(ctx)}\` (what is next) → ` : '',
     PROOF_LINE:
       proofLine(ctx) || '*(not yet written — the first session writes it with the owner)*',
+    OFF_LIMITS_ROW: offLimitsRow(ctx),
   };
   return planned(
     ctx,

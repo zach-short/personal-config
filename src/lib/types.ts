@@ -128,6 +128,12 @@ export type RepoPlan = {
    * until they write one. Per target, because it is a property of the work, not of the person.
    */
   proofLine: string;
+  /**
+   * What the agent must not read or copy here, in the owner's words (setup-tracks `DESIGN.md`
+   * D23). Per target for the proof line's reason — it is a property of the work, not of the
+   * person — and empty is a complete answer rather than an unanswered one.
+   */
+  offLimits: string;
 };
 
 export type Config = {

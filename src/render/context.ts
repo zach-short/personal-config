@@ -152,6 +152,11 @@ export function proofLine(ctx: RenderContext): string {
   return answer(ctx, 'proofLine').trim();
 }
 
+/** What the agent must not read or copy (D23); empty is a complete answer, not a missing one. */
+export function offLimits(ctx: RenderContext): string {
+  return answer(ctx, 'offLimits').trim();
+}
+
 /**
  * The answers one target renders from: the shared `you` and `practices` answers, plus what was
  * asked once for this target. The proof line is asked in the `discover` phase into a per-target
@@ -159,9 +164,12 @@ export function proofLine(ctx: RenderContext): string {
  * dropped before any renderer or the saved `.personal-config.json` saw it (found 2026-09-19).
  * Laid over the shared answers here, it is hashed with them and saved with them, so `doctor`
  * rebuilds the same expectation from the repo's own record.
+ *
+ * `offLimits` (D23) takes the same trip for the same reason, added 2026-09-22 by following that
+ * bug's path line by line rather than by finding it again.
  */
 export function targetAnswers(answers: Answers, repo: RepoPlan | null): Answers {
-  return repo ? { ...answers, proofLine: repo.proofLine } : answers;
+  return repo ? { ...answers, proofLine: repo.proofLine, offLimits: repo.offLimits } : answers;
 }
 
 export function commitRuleLine(answers: Answers): string {

@@ -205,6 +205,10 @@ export async function planRepo(
     // is about the person, and the plan carried no slot for it, so the answer never reached a
     // renderer or the saved record. It rides on the plan because it is this target's.
     proofLine: String(perRepo.proofLine ?? '').trim(),
+    // The same trip as the line above it, deliberately (D23): asked into `perRepo`, left out of
+    // `pickShared` because it is this target's and not the person's, and carried here so
+    // `targetAnswers` can lay it back over the shared answers for the renderers and the record.
+    offLimits: String(perRepo.offLimits ?? '').trim(),
   };
 }
 

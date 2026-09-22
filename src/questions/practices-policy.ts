@@ -1,8 +1,9 @@
 import type { PracticeArea, Question } from '../lib/types.ts';
 
 /**
- * Three areas that are not language rules but owner policy — they render into Part 11 of the
- * adapted standard, which is the one part the standard itself marks as editable preference.
+ * Four areas that are not language rules but owner policy — they render into Part 11 of the
+ * adapted standard, which is the one part the standard itself marks as editable preference,
+ * and into the short standard's `## Preferences`, which is that part's short-track counterpart.
  */
 
 function question(id: string, ask: string, options: Question['options']): Question {
@@ -71,6 +72,59 @@ const DRIVE_BY_FIXES: PracticeArea = {
   },
 };
 
+/**
+ * The non-coder's analogue of `commit-policy` (setup-tracks `DESIGN.md` D22). `commit-policy`
+ * decides who takes the irreversible step in a repo and is asked only where git is in play, so
+ * without this a non-coder is left with no rule about the irreversible step at all — and for a
+ * document that is not in git, an edit in place is that step.
+ *
+ * It recommends the agent take that step, which nothing else here does. Two things outweigh the
+ * consistency: the complaint this whole design exists for is an agent that replies with a plan
+ * instead of doing the work (D15), which is what "show me first" makes the rule; and the harness
+ * already supplies the veto that answer would add — `Write` and `Edit` prompt before touching a
+ * file and refuse to overwrite one the session has not read. What no harness setting supplies is
+ * the *ritual* around an edit — name it, never delete, move the old one aside — which is what the
+ * recommended paragraph writes.
+ */
+const EDIT_POLICY: PracticeArea = {
+  target: 'policy',
+  languages: [],
+  question: {
+    ...question(
+      'edit-policy',
+      'When your agent changes a document, should it make the change, or show it to you first?',
+      [
+        {
+          value: 'agent-edits',
+          label: 'The agent edits, and names every change',
+          example:
+            'It changes the file, says which part and what it said before, and never deletes one',
+          recommended: true,
+        },
+        {
+          value: 'show-first',
+          label: 'Show me first — I make the change',
+          example: 'It writes the new wording in chat; you put it in',
+        },
+        {
+          value: 'none',
+          label: 'No rule',
+          example: 'Nothing is written; the agent does what it would do by default',
+        },
+      ],
+    ),
+    when: { key: 'workKind', is: 'non-code' },
+  },
+  rule: () => null,
+  policy: (value) => {
+    if (value === 'none') return null;
+    if (value === 'show-first') {
+      return '**Changes to a document are shown, not made.** Write the new wording in chat — the file, the section, and the replacement in full — and leave the file where it is; the owner puts it in. This holds whether or not the work is in git: the owner asked for the step, and a version history is not what makes it worth keeping.';
+    }
+    return '**The agent makes the change.** Edit the document rather than describing the edit, then name every file changed in the hand-back and, for each, which section moved and what it said before. **Never delete a document, and never overwrite one you have not read this session:** move the old one aside, with the date in its name, and say where it went.';
+  },
+};
+
 const COMMIT_POLICY: PracticeArea = {
   target: 'policy',
   languages: [],
@@ -97,4 +151,14 @@ const COMMIT_POLICY: PracticeArea = {
   },
 };
 
-export const POLICY_AREAS: PracticeArea[] = [COPY_REGISTERS, DRIVE_BY_FIXES, COMMIT_POLICY];
+/**
+ * `commit-policy-practice` stays last: it is the one area the short standard pulls *out* of
+ * Preferences and into its git section, and Part 11 of the long standard has read it last since
+ * 0.2.5. `edit-policy` sits beside the two house rules a non-coder actually answers.
+ */
+export const POLICY_AREAS: PracticeArea[] = [
+  COPY_REGISTERS,
+  DRIVE_BY_FIXES,
+  EDIT_POLICY,
+  COMMIT_POLICY,
+];

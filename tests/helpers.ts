@@ -110,6 +110,7 @@ export function testRepoPlan(overrides: Partial<RepoPlan> = {}): RepoPlan {
     archiveHome: '',
     owned: true,
     proofLine: '',
+    offLimits: '',
     ...overrides,
   };
 }
