@@ -36,12 +36,15 @@ describe('the catalog carries the whole question set', () => {
   // This is the split the catalog *carries*, which item 56 did not change: gating a question
   // does not remove it, and the site needs every one to evaluate the conditions for itself.
   // What a given person is actually asked is pinned separately, below.
-  test('35 questions, phased 14 / 7 / 14', async () => {
+  //
+  // 35 → 37 on 2026-09-22, item 61: `off-limits` in `discover` and `edit-policy` in
+  // `practices`, the two questions a non-coder is asked and a programmer is not (D22, D23).
+  test('37 questions, phased 14 / 8 / 15', async () => {
     const catalog = await committed();
     const byPhase: Record<string, number> = {};
     for (const q of catalog.questions) byPhase[q.phase] = (byPhase[q.phase] ?? 0) + 1;
-    expect(catalog.questions.length).toBe(35);
-    expect(byPhase).toEqual({ you: 14, discover: 7, practices: 14 });
+    expect(catalog.questions.length).toBe(37);
+    expect(byPhase).toEqual({ you: 14, discover: 8, practices: 15 });
   });
 
   test('every question the wizard asks is present, in the wizard`s order', async () => {
@@ -90,6 +93,10 @@ describe('the conditionals and the one hidden question survive the trip', () => 
       ],
     };
     const fullWeight = { key: 'configWeight', is: 'full' };
+    // Item 61's two (D22, D23). The mirror image of `codeOnly`, and the only two specs in the
+    // set that name `non-code`: both questions exist because confining `commit-policy` to a
+    // repo left the non-coder with no rule about the step that cannot be taken back.
+    const nonCodeOnly = { key: 'workKind', is: 'non-code' };
     expect(conditions).toEqual({
       // Item 62: `commitRuleLine` is read by `repo.ts`, `standard.ts` and `short-standard.ts`
       // for any git target, non-code included — only `commits.md` (`rules.ts:24`) is code-only,
@@ -103,6 +110,16 @@ describe('the conditionals and the one hidden question survive the trip', () => 
       'model-routing': fullWeight,
       'docs-mcp': codeOnly,
       'work-profile': codeAndFull,
+      // D26, the two item 56's audit did not count (G23, G24): both were asked on every
+      // short-track shape, saved, and rendered into no document there — `archiveHome` because
+      // `workRecordShape` returns `ledger` for the whole short track, `mode` because its two
+      // readers are the Part 0 prompt and the long standard, neither of which a short track
+      // writes. They take `work-profile`'s spec exactly, the negation of `isShortTrack`.
+      'archive-home': codeAndFull,
+      mode: codeAndFull,
+      // D23: asked per target, like the proof line beside it, but only where the work is not
+      // code — a repo's off-limits material has `.gitignore` and `.env` already.
+      'off-limits': nonCodeOnly,
       'track-mode': {
         all: [
           { key: 'owned', isNot: false },
@@ -110,6 +127,8 @@ describe('the conditionals and the one hidden question survive the trip', () => 
         ],
       },
       tracker: { key: 'mode', is: 'team' },
+      // D22: the non-coder's analogue of `commit-policy`, which is the entry above it.
+      'edit-policy': nonCodeOnly,
       'commit-policy-practice': { never: true },
       comments: codeOnly,
       'function-length': codeOnly,
@@ -143,8 +162,10 @@ describe('the conditionals and the one hidden question survive the trip', () => 
         .map((q) => q.id);
 
     expect(asked('code')).toHaveLength(13);
-    // Copy registers and drive-by fixes survive: neither is a rule about source code.
-    expect(asked('non-code')).toEqual(['copy-registers', 'drive-by-fixes']);
+    // Copy registers and drive-by fixes survive: neither is a rule about source code. Item 61
+    // adds the third, and it is the only one of the three a *programmer* is not asked —
+    // `PART 3 OF 3 · House rules` for a non-coder goes from two questions to three (D22).
+    expect(asked('non-code')).toEqual(['copy-registers', 'drive-by-fixes', 'edit-policy']);
   });
 
   test('tracker is asked for a team and skipped for a solo', async () => {
@@ -192,8 +213,14 @@ describe('the conditionals and the one hidden question survive the trip', () => 
  * Counts, not just absences: a count is what goes red when a *new* question is added with no
  * thought about which track wants it.
  */
-describe('what each of the four shapes is actually asked', () => {
-  /** The site's view of a run: `owned` is derived from a git remote, and a browser has none. */
+describe('what each of the five shapes is actually asked', () => {
+  /**
+   * The site's view of a run: `owned` is derived from a git remote, and a browser has none.
+   *
+   * `mode` is supplied rather than asked-for because `tracker` reads it, and item 60 stopped
+   * asking it on a short track (D26) — where an unasked `mode` reads as `solo`
+   * (`pickShared`, `src/commands/setup.ts`), which is what `tracker`'s own condition then sees.
+   */
   async function asked(answers: Answers): Promise<string[]> {
     const catalog = await committed();
     return catalog.questions
@@ -201,7 +228,15 @@ describe('what each of the four shapes is actually asked', () => {
       .map((q) => q.id);
   }
 
-  const DEAD_ON_A_SHORT_TRACK = ['model-deep', 'model-fast', 'model-routing', 'work-profile'];
+  const DEAD_ON_A_SHORT_TRACK = [
+    'model-deep',
+    'model-fast',
+    'model-routing',
+    'work-profile',
+    // Item 60, D26.
+    'archive-home',
+    'mode',
+  ];
 
   test('code + full + git is asked everything — §3.1 row 1 renders 0.2.5 byte for byte', async () => {
     const ids = await asked({ workKind: 'code', configWeight: 'full', usesGit: 'yes' });
@@ -221,11 +256,16 @@ describe('what each of the four shapes is actually asked', () => {
     expect(ids).toContain('docs-mcp');
   });
 
-  test('code + light drops the tiers, the routing rule and the work profile', async () => {
+  test('code + light drops the tiers, the routing rule, the work profile and D26’s two', async () => {
     const ids = await asked({ workKind: 'code', configWeight: 'light', usesGit: 'yes' });
 
-    expect(ids).toHaveLength(29);
+    // 29 → 27 on item 60: `archive-home` and `mode` join the four (D26). Item 61 adds nothing
+    // here — both of its questions are non-code, and this is the short track a *programmer*
+    // walks, which is the half of "nothing on a code track" that is easy to lose.
+    expect(ids).toHaveLength(27);
     for (const id of DEAD_ON_A_SHORT_TRACK) expect(ids).not.toContain(id);
+    expect(ids).not.toContain('off-limits');
+    expect(ids).not.toContain('edit-policy');
     // A light *code* setup still gets `commits.md` and `docs-lookup.md`, so it is still asked.
     expect(ids).toContain('commit-policy');
     expect(ids).toContain('docs-mcp');
@@ -235,20 +275,49 @@ describe('what each of the four shapes is actually asked', () => {
     const full = await asked({ workKind: 'non-code', configWeight: 'full', usesGit: 'yes' });
     const light = await asked({ workKind: 'non-code', configWeight: 'light', usesGit: 'yes' });
 
-    // 19 and 16, not 18 and 15 (item 62): `commit-policy` is asked wherever the target is in
-    // git, which a non-code target with git of its own still is.
+    // 19 and 16 on item 61: two more than item 60's 17 and 14, both shapes gaining
+    // `off-limits` and `edit-policy` (D22, D23). §10.3's "After D22 + D23" column says 18 for
+    // the full shape and the gap is item 62's, not this row's: that column was computed on item
+    // 56's tree, before item 62 put `commit-policy` back for a non-code target in git, and that
+    // one question is the whole of the difference — the same off-by-one item 60 recorded
+    // (HANDOFF 73), carried forward unchanged. Measured by running, not reasoned.
     expect(full).toHaveLength(19);
     expect(light).toHaveLength(16);
     for (const ids of [full, light]) {
       expect(ids).toContain('commit-policy');
+      expect(ids).toContain('off-limits');
+      expect(ids).toContain('edit-policy');
       expect(ids).not.toContain('attribution');
       expect(ids).not.toContain('docs-mcp');
       expect(ids).not.toContain('work-profile');
+      expect(ids).not.toContain('archive-home');
+      expect(ids).not.toContain('mode');
     }
     // The one that is not the short-track negation: non-code + full still renders
     // `model-routing.md`, so it is still asked for the tiers that table prints.
     expect(full).toContain('model-routing');
     expect(light).not.toContain('model-routing');
+  });
+
+  test('the shortest track — §3.1’s last row, the shape this design exists for', async () => {
+    const ids = await asked({ workKind: 'non-code', configWeight: 'light', usesGit: 'no' });
+
+    // 21 before item 56, 14 after it, 12 after D26, 14 again after item 61's two. The fifth
+    // shape of §10.3's table, which had no case of its own until item 60: it is the one a
+    // non-programmer actually walks, and §10.3's "After D22 + D23" column says 14 for it.
+    expect(ids).toHaveLength(14);
+    for (const id of DEAD_ON_A_SHORT_TRACK) expect(ids).not.toContain(id);
+    // The two this shape gained: a rule about the step that cannot be taken back where there is
+    // no commit to gate it on, and the one question in the set about somebody else's material.
+    expect(ids).toContain('edit-policy');
+    expect(ids).toContain('off-limits');
+    // Nothing here is asked about git, and `tracker` follows `mode` for free — an unasked
+    // `mode` is never `team` (D26).
+    expect(ids).not.toContain('commit-policy');
+    expect(ids).not.toContain('track-mode');
+    expect(ids).not.toContain('tracker');
+    // The per-target question that is asked on every track, gates or no gates (D7).
+    expect(ids).toContain('proof-line');
   });
 
   test('the seven are gone together on the shape that wants none of them', async () => {
@@ -257,8 +326,8 @@ describe('what each of the four shapes is actually asked', () => {
 
     // Every question the short non-code track skips, named: six of item 56's seven (item 62
     // moved `commit-policy` off this list — git is `yes` on both sides, so it is asked on
-    // both) and the eleven code-conventions questions that were already gated on `code`.
-    // `track-mode` is asked on both sides too, for the same reason, and is correctly absent.
+    // both), item 60's two (D26), and the eleven code-conventions questions that were already
+    // gated on `code`. `track-mode` is asked on both sides too, and is correctly absent.
     expect(before.filter((id) => !after.includes(id))).toEqual([
       'attribution',
       'model-deep',
@@ -266,6 +335,8 @@ describe('what each of the four shapes is actually asked', () => {
       'model-routing',
       'docs-mcp',
       'work-profile',
+      'archive-home',
+      'mode',
       'comments',
       'function-length',
       'exports',
@@ -278,6 +349,23 @@ describe('what each of the four shapes is actually asked', () => {
       'design-tokens',
       'test-policy',
     ]);
+  });
+
+  /**
+   * The other direction, which had no case until item 61 because until item 61 the answer was
+   * the empty list: the short non-code track is now asked two things the full code track is
+   * not. Pinned as a list rather than a count, because "a non-coder is asked something a
+   * programmer is not" is the whole of D22 and D23 and an added third would be a decision.
+   */
+  test('and the two that go the other way — the only questions a programmer is never asked', async () => {
+    const code = await asked({ workKind: 'code', configWeight: 'full', usesGit: 'yes' });
+    const nonCode = await asked({
+      workKind: 'non-code',
+      configWeight: 'light',
+      usesGit: 'yes',
+    });
+
+    expect(nonCode.filter((id) => !code.includes(id))).toEqual(['off-limits', 'edit-policy']);
   });
 });
 

@@ -202,14 +202,17 @@ describe('a question its `when` skipped', () => {
    * 56) and it is the question this walk lands back on. The `you` phase has always answered all
    * three by the time `discover` runs.
    */
-  async function runDiscover(prompter: Prompter, owned: boolean): Promise<Answers> {
+  async function runDiscover(
+    prompter: Prompter,
+    owned: boolean,
+    track: Answers = { workKind: 'code', configWeight: 'full' },
+  ): Promise<Answers> {
     const config = await loadConfig(parseCli(['setup']), null);
     const answers: Answers = {
       ...config.answers,
       owned,
-      workKind: 'code',
-      configWeight: 'full',
       usesGit: 'yes',
+      ...track,
     };
     await askPhase('discover', prompter, answers, config, undefined, ['projects-dir']);
     return answers;
@@ -227,5 +230,95 @@ describe('a question its `when` skipped', () => {
     await runDiscover(prompter, true);
 
     expect(ids(prompter)).toContain('track-mode');
+  });
+
+  /**
+   * Item 60 (D26) puts `archive-home` and `mode` behind `code && full`, so on a short track the
+   * phase stops before them and the walk steps back onto the question actually asked before it.
+   *
+   * The `you`-phase case above cannot cover these two, and that is a property of the runner,
+   * not an omission: `askPhase` is called once per phase and offers no `← back` on a phase's
+   * first question, so changing `work-kind` in `you` can never unask a `discover` question in
+   * the same pass. What it does instead is decide the set `discover` is asked from, which is
+   * what this case drives.
+   *
+   * **Item 61 moved where the phase ends**, and the trailing `off-limits` below is that: a
+   * non-code track now asks one more question after the proof line (D23). What this case is
+   * about — that `archive-home` and `mode` are gone and the walk steps back over them — is
+   * unchanged, and the case immediately after it owns the new question's own walk.
+   */
+  test('a short track stops before D26’s two and steps back onto what it came from', async () => {
+    const prompter = scripted(['tracked', BACK]);
+    const answers = await runDiscover(prompter, true, {
+      workKind: 'non-code',
+      configWeight: 'light',
+    });
+
+    // Asked, stepped back from, re-asked, and walked forward again.
+    expect(ids(prompter)).toEqual([
+      'track-mode',
+      'proof-line',
+      'track-mode',
+      'proof-line',
+      'off-limits',
+    ]);
+    expect(ids(prompter)).not.toContain('archive-home');
+    expect(ids(prompter)).not.toContain('mode');
+    // What each of the two leaves behind, and they differ. `archiveHome` is a top-level config
+    // key rather than a stored answer, so an unasked question leaves nothing for
+    // `archiveFor` (`src/commands/setup.ts`) to read and the plan carries the empty string —
+    // which `renderArchiveIndex` already treats as "no archive" (D26). `mode` *is* a stored
+    // answer, and both shipped profiles set it to `solo`, so the merged config seeds it before
+    // the phase starts; `pickShared` would default it to `solo` anyway.
+    expect(answers.archiveHome).toBeUndefined();
+    expect(answers.mode).toBe('solo');
+    // `tracker` follows `mode` for free — it is asked only when `mode` is `team`, which an
+    // unasked `mode` never becomes.
+    expect(ids(prompter)).not.toContain('tracker');
+  });
+
+  /**
+   * Item 61's `off-limits` (D23) is a `text` question that exists only on a non-code track, so
+   * it is the first question whose *presence* turns on `work-kind` and which is also the last
+   * thing the phase asks. Two things have to hold, and they are asserted separately because
+   * they are independent: that changing `work-kind` is what makes it appear at all, and that
+   * once it appears it can be stepped back from and walked forward onto again like any other.
+   *
+   * The first half is driven by running the phase twice rather than by pressing `← back` in
+   * `you`, for the runner reason the case above records: `askPhase` cannot cross a phase
+   * boundary, so a `work-kind` change can only ever decide the set the *next* phase asks from.
+   */
+  test('the new text question appears only when work-kind says non-code', async () => {
+    const code = scripted([]);
+    await runDiscover(code, true, { workKind: 'code', configWeight: 'light' });
+    expect(ids(code)).not.toContain('off-limits');
+
+    const nonCode = scripted([]);
+    await runDiscover(nonCode, true, { workKind: 'non-code', configWeight: 'light' });
+    expect(ids(nonCode)).toContain('off-limits');
+  });
+
+  test('and once it appears it is stepped back from and resumed, not skipped past', async () => {
+    const LINE = 'the totals agree with the source table';
+    const prompter = scripted(['tracked', LINE, BACK]);
+    const answers = await runDiscover(prompter, true, {
+      workKind: 'non-code',
+      configWeight: 'light',
+    });
+
+    // Reached, stepped back from onto the question before it, and reached again — the walk a
+    // last-question-of-the-phase has to survive, since there is nothing after it to land on.
+    expect(ids(prompter)).toEqual([
+      'track-mode',
+      'proof-line',
+      'off-limits',
+      'proof-line',
+      'off-limits',
+    ]);
+    // It is not the phase's first question, so the runner offers the way back from it.
+    expect(prompter.asked[2]?.canGoBack).toBe(true);
+    // Stepping back re-asks rather than discarding: the answer given before the `← back` is
+    // what the re-ask falls back to, so walking forward again keeps it.
+    expect(answers.proofLine).toBe(LINE);
   });
 });

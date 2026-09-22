@@ -69,15 +69,21 @@ export const YOU_QUESTIONS: Question[] = [
     configKey: 'usesGit',
     readMore: 'uses-git',
     options: [
+      // D20 upholds D2 — two values, no third — and puts what a third value would have said
+      // into the labels instead: "Yes, in git repos" / "No, just folders" is a pair a person
+      // who keeps one repo *and* one loose folder can answer neither half of truthfully
+      // (setup-tracks `DESIGN.md` G29). After item 54, `yes` means *git is in play somewhere*
+      // and the target's kind decides where, so "some or all" is not a hedge — it is what the
+      // value has meant since `targetUsesGit` (G27). Settled copy, §10.5: the warm variant.
       {
         value: 'yes',
-        label: 'Yes, in git repos',
-        example: 'commits, branches, history',
+        label: 'Yes, some or all of it',
+        example: 'commits and history, in at least one place',
         recommended: true,
       },
       {
         value: 'no',
-        label: 'No, just folders',
+        label: 'No, none of it',
         example: 'the files live on disk and that’s it',
         recommended: false,
       },
@@ -245,11 +251,17 @@ export const YOU_QUESTIONS: Question[] = [
     configKey: 'hooks',
     readMore: 'hooks',
     options: [
+      // The option installs two guards, not one: the commit guard where the target is a repo,
+      // and the delete guard — `rm`, `rmdir`, `unlink` — for non-code work on either weight
+      // (D25, `src/render/hooks.ts`). Its old label named three git commands to a person who
+      // had just answered that they keep none of their work in git (G29), so it named the one
+      // guard they would never get. Settled copy, §10.5: the plain variant. The value stays
+      // `commit-guard`; renaming it would break every stored profile that carries it (DIAL-7).
       {
         value: 'commit-guard',
-        label: 'Yes — block `git commit`, `git push` and `git add -A`',
+        label: 'Yes — block the commands that can’t be undone',
         example:
-          'The agent tries `git commit`; the hook refuses and prints the two-block ritual',
+          '`git commit` and `git push` in a repo, `rm` for other work; the hook refuses and says what to do instead',
         recommended: true,
       },
       {

@@ -2,7 +2,12 @@
 
 ## What this is
 
-Two shapes for writing work down. Pick by the *shape of the work*, not the size of the repo.
+Two shapes for writing work down. Pick by the *shape of the work*, not the size of the project.
+
+The question says **this project**, not this repo (setup-tracks `DESIGN.md` D21, reusing the
+word settled on the portfolio in 2026-09-17). You are only asked it for code work on the whole
+method — but your targets can still be a mix of repos and plain folders, and this answer covers
+all of them, so "project" is the word that is true of each.
 
 ## The options
 
@@ -35,7 +40,7 @@ is the difference between a project and a long argument.
 opened for something small tends to be abandoned half-written — which is worse than a board row,
 because a half-written `DESIGN.md` looks authoritative.
 
-They are not exclusive: a ledger repo opens a folder for the one effort that needs it.
+They are not exclusive: a ledger project opens a folder for the one effort that needs it.
 
 ## What it writes and where
 
@@ -44,8 +49,9 @@ a ledger whatever you answer here: the folder-per-effort shape is machinery thei
 standard does not describe, and a `docs/incomplete/README.md` citing a part of a document that
 does not exist is worse than not offering the choice. Asking would be asking to be ignored.
 
-Ledger: `HANDOFF.md` and `PASSOFF.md` at the repo root. Folders: `docs/incomplete/README.md`
-scaffolding the stages.
+Ledger: `HANDOFF.md` and `PASSOFF.md` at the project's root — the board is the second half of
+the shape, and a lighter setup, which is never asked this question, gets the ledger without it
+(D9). Folders: `docs/incomplete/README.md` scaffolding the stages.
 
 ## How to undo it
 

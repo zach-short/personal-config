@@ -24,6 +24,15 @@ person. If the archive is lost, the index entries in the repo point at nothing. 
 work in-tree under `docs/archive/` is a real alternative — it costs listing noise and buys
 durability.
 
+## When you are asked this
+
+Only for **code work on the full method**. A lighter setup and non-code work both render the
+work record as a ledger and never write the long standard, so neither of this answer's readers —
+the folders index and the archive index — is reachable there: the question was asked, saved, and
+rendered into no document (setup-tracks `DESIGN.md` D26). Unasked, the key stays empty, which is
+the same thing as answering it with nothing: no index is written, and the archive rules in the
+standard are still there to follow by hand.
+
 ## What it writes and where
 
 `<archive home>/INDEX.md`, seeded with the legend and an empty Closed section. `<repo>` in the

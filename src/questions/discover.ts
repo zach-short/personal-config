@@ -9,7 +9,12 @@ export const DISCOVER_QUESTIONS: Question[] = [
     id: 'projects-dir',
     phase: 'discover',
     kind: 'text',
-    ask: 'Which directory holds the repos you want to set up?',
+    // "projects", not "repos": this is the first question the terminal asks, and D11's finding
+    // about the page title applies unchanged to it — four words that turn a non-coder away
+    // before they have answered anything. The word is settled by citation rather than picked
+    // here: the portfolio settled it on 2026-09-17 (setup-tracks `DESIGN.md` G30, D21), where
+    // "where your work lives" and "repos and folders" were considered and rejected.
+    ask: 'Which directory holds the projects you want to set up?',
     configKey: 'projectsDir',
     readMore: 'projects-dir',
     placeholder: '.',
@@ -18,7 +23,10 @@ export const DISCOVER_QUESTIONS: Question[] = [
     id: 'work-profile',
     phase: 'discover',
     kind: 'select',
-    ask: 'How does work arrive in this repo?',
+    // "this project", the same settlement (G30). Asked only on code + full after item 56, so
+    // the reader is a programmer — but their targets may still be a mix of repos and folders,
+    // which is item 54's whole case, so "project" is the honest word here too (D21).
+    ask: 'How does work arrive in this project?',
     configKey: 'workProfile',
     readMore: 'work-profile',
     options: [
@@ -98,6 +106,30 @@ export const DISCOVER_QUESTIONS: Question[] = [
       'e.g. the reconciliation balances to the bank statement, or someone who didn’t write it read it',
   },
   {
+    /**
+     * What the agent must not read or copy here (setup-tracks `DESIGN.md` D23). The only
+     * question in the set about harm to somebody other than the owner: a folder of non-code
+     * work is far likelier than a repo to hold other people's records, and until 2026-09-22
+     * nothing asked (G37). Non-code only — a code repo's off-limits material has conventions
+     * (`.gitignore`, `.env`) this would only restate, and the full router's `## Never do this`
+     * is Part 0's to fill.
+     *
+     * Per target, and travelling exactly as the proof line does: asked into the per-target map,
+     * carried on `RepoPlan`, laid over by `targetAnswers`. **Empty is a complete answer and
+     * renders nothing** — no line, no row, no "none named". The proof line's empty renders
+     * *"not yet written"* because writing one is a first session's job; nothing being off
+     * limits is not a job.
+     */
+    id: 'off-limits',
+    phase: 'discover',
+    kind: 'text',
+    ask: 'Is there anything here the agent must not read or copy?',
+    configKey: 'offLimits',
+    readMore: 'off-limits',
+    placeholder: 'e.g. a folder of other people’s records — or leave this empty',
+    when: { key: 'workKind', is: 'non-code' },
+  },
+  {
     id: 'archive-home',
     phase: 'discover',
     kind: 'text',
@@ -105,6 +137,18 @@ export const DISCOVER_QUESTIONS: Question[] = [
     configKey: 'archiveHome',
     readMore: 'archive-home',
     placeholder: '~/archive/<repo>/, or docs/archive/ to keep closed work in-tree',
+    // `workRecordShape` returns `ledger` for the whole short track (`src/render/context.ts`)
+    // and the short track never renders the long standard, so both of this answer's readers —
+    // `renderFolders` and `renderArchiveIndex` (`src/render/repo.ts`) — are unreachable there:
+    // it was asked, saved, and rendered into no document (setup-tracks `DESIGN.md` D26, G24).
+    // The same spec as `work-profile` above, `isShortTrack` negated. Unasked, the key stays
+    // empty, which `renderArchiveIndex` already reads as "no archive".
+    when: {
+      all: [
+        { key: 'workKind', is: 'code' },
+        { key: 'configWeight', is: 'full' },
+      ],
+    },
   },
   {
     id: 'mode',
@@ -127,6 +171,20 @@ export const DISCOVER_QUESTIONS: Question[] = [
         recommended: false,
       },
     ],
+    // Both readers are out of reach on a short track: `src/render/repo.ts` reads `mode` only
+    // inside the Part 0 prompt, which that track returns `null` for, and `src/render/standard.ts`
+    // is the long standard, which it never writes (D26, G24). The same spec again. An unasked
+    // `mode` reads as `solo` (`pickShared`, `src/commands/setup.ts`), which is what the short
+    // standard already tells its reader — "The owner is the person who decides things here" —
+    // and `tracker` below needs no condition of its own, because a `mode` that is not asked is
+    // never `team`. Against, and recorded in D26: a non-code *team* is a real reader this makes
+    // solo-only in its questions, as it already is in its documents.
+    when: {
+      all: [
+        { key: 'workKind', is: 'code' },
+        { key: 'configWeight', is: 'full' },
+      ],
+    },
   },
   {
     id: 'tracker',

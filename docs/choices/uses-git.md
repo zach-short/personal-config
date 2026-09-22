@@ -11,8 +11,20 @@ is exactly why this is asked once about you rather than guessed per folder.
 
 ## The options
 
-**Yes, in git repos.** *Recommended, and it is what this tool assumed before the question
+**Yes, some or all of it.** *Recommended, and it is what this tool assumed before the question
 existed.*
+
+**The rule for answering it: yes if *any* of it is.** The two options are deliberately not
+"repos" and "folders" — a person who keeps one repo and one loose folder is both, and the old
+pair let them answer neither half truthfully (setup-tracks `DESIGN.md` D20, G29). "Yes" does not
+claim everything is in git. It means git is in play *somewhere*, and which of your targets gets
+the git rules is then decided per target from what is actually on disk, not from this answer.
+
+A third option meaning "some of it" was proposed on 2026-09-22 and declined, with the reason
+recorded: it would behave identically to "yes" everywhere the answer is read, and a third value
+would force every future condition to choose between "is yes" and "is not no" — where the wrong
+choice silently stops asking the git questions of the people who most need them. Two values have
+a clean negation; three do not.
 
 *The defense.* Git is what makes most of this checkable. Whether a file is committed or ignored
 is a real distinction, `git status` is how the commit ritual knows which files a session
@@ -20,11 +32,20 @@ touched, and a ledger in a tracked file can be cited from a pull request. The ow
 which refuses to write rule files into somebody else's repository — reads the origin remote, so
 it only exists at all when there is one.
 
-*The strongest argument against it.* It is an assumption, and until this question existed it was
-an unstated one: work not in a repository was simply invisible to the setup run. Answering "yes"
-when half your work is loose folders gets you a configuration for the half git can see.
+*The strongest argument against it.* It asks you to apply a rule — answer yes if any of it is —
+where a third option would have let you describe yourself and left the reasoning to the tool.
+That is a real cost on one of the first screens, which is where a person decides whether this
+tool is for them at all. The answer is that the tool does now do that reasoning, per target;
+this option's job is only to point you at it. If it turns out that people with both answer "no"
+anyway, the third option is the fix, and what it would cost is written down in that decision.
 
-**No, just folders.** *The files live on disk and that's it.*
+*What used to be the argument against it, and what answered it.* Until 2026-09-22 this section
+said that answering "yes" when half your work is loose folders "gets you a configuration for the
+half git can see". That was true, and it is the thing board item 54 fixed: the git rules are now
+placed per target, so the loose half is configured as a folder rather than handed rules it
+cannot honour. Kept here rather than deleted, because it is why the labels could change at all.
+
+**No, none of it.** *The files live on disk and that's it.*
 
 *The defense.* It is the honest answer for a great deal of real work, and it removes a question
 that cannot be answered sensibly without a repository: there is no `.git/info/exclude` to write

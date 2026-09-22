@@ -29,10 +29,25 @@ than in a transcript, and someone who is not the author walks the runtime pass.
 in a repo where you are in fact the only decider, it adds ceremony that routes your own
 questions away from the chat where you would actually answer them.
 
+## When you are asked this
+
+Only for **code work on the full method**. Both readers of this answer are out of reach
+otherwise: the Part 0 prompt, which a lighter or non-code setup does not write, and the long
+standard, whose Part 12 is the teams mapping. On those tracks the question was asked and its
+answer reached no document (setup-tracks `DESIGN.md` D26), so it is no longer asked, and an
+answer that is not given reads as **one person — me**. That is what the short standard already
+tells its reader: the owner is the person who decides things here.
+
+The cost is recorded rather than hidden: a non-code team — a small firm where several people
+decide — is a real reader, and this makes the short track solo-only in its questions, as it
+already was in its documents. A team version of the short standard is a piece of work waiting on
+someone who needs it.
+
 ## What it writes and where
 
 Solo cuts Part 12 from the standard copy and writes `none` for the tracker. Team keeps Part 12
-and fills the tracker you name.
+and fills the tracker you name. `tracker` is asked only when you answer team, so it follows this
+question wherever it goes.
 
 ## How to undo it
 
