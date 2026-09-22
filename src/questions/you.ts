@@ -110,17 +110,16 @@ export const YOU_QUESTIONS: Question[] = [
         recommended: false,
       },
     ],
-    // Asked only where an answer reaches a rendered file (PASSOFF item 56). `commits.md` goes
-    // to code work kept in git (`src/render/rules.ts`), and the full standard's Part 11 reads
-    // the policy as `none` for a target with no git of its own (`src/render/standard.ts`).
-    // The git half is `isNot: 'no'` and never `is: 'yes'`: a third value meaning "some of it"
-    // would otherwise stop asking the git questions of the people who most need them.
-    when: {
-      all: [
-        { key: 'workKind', is: 'code' },
-        { key: 'usesGit', isNot: 'no' },
-      ],
-    },
+    // Asked wherever an answer reaches a rendered file (PASSOFF item 56, corrected by item 62).
+    // `commits.md` goes to code work kept in git (`src/render/rules.ts:24`, gated on
+    // `code && usesGit`), but `commitRuleLine` (`src/render/context.ts:167`) is read by
+    // `src/render/repo.ts:179`, `src/render/standard.ts:109` and `src/render/short-standard.ts:59`
+    // for **any** git target — non-code included. Gating this on `code` too silently defaulted
+    // every non-code-in-git run to `print-blocks` without ever asking, which is a real loss of
+    // choice (HANDOFF 67 accepted it as a known tradeoff; item 62 reverses that acceptance).
+    // `isNot: 'no'`, never `is: 'yes'`: a third value meaning "some of it" would otherwise stop
+    // asking the git questions of the people who most need them.
+    when: { key: 'usesGit', isNot: 'no' },
   },
   {
     id: 'attribution',

@@ -1,10 +1,17 @@
 /**
- * PASSOFF item 56 stopped seven questions being asked on the tracks that discard them. Two
- * properties have to survive that, and neither is visible from `catalog.json`:
+ * PASSOFF item 56 stopped seven questions being asked on the tracks that discard them. Item 62
+ * found `commit-policy`'s gate was one of the seven but should not have been: `commitRuleLine`
+ * is read by `repo.ts`, `standard.ts` and `short-standard.ts` for any git target, non-code
+ * included, so gating the question on `code` too silently defaulted a non-code-in-git run
+ * instead of asking it — a real loss of choice, corrected by gating on git alone. Six of the
+ * seven remain cut for a non-code track; `commit-policy` is not one of them where git is in
+ * play. Two properties have to survive the cut that remains, and neither is visible from
+ * `catalog.json`:
  *
  * **DIAL-7.** A question that is no longer asked still has a *stored* answer honoured. Profiles
- * saved before this row carry answers to all seven, and a renderer that still reads one must
- * keep reading it — the cut is to the asking, never to the rendering.
+ * saved before this row (or before item 62, for `commit-policy` specifically) carry answers to
+ * all seven, and a renderer that still reads one must keep reading it — the cut is to the
+ * asking, never to the rendering.
  *
  * **The one condition that is not the short-track negation.** `model-deep`, `model-fast` and
  * `model-routing` are gated on the weight alone rather than on `code && full`, because
@@ -62,11 +69,12 @@ function contentsAt(files: PlannedFile[], path: string): string {
 }
 
 describe('an answer that is no longer asked for is still honoured', () => {
-  test('a stored `agent-commits` reaches a non-code router, though nothing asked for it', async () => {
+  test('a stored `agent-commits` reaches a non-code router', async () => {
     const dir = await tempDir('pc-gated-');
     try {
-      // The catalog no longer puts `commit-policy` to this person — but a profile saved before
-      // item 56 carries one, and DIAL-7 says the run must render what it rendered then.
+      // `NON_CODE_IN_GIT` is now asked `commit-policy` itself (item 62) — this pins the
+      // renderer's read of the answer, independent of whether this run's own catalog would
+      // have asked for it, which is what a profile saved by an older catalog also needs.
       const files = await renderFor(dir, { ...NON_CODE_IN_GIT, commitPolicy: 'agent-commits' });
 
       const router = contentsAt(files, join(dir, 'CLAUDE.md'));
@@ -80,6 +88,9 @@ describe('an answer that is no longer asked for is still honoured', () => {
   test('the default is what an unanswered one falls back to, not an empty line', async () => {
     const dir = await tempDir('pc-gated-');
     try {
+      // Simulates a profile from before the question existed at all, not a cut — item 62
+      // means a fresh `NON_CODE_IN_GIT` run asks this one, but an old saved profile can still
+      // lack the key, and the renderer must not blank the line for that.
       const { commitPolicy: _dropped, ...unanswered } = NON_CODE_IN_GIT;
       const files = await renderFor(dir, unanswered);
 

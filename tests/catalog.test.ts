@@ -73,8 +73,10 @@ describe('the conditionals and the one hidden question survive the trip', () => 
     // accident is exactly what this is here to catch, and a loop over the same source would
     // agree with itself either way.
     const codeOnly = { key: 'workKind', is: 'code' };
-    // The seven of item 56. `isNot: 'no'` on the git half and never `is: 'yes'`, so a third
-    // value meaning "some of it" keeps asking rather than silently stopping.
+    // The seven of item 56, one corrected by item 62. `isNot: 'no'` on every git half and
+    // never `is: 'yes'`, so a third value meaning "some of it" keeps asking rather than
+    // silently stopping.
+    const gitOnly = { key: 'usesGit', isNot: 'no' };
     const codeAndGit = {
       all: [
         { key: 'workKind', is: 'code' },
@@ -89,7 +91,10 @@ describe('the conditionals and the one hidden question survive the trip', () => 
     };
     const fullWeight = { key: 'configWeight', is: 'full' };
     expect(conditions).toEqual({
-      'commit-policy': codeAndGit,
+      // Item 62: `commitRuleLine` is read by `repo.ts`, `standard.ts` and `short-standard.ts`
+      // for any git target, non-code included — only `commits.md` (`rules.ts:24`) is code-only,
+      // and `attribution` rides on that narrower file alone.
+      'commit-policy': gitOnly,
       attribution: codeAndGit,
       // The tier table in `model-routing.md` is written on the weight alone, non-code
       // included, so these three are *not* the short-track negation — see `you.ts`.
@@ -226,14 +231,16 @@ describe('what each of the four shapes is actually asked', () => {
     expect(ids).toContain('docs-mcp');
   });
 
-  test('non-code drops the commit questions and the docs rule on either weight', async () => {
+  test('non-code in git keeps its own commit question but drops attribution, the docs rule and the work profile', async () => {
     const full = await asked({ workKind: 'non-code', configWeight: 'full', usesGit: 'yes' });
     const light = await asked({ workKind: 'non-code', configWeight: 'light', usesGit: 'yes' });
 
-    expect(full).toHaveLength(18);
-    expect(light).toHaveLength(15);
+    // 19 and 16, not 18 and 15 (item 62): `commit-policy` is asked wherever the target is in
+    // git, which a non-code target with git of its own still is.
+    expect(full).toHaveLength(19);
+    expect(light).toHaveLength(16);
     for (const ids of [full, light]) {
-      expect(ids).not.toContain('commit-policy');
+      expect(ids).toContain('commit-policy');
       expect(ids).not.toContain('attribution');
       expect(ids).not.toContain('docs-mcp');
       expect(ids).not.toContain('work-profile');
@@ -248,11 +255,11 @@ describe('what each of the four shapes is actually asked', () => {
     const before = await asked({ workKind: 'code', configWeight: 'full', usesGit: 'yes' });
     const after = await asked({ workKind: 'non-code', configWeight: 'light', usesGit: 'yes' });
 
-    // Every question the short non-code track skips, named: the seven of item 56 and the
-    // eleven code-conventions questions that were already gated on `code`. Git is `yes` on
-    // both sides, so `track-mode` is asked on both and is correctly absent from the diff.
+    // Every question the short non-code track skips, named: six of item 56's seven (item 62
+    // moved `commit-policy` off this list — git is `yes` on both sides, so it is asked on
+    // both) and the eleven code-conventions questions that were already gated on `code`.
+    // `track-mode` is asked on both sides too, for the same reason, and is correctly absent.
     expect(before.filter((id) => !after.includes(id))).toEqual([
-      'commit-policy',
       'attribution',
       'model-deep',
       'model-fast',

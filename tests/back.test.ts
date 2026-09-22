@@ -160,17 +160,20 @@ describe('walking backwards', () => {
  * the set shrink; the trail is what stops it landing on a question that is no longer there.
  */
 describe('changing a track answer on the way back', () => {
-  test('answering non-code at the top drops the questions gated on code', async () => {
+  test('answering non-code at the top drops attribution and the docs rule, but re-asks the commit question', async () => {
     // Forward to `attribution`, then four backs to stand on `work-kind` again and change it.
     const prompter = scripted([...TRACK, 'print-blocks', BACK, BACK, BACK, BACK, 'non-code']);
     const answers = await runYou(prompter);
 
     const secondPass = ids(prompter).slice(ids(prompter).lastIndexOf(youId(0)));
-    expect(secondPass).not.toContain('commit-policy');
+    // `commit-policy` is gated on git alone (item 62), and git is still `yes` — only the
+    // work kind changed — so it is asked again, unlike `attribution` and `docs-mcp`, which
+    // are still code-only.
+    expect(secondPass).toContain('commit-policy');
     expect(secondPass).not.toContain('attribution');
     expect(secondPass).not.toContain('docs-mcp');
-    // Not asked again is not the same as unanswered: the answer given before the correction
-    // stays in the map, and every renderer that reads it is gated on the same track (item 56).
+    // Re-asked with the script exhausted, it falls back to the recommended default — the
+    // same value it was given the first time, so this does not by itself prove the re-ask.
     expect(answers.commitPolicy).toBe('print-blocks');
     expect(answers.workKind).toBe('non-code');
   });
