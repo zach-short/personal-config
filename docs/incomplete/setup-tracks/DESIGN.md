@@ -14,7 +14,8 @@ context budget that Pro does not have. Some of his material is in git; some is n
 frozen decisions `D1…D14` — **from here this document changes by amendment only**: a new dated
 `D<n>`, a dated supersession naming what it replaces, or an `As built:` note. Never by editing
 a decision in place. §4 keeps the options as they were written *before* the decisions, because
-the argument against each one is what stops it returning in three weeks as a new objection.
+the argument against each one is what stops it returning in three weeks as a new objection. §9 holds
+the amendments of 2026-09-17; §10 those of 2026-09-22, which await ratification.
 
 ---
 ## 1. What exists, verified 2026-09-17
@@ -555,3 +556,402 @@ anything unclear*, with **Check first** recommended, because it is what the wiza
 version cannot claim. Settled: **fold `0.2.6` into `0.3.0`.** Item 36 is `SUPERSEDED` on the
 board — the work stands, only its version number dies — and item 45 rewrites the heading rather
 than opening a second section. Nothing named `0.2.6` is committed or published.
+
+---
+## 10. Amendments — 2026-09-22
+
+**Status: proposed 2026-09-22 by board row 58; ratification pending.** Written by an unattended
+session, so each decision below is complete — stated flatly, defended, with the argument against
+it recorded — and carries a *Ratified:* line that is empty until Zach answers. His answers land
+on those lines, dated, the same turn they are given; a "no" stays on that line as the board's
+`SETTLED AS NO` does, so it is not proposed again. **Nothing here is built until it is
+ratified**: the rows in §10.4 are `HELD` on this section. The precedent is step 60's strike-list
+— asked in the hand-back with the document already written — and R6: one batch, one message.
+
+Two of the audit's findings could not be built without amending a frozen decision first, and
+this section is the amendment. It touches exactly two frozen things and says so where it does:
+D2's "exactly two values" is **upheld** (D20), and §3.2's wording freeze is **partially
+superseded** for four strings (D21). D25 partially supersedes D16. Everything else adds.
+
+### 10.1 What was verified 2026-09-22
+
+Read at `f2b04e0` plus items 54 and 55's uncommitted trees (`src/render/target-git.ts` new;
+`src/render/hooks.ts` re-gating the guard); line numbers are that tree's. Continues §1's numbering.
+
+| # | Claim | Verified state | Citation |
+|---|---|---|---|
+| G23 | Item 56's measure: the short track asks six questions it discards | **Reproduced before item 56 began, and it is eight.** Evaluating `matchesWhen` over `ALL_QUESTIONS` for the shapes of §3.1: code+full+git **33**, code+full+no-git **32**, code+light+git **33**, non-code+full+git **22**, non-code+light+no-git **21**. Beyond item 56's six, two more are asked on every short-track shape and rendered into no document there: `archive-home` and `mode` (G24). Item 56's build, in flight and uncommitted at 13:44, gates seven — its six plus `model-routing`, on weight alone — and neither of these two | a script over `src/lib/when.ts` and `src/questions/index.ts`, 2026-09-22, run twice |
+| G24 | Where `archive-home` and `mode` render | `archiveHome` is read at `src/render/repo.ts:189` (`workRecordLines`, the `folders` branch), `:270` and `:284` (`renderFolders`, `renderArchiveIndex`), `:316` (saved into `.personal-config.json`) and `src/render/standard.ts:54` (the long standard). `workRecordShape` returns `ledger` on every short track (`src/render/context.ts:112`) and the short track never renders the long standard, so there the answer is **saved and rendered into no document**. `mode` is read at `src/render/repo.ts:401` and `:451` — both inside the Part 0 prompt, which `:385` returns `null` for on the short track — and `src/render/standard.ts:34`; `grep -n "mode" src/render/short-standard.ts` matches one comment, about Part 12. `tracker` is asked only when `mode` is `team` (`src/questions/discover.ts:128`) and read only at `standard.ts:55`, so it follows `mode` | `grep -rn "archiveHome" src/render/`; `grep -rn "'mode'" src/render/`, 2026-09-22 |
+| G25 | What `PART 3 OF 3 · House rules` asks a non-coder | Two questions, `copy-registers` and `drive-by-fixes`; the test asserts exactly that pair | `tests/catalog.test.ts:114` |
+| G26 | Every reader of `usesGit` — what a third value would have to survive | Eight sites, five of them reads in renderers. Two read the *person's* answer for the global layer and must keep doing so: `src/render/rules.ts:24` (`commits.md`) and `src/render/skills.ts:89`. One reads it per target through the target's kind: `src/render/target-git.ts:32`, item 54's helper, imported by `repo.ts`, `standard.ts` and `short-standard.ts`. One is the ignore file, `src/render/repo.ts:353`, and one is `trackOf` itself, `src/render/context.ts:81`, reading `!== 'no'`. The other three: the question, `src/questions/you.ts:69`; the stored-profile default, `src/lib/stored-profile-defaults.ts:23`; a `when` spec, `src/questions/discover.ts:68` | `grep -rn "usesGit" src/`, 2026-09-22 |
+| G27 | How `yes` is read after item 54 | As **"git is in play somewhere; the target's kind decides where"** — `targetUsesGit` is `kind === 'git' && usesGit` — and `no` is honoured over the disk for a repo the person owns. `docs/choices/uses-git.md:40-70` says so as of item 54, with the earlier claim kept and marked wrong (R5) | `src/render/target-git.ts:13-16`, `:31-33`; `HANDOFF.md` step 64 |
+| G28 | The one spec that tests `is: 'yes'` rather than `isNot: 'no'` | `track-mode`'s, `src/questions/discover.ts:68` — pinned verbatim by `tests/catalog.test.ts:76` and used as a fixture four times in `tests/when-all.test.ts`. Item 56's prompt already writes every *new* git condition as `isNot: 'no'` against the possibility of a third value, and items 54 and 55 read the answer the same way | `grep -rn "is: 'yes'" src/ tests/`, 2026-09-22 |
+| G29 | The strings a non-coder reads that assume a repo or git | Four, all in questions the short track asks: `src/questions/discover.ts:12` *"the repos you want to set up"*; `discover.ts:21` *"in this repo"*; the two `uses-git` option labels, `you.ts:74` and `:80` — *"Yes, in git repos"* / *"No, just folders"* — which a person with both cannot answer truthfully; and the `hooks` first option, `you.ts:211` — *"Yes — block `git commit`, `git push` and `git add -A`"*, the recommended answer, shown to someone who has just said they keep no work in git (item 55's second question). `mode`'s second option, *"Several people merge code here"* (`discover.ts:114`), is a fifth, mooted if D26 stops asking it where a non-coder would see it | read 2026-09-22 |
+| G30 | Where "projects" was settled as the word for a repo-or-folder | The portfolio, 2026-09-17, items 41 and 48: *"'your projects' replaces 'your repo(s)' everywhere a visitor reads it … true of a git repo and of a plain folder, needing no hedging or slash"*, with *"where your work lives"* and *"repos and folders"* considered and rejected. R7 says cite a settlement rather than re-ask | `~/Projects/portfolio/src/lib/setup-copy.ts`, header comment |
+| G31 | What candidate 3 (what the agent shows when it states a number) would add | It is R2 of the short standard already — *"Every claim names its source. The file and line, the page, the row…"* — with its test. And the rule `copy-registers` renders as a paragraph is R7 in the short standard **and** R7 in the long one, so that duplication belongs to both tracks and is not this section's | `standard/AGENT-PRACTICES.short.md:31-33`, `:52-54`; `standard/AGENT-PRACTICES.boilerplate.md:176`, `:205` |
+| G32 | Where a per-target line and a per-target fact land on the short track | `templates/CLAUDE.short.md:26` has a `## Never do this` section filled by `{{COMMIT_LINE}}` alone as of 2026-09-22; `templates/HANDOFF.short.md`'s "How things are here" table has the proof line as its first row and two empty rows the first session fills. The proof line is the precedent for a per-target answer: asked in `discover` into the per-target map, carried on `RepoPlan` (`src/lib/types.ts:130`), laid over the shared answers by `targetAnswers` (`src/render/context.ts:163`) so it is saved and hashed | read 2026-09-22 |
+| G33 | What the harness itself guards | Claude Code's `Write` tool refuses to overwrite a file the session has not read, and `Edit` requires the same — stated in the tools' own descriptions as read in this session, 2026-09-22. **A lead, not a fact (R3):** row 59 verifies it against the harness before relying on it, because it is what makes a Bash-only delete guard sufficient rather than partial | the harness's tool descriptions |
+| G34 | The commit guard's parser is the shape a delete guard copies | `templates/hooks/commit-guard.sh` parses the command out of the JSON with `jq`, walks its words, sees through wrappers (`env`, `sudo`, `sh -c`), git's own options (`-C`, `-c`) and chained commands, and fails *closed* without `jq`. `docs/choices/hooks.md` records what it catches and what it does not | `templates/hooks/commit-guard.sh:1-40`; `docs/choices/hooks.md`, "What the guard catches" |
+| G35 | What light installs, and what item 55 changed | The completion gate only on light: `wantedHooks` returns `{ guard: false, banner: false, gate: true }` for `configWeight: 'light'` (`src/render/hooks.ts:67-68`), per D16, whose reason for leaving the commit guard out of light is that it is git-specific. Item 55's uncommitted change conditions the full-track guard on `trackOf(ctx).usesGit` (`:70`) and its comment says in terms that a no-git run's own guard is *"left open for row 58"* (`:55-58`) | `src/render/hooks.ts:35-74`, read 2026-09-22 |
+| G36 | The portfolio needs no code change for anything in this section | The pin is `0.3.0` and exact; the port of `matchesWhen` has `all:` (item 41); the site branches on `phase` (three, unchanged) and on `kind` (`select` and `text`, both used here). A new question, option label or `when` of the existing forms reaches the browser through the pin alone (D18) | `~/Projects/portfolio/package.json:20`; `~/Projects/portfolio/src/lib/catalog.ts`, `matchesWhen` and `Question.kind` |
+| G37 | Whether anything asks what an agent must not read | `grep -rn "read or copy\|off.limits\|must not read" src/ templates/` returns nothing | grep, 2026-09-22 (R4) |
+
+### 10.2 Decisions
+
+**D20 — D2 stands. `uses-git` keeps two values; a person with both answers "yes", and the labels
+say so.** 2026-09-22. *Ratified:* —
+
+The audit recommended a third value meaning "some of it". Item 54 removed the reason for it:
+after `targetUsesGit` (G27), `yes` already means *git is in play somewhere and the target's kind
+decides where*, and `no` means *nowhere, whatever the disk says*. A third value would therefore
+behave identically to `yes` at every one of G26's eight sites — the two global-layer reads must
+treat "some" as yes (the person has repos, so `commits.md` and the commit guard are theirs); the
+per-target read already ignores the person's answer beyond `!== 'no'`; and every `when` that
+gates a git question must admit "some", because the person has repos and needs them. A value
+with no behaviour of its own is a label wearing a value's clothes.
+
+*Defense.* D2's original argument was a publish per value that crosses the pin. That argument is
+weaker than it was, because this section costs a publish regardless (§10.3) and a third value
+would ride on it. The argument that does hold is the one item 56's prompt already names: with
+three values, every `when` author must choose between `is: 'yes'` and `isNot: 'no'`, and the
+wrong choice **silently stops asking the git questions of the people who most need them** — a
+failure that compiles, passes every gate and is wrong in production. Two values have a clean
+negation; three do not. The one existing `is: 'yes'` (G28) would have to change, with its pinned
+test and four fixtures, on the day the third value shipped, and nothing would go red if one were
+missed.
+
+*What changes instead.* The two option labels and their hints, under R7 (§10.5): the "yes" label
+says *some or all of it*, the "no" label says *none of it*, so a person with a repo and a loose
+folder sees their answer. `docs/choices/uses-git.md`'s options section says the same in a
+sentence; item 54 already corrected its "What it writes" section.
+
+*Against, recorded.* A label that says "some or all" asks the person to apply a rule — *answer
+yes if any of it is* — where a third value would let them describe themselves and leave the
+reasoning to the tool. That is a real cost on the first three screens, which §7.1 says are where
+a non-programmer decides whether the tool is for them. The answer is that after item 54 the tool
+*does* reason, per target, from the disk; the label's job is only to point the person at "yes",
+and a hint of one line does that. If a later reader finds people with both answering "no"
+anyway, the third value is the fix, and this decision says what it costs: G28's spec, item 56's
+`isNot: 'no'` discipline held to everywhere, and `trackOf`'s boolean either kept (making "some" a
+synonym for yes) or made three-valued at G26's five render sites.
+
+*Interaction with item 54's step 4.* Zach's call there — `no` honours the answer over a git repo
+on disk — is what makes this decision's second sentence true, and D20 is compatible with either
+call: had `no` deferred to the disk, "some" and "no" would have converged instead of "some" and
+"yes", and the conclusion would be the same.
+
+**D21 — §3.2's wording freeze is partially superseded: four strings change, for D11's reason.**
+2026-09-22. *Ratified:* —
+
+*What is superseded, precisely:* §3.2's second bullet, *"the existing 30 questions keep … their
+wording"*, for four strings and no others — `projects-dir`'s ask, `work-profile`'s ask,
+`uses-git`'s two option labels with their hints (D20), and the `hooks` first option's label with
+its hint (D25). Ids, order, option *values* and every other string stay frozen; a stored profile
+reads exactly as it did.
+
+*Defense.* D11's reasoning for the page title applies unchanged: *"Set up your repo"* turned the
+reader away in four words before a question, and *"the repos you want to set up"* is the first
+question the terminal asks. The portfolio fixed its own copies of the same words on 2026-09-17
+(G30) while `discover.ts:12` and `:21` kept theirs because §3.2 froze them. The freeze was doing
+its job against a build phase; it is lifted here, by the amendment the freeze asks for, for the
+strings a non-coder reads.
+
+*The words.* "projects" for `projects-dir` and "this project" for `work-profile`, citing G30's
+settlement rather than re-asking; the four `uses-git` and `hooks` strings go out with registers
+under R7 (§10.5). `mode`'s *"merge code here"* (G29) is not reworded: D26 stops asking it where a
+non-coder would see it.
+
+*Against, recorded.* Every reworded string is a catalog change and so crosses the pin; and "this
+project" is a hedge where "this repo" was precise for the code+full person who still answers
+`work-profile` after item 56. Accepted: item 56 confines `work-profile` to code+full, whose
+targets may still be a mix — item 54's whole case — so "project" is the honest word for them too.
+
+**D22 — A non-coder is asked who makes changes to a document: the analogue of `commit-policy`,
+as a policy area.** 2026-09-22. *Ratified:* —
+
+The audit's first candidate, taken. `commit-policy` decides who takes the irreversible step in a
+repo; item 56 confines it to code+git, correctly, and that leaves the non-coder with **no rule
+about the irreversible step at all** — and for a document not in git, an edit in place is that
+step (`docs/choices/uses-git.md:36`: *"A folder is one deletion from gone"*).
+
+*Shape.* A `PracticeArea` with `target: 'policy'` in `src/questions/practices-policy.ts`, beside
+`copy-registers` and `drive-by-fixes`: phase `practices`, id `edit-policy`,
+`configKey: practices.edit-policy`, `when: { key: 'workKind', is: 'non-code' }`, three options
+with the recommended one first (G19). It renders where the other two policy areas render — the
+short standard's `## Preferences`, through `policyParagraphs` (`src/render/standard.ts:91`),
+which picks up a new area with no renderer change — and nowhere on a code track, where the
+area's answer is absent and `policyAnswer` reads `none`.
+
+*The three answers, and what each paragraph says.* **(1) The agent edits, and names every
+change** — *recommended*: the agent changes the file; the hand-back names every file changed
+and, for each, the section and what it said before; the agent never deletes a document and never
+overwrites one it has not read in this session — it moves the old one aside and says where.
+**(2) Show me first — I make the change**: changes to a document are written in chat, not made;
+the owner applies them; this holds whether or not the target is in git, because the owner asked
+for it. **(3) No rule**: nothing is written. The ask line and the option labels are
+visitor-facing copy and go out under R7 (§10.5); the paragraphs themselves are the builder's to
+write in the register of the two beside them, flagged in the hand-back as D19 did for
+`output-style`.
+
+*Why (1) is recommended and not (2).* Every other recommendation here puts the irreversible step
+with the owner — `commit-policy`, `output-style`, `drive-by-fixes` — and consistency argued for
+(2). Two things outweigh it. D15's evidence: the complaint this design exists for is an agent
+that *"replies with a plan instead of doing the work"*, and (2) makes that the rule. And the
+harness already supplies the veto (2) would add: in the default permission mode `Write` and
+`Edit` prompt before touching a file, and they refuse to overwrite one the session has not read
+(G33), so the "show me first" step exists before any rule is written. What no harness setting
+supplies is the *ritual around* an edit — name it, never delete, move aside — and that is what
+(1) writes. (2) stays for the person whose documents are records an agent must not touch, which
+is a real case with its own defense.
+
+*Against, recorded.* It is a third `practices` question on a phase this design cut to two for
+the non-coder, and the recommended answer is the one place this tool recommends the agent take
+an irreversible step. The mitigation is D25, which enforces the "never delete" clause where hooks
+are on, in the relationship `commit-policy` has to the commit guard. And the condition leaves the
+code+no-git person without it: a repo without version control is a situation this tool declines
+to design for, and says so rather than serving it badly.
+
+**D23 — A non-coder is asked, once per target, what the agent must not read or copy.**
+2026-09-22. *Ratified:* —
+
+The audit's fourth candidate, taken — the only one of the seven about harm to someone other than
+the owner. A folder of non-code work is far likelier than a repo to hold other people's records,
+and as of 2026-09-22 the wizard does not ask (G37).
+
+*Shape.* A `text` question in `discover`, id `off-limits`, `configKey: offLimits`,
+`when: { key: 'workKind', is: 'non-code' }`, asked per target exactly as the proof line is
+(G32): into the per-target map, carried on `RepoPlan` as `offLimits`, laid over by
+`targetAnswers` so it is saved to `.personal-config.json` and hashed into the stamp. Empty is a
+complete answer and renders nothing — unlike the proof line, whose empty renders *"not yet
+written"* because writing one is a first-session job; nothing being off limits is not a job.
+
+*What it renders.* One line in the short router's `## Never do this` — *Never read, copy or
+quote from `<answer>`* — beside the commit line, and one row in the short ledger's "How things
+are here" table — *Not to be read or copied | `<answer>` | the owner* — under the proof-line
+row. Both templates have the slot (G32). Nothing on a code track: the full router's `## Never do
+this` is Part 0's to fill, and a code repo's off-limits material has conventions (`.gitignore`,
+`.env`) this question would only restate.
+
+*Against, recorded.* A rule is not a guard, and this is the boundary where that matters most: a
+`grep -r` over the folder reads the material before the rule is consulted, and one path named at
+setup time leaves the next sensitive file unnamed. A blank text question is also the screen most
+people skip. The answer is that the router is read before the folder is touched, that one named
+path is more than the zero named without the question, and that the harness has an enforcement
+mechanism this can grow into — `permissions.deny` on a `Read` pattern in the project's own
+settings — which §10.6 reserves rather than builds, because it is a second write target and the
+question has to exist before it is worth wiring.
+
+**D24 — Five candidates declined, each with its reason, so they are not proposed again.**
+2026-09-22. *Ratified:* —
+
+The discriminator, applied to all seven: **a preference only the person holds is a question; a
+fact the first session can read off the folder is the first session's job**, which the short
+standard's last section already assigns (`standard/AGENT-PRACTICES.short.md:184-190`: *"look at
+what is actually in the folder, and fill the ledger's Orientation and 'How things are here' from
+what you find"*). A question that fills a slot the first session would fill better, with the
+folder in view, is a screen spent to get a worse answer.
+
+- **(3) What the agent must show when it states a number.** Declined: it is R2 of the short
+  standard already (G31), with a test, and a second rule about numbers would restate it or
+  contradict it. If R2's *Test:* line turns out not to reach a computed figure, that is a
+  one-line change to the short standard's R2 — its own row, since editing that file is outside
+  this one — and not a question.
+- **(5) How new documents are named and where they go.** Declined: the analogue in code,
+  `file-naming`, has options because ecosystems have conventions to pick from; non-code work has
+  none, so this is free text rendered as a rule the agent must interpret — and the folder's own
+  contents show the convention better than a wizard can elicit it. The short ledger's *Where the
+  files live* row is the slot. **Against, recorded:** a person with no convention yet gets none;
+  the answer is that the first session writes one with the owner, which is R6/R7 work and better
+  done with the folder open.
+- **(6) What format the work is in.** Declined: `ls` answers it, and the only thing the answer
+  could change — which tools the agent needs for a spreadsheet — is not this tool's to write (§2:
+  the output is documents that shape how an agent works). **Against, recorded, and it is the
+  strongest of the five:** it is the one question whose answer might mean *this tool cannot help
+  you* — work that lives in a web app or a database has no folder for a router to sit in — and a
+  wizard that asked it first could say so before twenty questions rather than after. The honest
+  reply is that this design cannot serve a non-disk answer (§2: one wizard, documents on disk),
+  so the question would be a door with nothing behind it; §10.6 reserves it for a design that
+  can.
+- **(7) House vocabulary.** Declined as a question: it is a template slot at most — a `## Words
+  used here` in the short ledger — and even that waits on evidence that a first session fails to
+  write the folder's vocabulary into Orientation unprompted. This session has no such ledger to
+  read, so the slot is not opened on a guess.
+- **(2) The delete guard** is not declined; it is D25, as a hook and not a question.
+
+**D25 — The `hooks` guard option installs a delete guard for non-code work: the analogue of the
+commit guard. Partially supersedes D16.** 2026-09-22. *Ratified:* —
+
+Item 55 conditions the commit guard on git and asks, for the person who keeps none, *"does a
+no-git run get a guard of its own?"*, deferring the answer here (G35). It does — keyed on **work
+kind**, not on git, because `settings.json` is global (`src/render/hooks.ts:11`) and the guard has
+to be right for every session the person runs: a non-coder who also keeps repos needs the delete
+guard in the folder and the commit guard in the repo, and both are theirs.
+
+*Shape.* `templates/hooks/delete-guard.sh`, a `PreToolUse` hook on `Bash` with the commit
+guard's parser (G34 — copied, not reinvented: wrappers, chained commands and the `jq` fail-closed
+path are already solved there), refusing `rm`, `rmdir` and `unlink` with exit 2 and a message
+that names the alternative: move the file aside — into the Trash, or beside itself with the date
+in its name — and say where it went. Installed when `hooks` is `commit-guard` or `both` and
+`workKind` is `non-code`, on **both weights**. That last clause is the partial supersession of
+D16, which said light writes the completion gate and no guard: D16's reason for leaving the
+commit guard out of light — *it is git-specific* — does not reach a guard that is not, and
+D16's own argument for the gate — *a command hook spends zero tokens, so the budget argument that
+carried D6 does not apply* — carries this one identically. D16's commit-guard half is untouched:
+light still writes no commit guard, item 55 is unchanged, and `hooks: none` is still none on
+every track.
+
+*No new question.* The `hooks` question's first option covers both guards; its label and hint
+are reworded (D21, R7 variants in §10.5) so it no longer names three git commands to a person
+who has none. The value `commit-guard` is kept — values are ids a stored profile carries, and
+renaming one is DIAL-7's problem twice over.
+
+*What it catches and what it does not, to be recorded in `docs/choices/hooks.md` as the commit
+guard's are.* Caught: `rm`, `rmdir` and `unlink` in every form the commit guard's parser sees
+`git commit` in. Not caught: `find -delete`, `git clean`, a redirect that truncates a file, `mv`
+over an existing path, and any script the agent runs — it is a guard against a session reaching
+for a delete, not against a determined one. The overwrite half is the harness's (G33), which is
+what makes a Bash-only guard sufficient; row 59 verifies G33 before relying on it.
+
+*Against, recorded.* `rm` is one of several ways to lose a file from a shell, so the guard covers
+a fraction and the feeling of coverage is whole — the objection the hooks long form records
+against the completion gate, answered the same way: a guard that catches the common case and
+says what it does not catch is worth more than none. It is a fourth script under
+`templates/hooks/` to keep working on bash 3.2. And it makes light asymmetric — a light
+non-coder gets a guard where a light coder gets none — which is D16's asymmetry, not this
+decision's, and D16 is not reopened here.
+
+**D26 — The short track asks nothing it discards: `archive-home` and `mode` join item 56's
+six.** 2026-09-22. *Ratified:* —
+
+G23 and G24: both are asked on every short-track shape, saved, and rendered into no document
+there. They take the spec item 56 writes for `work-profile` —
+`{ all: [{ key: 'workKind', is: 'code' }, { key: 'configWeight', is: 'full' }] }`, the negation
+of `isShortTrack` (`src/questions/discover.ts:43-48` in item 56's tree; its tier questions took
+the weight alone, because `model-routing.md` prints them on non-code + full) — and `tracker`
+follows `mode` for free, since an unasked `mode` is not `team`.
+A `mode` that is not asked reads as `solo` (`src/commands/setup.ts`, `pickShared`), which is what
+the short standard already says of its reader: *"The owner is the person who decides things
+here"* (`standard/AGENT-PRACTICES.short.md:18`).
+
+*Defense.* Item 56's own: an answer nothing reads is a screen spent for nothing, and the person
+this design is for pays for every screen. The two long forms' "What it writes" sections say when
+the question is asked at all.
+
+*Against, recorded.* A non-code team — a small firm, several people deciding — is a real reader,
+and this makes the short track solo-only in its questions as it already is in its documents. The
+answer is that the long track serves that reader no better as of 2026-09-22 (a non-code team
+would get a code standard with a Part 12), that no such reader appears in §1 or in the audit,
+and that a team branch of the short standard is a row of its own once one does — §10.6 reserves
+it. And `archive-home` on the short track has one reader, the record in `.personal-config.json`;
+not asking it leaves that key empty, which `renderArchiveIndex` already treats as "no archive"
+(`src/render/repo.ts:287`).
+
+### 10.3 What it costs
+
+Every accepted question owes a long form (G19 — over 400 characters, the word *undo*, the
+defense, the strongest argument against, what it writes, how to undo; `recommended` first where
+there are three options), and every string, `when` or question is a catalog change. All of them
+ride **one publish**, and the lockstep D14 names holds: personal-config publishes → the portfolio
+bumps its exact pin (the successor to item 46) → deploy. **No portfolio code changes** (G36): no
+new `WhenSpec` form, no new phase, no new question kind. Item 57's counter fix is in the same
+portfolio pass.
+
+| Decision | Long forms | Catalog | Renderers and templates | Crosses the pin |
+|---|---|---|---|---|
+| D20 | `uses-git.md`, options section | two option labels + hints | none | yes |
+| D21 | `projects-dir.md`, `work-profile.md` where they quote the ask | two asks | none | yes |
+| D22 | `edit-policy.md` (new) | +1 question, `practices` | `practices-policy.ts` area; `short-standard.ts` picks it up unchanged | yes |
+| D23 | `off-limits.md` (new) | +1 question, `discover` | `discover.ts`; `types.ts` (`RepoPlan.offLimits`); `setup.ts` (`planRepo`); `context.ts` (`targetAnswers`, a reader); `repo.ts` (short router, short ledger); `CLAUDE.short.md`; `HANDOFF.short.md` | yes |
+| D25 | `hooks.md` | one option label + hint | `templates/hooks/delete-guard.sh` (new); `hooks.ts` (`wantedHooks`, the merge, `declinedHookHelp` and `hookSnippet`, which enumerate scripts by name) | the label does; the script alone would not |
+| D26 | `archive-home.md`, `mode.md` | two `when`s | none | yes |
+
+*The counts.* `catalog.json` goes **35 → 37**; `tests/catalog.test.ts:35`'s split becomes
+`{ you: 14, discover: 8, practices: 15 }` and its conditions table gains four entries — that red
+is the test doing its job (hazard 4). What each shape is asked: measured before item 56 began
+(G23) and again on item 56's uncommitted tree at 13:44 on 2026-09-22, then computed for this
+section's two changes — the last two columns are arithmetic, not a run (R10), and rows 60 and 61
+verify them by running:
+
+| Shape | Before item 56 | Item 56's tree, 13:44 | After D26 | After D22 + D23 |
+|---|---|---|---|---|
+| code + full + git | 33 | 33 | 33 | **33** — §2's first non-scope item, in questions as in bytes |
+| code + full + no git | 32 | 30 | 30 | **30** |
+| code + light + git | 33 | 29 | 27 | **27** |
+| non-code + full + git | 22 | 18 | 16 | **18** |
+| non-code + light + no git | 21 | 14 | 12 | **14** |
+
+`PART 3 OF 3 · House rules` for a non-coder: two questions → three. Item 56's own ask — whether
+`model-routing` joins — is answered in its tree: gated on weight, so a non-code + full person is
+still asked the three tier questions, because their `model-routing.md` prints the table
+(`src/render/rules.ts:25`).
+
+*The version.* A minor, not a patch: the question set changes shape, which is D19's rule for
+`0.3.0`. Whether it is the cut that carries items 54–56 or the one after is Zach's; nothing here
+publishes.
+
+### 10.4 The build rows this section opens
+
+Three rows, all `HELD` on this section's ratification, serial in lane A because they share
+`catalog.json`, `src/questions/` and `tests/catalog.test.ts` with item 56 and with each other.
+The rows carry the prompts; this is the order and why.
+
+| # | Row | Decides | Driver | Waits on | Why that shape |
+|---|---|---|---|---|---|
+| 59 | The delete guard | D25 — the script, the hook entry, the long form; not the label | Opus 5 | item 55, ratification | Item 55 owns `hooks.ts`, `hooks.md` and `tests/hooks.test.ts` and is re-gating the commit guard in the same function; this lands on top of it rather than beside it. No catalog change, so it can land before the publish-bearing rows, and the label in row 60 then describes something that exists. |
+| 60 | The short track's question set, second pass | D20's labels, D21, D25's label, D26 | Opus 5 | items 56 and 59, ratification | Catalog-only: four strings, two `when`s, six long forms, the counts. Item 56 owns every file it touches and writes the `when` precedent it copies. Opus 5 to match item 56, because a wrong `when` is a silent skip. |
+| 61 | The two non-code questions | D22, D23 | Opus 5 | row 60, ratification | The only row with renderer work — the proof line's path for D23, a policy area for D22 — and two new long forms. Last because it moves the counts row 60 just moved. |
+
+Not a row: item 57 (the portfolio counter) is unchanged by this. Item 56 is not amended: its
+prompt already writes git conditions as `isNot: 'no'`, which D20 makes a hedge with nothing
+behind it, and harmless either way.
+
+### 10.5 Copy going out under R7
+
+Settled by citation, no variants: **projects** and **this project** (G30). Unsettled, three
+registers each, the recommendation first. All four questions are on the non-coder's first
+screens, where §7.1 chose warm.
+
+`uses-git`, the two options (D20):
+- *warm* — **Yes, some or all of it** · commits and history, in at least one place /
+  **No, none of it** · the files live on disk and that's it
+- *plain* — **Yes — at least some of it is in git** / **No — none of it is**
+- *terse* — **Some or all of it** / **None of it**
+
+`hooks`, the first option (D25):
+- *plain* — **Yes — block the commands that can't be undone** · `git commit` and `git push` in a
+  repo, `rm` for other work; the hook refuses and says what to do instead
+- *warm* — **Yes — guard the things you can't take back** · commits and pushes in a repo,
+  deleting a file elsewhere; which one you get follows your answers above
+- *terse* — **Yes — guard commits and deletes** · the hook refuses them and prints the alternative
+
+`edit-policy`, the ask and three options (D22):
+- ask, *warm* — **When your agent changes a document, should it make the change, or show it to
+  you first?** · *plain* — Who makes changes to your documents — the agent, or you? · *terse* —
+  May the agent edit your documents directly?
+- options — **The agent edits, and names every change** · it changes the file, says which part
+  and what it said before, and never deletes one / **Show me first — I make the change** · it
+  writes the new wording in chat; you put it in / **No rule** · nothing is written; the agent
+  does what it would do by default
+
+`off-limits`, the ask and placeholder (D23):
+- ask, *warm* — **Is there anything here the agent must not read or copy?** · *plain* — What
+  must the agent never read or copy here? · *terse* — Anything off limits to the agent?
+- placeholder — *e.g. a folder of other people's records — or leave this empty*
+
+### 10.6 Seams reserved, deliberately not built
+
+- **`permissions.deny` for D23.** The harness can refuse a `Read` by pattern in the project's own
+  settings; D23's answer is the input it would need. Not built: a second write target
+  (`<project>/.claude/settings.json`) with its own merge, preview and undo, before the question
+  has shown it gets answered.
+- **A team branch of the short standard** (D26's argument against). Waits on a reader.
+- **"Where does the work live?"** (D24, candidate 6). Waits on a design that can serve an answer
+  other than a folder on disk.
+- **A vocabulary slot in the short ledger** (D24, candidate 7). Waits on a first session's ledger
+  showing it missing.
+- **D22 and D23 on the code track.** The full router's `## Never do this` is Part 0's; a
+  code+no-git person's edit policy is a case this tool declines to serve.
+- **`any:` and `not:`** — still no caller; §8's seam stands. Nothing in this section needed
+  either, which is evidence the `all:`-only call was right.
+- **`trash`, `find -delete` and `git clean` in the delete guard.** Recorded as not caught; a guard
+  that grows by objection becomes the parallel exclusion list D5 refused.
