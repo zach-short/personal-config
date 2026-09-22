@@ -20,6 +20,7 @@ import {
   trackOf,
   workRecordShape,
 } from './context.ts';
+import { targetUsesGit } from './target-git.ts';
 
 export async function renderRepoFiles(
   ctx: RenderContext,
@@ -170,9 +171,12 @@ function stackLine(ctx: RenderContext): string {
   return `Detected ${ctx.date}: ${parts.join(' · ')}. <!-- Verify and expand — versions where they matter. -->`;
 }
 
-/** Work kept out of git has no commit rule to restate (setup-tracks `DESIGN.md` §3.1, row 2). */
+/**
+ * Work kept out of git has no commit rule to restate (setup-tracks `DESIGN.md` §3.1, row 2) —
+ * and neither has a plain folder, whatever the person answered about their repos (item 54).
+ */
 function commitRule(ctx: RenderContext): string {
-  return trackOf(ctx).usesGit ? commitRuleLine(ctx.answers) : '';
+  return targetUsesGit(ctx) ? commitRuleLine(ctx.answers) : '';
 }
 
 function commitLine(ctx: RenderContext): string {
@@ -448,7 +452,7 @@ function cutHints(ctx: RenderContext): string {
     hints.push(
       "Part 12 is already cut; its cross-references (`grep -n 'Part 12'`) are still yours to fix here.",
     );
-  if (!trackOf(ctx).usesGit)
+  if (!targetUsesGit(ctx))
     hints.push(
       'This work is not kept in git, so Part 6 — parallel sessions, worktrees and the commit rules — is a candidate to cut whole; keep only what a plain folder can honour.',
     );

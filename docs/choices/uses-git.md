@@ -37,18 +37,37 @@ tool keeps is the only way back from an accepted run. A folder is one deletion f
 
 ## What it writes and where
 
-**Yes** writes the git rules where they apply: the global `commits.md` for code work, the commit
-policy inside the short standard for other work, the commit line in the router, and the ignore
-entries that keep the personal files out of the repository.
+**Yes** writes the git rules where they apply — and *where they apply* is decided for each target
+separately, not once for you. A target that discovery found as a git repository gets them; a
+plain folder gets none of them, however you answered, because a folder has no `.git` to honour
+them. That per-target split is what lets somebody with a repo and a loose folder answer this once
+and have both come out right.
+
+So, for a git target: the commit line in the router, the commit policy paragraph in the standard's
+owner-policy part — or inside the git section of the short standard, on the short track — and the
+ignore entries that keep the personal files out of the repository. The global `commits.md` for
+code work is written from your answer alone, because `~/.claude/` belongs to no target and your
+answer is the only input it could have.
+
+> **Wrong until 2026-09-22, kept here rather than deleted (R5).** This section used to stop at
+> "where they apply" and describe every one of those files as following from the answer. Three of
+> the four per-target places did not read the target at all: a plain folder belonging to somebody
+> who answered "yes" was handed a router rule against `git commit`, a commit paragraph in its
+> standard, and a git section in its short standard — and its Part 0 prompt was never told Part 6
+> could go. Only the ignore entries were ever decided per target. Corrected in the code and here
+> on 2026-09-22 (board item 54); `tests/mixed-targets.test.ts` pins all four.
 
 **No** writes none of those — no `commits.md`, no ignore entries anywhere, no git section in the
 short standard — and on the code track the long standard's owner-policy part carries no commit
 paragraph while the Part 0 prompt names Part 6 (parallel sessions, worktrees, the commit rules) as
-a candidate to cut whole.
+a candidate to cut whole. That holds even for a target that really is a git repository: the answer
+you gave is not overruled by what the scan found on disk, because this is the one place you can
+say "not here either".
 
 It also gates one question, the committed-or-private question for each target, which is asked
 only when the target is both yours and in git. Discovery finds plain folders as well as
-repositories, so a folder of files is a target whichever way this is answered.
+repositories, so a folder of files is a target whichever way this is answered — and it is
+rendered as a folder either way.
 
 ## How to undo it
 

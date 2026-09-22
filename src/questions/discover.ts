@@ -35,6 +35,17 @@ export const DISCOVER_QUESTIONS: Question[] = [
         recommended: false,
       },
     ],
+    // `workRecordShape` returns `ledger` for the whole short track whatever this says
+    // (`src/render/context.ts`, which names stopping the question as the honest fix), so the
+    // answer only reaches a rendered file on code *and* full. That is `isShortTrack`'s
+    // "non-code or light" negated, written as a conjunction because `WhenSpec` has `all:` and
+    // deliberately no `any:` (PASSOFF item 56).
+    when: {
+      all: [
+        { key: 'workKind', is: 'code' },
+        { key: 'configWeight', is: 'full' },
+      ],
+    },
   },
   {
     id: 'track-mode',

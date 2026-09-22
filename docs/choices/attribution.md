@@ -31,6 +31,9 @@ permanent.
 
 A section in `~/.claude/rules/commits.md`, alongside the commit policy.
 
+**Asked only when that file is written** — code work you keep in git, which is exactly the
+condition on `commit-policy`. A trailer rule with no commit rule to sit in has nowhere to go.
+
 ## How to undo it
 
 Delete `~/.claude/rules/commits.md`, or edit its Attribution section.

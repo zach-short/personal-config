@@ -39,6 +39,11 @@ They are not exclusive: a ledger repo opens a folder for the one effort that nee
 
 ## What it writes and where
 
+**Asked only for code work on the whole method.** Non-code work and the lighter setup both get
+a ledger whatever you answer here: the folder-per-effort shape is machinery their shorter
+standard does not describe, and a `docs/incomplete/README.md` citing a part of a document that
+does not exist is worse than not offering the choice. Asking would be asking to be ignored.
+
 Ledger: `HANDOFF.md` and `PASSOFF.md` at the repo root. Folders: `docs/incomplete/README.md`
 scaffolding the stages.
 

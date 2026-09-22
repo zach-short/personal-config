@@ -13,9 +13,9 @@ import {
   type RenderContext,
   routerFile,
   standardPath,
-  trackOf,
 } from './context.ts';
 import { COMMIT_POLICY_KEY, OWNER_IS_INTERACTIVE, policyParagraphs } from './standard.ts';
+import { targetUsesGit } from './target-git.ts';
 
 /** DIAL-9: one file beside the long one, sharing `standard/VERSION` with it (D10). */
 async function shortBoilerplate(): Promise<string> {
@@ -47,7 +47,9 @@ const PREFERENCES = '## Preferences';
 
 function pipeline(text: string, ctx: RenderContext): string {
   const withBoard = hasBoard(ctx) ? text : cutSection(text, WHAT_IS_NEXT);
-  const withGit = trackOf(ctx).usesGit ? withBoard : cutSection(withBoard, IN_GIT);
+  // The target's kind, not the person's answer: a folder belonging to somebody who also keeps
+  // repos has no git section to keep (item 54).
+  const withGit = targetUsesGit(ctx) ? withBoard : cutSection(withBoard, IN_GIT);
   const withPolicy = replaceSectionBody(withGit, PREFERENCES, preferences(ctx));
   return `${fill(withPolicy, placeholders(ctx)).replace(/\n+$/, '')}\n`;
 }

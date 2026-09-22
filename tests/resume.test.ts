@@ -390,6 +390,29 @@ describe('going back, and what the checkpoint does about it', () => {
 });
 
 describe('the real question chain', () => {
+  /**
+   * The phase's first three answers gate seven of the questions behind them (PASSOFF item 56),
+   * and `recording` answers everything `<prefix>-<id>` — so an unwrapped run would answer
+   * `work-kind` with `first-work-kind` and walk a phase four questions shorter than the one
+   * these tests are about. The track questions take the offered default instead, which is
+   * `code`, `full`, `yes`: the one combination that asks the whole phase.
+   */
+  const TRACK_IDS = new Set(['work-kind', 'config-weight', 'uses-git']);
+
+  function onTrack(inner: Prompter & { asked: string[] }): Prompter & { asked: string[] } {
+    return {
+      asked: inner.asked,
+      async ask(question, fallback, canGoBack) {
+        const answer = await inner.ask(question, fallback, canGoBack);
+        return TRACK_IDS.has(question.id) ? fallback : answer;
+      },
+      async confirm(message, fallback) {
+        return inner.confirm(message, fallback);
+      },
+      pick: pickAll,
+    };
+  }
+
   /** The `you` phase exactly as `setup` asks it, defaults and all — no TTY. */
   async function youPhase(prompter: Prompter): Promise<Answers> {
     const config = await loadConfig(parseCli(['setup']), null);
@@ -403,28 +426,33 @@ describe('the real question chain', () => {
       const ids = questionsFor('you').map((q) => q.id);
       expect(ids.length).toBeGreaterThan(3);
 
-      const first = interruptedAfter(3, 'first');
-      await expect(youPhase(checkpointing(first))).rejects.toThrow('interrupted');
-      expect(first.asked).toEqual(ids.slice(0, 3));
+      // Four, not three: the first three are the track questions, whose answers are the
+      // offered defaults on both runs and so cannot show which run produced them. The fourth
+      // is the first one carrying a prefix, and it is what the assertion below reads.
+      const first = interruptedAfter(4, 'first');
+      await expect(youPhase(checkpointing(onTrack(first)))).rejects.toThrow('interrupted');
+      expect(first.asked).toEqual(ids.slice(0, 4));
 
       const offer = await readCheckpoint();
       expect(offer.kind).toBe('ready');
       if (offer.kind !== 'ready') return;
-      expect(offer.checkpoint.entries).toHaveLength(3);
+      expect(offer.checkpoint.entries).toHaveLength(4);
 
+      // No `onTrack` here: the three track answers come back off the tape without the inner
+      // prompter ever being asked, which is the property the replay exists for.
       const second = recording('second');
       const answers = await youPhase(checkpointing(second, offer.checkpoint.entries));
 
       // Named by position rather than by question id: the ids at the head and tail of `you`
-      // move whenever a question is added, and what this pins is that the first three answers
+      // move whenever a question is added, and what this pins is that the first four answers
       // came from the interrupted run and everything after it from the second.
       const questions = questionsFor('you');
-      const head = questions[0];
+      const fourth = questions[3];
       const tail = questions.at(-1);
-      if (!head || !tail) throw new Error('the you phase is empty');
+      if (!fourth || !tail) throw new Error('the you phase is too short to interrupt');
 
-      expect(second.asked).toEqual(ids.slice(3));
-      expect(answers[head.configKey]).toBe(`first-${head.id}`);
+      expect(second.asked).toEqual(ids.slice(4));
+      expect(answers[fourth.configKey]).toBe(`first-${fourth.id}`);
       expect(answers[tail.configKey]).toBe(`second-${tail.id}`);
     });
   });

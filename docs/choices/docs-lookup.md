@@ -34,6 +34,10 @@ the tool is absent: say so, and fall back to the installed package's own README 
 
 `~/.claude/rules/docs-lookup.md`, naming the tool you gave.
 
+**Asked for code work only.** The rule is entirely about library and framework APIs, so a
+non-code setup is not asked it at all. Weight makes no difference: a lighter code setup still
+gets the rule, because looking a version up costs nothing to follow.
+
 ## How to undo it
 
 Delete `~/.claude/rules/docs-lookup.md`.

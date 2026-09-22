@@ -40,6 +40,12 @@ safeguard. This is very close to having no rule, with extra words.
 
 `~/.claude/rules/model-routing.md`, which also carries the tier table.
 
+**Asked only if you take the whole method.** A lighter setup does not write this rule at all —
+on a small budget its advice to delegate a task to a second model is the most expensive thing
+on the page — so the question is skipped rather than asked and discarded. It *is* asked for
+non-code work on the full setup: routing a task to the right model is not a fact about source
+code.
+
 ## How to undo it
 
 Delete `~/.claude/rules/model-routing.md`.

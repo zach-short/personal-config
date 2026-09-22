@@ -110,6 +110,17 @@ export const YOU_QUESTIONS: Question[] = [
         recommended: false,
       },
     ],
+    // Asked only where an answer reaches a rendered file (PASSOFF item 56). `commits.md` goes
+    // to code work kept in git (`src/render/rules.ts`), and the full standard's Part 11 reads
+    // the policy as `none` for a target with no git of its own (`src/render/standard.ts`).
+    // The git half is `isNot: 'no'` and never `is: 'yes'`: a third value meaning "some of it"
+    // would otherwise stop asking the git questions of the people who most need them.
+    when: {
+      all: [
+        { key: 'workKind', is: 'code' },
+        { key: 'usesGit', isNot: 'no' },
+      ],
+    },
   },
   {
     id: 'attribution',
@@ -132,6 +143,15 @@ export const YOU_QUESTIONS: Question[] = [
         recommended: false,
       },
     ],
+    // Read only inside `commitRule` (`src/render/rules.ts`), so it rides on exactly the
+    // condition that writes the rule: an attribution answer with no commit rule to carry it
+    // has nowhere to be written.
+    when: {
+      all: [
+        { key: 'workKind', is: 'code' },
+        { key: 'usesGit', isNot: 'no' },
+      ],
+    },
   },
   {
     id: 'model-deep',
@@ -141,6 +161,15 @@ export const YOU_QUESTIONS: Question[] = [
     configKey: 'models.deep',
     readMore: 'model-tiers',
     placeholder: 'e.g. a top reasoning model, named as your harness names it',
+    // Deep and Mechanical are rendered in two places and both are the full weight: the full
+    // standard's `MODEL_DEEP`/`MODEL_FAST` placeholders (`src/render/standard.ts`) and the tier
+    // table in `model-routing.md`, which `src/render/rules.ts` writes whenever the weight is
+    // full — **non-code included**. So the condition is the weight alone and not the short-track
+    // negation (`code && full`): the tighter conjunction would stop asking a non-code, full
+    // person for tiers their own `model-routing.md` still prints, and the table would render
+    // `<unset>`. The short standard reads `models.default` alone (D6), which is why that
+    // question keeps no condition while these two take one (PASSOFF item 56).
+    when: { key: 'configWeight', is: 'full' },
   },
   {
     id: 'model-default',
@@ -159,6 +188,8 @@ export const YOU_QUESTIONS: Question[] = [
     configKey: 'models.fast',
     readMore: 'model-tiers',
     placeholder: 'e.g. your fastest model',
+    // The other half of the tier table; see `model-deep` above for why the weight alone.
+    when: { key: 'configWeight', is: 'full' },
   },
   {
     id: 'model-routing',
@@ -188,6 +219,12 @@ export const YOU_QUESTIONS: Question[] = [
         recommended: false,
       },
     ],
+    // `src/render/rules.ts` writes `model-routing.md` on the full weight and on no other
+    // condition — D6 cuts it from a light setup, where its advice to delegate to a subagent is
+    // the most expensive thing on the page. Cut with the other six by the owner's call on
+    // 2026-09-22, and gated on the weight alone for the same reason as the tiers above: the
+    // rule is domain-neutral and a non-code, full run still gets it.
+    when: { key: 'configWeight', is: 'full' },
   },
   {
     id: 'docs-mcp',
@@ -197,6 +234,9 @@ export const YOU_QUESTIONS: Question[] = [
     configKey: 'docsMcp',
     readMore: 'docs-lookup',
     placeholder: 'a connected docs MCP, or "none" to skip this rule',
+    // `docs-lookup.md` is entirely library APIs and goes to code work only (`src/render/rules.ts`,
+    // G4). Weight and git do not gate it: a light code setup still gets the rule.
+    when: { key: 'workKind', is: 'code' },
   },
   {
     id: 'hooks',

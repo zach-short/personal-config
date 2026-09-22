@@ -27,6 +27,22 @@ The CLI. The working standard it installs is versioned separately — see
 
 ### Fixed
 
+- **A plain folder is no longer written to as though it were a repository.** Answering *yes* to
+  git is a fact about you, and somebody with one repo and one loose folder answers it truthfully
+  — but four per-target places read that answer where the target's own kind was what applied, so
+  the folder was handed a router rule against `git commit`, a commit policy in its standard, a
+  git section in its short standard, and a Part 0 prompt that was never told the worktree part
+  could go. Nothing errored; the documents were simply wrong for the directory they sat in. Git
+  content now reaches a target only when that target is a git repository *and* your answer was
+  not *no* — so answering *no* still suppresses it everywhere, including in a directory that
+  really is a repository.
+- **A run that keeps nothing in git no longer installs the commit guard.** The hook question's
+  recommended answer blocks `git commit`, `git push` and `git add -A`, and it was installed
+  whenever you picked it — including after you had just answered that you keep no work in git, so
+  taking the recommendation added a `PreToolUse` hook over commands you never run. It is now
+  installed only when git is in play. The completion gate is untouched and is still written on
+  every setup, *No hooks* still writes nothing at all, and a setup that does use git gets exactly
+  what it got before. Nothing is added in the guard's place.
 - **A profile someone hands you can no longer tell `setup` who you are.** `setup --from` and a
   checkout's own `.personal-config.json` were merged whole, `identity` included, and the login
   in them outranked the one `gh` proves — so a profile fetched from a link could name you the
@@ -56,6 +72,16 @@ The CLI. The working standard it installs is versioned separately — see
 
 ### Changed
 
+- **The setup no longer asks you seven questions it was going to throw away.** The three
+  questions that open a run decided what was *written* and nothing about what was *asked*, so
+  somebody doing non-code work with no git answered twenty-one questions and six of them reached
+  no file. Commit policy and attribution are now asked only for code work kept in git, the
+  docs-lookup tool only for code work, the work-record shape only for code work on the whole
+  method, and the Deep and Mechanical tiers and the model-routing rule only where that rule is
+  written at all. A non-code, lighter setup now answers fourteen questions instead of twenty-one;
+  a code setup with the whole method in git is asked all thirty-three it was asked before. An
+  answer already stored for a question you are no longer asked is still honoured wherever a file
+  reads it.
 - **`standard/VERSION` is 1.1.0.** One number covers both forms of the standard, so every file
   generated before this reports a standard behind the current one until `setup` is re-run — the
   same as any standard bump, and by design.

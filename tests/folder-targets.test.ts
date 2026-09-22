@@ -135,7 +135,16 @@ describe('DIAL-10 — the listing stays readable when the scan is broad', () => 
 });
 
 describe('DIAL-11 — trackMode for a folder target', () => {
-  const answers = (): Answers => ({ ...DEFAULT_ANSWERS, usesGit: 'yes', archiveHome: '' });
+  // The track is answered explicitly rather than left to fall through: `work-profile` is asked
+  // on code + full only (PASSOFF item 56), and the neighbour assertion below is about
+  // `track-mode` being skipped by id, not about which track this person is on.
+  const answers = (): Answers => ({
+    ...DEFAULT_ANSWERS,
+    workKind: 'code',
+    configWeight: 'full',
+    usesGit: 'yes',
+    archiveHome: '',
+  });
 
   test('the question is not asked, and `n/a` is recorded rather than nothing', async () => {
     const { prompter, asked } = tracingPrompter();

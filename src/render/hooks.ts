@@ -2,7 +2,7 @@ import { join } from 'node:path';
 import { claudeHooksDir, claudeSettingsFile, contractHome } from '../lib/paths.ts';
 import { template } from '../lib/template.ts';
 import type { PlannedFile } from '../lib/types.ts';
-import { answer, planned, type RenderContext } from './context.ts';
+import { answer, planned, type RenderContext, trackOf } from './context.ts';
 
 /** Which of the three hook scripts a run installs. */
 type HookSet = { guard: boolean; banner: boolean; gate: boolean };
@@ -39,7 +39,25 @@ export async function renderHooks(ctx: RenderContext): Promise<PlannedFile[]> {
  * budget, and a `command` hook is a shell script that spends zero tokens, so the argument that
  * carried the cut does not reach it.
  *
- * `hooks: none` is still none, on both tracks. The option's own text promises that nothing is
+ * **D16's reason for cutting the guard from light is git, not weight, so it governs `usesGit`
+ * too** (board row 55, reproduced 2026-09-22). This gate used to read weight alone, so a person
+ * who answered "I keep no work in git" and then took the `hooks` question's *recommended*
+ * answer — because it is the recommendation — had a `PreToolUse` hook installed over a tool they
+ * do not use. That was the one place a track answer was contradicted by what the run wrote
+ * rather than merely ignored.
+ *
+ * Read as `!== 'no'` through `trackOf`, not `=== 'yes'`: a profile stored before the git
+ * question existed has no answer and must keep rendering what it rendered at 0.2.5 (DIAL-7),
+ * and row 58's coming third `usesGit` answer must read as "not no" rather than silently
+ * suppressing the guard. It is the person's answer and not `targetUsesGit()` because these
+ * scripts land in `~/.claude/`, where there is no target whose `kind` could be consulted.
+ *
+ * **Nothing is installed in the guard's place.** Whether a no-git run wants a protective hook of
+ * its own — against `rm`, or writes outside the project folder — is a real gap and is left open
+ * for row 58, which amends the tracks design anyway; bolting a new mechanism on here would
+ * decide it in the wrong document.
+ *
+ * `hooks: none` is still none, on every track. The option's own text promises that nothing is
  * added to `settings.json`, and a gate installed over that promise would make the question a
  * lie and its long form's undo instructions wrong.
  */
@@ -49,7 +67,7 @@ function wantedHooks(ctx: RenderContext): HookSet {
   if (answer(ctx, 'configWeight', 'full') === 'light')
     return { guard: false, banner: false, gate: true };
   return {
-    guard: choice === 'commit-guard' || choice === 'both',
+    guard: (choice === 'commit-guard' || choice === 'both') && trackOf(ctx).usesGit,
     banner: choice === 'banner' || choice === 'both',
     gate: true,
   };

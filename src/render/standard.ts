@@ -9,9 +9,9 @@ import {
   planned,
   type RenderContext,
   standardPath,
-  trackOf,
   workRecordShape,
 } from './context.ts';
+import { targetUsesGit } from './target-git.ts';
 
 export async function standardVersion(): Promise<string> {
   const path = join(repoRoot(), 'standard', 'VERSION');
@@ -102,11 +102,13 @@ export function policyParagraphs(
 /**
  * The commit-policy area reads the `you` answer; every other policy area has its own. Work kept
  * out of git has no commit policy to state (setup-tracks `DESIGN.md` §3.1, row 2), so that one
- * answer reads as `none` there rather than rendering a ritual for a repository that is not one.
+ * answer reads as `none` there rather than rendering a ritual for a repository that is not one
+ * — which is literally true of a folder target, whose person may well keep repos elsewhere
+ * (item 54).
  */
 function policyAnswer(ctx: RenderContext, configKey: string): string {
   if (configKey === COMMIT_POLICY_KEY) {
-    if (!trackOf(ctx).usesGit) return 'none';
+    if (!targetUsesGit(ctx)) return 'none';
     return answer(ctx, 'commitPolicy', 'print-blocks');
   }
   return answer(ctx, configKey, 'none');

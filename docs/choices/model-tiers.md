@@ -36,6 +36,11 @@ skip the routing rule — both are reasonable.
 
 ## What it writes and where
 
+**The Deep and Mechanical tiers are asked only if you take the whole method.** A lighter setup
+writes one model rather than three and no `model-routing.md` at all, so those two answers would
+have nowhere to go. The Default tier is asked on every setup, light and full alike, because the
+shorter standard names one model and that is the one it names.
+
 `~/.claude/rules/model-routing.md` carries the table. Generated boards and pass-off prompts use
 the Default tier's name in their `**Model:**` headers.
 

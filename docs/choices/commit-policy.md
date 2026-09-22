@@ -59,6 +59,14 @@ answers to the same question.
 
 ## What it writes and where
 
+**You are asked this only for code work you keep in git.** Non-code work takes its commit
+wording from the short standard instead, where it is written for that work rather than for a
+programmer; work kept out of git has no commit to have a policy about. On either of those the
+question is skipped rather than asked and thrown away. One consequence worth knowing: a
+non-code repo that *is* in git still gets the "never run `git commit`" line in its router,
+because that is what this question's recommended answer produces — edit the line if you want
+the agent committing there.
+
 `~/.claude/rules/commits.md` — a new file. Your own `~/.claude/CLAUDE.md` is never edited. If
 it already has a section covering commits, the wizard says so and leaves it alone; delete it
 yourself if you want only one.
