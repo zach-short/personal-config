@@ -1,9 +1,10 @@
 import { createHash } from 'node:crypto';
 import { join } from 'node:path';
-import { exists, readJson as readJsonFile } from './disk.ts';
+import { asConfigLayer, withoutIdentity } from './config-layer.ts';
+import { exists, readJson } from './disk.ts';
 import { configFile, repoRoot } from './paths.ts';
 import { loadProfileFrom } from './profile-source.ts';
-import type { Answers, Cli, Config } from './types.ts';
+import type { Answers, Cli, Config, ConfigLayer } from './types.ts';
 
 /**
  * Merge order, lowest first: `starter` → `--profile <name>` → the user's saved config → the
@@ -15,14 +16,19 @@ import type { Answers, Cli, Config } from './types.ts';
  * seconds ago on the site, and the failure worth preventing is those answers losing silently to
  * a saved config they have forgotten writing. The cost, accepted 2026-09-16: running it inside
  * an already-configured repo re-renders that repo to the new answers.
+ *
+ * **`identity` does not follow that order.** The three layers wrapped in `withoutIdentity`
+ * below are documents rather than code, and a login decides where `setup` writes tracked
+ * files; `config-layer.ts` has the whole reason. Only the two `readProfile` layers may name
+ * one, because those ship inside the package that is running.
  */
 export async function loadConfig(cli: Cli, repoDir: string | null): Promise<Config> {
   const layers = [
     await readProfile('starter'),
     cli.profile === 'starter' ? {} : await readProfile(cli.profile),
-    await readJson(configFile()),
-    repoDir ? await readJson(join(repoDir, '.personal-config.json')) : {},
-    cli.from ? await loadProfileFrom(cli.from) : {},
+    withoutIdentity(await readLayer(configFile())),
+    repoDir ? withoutIdentity(await readLayer(join(repoDir, '.personal-config.json'))) : {},
+    cli.from ? withoutIdentity(await loadProfileFrom(cli.from)) : {},
     cliLayer(cli),
   ];
   return layers.reduce<Config>(mergeLayer, emptyConfig(cli.profile));
@@ -39,25 +45,26 @@ export function emptyConfig(profile: string): Config {
   };
 }
 
-async function readProfile(name: string): Promise<Partial<Config>> {
+async function readProfile(name: string): Promise<ConfigLayer> {
   const path = join(repoRoot(), 'profiles', `${name}.json`);
-  const layer = await readJson(path);
+  const layer = await readLayer(path);
   if (Object.keys(layer).length === 0 && name !== 'starter') {
     throw new Error(`No profile named "${name}" — looked in profiles/${name}.json`);
   }
   return layer;
 }
 
-async function readJson(path: string): Promise<Partial<Config>> {
+/** A missing file is an empty layer; a file that is not one is refused by name and field. */
+async function readLayer(path: string): Promise<ConfigLayer> {
   if (!(await exists(path))) return {};
-  return (await readJsonFile(path)) as Partial<Config>;
+  return asConfigLayer(await readJson(path), path);
 }
 
-function cliLayer(cli: Cli): Partial<Config> {
+function cliLayer(cli: Cli): ConfigLayer {
   return cli.projectsDir ? { projectsDir: cli.projectsDir } : {};
 }
 
-function mergeLayer(base: Config, layer: Partial<Config>): Config {
+function mergeLayer(base: Config, layer: ConfigLayer): Config {
   return {
     profile: layer.profile ?? base.profile,
     identity: { ...base.identity, ...layer.identity },
@@ -140,8 +147,8 @@ export function personalAnswers(answers: Answers): Answers {
 }
 
 /** What the saved layer holds, for a caller that wants to report it before the merge hides it. */
-export async function savedUserConfig(): Promise<Partial<Config>> {
-  return readJson(configFile());
+export async function savedUserConfig(): Promise<ConfigLayer> {
+  return withoutIdentity(await readLayer(configFile()));
 }
 
 /**

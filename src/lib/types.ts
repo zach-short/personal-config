@@ -139,6 +139,25 @@ export type Config = {
   archiveHome: string;
 };
 
+/**
+ * One layer of `loadConfig`'s merge, as a document on disk is allowed to state it — narrowed
+ * into this shape by `config-layer.ts` and by nothing else.
+ *
+ * Deliberately not `Partial<Config>`, which the layer readers claimed to return until
+ * 2026-09-22. A layer may name one model tier and leave the other two to the layer below —
+ * `mergeLayer` spreads both objects, and a `--from` document over a named profile is exactly
+ * that case — but `Partial<Config>` makes only the top-level keys optional, so any `models` it
+ * carried had to hold all three. The cast hid the difference; narrowing cannot.
+ */
+export type ConfigLayer = {
+  profile?: string;
+  identity?: Partial<Config['identity']>;
+  models?: Partial<ModelTiers>;
+  answers?: Answers;
+  projectsDir?: string;
+  archiveHome?: string;
+};
+
 export type Cli = {
   command: string;
   profile: string;

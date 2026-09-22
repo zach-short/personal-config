@@ -88,8 +88,13 @@ describe('a config layer is narrowed, not cast', () => {
   test('passes: a partial models object merges over the layer below it', async () => {
     const dir = await tempDir('pc-from-');
     try {
-      const path = await jsonFile(dir, 'profile.json', { models: { default: 'From The Document' } });
-      const config = await loadConfig(parseCli(['setup', '--profile', 'zach', '--from', path]), null);
+      const path = await jsonFile(dir, 'profile.json', {
+        models: { default: 'From The Document' },
+      });
+      const config = await loadConfig(
+        parseCli(['setup', '--profile', 'zach', '--from', path]),
+        null,
+      );
       expect(config.models.default).toBe('From The Document');
       expect(config.models.deep).toBe('Fable 5.1');
     } finally {

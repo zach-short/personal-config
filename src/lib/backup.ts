@@ -75,6 +75,9 @@ export async function backupFiles(paths: string[], stamp = timestampDir()): Prom
  * The newest backup, or `null` where there is nothing to restore. A directory without a
  * `manifest.json` is not one: `backupFiles` writes the manifest after the copies, so a run
  * interrupted mid-copy leaves a directory `undo` must not treat as restorable.
+ *
+ * A `manifest.json` that is not a manifest is a third case, and it is refused rather than
+ * reported empty — see `asManifest`.
  */
 export async function latestBackup(): Promise<Backup | null> {
   const dirs = await readdir(backupsDir()).catch(() => []);
@@ -86,9 +89,50 @@ export async function latestBackup(): Promise<Backup | null> {
   if (!(await exists(path))) return null;
   return {
     dir,
-    manifest: (await readJson(path)) as Manifest,
+    manifest: asManifest(await readJson(path), path),
     restoredAt: await restoredAt(dir),
   };
+}
+
+/**
+ * The parsed manifest, narrowed before `undo` acts on it (`docs/conventions-ts.md` T1). This
+ * was `as Manifest` until 2026-09-22, and the cast was the load-bearing kind: `runUndo` prints
+ * `manifest.timestamp`, counts `manifest.entries` and then hands each entry to `copyTo`, so a
+ * file of the wrong shape reached a write. An `entries` of the wrong element type is the worst
+ * of them — `copyTo(undefined, undefined)` throws from inside `node:fs` with no mention of the
+ * manifest, leaving a person with a failing `undo` and nothing naming the file to delete.
+ *
+ * Refusing by path is therefore the whole point, and refusing is safe to add: `timestamp` and
+ * `entries` have both been required since `Manifest` was introduced in `8947613`, so no
+ * manifest this tool has ever written fails here.
+ */
+function asManifest(parsed: unknown, path: string): Manifest {
+  if (!isRecord(parsed)) throw new Error(`${path} is not a backup manifest`);
+  if (typeof parsed.timestamp !== 'string') {
+    throw new Error(`${path}: "timestamp" is not a string`);
+  }
+  if (!Array.isArray(parsed.entries)) {
+    throw new Error(`${path}: "entries" is not a list`);
+  }
+  return { timestamp: parsed.timestamp, entries: parsed.entries.map((e) => asEntry(e, path)) };
+}
+
+function asEntry(value: unknown, path: string): BackupEntry {
+  if (!isRecord(value)) throw new Error(entryProblem(path));
+  const { original, stored } = value;
+  if (typeof original !== 'string' || typeof stored !== 'string') {
+    throw new Error(entryProblem(path));
+  }
+  return { original, stored };
+}
+
+/** One message for every malformed entry: the file to fix is the same either way. */
+function entryProblem(path: string): string {
+  return `${path}: "entries" holds something that is not a backed-up file`;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 /** When `undo` spent this backup, or `null` while it is still unspent. */

@@ -27,6 +27,24 @@ The CLI. The working standard it installs is versioned separately — see
 
 ### Fixed
 
+- **A profile someone hands you can no longer tell `setup` who you are.** `setup --from` and a
+  checkout's own `.personal-config.json` were merged whole, `identity` included, and the login
+  in them outranked the one `gh` proves — so a profile fetched from a link could name you the
+  owner of a repository you had only cloned, and the ownership check would then write *tracked*
+  files into it and edit its `.gitignore`. The login is now read only from a profile that ships
+  inside the package; every other document has its `identity` dropped, and everything else it
+  says still lands.
+- **A config file that is not one is refused by name instead of half-applied.** The four
+  documents behind the merge — a named profile, your saved answers, a repo's
+  `.personal-config.json` and whatever `--from` fetched — were read without their shape ever
+  being checked, so a `"models": "Opus 5"` written as a string spread its own letters across the
+  three model tiers and got stamped into the repo. Each field is now checked as it is read, and
+  a bad one stops the run naming the file and the field: `…/profile.json: "models" is not an
+  object`. Keys this tool does not own, like an adopted `ledgerFile`, are left alone as before.
+- **`undo` refuses a damaged backup manifest rather than acting on it.** A `manifest.json` that
+  is not a manifest reached the code that copies files back, where it failed somewhere inside
+  Node with nothing in the message naming the file to delete. It is now checked first, and
+  refused by path.
 - **`/close-out` and `/handoff` say what is true of the setup that installed them.** Both skills
   were written for a reader with a board, a code map, gate commands and a commit to land the
   record in, and a lighter or non-code setup installs exactly these two. They now render against

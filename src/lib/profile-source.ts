@@ -1,7 +1,8 @@
 import { join } from 'node:path';
+import { asConfigLayer } from './config-layer.ts';
 import { exists, readJson } from './disk.ts';
 import { expandHome, repoRoot } from './paths.ts';
-import type { Config } from './types.ts';
+import type { ConfigLayer } from './types.ts';
 
 /**
  * `setup --from` takes one of three things, and a resolver cannot tell a bare id from a
@@ -28,15 +29,15 @@ export async function profileUrl(id: string): Promise<string> {
 }
 
 /** Resolves whichever of the three forms was given, into a config layer the merge can take. */
-export async function loadProfileFrom(value: string): Promise<Partial<Config>> {
+export async function loadProfileFrom(value: string): Promise<ConfigLayer> {
   const kind = classifySource(value);
   if (kind === 'path') return readProfileFile(expandHome(value));
   return fetchProfile(kind === 'id' ? await profileUrl(value) : value, value);
 }
 
-async function readProfileFile(path: string): Promise<Partial<Config>> {
+async function readProfileFile(path: string): Promise<ConfigLayer> {
   if (!(await exists(path))) throw new Error(`No profile at ${path} — --from found no file`);
-  return asProfile(await readJson(path), path);
+  return asConfigLayer(await readJson(path), path);
 }
 
 /** Generous for one small JSON document, and short enough that a dead server is not a hang. */
@@ -45,10 +46,10 @@ const FETCH_TIMEOUT_MS = 10_000;
 /** Room for an apex/www or trailing-slash hop, few enough that a redirect loop terminates. */
 const MAX_REDIRECTS = 5;
 
-async function fetchProfile(url: string, given: string): Promise<Partial<Config>> {
+async function fetchProfile(url: string, given: string): Promise<ConfigLayer> {
   const { response, from } = await followSecurely(url, given);
   if (!response.ok) throw new Error(`--from ${given} → HTTP ${response.status} from ${from}`);
-  return asProfile(await response.json(), from);
+  return asConfigLayer(await response.json(), from);
 }
 
 /**
@@ -117,19 +118,6 @@ function redirectTarget(response: Response, from: string): string | null {
   if (response.status < 300 || response.status >= 400) return null;
   const location = response.headers.get('location');
   return location === null ? null : new URL(location, from).toString();
-}
-
-/** Parsed JSON is `unknown` until something narrows it — T1's rule at a real boundary. */
-function asProfile(parsed: unknown, from: string): Partial<Config> {
-  if (!isRecord(parsed)) throw new Error(`${from} is not a profile object`);
-  if (parsed.answers !== undefined && !isRecord(parsed.answers)) {
-    throw new Error(`${from} has an "answers" that is not an object`);
-  }
-  return parsed as Partial<Config>;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 /** `homepage` is the package's own field; S1 keeps the string out of `src/`. */
