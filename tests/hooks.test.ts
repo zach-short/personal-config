@@ -341,6 +341,99 @@ describe('a run that keeps nothing in git installs no commit guard', () => {
 });
 
 /**
+ * D25 (setup-tracks `DESIGN.md` §10.2, ratified 2026-09-22), which is the answer to the question
+ * the block above leaves open. Item 55 emptied the commit guard's slot on a no-git run on
+ * purpose; nothing went in it, because what belongs there was the design's to decide.
+ *
+ * It is keyed on **work kind, not on git**, and that is the part a later reader is most likely to
+ * "fix". `settings.json` is global (see this module's header), so the set of guards has to be
+ * right for every session the person runs at once: a non-coder who also keeps repos needs the
+ * delete guard for the folder *and* the commit guard for the repo, and both are theirs. Keying
+ * it on `usesGit: no` instead would take the delete guard away from exactly that person.
+ *
+ * On **both weights**, which is the partial supersession of D16: D16's reason for cutting the
+ * commit guard from light is that it is git-specific, and that reason does not reach a guard
+ * that is not. D16's own argument for the completion gate — a `command` hook spends zero
+ * tokens — carries this one identically.
+ */
+describe('non-code work gets a delete guard where a repo gets the commit guard', () => {
+  test('violates the old behaviour: non-code plans the delete guard and the gate', async () => {
+    const answers: Answers = {
+      ...DEFAULT_ANSWERS,
+      hooks: 'commit-guard',
+      workKind: 'non-code',
+      usesGit: 'no',
+    };
+    expect((await plannedScripts(answers)).sort()).toEqual([
+      'completion-gate.sh',
+      'delete-guard.sh',
+    ]);
+    expect(await mergedEvents(answers)).toEqual(['PreToolUse', 'Stop']);
+  });
+
+  test('violates the old behaviour: the lighter setup gets it too', async () => {
+    const scripts = await plannedScripts({
+      ...DEFAULT_ANSWERS,
+      hooks: 'commit-guard',
+      workKind: 'non-code',
+      usesGit: 'no',
+      configWeight: 'light',
+    });
+    expect(scripts.sort()).toEqual(['completion-gate.sh', 'delete-guard.sh']);
+  });
+
+  /** The case the work-kind key exists for: both guards, because both hazards are real. */
+  test('violates the old behaviour: a non-coder who also keeps repos gets both', async () => {
+    const scripts = await plannedScripts({
+      ...DEFAULT_ANSWERS,
+      hooks: 'both',
+      workKind: 'non-code',
+      usesGit: 'yes',
+    });
+    expect(scripts.sort()).toEqual([
+      'commit-guard.sh',
+      'completion-gate.sh',
+      'delete-guard.sh',
+      'session-banner.sh',
+    ]);
+  });
+
+  test('passes: code work gets no delete guard, on either weight', async () => {
+    const full = await plannedScripts({ ...DEFAULT_ANSWERS, hooks: 'both' });
+    expect(full).not.toContain('delete-guard.sh');
+    const light = await plannedScripts({
+      ...DEFAULT_ANSWERS,
+      hooks: 'both',
+      configWeight: 'light',
+    });
+    expect(light).not.toContain('delete-guard.sh');
+  });
+
+  /**
+   * The same promise the guard's own `none` case makes, on the track that gains a script here.
+   * The option's text says nothing is added to `settings.json`, and the long form's undo
+   * instructions are written against that promise.
+   */
+  test('passes: hooks none is still none for non-code work', async () => {
+    const files = await renderHooks(
+      testContext({ ...DEFAULT_ANSWERS, hooks: 'none', workKind: 'non-code', usesGit: 'no' }),
+    );
+    expect(files).toEqual([]);
+  });
+
+  /** The banner is not a guard: picking it alone must not install one by the back door. */
+  test('passes: the banner alone installs no guard of either kind', async () => {
+    const scripts = await plannedScripts({
+      ...DEFAULT_ANSWERS,
+      hooks: 'banner',
+      workKind: 'non-code',
+      usesGit: 'no',
+    });
+    expect(scripts.sort()).toEqual(['completion-gate.sh', 'session-banner.sh']);
+  });
+});
+
+/**
  * Why `gateCommand()` still returns `bash "<path>"` now that the bit is guaranteed. The entry
  * is merged into `settings.json`, and `mergeArrays` de-duplicates by exact JSON — so changing
  * the command string would not replace the installed entry, it would sit beside it and the gate
@@ -368,6 +461,37 @@ describe('the settings merge is idempotent against what a previous run wrote', (
       for (const [event, entries] of Object.entries(after.hooks)) {
         expect([event, entries.length]).toEqual([event, 1]);
       }
+      expect(change?.before).toBe(change?.after ?? '');
+    } finally {
+      if (previous === null) await rm(claudeSettingsFile(), { force: true });
+      else await writeText(claudeSettingsFile(), previous);
+    }
+  });
+
+  /**
+   * The same property with **four** scripts, where it stops being obvious: both guards match
+   * `Bash`, so a non-code run merges two entries under one matcher. They stand beside each other
+   * rather than sharing one entry's `hooks` array, which is what lets `mergeArrays` de-duplicate
+   * each by exact JSON — and what lets a person who already has the commit guard installed gain
+   * the delete guard on a re-run without acquiring a second copy of the first.
+   */
+  test('passes: two Bash guards re-merge into themselves, adding no third entry', async () => {
+    const previous = (await exists(claudeSettingsFile()))
+      ? await readText(claudeSettingsFile())
+      : null;
+    try {
+      const [merge] = (
+        await renderHooks(
+          testContext({ ...DEFAULT_ANSWERS, hooks: 'both', workKind: 'non-code' }),
+        )
+      ).filter((f) => f.strategy === 'merge-json');
+      expect(merge).toBeDefined();
+
+      await writeText(claudeSettingsFile(), (merge as NonNullable<typeof merge>).contents);
+      const [change] = await resolvePlan([merge as NonNullable<typeof merge>]);
+      const after = JSON.parse(change?.after ?? '{}') as { hooks: Record<string, unknown[]> };
+
+      expect(after.hooks.PreToolUse?.length).toBe(2);
       expect(change?.before).toBe(change?.after ?? '');
     } finally {
       if (previous === null) await rm(claudeSettingsFile(), { force: true });

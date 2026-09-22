@@ -363,6 +363,11 @@ describe('§3.1 row 4 — non-code, whatever the weight and whatever git says', 
         '/tmp/accounts/HANDOFF.md',
         '/tmp/accounts/docs/AGENT-PRACTICES.md',
         '~/.claude/hooks/personal-config/completion-gate.sh',
+        // The smallest setup still gets a guard, and this is the one line of it (D25, ratified
+        // 2026-09-22). D16 cut the *commit* guard from the lighter setup because it is
+        // git-specific; that reason does not reach a guard against `rm`, and this reader — a
+        // non-coder, on a folder — is the one with no commit to restore a deleted file from.
+        '~/.claude/hooks/personal-config/delete-guard.sh',
         '~/.claude/settings.json',
         '~/.claude/skills/close-out/SKILL.md',
         '~/.claude/skills/handoff/SKILL.md',
@@ -427,6 +432,9 @@ describe('D7 — the proof line reaches the plan, the record and every document'
     expect(targetAnswers(shared, folderPlan({ proofLine: LINE }))).toEqual({
       ...shared,
       proofLine: LINE,
+      // Item 61: `offLimits` takes the same trip, and an unanswered one is the empty string
+      // rather than an absence — which is what makes it a complete answer (D23).
+      offLimits: '',
     });
     expect(targetAnswers(shared, null)).toBe(shared);
   });

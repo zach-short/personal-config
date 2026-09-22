@@ -4,8 +4,12 @@ import { template } from '../lib/template.ts';
 import type { PlannedFile } from '../lib/types.ts';
 import { answer, planned, type RenderContext, trackOf } from './context.ts';
 
-/** Which of the three hook scripts a run installs. */
-type HookSet = { guard: boolean; banner: boolean; gate: boolean };
+/**
+ * Which of the four hook scripts a run installs. `guard` is the *commit* guard, keyed on git;
+ * `deleteGuard` is its analogue for work that is not in a repository, keyed on work kind (D25).
+ * They are separate booleans and not one three-valued key because a person can want both.
+ */
+type HookSet = { guard: boolean; deleteGuard: boolean; banner: boolean; gate: boolean };
 
 /**
  * This module owns `~/.claude/settings.json`: the hook entries and the output style both land
@@ -19,11 +23,14 @@ type HookSet = { guard: boolean; banner: boolean; gate: boolean };
 export async function renderHooks(ctx: RenderContext): Promise<PlannedFile[]> {
   const want = wantedHooks(ctx);
   const style = outputStyleFor(ctx);
-  if (!want.guard && !want.banner && !want.gate && style === null) return [];
+  if (!want.guard && !want.deleteGuard && !want.banner && !want.gate && style === null)
+    return [];
 
   const files: PlannedFile[] = [];
   if (want.guard)
     files.push(await scriptFile(ctx, 'commit-guard.sh', 'hook — blocks git commit/push'));
+  if (want.deleteGuard)
+    files.push(await scriptFile(ctx, 'delete-guard.sh', 'hook — blocks rm/rmdir/unlink'));
   if (want.banner)
     files.push(await scriptFile(ctx, 'session-banner.sh', 'hook — session start banner'));
   if (want.gate)
@@ -52,10 +59,21 @@ export async function renderHooks(ctx: RenderContext): Promise<PlannedFile[]> {
  * suppressing the guard. It is the person's answer and not `targetUsesGit()` because these
  * scripts land in `~/.claude/`, where there is no target whose `kind` could be consulted.
  *
- * **Nothing is installed in the guard's place.** Whether a no-git run wants a protective hook of
- * its own — against `rm`, or writes outside the project folder — is a real gap and is left open
- * for row 58, which amends the tracks design anyway; bolting a new mechanism on here would
- * decide it in the wrong document.
+ * **What goes in the guard's place is the delete guard** (D25, ratified 2026-09-22), which the
+ * comment here used to leave open for row 58. A repo's irreversible step is a commit; a folder's
+ * is a delete, and it has no checkout to be taken back out of.
+ *
+ * It is keyed on **work kind, not on git**, and that asymmetry with the line above is the whole
+ * decision. This file writes the *global* `settings.json` (see the module header), so the set of
+ * guards has to be right for every session the person runs, not for one target: a non-coder who
+ * also keeps repos needs the delete guard in the folder and the commit guard in the repo, and
+ * both are theirs. Keyed on `usesGit: no` it would be taken away from exactly that person.
+ *
+ * It is written on **both weights**, which is the partial supersession of D16. D16's reason for
+ * cutting the *commit* guard from light is that it is git-specific, and that reason does not
+ * reach a guard that is not; D16's own argument for the completion gate — a `command` hook is a
+ * shell script that spends zero tokens — carries this one unchanged. D16's commit-guard half is
+ * untouched: light still writes no commit guard.
  *
  * `hooks: none` is still none, on every track. The option's own text promises that nothing is
  * added to `settings.json`, and a gate installed over that promise would make the question a
@@ -63,11 +81,15 @@ export async function renderHooks(ctx: RenderContext): Promise<PlannedFile[]> {
  */
 function wantedHooks(ctx: RenderContext): HookSet {
   const choice = answer(ctx, 'hooks', 'none');
-  if (choice === 'none') return { guard: false, banner: false, gate: false };
+  if (choice === 'none')
+    return { guard: false, deleteGuard: false, banner: false, gate: false };
+  const wantsGuard = choice === 'commit-guard' || choice === 'both';
+  const deleteGuard = wantsGuard && trackOf(ctx).workKind === 'non-code';
   if (answer(ctx, 'configWeight', 'full') === 'light')
-    return { guard: false, banner: false, gate: true };
+    return { guard: false, deleteGuard, banner: false, gate: true };
   return {
-    guard: (choice === 'commit-guard' || choice === 'both') && trackOf(ctx).usesGit,
+    guard: wantsGuard && trackOf(ctx).usesGit,
+    deleteGuard,
     banner: choice === 'banner' || choice === 'both',
     gate: true,
   };
@@ -118,16 +140,27 @@ function gateCommand(): string {
   return `bash "${join(claudeHooksDir(), 'completion-gate.sh')}"`;
 }
 
+/**
+ * One entry per guard, both matching `Bash`, rather than one entry carrying two commands.
+ * `mergeArrays` de-duplicates by exact JSON, so entries that stand beside each other are matched
+ * and skipped one at a time: a person who already has the commit guard installed and gains the
+ * delete guard on a re-run acquires the new entry alone. Folded into a single entry's `hooks`
+ * array, the pair would be one value that differs from the installed one, and the merge would
+ * leave both — the commit guard firing twice on every Bash call.
+ */
+function bashGuardEntry(script: string): Record<string, unknown> {
+  return {
+    matcher: 'Bash',
+    hooks: [{ type: 'command', command: `${join(claudeHooksDir(), script)}` }],
+  };
+}
+
 function settingsMerge(ctx: RenderContext, want: HookSet, style: string | null): PlannedFile {
   const hooks: Record<string, unknown[]> = {};
-  if (want.guard) {
-    hooks.PreToolUse = [
-      {
-        matcher: 'Bash',
-        hooks: [{ type: 'command', command: `${join(claudeHooksDir(), 'commit-guard.sh')}` }],
-      },
-    ];
-  }
+  const guards: Record<string, unknown>[] = [];
+  if (want.guard) guards.push(bashGuardEntry('commit-guard.sh'));
+  if (want.deleteGuard) guards.push(bashGuardEntry('delete-guard.sh'));
+  if (guards.length > 0) hooks.PreToolUse = guards;
   if (want.banner) {
     hooks.SessionStart = [
       {
@@ -184,10 +217,11 @@ function settingsLabel(hasHooks: boolean, hasStyle: boolean): string {
 export function declinedHookHelp(plannedPaths: string[]): string | null {
   const want = {
     guard: plannedPaths.includes(join(claudeHooksDir(), 'commit-guard.sh')),
+    deleteGuard: plannedPaths.includes(join(claudeHooksDir(), 'delete-guard.sh')),
     banner: plannedPaths.includes(join(claudeHooksDir(), 'session-banner.sh')),
     gate: plannedPaths.includes(join(claudeHooksDir(), 'completion-gate.sh')),
   };
-  if (!want.guard && !want.banner && !want.gate) return null;
+  if (!want.guard && !want.deleteGuard && !want.banner && !want.gate) return null;
   return [
     `\nHooks were in that plan, so ${contractHome(claudeSettingsFile())} is untouched. This is what`,
     'a run would merge into it, if you would rather add it by hand:',
@@ -198,13 +232,17 @@ export function declinedHookHelp(plannedPaths: string[]): string | null {
   ].join('\n');
 }
 
+/** One `PreToolUse` line per guard, in the shape `settingsMerge` writes them. */
+function guardLine(script: string): string {
+  return `    { "matcher": "Bash", "hooks": [{ "type": "command", "command": "${join(claudeHooksDir(), script)}" }] }`;
+}
+
 function hookSnippet(want: HookSet): string {
   const parts: string[] = [];
-  if (want.guard) {
-    parts.push(
-      `  "PreToolUse": [\n    { "matcher": "Bash", "hooks": [{ "type": "command", "command": "${join(claudeHooksDir(), 'commit-guard.sh')}" }] }\n  ]`,
-    );
-  }
+  const guards: string[] = [];
+  if (want.guard) guards.push(guardLine('commit-guard.sh'));
+  if (want.deleteGuard) guards.push(guardLine('delete-guard.sh'));
+  if (guards.length > 0) parts.push(`  "PreToolUse": [\n${guards.join(',\n')}\n  ]`);
   if (want.banner) {
     parts.push(
       `  "SessionStart": [\n    { "matcher": "startup|resume", "hooks": [{ "type": "command", "command": "${join(claudeHooksDir(), 'session-banner.sh')}", "timeout": 5 }] }\n  ]`,
