@@ -27,6 +27,18 @@ The CLI. The working standard it installs is versioned separately — see
   backed up and `undo` restores it. The stamp's config hash is written as `00000000`, because
   the answers that produced an adapted file are unknowable and nothing reads that field on an
   adapted file. (D3.)
+- **`personal-config upgrade [path…]` — what changed in the standard since a repo adapted it.**
+  It reads the adapted file's stamp, compares it with the installed `standard/VERSION`, and prints
+  every `standard/CHANGELOG.md` entry between the two, newest first. `--write` also saves them, with
+  the steps for applying them, as `UPGRADE-PROMPT.md` at the repo root. That file goes through
+  the same stamp, preview, backup and `undo` as every other write, and its ignore line is planned
+  with it. It makes no network call and edits no adapted document. Where there is nothing adapted
+  (a short-track setup, a repo never set up, or a copy from before the marker, which gets
+  pointed at `doctor --fix`), it prints one line and exits 0. It also exits 0 when the standard
+  is behind. A stamp newer than the installed standard exits 1, because the tool is the stale
+  part. `doctor`'s advisory for an adapted file that is behind now names the command. The version
+  ordering both use moved out of the drift rule into `src/lib/semver.ts`. Scoped and ratified in
+  `docs/incomplete/upgrade-command/DESIGN.md` (D1–D4).
 
 ### Changed
 

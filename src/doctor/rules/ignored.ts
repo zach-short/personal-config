@@ -4,7 +4,12 @@ import { excludeFile, isIgnored } from '../../lib/git.ts';
 import { readTrackMode } from '../../lib/repo-config.ts';
 import type { Finding, PlannedFile } from '../../lib/types.ts';
 
-const PERSONAL = ['.personal-config.json', 'PART0-PROMPT.md'];
+/**
+ * `UPGRADE-PROMPT.md` is here for the reason `PART0-PROMPT.md` is: a prompt written into the repo
+ * to be acted on and deleted, and never part of it. `upgrade --write` plans its ignore line with
+ * it; this is what reports one a person copied in, or one left behind after the line was removed.
+ */
+const PERSONAL = ['.personal-config.json', 'PART0-PROMPT.md', 'UPGRADE-PROMPT.md'];
 
 /**
  * A personal file that git can see is a personal file about to be swept into a commit. Coverage

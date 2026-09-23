@@ -1,7 +1,8 @@
 # DESIGN — `personal-config upgrade`: ship the delta, not the text
 
-**Status:** `RATIFIED`. Opened 2026-09-23 as `SCOPE.md`; **GATE 1 completed 2026-09-23** and
-renamed the same day. Owner: Zach. One repo — `personal-config`.
+**Status:** `BUILT` 2026-09-23 (board row 69) — gates green, uncommitted at the time of writing;
+see the `As built:` notes under D1–D4 and §8. Opened 2026-09-23 as `SCOPE.md`; **GATE 1 completed
+2026-09-23** and renamed the same day. Owner: Zach. One repo — `personal-config`.
 
 **Why this exists.** Item B of the upgrade audit of 2026-09-23. Item 68 makes an adapted file
 visible again — it keeps its stamp, so its standard version is readable and `doctor` reports it
@@ -91,6 +92,13 @@ is written (U10, U12).
 nobody remembers.
 *Rejected:* E-3, appending a board item — the board is unlocked, no allocator exists for item
 numbers (H3, H4), and a `light` repo has no board at all (U14). Ratified 2026-09-23.
+*As built 2026-09-23:* `src/commands/upgrade.ts`, with the prompt rendered by
+`src/render/upgrade-prompt.ts` through `planned()`. `--write` plans the file's ignore line
+alongside it, `append-lines` into the same target `doctor --fix` would pick (`ignoreTarget`), and
+only where git does not already ignore the name. `UPGRADE-PROMPT.md` joined `doctor`'s personal-file
+list (`src/doctor/rules/ignored.ts`). **`renderIgnore` in `src/render/repo.ts` was not changed**,
+although the board row lists it (BD-2). An existing `UPGRADE-PROMPT.md` with no stamp is refused
+with exit 1 rather than overwritten, which is the stamp guard's ordinary behaviour.
 
 **D2 — The delta is the shipped changelog, sliced between the two versions.**
 Read `standard/CHANGELOG.md` from `repoRoot()` (U5), take every entry above the stamped version
@@ -103,6 +111,11 @@ release that forgets an entry produces a confident, empty prompt.
 *Closed, not weighed:* S-2, a textual diff of the boilerplate. Only the current version ships
 (U3), so it needs bundled history or a fetch, and the fetch is refused on U16 rather than
 traded against. Ratified 2026-09-23.
+*As built 2026-09-23:* `src/lib/changelog.ts`. The parser finds `## <version> — <date>` headings
+among prose lines only, so a heading quoted in a fence is body text. A level-two heading of
+any other shape ends the entry above it and is not an entry. An empty slice between two different
+versions is said out loud in both outputs ("the changelog is missing one"), which is the one
+guard this command can put on the accepted cost above.
 
 **D3 — It reports on the adapted standard, and nothing else.**
 Where a target has no adapted standard — never configured, or a short track — one clear line
@@ -117,6 +130,11 @@ know that `doctor` gives the rest. The command's own output should say so.
 into an adaptation prompt invites a session to "adapt" a document to an argument-parser fix;
 and it would re-assert a coupling between the two version lines that U17 records as
 deliberately rejected. Ratified 2026-09-23.
+*As built 2026-09-23:* the adapted standard is found by `collectDocs` (`src/doctor/scan.ts`) and
+not by `readStandardPath` (BD-1). DIAL-5's one line has three wordings. An unstamped Part 0
+adaptation is pointed at `doctor --fix`, found by reusing `unstampedAdaptation.check`. A plain
+stamp is pointed at `setup`. Anything else gets "nothing to compare". Every run ends with one
+sentence naming `doctor` for the rest, which pays the accepted cost above in the output.
 
 **D4 — The version comparator moves to `src/lib/semver.ts`, and the drift rule is rewired onto it.**
 *Defense:* two callers is the point at which it stops being one rule's private business, and L2
@@ -125,6 +143,12 @@ these two* — is the same ordering `isOlder` already implements, and "is 1.10.0
 1.9.0" is exactly the question that gets answered differently in two places.
 *Accepted cost:* it touches `src/doctor/rules/stamp-drift.ts`, which item 68 also owns. The two
 items are serialized on the board for that reason as well as for H1. Ratified 2026-09-23.
+*As built 2026-09-23:* `src/lib/semver.ts` exports `parseVersion`, `compareVersions`, `isOlder`
+and `versionsBetween`. The drift rule imports `isOlder` and its private copy is gone. The ordering
+is unchanged for every version either line has shipped. `compareVersions` returns null rather
+than 0 for an unreadable side, so "not comparable" and "equal" cannot be confused. The drift
+advisory's message now names `personal-config upgrade` where it said "the standard's changelog
+lists what changed".
 
 ### Rules that survive unchanged
 
@@ -279,3 +303,33 @@ Four questions, one batch, in chat. Every answer took the marked recommendation.
 | DIAL-8 — a shared comparator, or its own? | **`src/lib/semver.ts`**, drift rewired onto it | D4 |
 
 **Still open, deliberately:** nothing. The item is ratified and waits only on item 68.
+
+---
+
+## 8. Build-level calls — 2026-09-23, board row 69
+
+Each one implements D1–D4 and reopens none of them. Each can be reversed as described.
+
+- **BD-1 — the adapted standard is found by scan, not by `readStandardPath`.** H1 in another
+  form. Both real adapted repos this item was scoped against have no `.personal-config.json`, so
+  a lookup through the recorded path returns null for both. The command would then report
+  "not adapted" for every repo that is adapted. `collectDocs` finds the standard by name and by
+  adopted name, the same way `doctor` does. To reverse, try the recorded path first and fall
+  back to the scan.
+- **BD-2 — the ignore line is planned by `--write`, not by `setup`'s `renderIgnore`.** DIAL-6
+  says the file goes on the ignore list. `renderIgnore` lists only the names that run itself
+  plans, and its comment says why: an ignore line for a file that is never written is a claim
+  about a file. `setup` never writes `UPGRADE-PROMPT.md`, so the command that writes it plans
+  the line. `doctor`'s `ignored` rule now knows the name, so a prompt that git can still see
+  is reported like `PART0-PROMPT.md`. To reverse, add the name to `renderIgnore`'s `personal`
+  list, which moves `tests/golden/full-track.json`.
+- **BD-3 — exit codes.** Exit 0 for behind (DIAL-3), current, and every DIAL-5 case, including
+  a stamp reading `unknown`, because that is a state `doctor --fix` writes on purpose. Exit 1 for
+  a stamp newer than installed (DIAL-2), because the fix is to the tool and a loop over many repos
+  has to notice. Exit 1 for a version nothing can compare, and for a `--write` refused by the
+  stamp guard. To reverse, change `isFailure` in `src/lib/upgrade.ts`.
+- **BD-4 — the prompt asks for the entries oldest first**, although both outputs list them newest
+  first as DIAL-4 says. The list order is for reading the gap. The apply order follows the
+  order in which the entries were written.
+- **BD-5 — several adapted standards in one root get one prompt**, with one section each. The
+  case is rare, and one file per root keeps DIAL-6's single path.

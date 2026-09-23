@@ -13,6 +13,7 @@ const COMMANDS = [
   'handoff',
   'worktree',
   'context',
+  'upgrade',
   'help',
   'version',
 ] as const;
@@ -30,6 +31,7 @@ const OPTIONS = {
   force: { type: 'boolean', default: false },
   fix: { type: 'boolean', default: false },
   move: { type: 'boolean', default: false },
+  write: { type: 'boolean', default: false },
   keep: { type: 'string' },
   'projects-dir': { type: 'string' },
   from: { type: 'string' },
@@ -54,6 +56,7 @@ export function parseCli(argv: string[]): Cli {
     force: values.force === true,
     fix: values.fix === true,
     move: values.move === true,
+    write: values.write === true,
     keep: keepValue(values.keep) ?? DEFAULT_KEEP,
     projectsDir: values['projects-dir'] ?? null,
     from: values.from ?? null,

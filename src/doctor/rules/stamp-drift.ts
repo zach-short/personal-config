@@ -1,4 +1,5 @@
 import { diffSummary } from '../../lib/diff.ts';
+import { isOlder } from '../../lib/semver.ts';
 import { readStamp, type StampParts } from '../../lib/stamp.ts';
 import type { Finding } from '../../lib/types.ts';
 import type { Doc } from '../scan.ts';
@@ -84,20 +85,9 @@ function adaptedLag(doc: Doc, stamp: StampParts, current: string): Finding[] {
   return [
     advisory(
       doc,
-      `adapted from standard v${stamp.standardVersion}; v${current} is installed — the standard's changelog lists what changed, and \`setup\` will not touch an adapted file`,
+      `adapted from standard v${stamp.standardVersion}; v${current} is installed — \`personal-config upgrade\` prints what changed, and \`setup\` will not touch an adapted file`,
     ),
   ];
-}
-
-function isOlder(a: string, b: string): boolean {
-  const left = a.split('.').map(Number);
-  const right = b.split('.').map(Number);
-  for (let i = 0; i < 3; i += 1) {
-    const l = left[i] ?? 0;
-    const r = right[i] ?? 0;
-    if (l !== r) return l < r;
-  }
-  return false;
 }
 
 function finding(doc: Doc, message: string): Finding {

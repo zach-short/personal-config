@@ -180,6 +180,8 @@ export type Cli = {
   fix: boolean;
   /** `archive` only: perform the move as well as planning it. */
   move: boolean;
+  /** `upgrade` only: also write `UPGRADE-PROMPT.md` at each target's root. */
+  write: boolean;
   /** `fold` only: how many of the newest ledger steps keep their bodies. */
   keep: number;
   projectsDir: string | null;

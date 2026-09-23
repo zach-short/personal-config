@@ -7,6 +7,7 @@ import { runHandoff } from './commands/handoff.ts';
 import { runPassoff } from './commands/passoff.ts';
 import { runSetup } from './commands/setup.ts';
 import { runUndo } from './commands/undo.ts';
+import { runUpgrade } from './commands/upgrade.ts';
 import { runWorktree } from './commands/worktree.ts';
 import { runDoctor } from './doctor/index.ts';
 import { checkUsage, parseCli } from './lib/args.ts';
@@ -17,6 +18,7 @@ const HELP = `personal-config — set up an agent-driven working style in your r
 
   personal-config setup                        ask, preview, then write
   personal-config doctor                       check what is written, against the rules it follows
+  personal-config upgrade [path…]             what changed in the standard since a repo adapted it
   personal-config undo                         restore the files the last run overwrote
   personal-config passoff next                 the next OPEN board item, with its prompt
   personal-config passoff claim <n>            mark item <n> IN FLIGHT, dated
@@ -38,6 +40,7 @@ Options
   --force              skip the confirm (implies you have read the preview)
   --fix                doctor only: apply the mechanical fixes
   --move               archive only: perform the move, not just the plan
+  --write              upgrade only: also save it as UPGRADE-PROMPT.md at the repo root
   --keep <n>           fold only: ledger steps left whole, newest first  (default: 20)
   --sentinel <phrase>  context only: a phrase unique to this conversation  (required)
   --help, --version
@@ -62,6 +65,7 @@ const DISPATCH: Record<string, (cli: Cli) => Promise<number>> = {
   handoff: runHandoff,
   worktree: runWorktree,
   context: runContext,
+  upgrade: runUpgrade,
 };
 
 async function main(): Promise<number> {

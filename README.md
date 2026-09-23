@@ -209,6 +209,36 @@ other one does: backed up before it is touched, and `personal-config undo` puts 
 `--dry-run` says what it would write and writes nothing. The exit code answers for what is left,
 so a run that fixed everything exits 0.
 
+## `upgrade`
+
+```bash
+bun run src/cli.ts upgrade              # this directory
+bun run src/cli.ts upgrade ~/code/app   # or any paths
+bun run src/cli.ts upgrade . --write    # and save it as UPGRADE-PROMPT.md
+```
+
+What `doctor`'s advisory finding leads to. A standard that Part 0 adapted to your repo is a document
+an agent rewrote, so `setup` never replaces it, and a newer standard cannot simply be copied
+over it. `upgrade` reads the version from the adapted file's stamp, compares it with the
+standard this package installs, and prints every entry in the standard's changelog between the
+two, newest first. Those entries are written as instructions for a session to apply, not as
+release notes.
+
+It reads nothing from the network: the changelog ships inside the package. It edits no adapted
+document either. `--write` saves the same entries, with the steps for applying them, as
+`UPGRADE-PROMPT.md` at the repo root, for a fresh session to act on. The file is stamped,
+previewed, backed up and undoable like every other write, and its line is added to your ignore
+file. The session that applies it updates the version in the stamp, and that edit is what clears
+`doctor`'s finding.
+
+It answers for the adapted standard only. A standard `setup` wrote and nobody adapted is brought
+up to date by re-running `setup`, and `doctor` reports every generated file a re-run would change.
+Where there is no adapted standard, `upgrade` prints one line saying why and exits 0. That covers
+a short-track setup, a repo never set up, and a copy adapted before the marker existed, which
+`doctor --fix` stamps first. Being behind also exits 0, because it is work to schedule. A stamp
+newer than the installed standard exits 1: it means this copy of the tool is out of date, and
+reading the changelog backwards would tell you to undo a change.
+
 ## `passoff`, `handoff`, `archive` and `fold`
 
 Four commands for the rituals the standard asks for at the start and the end of a piece of
