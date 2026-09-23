@@ -1,6 +1,6 @@
 # DESIGN — `personal-config upgrade`: ship the delta, not the text
 
-**Status:** `BUILT` 2026-09-23 (board row 69) — gates green, uncommitted at the time of writing;
+**Status:** `BUILT` 2026-09-23 (board row 69, HANDOFF 84), commit `c94217a`, gates green;
 see the `As built:` notes under D1–D4 and §8. Opened 2026-09-23 as `SCOPE.md`; **GATE 1 completed
 2026-09-23** and renamed the same day. Owner: Zach. One repo — `personal-config`.
 
