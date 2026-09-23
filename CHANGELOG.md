@@ -118,6 +118,13 @@ The CLI. The working standard it installs is versioned separately — see
 
 ## 0.3.0 — 2026-09-18
 
+> **On `0.2.6`, recorded 2026-09-23.** The entries below were written under a `## 0.2.6` heading
+> and renamed here when `0.3.0` was cut. A `0.2.6` was nevertheless published to npm from
+> `af51dd8` on 2026-09-18, twenty-nine hours before `0.3.0`, and is still on the registry — it
+> has no heading of its own here because its content is the list below *minus* the executable-bit
+> and shebang fix, which landed in `044a71b` after it. Use `0.3.0` or later; `latest` has never
+> pointed at `0.2.6`.
+
 ### Added
 
 - **Three questions open the run, and they decide how much of the rest applies.** Whether your

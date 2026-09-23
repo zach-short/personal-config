@@ -557,6 +557,17 @@ version cannot claim. Settled: **fold `0.2.6` into `0.3.0`.** Item 36 is `SUPERS
 board — the work stands, only its version number dies — and item 45 rewrites the heading rather
 than opening a second section. Nothing named `0.2.6` is committed or published.
 
+> **Correction, 2026-09-23 (board row 64).** The last sentence is false, and was false when it
+> was written. The *decision* above stands untouched — `0.2.6` was folded into `0.3.0` and item
+> 45 rewrote the heading — but the claim about the world is withdrawn. `0.2.6` **was** committed:
+> `af51dd8`, 2026-09-17, carrying `package.json` at `0.2.6` and `catalog.json` at
+> `0.2.6+cd3836bf`. And it **was** published: `npm view personal-config time` reports `0.2.6` at
+> 2026-09-18T20:07:05Z, twenty-nine hours before `0.3.0`. The rewrite renamed the changelog
+> heading and never touched the registry, so `0.2.6` exists on npm with no changelog heading and
+> no `v0.2.6` tag — while `0.2.4` and `0.2.5` are the inverse, tagged and never published.
+> It also predates `044a71b`, so the published `0.2.6` carries the non-executable-hook defect
+> `0.3.0` fixed. Nothing is broken for anyone on `latest`. See HANDOFF 78.
+
 ---
 ## 10. Amendments — 2026-09-22
 
