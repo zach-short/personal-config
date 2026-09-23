@@ -180,6 +180,8 @@ export type Cli = {
   fix: boolean;
   /** `archive` only: perform the move as well as planning it. */
   move: boolean;
+  /** `fold` only: how many of the newest ledger steps keep their bodies. */
+  keep: number;
   projectsDir: string | null;
   /** `setup` only: a profile to start from — a local path, an https URL, or a short id. */
   from: string | null;

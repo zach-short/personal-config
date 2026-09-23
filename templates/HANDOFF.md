@@ -56,6 +56,11 @@ Numbered, append-only. **Take the next free number by reading this file**, not f
 written anywhere else — another session may have taken it. **Do not edit a step you did not
 write**; append a correction as a new step.
 
+Old steps are folded out to the archive and keep their number, title and date as one line
+(`personal-config fold ledger`). A step is addressable forever — "step 24" is how everything
+refers to that work — so the line stays even when the body goes. Standing sections
+above are never folded; they are edited in place.
+
 **1. <!-- Title. -->** Done {{DATE}}, on branch `<branch>`. <!-- What changed, why, what is now
 fixed, which questions it answered. --> **Left owed:** <!-- what the next session inherits. -->
 

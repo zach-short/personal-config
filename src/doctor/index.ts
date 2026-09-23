@@ -17,9 +17,17 @@ import { relativeDates } from './rules/relative-dates.ts';
 import { settledSupersession } from './rules/settled-supersession.ts';
 import { stampDrift } from './rules/stamp-drift.ts';
 import { stepNumbers } from './rules/step-numbers.ts';
+import { unfolded } from './rules/unfolded.ts';
 import { collectDocs, type Doc } from './scan.ts';
 
-const DOC_RULES = [relativeDates, absenceEvidence, placeholders, stepNumbers, boardStatus];
+const DOC_RULES = [
+  relativeDates,
+  absenceEvidence,
+  placeholders,
+  stepNumbers,
+  boardStatus,
+  unfolded,
+];
 
 export type DoctorReport = { findings: Finding[]; checked: number };
 

@@ -7,7 +7,7 @@ what "done" means here, and the writing habits that keep the record honest. It i
 start of every session, so it is kept short on purpose — a longer document would cost more to
 read than most of the work it governs.
 
-**Standard version: 1.1.0**
+**Standard version: 1.2.0**
 
 **Pre-filled by `personal-config` on {{DATE}}.** Every name below is this project's own, and
 nothing in this file is left for a later session to fill in. Read `{{ROUTER_FILE}}` first — the
@@ -94,7 +94,12 @@ is not in git, it is also the only history there is. Sections, in this order:
   file**, never from a number written elsewhere; **never edit a step you did not write** — append
   a correction as a new step.
 
-Standing sections are edited in place when they go stale. The log is only ever added to.
+Standing sections are edited in place when they go stale. The log is only ever added to — but
+once it runs past twenty or so steps, the older ones **keep their number, title and date and
+lose the rest** to a companion file beside the ledger. The ledger is read in full at the start
+of every session, so its length is what every session pays. Two things make it safe: copy the
+text out, check it arrived, and only then cut; and **never drop a number**. "Step 24" is how
+everything refers to that work, and a number that stops resolving takes every reference with it.
 
 ## What is next — `{{BOARD_FILE}}`
 

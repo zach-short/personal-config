@@ -2,6 +2,7 @@
 import { runArchive } from './commands/archive.ts';
 import { runCatalog } from './commands/catalog.ts';
 import { runContext } from './commands/context.ts';
+import { runFold } from './commands/fold.ts';
 import { runHandoff } from './commands/handoff.ts';
 import { runPassoff } from './commands/passoff.ts';
 import { runSetup } from './commands/setup.ts';
@@ -9,6 +10,7 @@ import { runUndo } from './commands/undo.ts';
 import { runWorktree } from './commands/worktree.ts';
 import { runDoctor } from './doctor/index.ts';
 import { checkUsage, parseCli } from './lib/args.ts';
+import type { Cli } from './lib/types.ts';
 import { version } from './lib/version.ts';
 
 const HELP = `personal-config — set up an agent-driven working style in your repos
@@ -20,6 +22,7 @@ const HELP = `personal-config — set up an agent-driven working style in your r
   personal-config passoff claim <n>            mark item <n> IN FLIGHT, dated
   personal-config handoff step                 the next free ledger step number
   personal-config archive <slug>               plan Part 7's archiving steps for closed work
+  personal-config fold [board|ledger]          move closed prompts and old step bodies to the archive
   personal-config worktree <lane>              plan a lane's worktree, with its checkout recipe
   personal-config context --sentinel <phrase>  this session's context size, from its transcript
   personal-config catalog                      regenerate catalog.json — the questions, as data
@@ -35,12 +38,31 @@ Options
   --force              skip the confirm (implies you have read the preview)
   --fix                doctor only: apply the mechanical fixes
   --move               archive only: perform the move, not just the plan
+  --keep <n>           fold only: ledger steps left whole, newest first  (default: 20)
   --sentinel <phrase>  context only: a phrase unique to this conversation  (required)
   --help, --version
 
 Nothing leaves your machine — --from <url|id> is the one exception, and it only fetches the
 profile you ask for. Every run previews the whole file tree before writing, backs up anything it
 overwrites, and can be undone.`;
+
+/**
+ * Which function runs a command, as a table rather than a chain of comparisons. `catalog` and
+ * `undo` are wrapped because neither takes the parsed argv — `undo` takes a prompter, and
+ * handing it a `Cli` would typecheck nowhere but read as if it might.
+ */
+const DISPATCH: Record<string, (cli: Cli) => Promise<number>> = {
+  setup: runSetup,
+  catalog: () => runCatalog(),
+  doctor: runDoctor,
+  undo: () => runUndo(),
+  archive: runArchive,
+  fold: runFold,
+  passoff: runPassoff,
+  handoff: runHandoff,
+  worktree: runWorktree,
+  context: runContext,
+};
 
 async function main(): Promise<number> {
   const argv = process.argv.slice(2);
@@ -64,18 +86,11 @@ async function main(): Promise<number> {
     console.log(HELP);
     return 0;
   }
-  if (cli.command === 'setup') return runSetup(cli);
-  if (cli.command === 'catalog') return runCatalog();
-  if (cli.command === 'doctor') return runDoctor(cli);
-  if (cli.command === 'undo') return runUndo();
-  if (cli.command === 'archive') return runArchive(cli);
-  if (cli.command === 'passoff') return runPassoff(cli);
-  if (cli.command === 'handoff') return runHandoff(cli);
-  if (cli.command === 'worktree') return runWorktree(cli);
-  if (cli.command === 'context') return runContext(cli);
+
+  const run = DISPATCH[cli.command];
   // Unreachable: `checkUsage` has already refused anything not in COMMANDS. Kept as a non-zero
   // backstop, because the one thing this must never do again is exit 0 without running.
-  return 1;
+  return run === undefined ? 1 : run(cli);
 }
 
 /**

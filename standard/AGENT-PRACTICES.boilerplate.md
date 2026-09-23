@@ -20,7 +20,7 @@ here, and the adapted copy is built on the answer. If an installer put this file
 left a prompt saying which of Part 0's steps are already done; follow that prompt rather than
 this paragraph.
 
-**Standard version: 1.1.0**
+**Standard version: 1.2.0**
 
 **Adapted: not yet — run Part 0.**
 
@@ -268,7 +268,9 @@ when they go stale. Sections, in this order:
   what is now fixed, which decisions it answered>`. Steps are addressable forever — "HANDOFF
   24" is how everything else refers to work. Two rules: **take the next free number by reading
   the file, not by trusting one written elsewhere** (another session may have taken it), and
-  **do not edit a step you did not write** — append a correction as a new step.
+  **do not edit a step you did not write** — append a correction as a new step. Old steps lose
+  their bodies to the archive and keep their number, title and date as one line (Part 7);
+  because a step is addressable forever, that line is what keeps the citation resolving.
 - **Style rules.** Short; the language-level conventions live wherever Part 8.1 puts them.
 
 ### `PASSOFF.md` — what is next
@@ -288,6 +290,12 @@ A board plus one standalone prompt per item (Part 3). The board is the paralleli
 - **A prompt rots the moment it is executed.** The ledger step is the truth; the prompt is the
   ask. Where a DONE prompt turns out to describe the work wrongly, say so on the board rather
   than editing the prompt into a lie.
+- **A `DONE` item's prompt leaves the board; its row never does.** The row is the permanent
+  part — the collision check, the pointer at the ledger step, and the item number, which
+  nothing may ever reuse. The prompt under it is the part that grows without bound, and it is
+  dead by the rule directly above. Fold it out at close-out (Part 7). **`SUPERSEDED` and
+  `SETTLED AS NO` keep their sections**: the first names what replaced the item, the second
+  carries the reason it is not to be re-proposed, and neither fact is written anywhere else.
 - **An item exists before work on it starts:** a row, plus a dated paragraph under the board
   saying why it exists and what it came out of. An item settled as *no* stays on the board with
   its reason, so it is not re-proposed.
@@ -845,6 +853,43 @@ When every phase is checked off:
 6. **Anything the doc leaves behind that still governs the code** moves to "Standing rules that
    outlived their doc" (8.3). A rule nobody can find is a rule nobody follows.
 7. Update the memory entry (Part 10) with the final state and what was left owed.
+
+## Folding (Profile L)
+
+A ledger and a board only ever grow, and the ledger is read in full at the start of every
+session. That makes their size a Part 5 problem rather than a tidiness one: left alone for a
+few months they become the largest thing a session reads, ahead of any code.
+
+Two things in them are already dead by this standard's own rules, and folding means moving
+those two to `{{ARCHIVE_HOME}}` and nothing else.
+
+1. **A `DONE` item's prompt.** §2.1 already says it rots the moment it is executed and that
+   the ledger step is the record. The row stays, with its pointer; so do the sections under
+   `SUPERSEDED` and `SETTLED AS NO`.
+2. **A ledger step's body**, for every step but the most recent twenty or so. **The number,
+   the title and the date stay, as one line.** That is not politeness. Steps are addressable
+   forever, so a fold that dropped the number would break every `DONE — <step>` on the board
+   and every citation in every other document, and would hand the next session a number the
+   log had already spent.
+
+Standing sections — Environment, Settled, the code map, the invariants — are never folded.
+They are edited in place when they go stale, which is what makes them the part that carries
+truth forward while the log carries history.
+
+**The order is the whole of the safety argument, and it is step 3 above applied to text:
+append to the archive, read it back, and only then cut.** A ledger and a board are routinely
+untracked — they are personal process rather than part of the repo — so git is holding no copy
+of what is about to be deleted.
+
+What says it is time is not a feeling but arithmetic: what a fold would remove, measured
+against the ceiling of whatever tier reads these files (Part 5).
+
+> **Worked example — the repo this standard ships from.** Its board carried 62 rows in 65
+> lines and 3,794 lines of prompts beneath them, every row already closed; its ledger carried
+> 77 steps in 5,168 lines. The two were ~168k tokens together — more than half a Default
+> session's runway before a line of code was read, and past the Deep tier's landing threshold
+> outright. Folding both took them to ~49k and changed no row and no step number
+> (measured 2026-09-23).
 
 **This standard applies forward from the date it is adopted.** Work archived before then is a
 historical record, not a conversion target: reshaping it to match a standard written after it

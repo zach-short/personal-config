@@ -7,6 +7,32 @@ The CLI that renders them is versioned separately (see the root `CHANGELOG.md`).
 in another repo carries the version it was adapted from; `personal-config doctor` reports a copy
 whose stamp is older than `standard/VERSION`.
 
+## 1.2.0 — 2026-09-23
+
+One rule added, in the two places it applies. Nothing existing changed in substance.
+
+- **Folding, in Part 7** — a section beside "Archiving (Profile P)" saying what leaves a ledger
+  and a board and what never does. Two things go: a `DONE` item's prompt, which §2.1 already
+  called dead the moment it was executed, and a ledger step's body once it is older than the
+  most recent twenty or so. Everything else stays. The row stays, because it is the collision
+  check, the pointer at the ledger step and an item number nothing may reuse. A step's number,
+  title and date stay as one line, because steps are addressable forever and dropping the
+  number would break every `DONE — <step>` on the board, every citation in every other
+  document, and the next session's read for a free number. `SUPERSEDED` and `SETTLED AS NO`
+  keep their sections — the replacement and the reason are written nowhere else. Standing
+  sections are never folded at all.
+- **The order is stated as the safety rule it is**: append to the archive, read it back, and
+  only then cut. This is Part 7's existing step 3 — "verify each file actually arrived before
+  trusting the deletion" — applied to text rather than to files, and it matters more here,
+  because a ledger and a board are routinely untracked and git is holding no copy.
+- **§2.1 gains the two consequences** where a reader of that section will hit them: one bullet
+  under the board, one sentence in the step-log bullet.
+
+Why it exists: the two documents are read at the start of every session, so their size is a
+Part 5 problem, not a tidiness one. In the repo this standard ships from they had reached ~168k
+tokens together — more than half a Default session's runway before any code was read, and past
+the Deep tier's landing threshold outright (measured 2026-09-23).
+
 ## 1.1.0 — 2026-09-19
 
 One document added. Nothing in the long one changed but its version line.

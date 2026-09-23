@@ -3,6 +3,40 @@
 The CLI. The working standard it installs is versioned separately — see
 [`standard/CHANGELOG.md`](standard/CHANGELOG.md).
 
+## Unreleased
+
+### Added
+
+- **`personal-config fold` — closing a piece of work, for a ledger and a board.** A ledger and
+  a board only grow, and the ledger is read in full at the start of every session, so their size
+  is a Part 5 problem rather than a tidiness one: this repo's own pair had reached ~168k tokens,
+  more than half a Default session's runway before a line of code is read (measured 2026-09-23).
+  `fold` moves the two things the standard already called dead. A `DONE` item's prompt goes to
+  the archive and **its row stays**, with its pointer; `SUPERSEDED` and `SETTLED AS NO` keep
+  their sections, because `doctor` reads those for the replacement and the reason and they are
+  written nowhere else. Step bodies older than the newest `--keep` (20) go too, and **every step
+  keeps its number, title and date as one line** — steps are addressable forever, so the stub is
+  what keeps `DONE — HANDOFF n`, every citation, and `handoff step`'s next free number working.
+  Standing sections are never folded.
+- **The order is the safety rule**: it appends to the archive, reads it back to verify every
+  block arrived, and only then cuts — Part 7 step 3 applied to text, which matters here because
+  a ledger and a board are routinely untracked and git holds no copy. Both writes go through the
+  usual backup, `undo` restores the live documents, and a second fold appends nothing the archive
+  already holds, so undo-then-fold cannot duplicate.
+- **A `doctor` rule, `unfolded`**, reporting a board or a log carrying more than 400 foldable
+  lines — one finding per document, not one per item, and silent below the threshold so the item
+  that just landed can still be read by the session that follows it.
+
+### Changed
+
+- **The working standard is 1.2.0** — Part 7 gains *Folding (Profile L)* beside *Archiving
+  (Profile P)*, §2.1 gains the two consequences, and the short form says the same in a sentence.
+  See [`standard/CHANGELOG.md`](standard/CHANGELOG.md).
+- **The `close-out` skill renders a fold step**, and the `HANDOFF.md` and `PASSOFF.md` templates
+  say what leaves each document and what never does.
+- **`main()` dispatches from a table** rather than a chain of comparisons, which is what kept
+  adding a tenth command inside the complexity ceiling.
+
 ## 0.4.0 — 2026-09-23
 
 ### Added

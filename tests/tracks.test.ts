@@ -118,6 +118,16 @@ const COMMIT_PARAGRAPH = '**Commits are the owner’s.**';
  * carry `models.light` and `modelLightEnabled`, empty and `no` respectively on `EVERYTHING`'s
  * answers, which never opt in). All three are content changes to files this test already covers,
  * not new files, so they are corrected here rather than exempted.
+ *
+ * **Four more moved on 2026-09-23, standard 1.2.0 — the folding rule.**
+ * `skills/close-out/SKILL.md` gained a fold step; `HANDOFF.md` and `PASSOFF.md` gained the
+ * sentence saying what leaves each document and what never does; and the adapted standard
+ * (`docs/AGENT-PRACTICES.md`, or `AGENT-PRACTICES.local.md` where the repo is someone else's)
+ * carries Part 7's new *Folding (Profile L)* section and §2.1's two consequences. The standard's
+ * own version line is normalised away above, so that fourth hash moved on the section's content
+ * and not on the bump. All four are content changes to files this test already covers — 62 keys
+ * before and after — so they are corrected here rather than exempted, and a file appearing or
+ * disappearing would still fail.
  */
 describe('§3.1 row 1 — code + full + git is the 0.3.0 output, byte for byte bar one skill', () => {
   const FULL = answersFor(CODE_FULL_GIT);

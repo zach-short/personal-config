@@ -1,5 +1,6 @@
 import { mkdir, readdir, rename, stat } from 'node:fs/promises';
 import { dirname, join, relative } from 'node:path';
+import { withIndexLine } from '../lib/archive-index.ts';
 import { confirmWrite } from '../lib/ask.ts';
 import { today } from '../lib/date.ts';
 import { readText } from '../lib/disk.ts';
@@ -419,19 +420,6 @@ async function archiveIndexEdit(plan: Plan): Promise<PlannedFile[]> {
 
   const entry = `- **${plan.target.name}${slash}** ✅ — ${plan.topic}. Closed ${today()}, last commit \`${plan.commit ?? 'none'}\`.`;
   return [edit(path, 'archive index — one line for this entry', withIndexLine(text, entry))];
-}
-
-function withIndexLine(text: string, entry: string): string {
-  const lines = text.split('\n');
-  const start = lines.findIndex((line) => /^##\s+closed\b/i.test(line));
-  if (start === -1) return `${text.replace(/\n+$/, '')}\n\n${entry}\n`;
-
-  const rest = lines.slice(start + 1);
-  const next = rest.findIndex((line) => /^##\s/.test(line));
-  const end = next === -1 ? lines.length : start + 1 + next;
-  const head = lines.slice(0, end);
-  while (head.length > start + 1 && (head.at(-1) ?? '').trim() === '') head.pop();
-  return `${[...head, entry, ...lines.slice(end)].join('\n').replace(/\n+$/, '')}\n`;
 }
 
 /**

@@ -186,9 +186,9 @@ edits. The write goes the same way every other one does: backed up before it is 
 `personal-config undo` puts it back. `--dry-run` says what it would append and writes nothing.
 The exit code answers for what is left, so a run that fixed everything exits 0.
 
-## `passoff`, `handoff` and `archive`
+## `passoff`, `handoff`, `archive` and `fold`
 
-Three commands for the rituals the standard asks for at the start and the end of a piece of
+Four commands for the rituals the standard asks for at the start and the end of a piece of
 work — the parts people skip because they are fiddly, not because they are unimportant.
 
 ```bash
@@ -226,6 +226,31 @@ only once the folder is actually in the archive — a line pointing at a folder 
 is worse than no line at all — so the shape is: run it, move it, run it again. `--move` does
 both halves. `<slug>` is a folder under `docs/incomplete/` or any path in the repo, so it serves
 a project-folder repo and a ledger-and-board one alike.
+
+```bash
+bun run src/cli.ts fold                 # both halves, preview first
+bun run src/cli.ts fold board           # just the closed prompts
+bun run src/cli.ts fold ledger --keep 30
+```
+
+Part 7's other half, for a ledger and a board. Both files only grow, and the ledger is read in
+full at the start of every session, so their size is a context-budget problem rather than a
+tidiness one — this repo's own pair had reached ~168k tokens (2026-09-23).
+
+`fold` moves the two things the standard already calls dead. A `DONE` item's prompt goes to
+`<archive home>/PASSOFF-closed.md`; **its row stays**, with its pointer at the ledger step, and
+so does every `SUPERSEDED` and `SETTLED AS NO` section, because the replacement and the reason
+are written nowhere else. Ledger step bodies older than the newest `--keep` (20 by default) go
+to `<archive home>/HANDOFF-log.md`, and **each step keeps its number, title and date as one
+line** — a step is cited forever, so dropping the number would break every `DONE — HANDOFF n`
+on the board and hand the next session a number the log had already spent. Standing sections
+are never touched.
+
+It appends to the archive, reads it back to check every block arrived, and only then cuts.
+That order is the point: a ledger and a board are usually untracked, so git is holding no copy
+of what is about to go. Both writes are backed up, `personal-config undo` restores the live
+documents, and folding again appends nothing the archive already holds. `doctor` reports a
+board or a log carrying more than 400 foldable lines.
 
 ## `worktree` and `context`
 

@@ -32,3 +32,7 @@ Lanes run in parallel, each in its own worktree; items inside a lane run in orde
      literal gate commands, what the owner should see, and the commit step. -->
 
 **Do not paste a prompt marked DONE** — a fresh session would build it again.
+
+A `DONE` item's prompt is folded out to the archive at close-out; its row stays here forever,
+with its pointer at the ledger step. `SUPERSEDED` and `SETTLED AS NO` keep their sections —
+the replacement and the reason are written nowhere else. `personal-config fold board` does it.

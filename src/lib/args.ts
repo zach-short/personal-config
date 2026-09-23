@@ -1,4 +1,5 @@
 import { parseArgs } from 'node:util';
+import { DEFAULT_KEEP } from './fold.ts';
 import type { Cli } from './types.ts';
 
 const COMMANDS = [
@@ -7,6 +8,7 @@ const COMMANDS = [
   'doctor',
   'undo',
   'archive',
+  'fold',
   'passoff',
   'handoff',
   'worktree',
@@ -28,6 +30,7 @@ const OPTIONS = {
   force: { type: 'boolean', default: false },
   fix: { type: 'boolean', default: false },
   move: { type: 'boolean', default: false },
+  keep: { type: 'string' },
   'projects-dir': { type: 'string' },
   from: { type: 'string' },
   sentinel: { type: 'string' },
@@ -51,6 +54,7 @@ export function parseCli(argv: string[]): Cli {
     force: values.force === true,
     fix: values.fix === true,
     move: values.move === true,
+    keep: keepValue(values.keep) ?? DEFAULT_KEEP,
     projectsDir: values['projects-dir'] ?? null,
     from: values.from ?? null,
     sentinel: values.sentinel ?? null,
@@ -77,8 +81,29 @@ export function checkUsage(argv: string[]): string | null {
   }
 
   const [first] = positionals;
-  if (first === undefined || isCommand(first)) return null;
+  if (first === undefined || isCommand(first)) return keepProblem(argv);
   return commandProblem(first);
+}
+
+/**
+ * `--keep` is parsed as a string because `parseArgs` has no integer type, so the one thing it
+ * cannot catch is the one mistake worth catching: `--keep all` would otherwise fall through to
+ * the default and quietly fold fifty steps the person meant to keep.
+ */
+function keepProblem(argv: string[]): string | null {
+  const raw = parseArgs({ args: argv, allowPositionals: true, options: OPTIONS }).values.keep;
+  if (raw === undefined || keepValue(raw) !== null) return null;
+  return [
+    `personal-config: --keep needs a whole number of steps, not '${raw}'`,
+    '',
+    'Run `personal-config --help` to see the options it takes.',
+  ].join('\n');
+}
+
+function keepValue(raw: string | undefined): number | null {
+  if (raw === undefined) return null;
+  const value = Number(raw);
+  return Number.isInteger(value) && value >= 0 ? value : null;
 }
 
 /**

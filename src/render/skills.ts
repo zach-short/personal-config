@@ -109,7 +109,9 @@ function closeOutVars(shape: SkillShape): Record<string, string> {
     CLOSE_OUT_TRIGGER: trigger(shape),
     WORK_UNIT: workUnit(shape),
     RECORD_WHERE: recordWhere(shape),
-    RECORD_STEPS: [recordStep(shape), landedEarly(shape)].join('\n'),
+    RECORD_STEPS: [recordStep(shape), foldStep(shape), landedEarly(shape)]
+      .filter((step) => step !== '')
+      .join('\n'),
     BLOCK_COUNT: blocks.length === 3 ? 'three' : 'two',
     HAND_BACK_BLOCKS: blocks.join('\n'),
     PROOF_SENTENCE: proofSentence(shape),
@@ -155,6 +157,27 @@ function phaseHeader(): string {
     '- **The phase header** becomes `**BUILT <date>, commit <hash>**`, plus any deviation,',
     '  discovery or re-ordering this phase forced on later phases. The design gets its',
     "  `As built:` paragraphs. The runtime-pass file gets this phase's entries.",
+  ].join('\n');
+}
+
+/**
+ * The fold, as a close-out step (standard 1.2.0, Part 7).
+ *
+ * Absent for the project-folder profile, which has no ledger and no board to fold: its closed
+ * work is archived whole by Part 7's other half, and a step telling it to trim a log it does
+ * not keep is a step that reads as a mistake in the document.
+ */
+function foldStep(shape: SkillShape): string {
+  if (shape.folders) return '';
+  const dead = shape.board
+    ? "this item's prompt, now its row says `DONE`, and any step body older than the newest twenty"
+    : 'any step body older than the newest twenty';
+  return [
+    `- **Fold what is now dead** — ${dead}.`,
+    '  `personal-config fold` does it: the row keeps its pointer and a step keeps its number,',
+    '  title and date as one line, because every citation depends on that line still being there.',
+    '  It appends to the archive and reads it back before it cuts, which is the only safe order',
+    '  for a document git is not holding a copy of.',
   ].join('\n');
 }
 
