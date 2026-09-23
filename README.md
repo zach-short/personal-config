@@ -300,10 +300,11 @@ bun run catalog
 
 Writes `catalog.json` in the repo root: every question the wizard asks — its text, its options
 with their examples, and the condition deciding whether it is asked at all — plus the long forms
-from [`docs/choices/`](docs/choices), keyed by the id each question cites. Thirty-five questions
-and thirty-three long forms as of `0.3.0+169b0409` — and nobody is asked all thirty-five, because
-twenty-one of them carry a condition: a code setup with the whole method in git is asked
-thirty-three, and someone doing other work on the lighter setup is asked fourteen.
+from [`docs/choices/`](docs/choices), keyed by the id each question cites. Thirty-nine questions
+and thirty-five long forms as of `0.4.0+e2b55565` — and nobody is asked all thirty-nine, because
+twenty-seven of them carry a condition: a code setup with the whole method in git is asked
+thirty-four, and someone doing other work on the lighter setup is asked sixteen, or fourteen if
+they keep none of it in git.
 
 It exists so another surface can ask the same questions without importing the wizard, which is
 not browser-safe. The stamp is the package version plus a hash of the questions it was built

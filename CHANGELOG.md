@@ -3,7 +3,7 @@
 The CLI. The working standard it installs is versioned separately — see
 [`standard/CHANGELOG.md`](standard/CHANGELOG.md).
 
-## [Unreleased]
+## 0.4.0 — 2026-09-23
 
 ### Added
 
@@ -24,6 +24,23 @@ The CLI. The working standard it installs is versioned separately — see
 - **A plain folder is planned as a folder.** Its router and standard take the plain names rather
   than the untracked ones, and no ignore entries are planned for a `.git` it does not have.
   `doctor` asks git about ignore coverage only in a repository.
+- **A non-coder is asked two questions a repository never needed.** *When your agent changes a
+  document, should it make the change, or show it to you first?* is the analogue of the commit
+  policy for work that has no commits — the agent edits and names every change, shows you first,
+  or follows no rule — and *Is there anything here the agent must not read or copy?* is a free
+  line carried per target into the router and the ledger. Both are asked on the *other work*
+  track only; a code setup is unchanged and asks neither.
+- **An opt-in fourth model tier, below Mechanical.** *Do you want a narrow tier below Mechanical,
+  for work where you can tell immediately if it went wrong?* defaults to **no**, and answering
+  yes asks which model fills it and adds a fourth row to `model-routing.md`'s table. Both
+  questions are asked on the full weight only, where that table is written — a lighter setup has
+  no table for a row to appear in. Everyone content with three tiers keeps exactly today's three.
+- **A delete guard, for work that is not code.** The commit guard protects the irreversible step
+  in a repository; *other work* has no such step, so the same hook answer now installs a
+  `PreToolUse` guard over `rm`, `rmdir` and `unlink` instead — reading each shell segment
+  separately, so `ls && rm x` is two commands and both are checked, and looking through `sh -c`
+  and `sudo` rather than past them. It is keyed on the kind of work, not on git, and is installed
+  on both weights. *No hooks* still writes nothing.
 
 ### Fixed
 
@@ -69,6 +86,13 @@ The CLI. The working standard it installs is versioned separately — see
   ledger's, and no board where none was written. A code setup with the whole method in git reads
   what it read before, except that the hand-back no longer asks a ledger for the runtime-pass
   entries only a project-folder setup ever had.
+- **A non-code target kept in git was never asked who commits, and silently defaulted.** The
+  previous release confined the commit-policy question to code work in git, on the reasoning that
+  `commits.md` is only written there. But the rendered commit line is also read by the router, the
+  standard and the short standard for *any* git target, non-code included — so someone keeping
+  documents in a repository was given `print-blocks` without being asked, which is a real choice
+  taken away rather than a question saved. The question is now asked wherever git is in play,
+  whatever the work is.
 
 ### Changed
 
@@ -85,6 +109,12 @@ The CLI. The working standard it installs is versioned separately — see
 - **`standard/VERSION` is 1.1.0.** One number covers both forms of the standard, so every file
   generated before this reports a standard behind the current one until `setup` is re-run — the
   same as any standard bump, and by design.
+- **Four questions a non-coder reads were reworded, and two more stopped being asked off the code
+  track.** The strings for where your projects live, what kind of work this is, whether you keep
+  it in git and what a hook should enforce were written for someone setting up a repository, and
+  read as jargon to anyone else; they now say the same thing in plain words. Where closed work
+  goes and whether one person or several decide are asked on the code track at the full weight
+  only — both write into documents a lighter or non-code setup never gets.
 
 ## 0.3.0 — 2026-09-18
 
