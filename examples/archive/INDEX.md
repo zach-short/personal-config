@@ -1,4 +1,4 @@
-<!-- personal-config v0.1.0 · 2026-09-15 · config e3a91f04 · standard v1.0.0 -->
+<!-- personal-config v0.5.0 · 2026-09-23 · config 11fe5083 · standard v1.2.0 · adapted -->
 # archive-leaflet — index
 
 Docs pulled out of the `leaflet` repo when they closed. One folder per topic, flat, no nesting.

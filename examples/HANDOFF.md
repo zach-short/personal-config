@@ -1,4 +1,4 @@
-<!-- personal-config v0.1.0 · 2026-09-15 · config e3a91f04 · standard v1.0.0 -->
+<!-- personal-config v0.5.0 · 2026-09-23 · config 11fe5083 · standard v1.2.0 · adapted -->
 # HANDOFF — leaflet (the ledger)
 
 **What is true.** Read first, every session. Append-only in the step log; standing sections are
@@ -87,6 +87,11 @@ on a write to the counter — the counter is the least important thing on that p
 
 Numbered, append-only. **Take the next free number by reading this file.** Do not edit a step
 you did not write; append a correction as a new step.
+
+Old steps are folded out to the archive and keep their number, title and date as one line
+(`personal-config fold ledger`). A step is addressable forever — "step 4" is how everything
+refers to that work — so the line stays even when the body goes. Standing sections above are
+never folded; they are edited in place.
 
 **1. Opened the ledger and the board.** Done 2026-08-30, on `main`. Ran every gate once and
 recorded the real output above. Settled the short-code decision with the owner.

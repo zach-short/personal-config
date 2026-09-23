@@ -1,4 +1,4 @@
-<!-- personal-config v0.1.0 · 2026-09-15 · config e3a91f04 · standard v1.0.0 -->
+<!-- personal-config v0.5.0 · 2026-09-23 · config 11fe5083 · standard v1.2.0 · adapted -->
 # PASSOFF — leaflet (the board)
 
 **What is next.** One row per item, one standalone prompt per item below the board. What is true
@@ -24,6 +24,11 @@ Lanes run in parallel, each in its own worktree; items inside a lane run in orde
 | 6 | CI, and the web test glob | `DONE — HANDOFF 4` | Default | A | — | `.github/workflows/ci.yml` |
 
 **Do not paste a prompt marked DONE** — a fresh session would build it again.
+
+A `DONE` item's prompt is folded out to the archive at close-out; its row stays here forever,
+with its pointer at the ledger step. `SUPERSEDED` and `SETTLED AS NO` keep their sections —
+the replacement and the reason are written nowhere else. `personal-config fold board` does it.
+Item 6 is folded: its row points at HANDOFF 4, and its prompt no longer lives here.
 
 ---
 
