@@ -39,12 +39,15 @@ describe('the catalog carries the whole question set', () => {
   //
   // 35 → 37 on 2026-09-22, item 61: `off-limits` in `discover` and `edit-policy` in
   // `practices`, the two questions a non-coder is asked and a programmer is not (D22, D23).
-  test('37 questions, phased 14 / 8 / 15', async () => {
+  //
+  // 37 → 39, same day, the `haiku-tier` effort: `model-light-enabled` and `model-light` in
+  // `you`, the opt-in fourth tier (D1).
+  test('39 questions, phased 16 / 8 / 15', async () => {
     const catalog = await committed();
     const byPhase: Record<string, number> = {};
     for (const q of catalog.questions) byPhase[q.phase] = (byPhase[q.phase] ?? 0) + 1;
-    expect(catalog.questions.length).toBe(37);
-    expect(byPhase).toEqual({ you: 14, discover: 8, practices: 15 });
+    expect(catalog.questions.length).toBe(39);
+    expect(byPhase).toEqual({ you: 16, discover: 8, practices: 15 });
   });
 
   test('every question the wizard asks is present, in the wizard`s order', async () => {
@@ -104,10 +107,20 @@ describe('the conditionals and the one hidden question survive the trip', () => 
       'commit-policy': gitOnly,
       attribution: codeAndGit,
       // The tier table in `model-routing.md` is written on the weight alone, non-code
-      // included, so these three are *not* the short-track negation — see `you.ts`.
+      // included, so these four are *not* the short-track negation — see `you.ts`.
       'model-deep': fullWeight,
       'model-fast': fullWeight,
+      'model-light-enabled': fullWeight,
       'model-routing': fullWeight,
+      // `model-light` adds a second condition on top of the weight: the opt-in answer itself
+      // (`haiku-tier` D1). Asked only when both are true, so the recommended `no` never surfaces
+      // a text question for a tier nobody wanted.
+      'model-light': {
+        all: [
+          { key: 'configWeight', is: 'full' },
+          { key: 'modelLightEnabled', is: 'yes' },
+        ],
+      },
       'docs-mcp': codeOnly,
       'work-profile': codeAndFull,
       // D26, the two item 56's audit did not count (G23, G24): both were asked on every
@@ -231,6 +244,8 @@ describe('what each of the five shapes is actually asked', () => {
   const DEAD_ON_A_SHORT_TRACK = [
     'model-deep',
     'model-fast',
+    'model-light-enabled',
+    'model-light',
     'model-routing',
     'work-profile',
     // Item 60, D26.
@@ -238,10 +253,14 @@ describe('what each of the five shapes is actually asked', () => {
     'mode',
   ];
 
+  // 33 → 34, the `haiku-tier` effort: `model-light-enabled` joins the always-asked-on-full-weight
+  // group. `model-light` itself is not asked here — `mode: 'solo'` is the only answer this
+  // probe supplies beyond the three track axes, so `modelLightEnabled` is unanswered and the
+  // opt-in's own condition is false.
   test('code + full + git is asked everything — §3.1 row 1 renders 0.2.5 byte for byte', async () => {
     const ids = await asked({ workKind: 'code', configWeight: 'full', usesGit: 'yes' });
 
-    expect(ids).toHaveLength(33);
+    expect(ids).toHaveLength(34);
     expect(ids).toContain('commit-policy');
     expect(ids).toContain('model-routing');
   });
@@ -249,8 +268,8 @@ describe('what each of the five shapes is actually asked', () => {
   test('code + full without git drops the two commit questions and nothing else', async () => {
     const ids = await asked({ workKind: 'code', configWeight: 'full', usesGit: 'no' });
 
-    // 33 − `track-mode`, which has always been git-gated, − the two of this row.
-    expect(ids).toHaveLength(30);
+    // 34 − `track-mode`, which has always been git-gated, − the two of this row.
+    expect(ids).toHaveLength(31);
     expect(ids).not.toContain('commit-policy');
     expect(ids).not.toContain('attribution');
     expect(ids).toContain('docs-mcp');
@@ -281,7 +300,12 @@ describe('what each of the five shapes is actually asked', () => {
     // 56's tree, before item 62 put `commit-policy` back for a non-code target in git, and that
     // one question is the whole of the difference — the same off-by-one item 60 recorded
     // (HANDOFF 73), carried forward unchanged. Measured by running, not reasoned.
-    expect(full).toHaveLength(19);
+    //
+    // 19 → 20 on the full shape only, the `haiku-tier` effort: `model-light-enabled` is asked on
+    // the weight alone, non-code included (same reasoning as `model-deep`/`model-fast` above).
+    // The light shape is untouched — `model-light-enabled` is also weight-gated, same as every
+    // other tier question, so a light non-code run never sees it either.
+    expect(full).toHaveLength(20);
     expect(light).toHaveLength(16);
     for (const ids of [full, light]) {
       expect(ids).toContain('commit-policy');
@@ -332,6 +356,7 @@ describe('what each of the five shapes is actually asked', () => {
       'attribution',
       'model-deep',
       'model-fast',
+      'model-light-enabled',
       'model-routing',
       'docs-mcp',
       'work-profile',

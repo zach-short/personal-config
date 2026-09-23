@@ -118,7 +118,12 @@ export function testRepoPlan(overrides: Partial<RepoPlan> = {}): RepoPlan {
 export function testConfig(overrides: Partial<Config> = {}): Config {
   return {
     ...emptyConfig('starter'),
-    models: { deep: 'Deep Model', default: 'Default Model', fast: 'Fast Model' },
+    models: {
+      deep: 'Deep Model',
+      default: 'Default Model',
+      fast: 'Fast Model',
+      light: 'Light Model',
+    },
     ...overrides,
   };
 }

@@ -142,7 +142,7 @@ describe('what the hash covers', () => {
     const b = testConfig({ answers: { 'models.default': 'Something Else' } });
     expect(await configHash(a)).toBe(await configHash(b));
 
-    const tiers = testConfig({ models: { deep: 'A', default: 'B', fast: 'C' } });
+    const tiers = testConfig({ models: { deep: 'A', default: 'B', fast: 'C', light: 'D' } });
     expect(await configHash(tiers)).not.toBe(await configHash(testConfig()));
   });
 
@@ -154,12 +154,13 @@ describe('what the hash covers', () => {
 });
 
 describe('hashedAnswers', () => {
-  test('drops exactly the four keys nothing is rendered from', () => {
+  test('drops exactly the five keys nothing is rendered from', () => {
     const kept = hashedAnswers({
       projectsDir: '~/Projects',
       'models.deep': 'Fable 5.1',
       'models.default': 'Opus 5',
       'models.fast': 'Sonnet 5',
+      'models.light': 'Haiku 4.5',
       'practices.comments': 'why-only',
     });
     expect(Object.keys(kept)).toEqual(['practices.comments']);

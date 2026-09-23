@@ -1,5 +1,5 @@
 {
-  "catalogVersion": "0.3.0+750df8d7",
+  "catalogVersion": "0.3.0+e2b55565",
   "questions": [
     {
       "id": "work-kind",
@@ -166,6 +166,53 @@
       "when": {
         "key": "configWeight",
         "is": "full"
+      }
+    },
+    {
+      "id": "model-light-enabled",
+      "phase": "you",
+      "kind": "select",
+      "ask": "Do you want a narrow tier below Mechanical, for work where you can tell immediately if it went wrong?",
+      "options": [
+        {
+          "value": "no",
+          "label": "No — three tiers is enough",
+          "example": "Mechanical keeps the whole mechanical band, as it does today",
+          "recommended": true
+        },
+        {
+          "value": "yes",
+          "label": "Yes — add a fourth tier below Mechanical",
+          "example": "A read-only report or one checked transform goes below Mechanical",
+          "recommended": false
+        }
+      ],
+      "readMore": "model-tiers",
+      "configKey": "modelLightEnabled",
+      "when": {
+        "key": "configWeight",
+        "is": "full"
+      }
+    },
+    {
+      "id": "model-light",
+      "phase": "you",
+      "kind": "text",
+      "ask": "Which model is your Light tier — for work where you can tell immediately if it went wrong?",
+      "placeholder": "e.g. your smallest, quickest model",
+      "readMore": "model-tiers",
+      "configKey": "models.light",
+      "when": {
+        "all": [
+          {
+            "key": "configWeight",
+            "is": "full"
+          },
+          {
+            "key": "modelLightEnabled",
+            "is": "yes"
+          }
+        ]
       }
     },
     {
@@ -994,7 +1041,7 @@
     },
     {
       "id": "model-tiers",
-      "body": "# The three model tiers\n\n## What this is\n\nThree names for models you already have access to, so that a task can say which one should run\nit without naming a specific release that will be obsolete in six months.\n\n- **Deep** — the strongest reasoning model you have.\n- **Default** — your everyday model.\n- **Mechanical** — your fastest, cheapest model.\n\n## How to choose which work gets which\n\n**The discriminator is: can the failure be silent?** Not how big or how scary the work feels.\nSizing by fear over-assigns the expensive tier and teaches you to ignore the label.\n\n- **Deep** is for work where a mistake compiles, passes every gate, and is wrong in production:\n  money paths, sync and merge rules, a notification that must never send. Prefer **one narrow\n  Deep review of a short load-bearing path** over a whole Deep phase.\n- **Default** is the right answer for most work — anything where failure is loud. A build\n  break, a red gate, a wrong screen. The gates do that reasoning for you.\n- **Mechanical** is for whole phases that are genuinely mechanical: close-out sweeps, a bounded\n  rename, doc reconciliation. Escalate the moment a gate fails for a non-obvious reason.\n\n## Why the tier also changes the size of the work\n\nA Deep session has roughly half an ordinary session's usable context before it starts\ncompacting. So assigning Deep does not just change who does the work — it means the work has to\nbe cut smaller. That is another reason to prefer one narrow Deep review to a whole Deep phase.\n\n## The argument against having tiers at all\n\nIf you only ever use one model, this is three questions and a table for nothing, and the rule\nthat checks a task's assigned model will never fire. Answer with the same model three times, or\nskip the routing rule — both are reasonable.\n\n## What it writes and where\n\n**The Deep and Mechanical tiers are asked only if you take the whole method.** A lighter setup\nwrites one model rather than three and no `model-routing.md` at all, so those two answers would\nhave nowhere to go. The Default tier is asked on every setup, light and full alike, because the\nshorter standard names one model and that is the one it names.\n\n`~/.claude/rules/model-routing.md` carries the table. Generated boards and pass-off prompts use\nthe Default tier's name in their `**Model:**` headers.\n\n## How to undo it\n\nDelete `~/.claude/rules/model-routing.md`.\n"
+      "body": "# The model tiers — three, and an optional fourth\n\n## What this is\n\nNames for models you already have access to, so that a task can say which one should run it\nwithout naming a specific release that will be obsolete in six months.\n\n- **Deep** — the strongest reasoning model you have.\n- **Default** — your everyday model.\n- **Mechanical** — your fastest, cheapest model.\n- **Light** — narrower still, for work you can check the moment it lands. **Optional:** you are\n  asked whether you want this tier at all, and the answer defaults to no.\n\n## How to choose which work gets which\n\n**The discriminator is: can the failure be silent?** Not how big or how scary the work feels.\nSizing by fear over-assigns the expensive tier and teaches you to ignore the label.\n\n- **Deep** is for work where a mistake compiles, passes every gate, and is wrong in production:\n  money paths, sync and merge rules, a notification that must never send. Prefer **one narrow\n  Deep review of a short load-bearing path** over a whole Deep phase.\n- **Default** is the right answer for most work — anything where failure is loud. A build\n  break, a red gate, a wrong screen. The gates do that reasoning for you.\n- **Mechanical** is for whole phases that are genuinely mechanical: close-out sweeps, ratchet\n  edits, doc reconciliation. Escalate the moment a gate fails for a non-obvious reason.\n- **Light**, if you take it, is for one narrow step whose result you can check immediately: a\n  read-only report, a single bounded transform you verify afterwards, a format conversion.\n\n### A worked example — where one person draws the Mechanical/Light line\n\nOne reader of this file runs Light for work on configuration files, on a single test: *can I tell\nimmediately, without running the system, that it went wrong?* Validating config syntax, grepping\nfor a pattern across files, generating a state report, linting against a schema, diffing two\nversions, a single bounded rename verified by a follow-up grep, normalizing format and\nindentation, syncing files that are meant to stay identical, converting between formats with\nvalidation on the far side — each of those either reads, or produces something whose correctness\nis visible on the face of the output.\n\nExplicitly **not** Light, for the same person: modifying configuration that is actually in use\nwithout a verification step, a multi-step migration where the intermediate state matters, deciding\nwhich of two values is the correct one, and refactoring logic that depends on intent. Those are\nMechanical or above — not because they are large, but because a wrong answer sits there looking\nright. This is one person's worked example, not a rule the tool enforces; the tiers themselves\nhave no opinion about configuration files.\n\n## Why the tier also changes the size of the work\n\nA Deep session has roughly half an ordinary session's usable context before it starts\ncompacting. So assigning Deep does not just change who does the work — it means the work has to\nbe cut smaller. That is another reason to prefer one narrow Deep review to a whole Deep phase.\n\n## The argument against having tiers at all\n\nIf you only ever use one model, this is a handful of questions and a table for nothing, and the\nrule that checks a task's assigned model will never fire. Answer with the same model every time,\nor skip the routing rule — both are reasonable.\n\n**And the argument against the fourth tier in particular:** Mechanical is already defined as your\nfastest, cheapest model, so Light is a second cheap model separated from it only by a judgement\ncall — \"could I tell immediately?\" — that you have to keep making correctly for the split to pay.\nGet it wrong and you have moved work that needed a gate onto the model least likely to notice it,\nwhich is strictly worse than leaving that work in Mechanical. That is why the answer defaults to\nno: three tiers is the honest default, and a fourth earns its keep only if you can already name\nthe work that belongs in it.\n\n## What it writes and where\n\n**The Deep and Mechanical tiers are asked only if you take the whole method**, and **Light is\nasked only if you say yes to it, on that same whole method.** A lighter setup writes one model\nrather than several and no `model-routing.md` at all, so those answers would have nowhere to go.\nThe Default tier is asked on every setup, light and full alike, because the shorter standard\nnames one model and that is the one it names.\n\n`~/.claude/rules/model-routing.md` carries the table — three rows, or four where you opted into\nLight. Generated boards and pass-off prompts use the Default tier's name in their `**Model:**`\nheaders.\n\n## How to undo it\n\nDelete `~/.claude/rules/model-routing.md`.\n\nTo drop Light alone and keep the other three, answer no the next time you are asked whether you\nwant it: the table goes back to three rows, and the model name you gave Light is simply not\nrendered. Nothing else in the file changes.\n"
     },
     {
       "id": "off-limits",

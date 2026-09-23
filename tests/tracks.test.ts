@@ -111,6 +111,13 @@ const COMMIT_PARAGRAPH = '**Commits are the owner’s.**';
  * the target here keeps a ledger and has neither — false in this shape, not only in the new ones,
  * which is why it was corrected rather than branched away from. `skills/handoff/SKILL.md` renders
  * the bytes it rendered at 0.3.0 and the assertion below is what proves it.
+ *
+ * **Three more moved the same day, `haiku-tier` D1.** `~/.claude/rules/model-routing.md`
+ * (Mechanical's row description trimmed once Light exists as a tier to hand its narrowest
+ * examples to), `.personal-config.json` and `~/.config/personal-config/config.json` (both now
+ * carry `models.light` and `modelLightEnabled`, empty and `no` respectively on `EVERYTHING`'s
+ * answers, which never opt in). All three are content changes to files this test already covers,
+ * not new files, so they are corrected here rather than exempted.
  */
 describe('§3.1 row 1 — code + full + git is the 0.3.0 output, byte for byte bar one skill', () => {
   const FULL = answersFor(CODE_FULL_GIT);

@@ -77,6 +77,13 @@ export type ModelTiers = {
   deep: string;
   default: string;
   fast: string;
+  /**
+   * The opt-in fourth tier, below Mechanical (`model-tiers` DESIGN D1/D2). Required rather than
+   * optional even though most people never set it: every other tier is empty-when-unasked too,
+   * and an optional field would let a writer of this object forget the key instead of stating
+   * that it is empty — the one failure mode a fourth tier's plumbing can have silently.
+   */
+  light: string;
 };
 
 /**

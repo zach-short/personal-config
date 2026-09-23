@@ -78,6 +78,7 @@ describe('the saved config renderer', () => {
       deep: 'Deep Model',
       default: 'Default Model',
       fast: 'Fast Model',
+      light: 'Light Model',
     });
   });
 

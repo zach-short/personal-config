@@ -5,7 +5,8 @@
   "models": {
     "deep": "",
     "default": "",
-    "fast": ""
+    "fast": "",
+    "light": ""
   },
   "answers": {
     "commitPolicy": "print-blocks",

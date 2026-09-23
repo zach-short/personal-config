@@ -74,5 +74,6 @@ function modelDefault(configKey: string, config: Config): string | null {
   if (configKey === 'models.deep') return config.models.deep;
   if (configKey === 'models.default') return config.models.default;
   if (configKey === 'models.fast') return config.models.fast;
+  if (configKey === 'models.light') return config.models.light;
   return null;
 }

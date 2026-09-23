@@ -197,6 +197,53 @@ export const YOU_QUESTIONS: Question[] = [
     when: { key: 'configWeight', is: 'full' },
   },
   {
+    id: 'model-light-enabled',
+    phase: 'you',
+    kind: 'select',
+    ask: 'Do you want a narrow tier below Mechanical, for work where you can tell immediately if it went wrong?',
+    configKey: 'modelLightEnabled',
+    readMore: 'model-tiers',
+    options: [
+      {
+        value: 'no',
+        label: 'No — three tiers is enough',
+        example: 'Mechanical keeps the whole mechanical band, as it does today',
+        recommended: true,
+      },
+      {
+        value: 'yes',
+        label: 'Yes — add a fourth tier below Mechanical',
+        example: 'A read-only report or one checked transform goes below Mechanical',
+        recommended: false,
+      },
+    ],
+    // The same gate as `model-deep`/`model-fast`, for the same reason given there: the only thing
+    // this answer changes is the tier table in `model-routing.md`, which `src/render/rules.ts`
+    // writes on the full weight alone. A light setup has no table for a fourth row to appear in,
+    // so the question has no referent there. `no` is recommended because the tier is opt-in
+    // (`model-tiers` DESIGN D1) — everyone content with three keeps today's three-row table and
+    // is never asked for a fourth model name.
+    when: { key: 'configWeight', is: 'full' },
+  },
+  {
+    id: 'model-light',
+    phase: 'you',
+    kind: 'text',
+    ask: 'Which model is your Light tier — for work where you can tell immediately if it went wrong?',
+    configKey: 'models.light',
+    readMore: 'model-tiers',
+    placeholder: 'e.g. your smallest, quickest model',
+    // Both conditions, not the opt-in alone: the weight gates the table this name is rendered
+    // into, and the opt-in gates whether the row exists at all. Gating on the opt-in by itself
+    // would take a model name on a light setup that writes no `model-routing.md` to put it in.
+    when: {
+      all: [
+        { key: 'configWeight', is: 'full' },
+        { key: 'modelLightEnabled', is: 'yes' },
+      ],
+    },
+  },
+  {
     id: 'model-routing',
     phase: 'you',
     kind: 'select',

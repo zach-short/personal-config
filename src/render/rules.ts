@@ -82,17 +82,33 @@ After a split commit, build HEAD in isolation before I push: gates run against t
 so a partial commit can leave the branch unbuildable while the tree is green.
 `;
 
+/**
+ * Three rows, or four where the person opted in. The fourth rides on the opt-in answer and not on
+ * `models.light` being non-empty: the other three render `<unset>` rather than dropping their row,
+ * and someone who opted in but left the name blank has the same thing to go and fix. Mechanical
+ * keeps only whole-phase work here — a single instantly-checkable step is Light's row once Light
+ * exists, and leaving it in both is the one wording failure D1 exists to prevent.
+ */
+function tierTable(ctx: RenderContext): string {
+  const tiers = ctx.config.models;
+  const rows = [
+    `| Deep | ${tiers.deep || '<unset>'} | Only where a mistake compiles, passes every gate, and is wrong in production. |`,
+    `| Default | ${tiers.default || '<unset>'} | The default, and the right answer for most work — anything whose failure is loud. |`,
+    `| Mechanical | ${tiers.fast || '<unset>'} | Whole phases of mechanical work: sweeps, ratchet edits, doc reconciliation. |`,
+  ];
+  if (answer(ctx, 'modelLightEnabled') === 'yes') {
+    rows.push(
+      `| Light | ${tiers.light || '<unset>'} | One narrow step you can check the moment it lands: a read-only report, a single bounded transform you verify after, a format conversion. |`,
+    );
+  }
+  return `| Tier | Model | Use for |\n|---|---|---|\n${rows.join('\n')}`;
+}
+
 function modelRoutingRule(ctx: RenderContext): PlannedFile | null {
   const mode = answer(ctx, 'modelRouting');
   if (mode === 'skip') return null;
 
-  const tiers = ctx.config.models;
-  const table = `| Tier | Model | Use for |
-|---|---|---|
-| Deep | ${tiers.deep || '<unset>'} | Only where a mistake compiles, passes every gate, and is wrong in production. |
-| Default | ${tiers.default || '<unset>'} | The default, and the right answer for most work — anything whose failure is loud. |
-| Mechanical | ${tiers.fast || '<unset>'} | Sweeps, ratchet edits, doc reconciliation, a bounded rename. |`;
-
+  const table = tierTable(ctx);
   const action =
     mode === 'warn-only'
       ? 'If they do not match, say so in one line and carry on.\n'

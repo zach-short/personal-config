@@ -38,7 +38,7 @@ export function emptyConfig(profile: string): Config {
   return {
     profile,
     identity: { githubLogin: null },
-    models: { deep: '', default: '', fast: '' },
+    models: { deep: '', default: '', fast: '', light: '' },
     answers: {},
     projectsDir: '',
     archiveHome: '',
@@ -82,14 +82,20 @@ function mergeLayer(base: Config, layer: ConfigLayer): Config {
  * not a configuration. Hashing it stamps identical files differently on two machines, and it
  * is the wrong thing to persist into a repo besides.
  *
- * The three `models.*` keys are already hashed as `models`, which `modelsFrom()` in
+ * The four `models.*` keys are already hashed as `models`, which `modelsFrom()` in
  * `commands/setup.ts` derives from exactly them. Hashing both counts one answer twice.
+ *
+ * `modelLightEnabled` is deliberately **not** in this set: unlike a model name, it is not
+ * mirrored into `config.models`, and it shapes a real rendered byte on its own — flipping it
+ * changes the tier table from three rows to four even if `models.light` never changes. Leaving
+ * it out of `UNHASHED_ANSWERS` means it hashes normally, through `answers`.
  */
 const UNHASHED_ANSWERS = new Set([
   'projectsDir',
   'models.deep',
   'models.default',
   'models.fast',
+  'models.light',
 ]);
 
 /**
@@ -130,9 +136,11 @@ const PERSONAL_ANSWERS = new Set([
   'docsMcp',
   'hooks',
   'keepExistingGlobal',
+  'modelLightEnabled',
   'models.deep',
   'models.default',
   'models.fast',
+  'models.light',
   'modelRouting',
   'skills',
 ]);

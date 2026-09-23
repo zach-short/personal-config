@@ -8,11 +8,13 @@
   "models": {
     "deep": "Fable 5.1",
     "default": "Opus 5",
-    "fast": "Sonnet 5"
+    "fast": "Sonnet 5",
+    "light": "Haiku 4.5"
   },
   "answers": {
     "commitPolicy": "print-blocks",
     "attribution": "none",
+    "modelLightEnabled": "yes",
     "modelRouting": "delegate-or-stop",
     "docsMcp": "Context7 MCP",
     "keepExistingGlobal": "report",

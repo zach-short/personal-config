@@ -282,6 +282,7 @@ function modelsFrom(answers: Answers, config: Config): Config['models'] {
     deep: String(answers['models.deep'] ?? config.models.deep),
     default: String(answers['models.default'] ?? config.models.default),
     fast: String(answers['models.fast'] ?? config.models.fast),
+    light: String(answers['models.light'] ?? config.models.light),
   };
 }
 

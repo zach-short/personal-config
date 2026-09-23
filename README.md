@@ -62,7 +62,7 @@ In four phases:
 
 | Phase | Asks about |
 |---|---|
-| **you** | Who runs `git commit`. Attribution trailers. Your three model tiers and what happens when a task names one you are not running. A docs-lookup tool. Hooks and skills. |
+| **you** | Who runs `git commit`. Attribution trailers. Your model tiers — three, or four if you want a narrow one below Mechanical — and what happens when a task names one you are not running. A docs-lookup tool. Hooks and skills. |
 | **discover** | Where your repos are; then per repo: how work arrives, whether these files are committed or private, where closed work goes, and whether one person decides here. |
 | **practices** | Fourteen areas — comments, function length, exports, file naming, imports, types, logic placement, the data layer, loading/error/empty states, design tokens, tests, user-facing copy, drive-by fixes, commits. |
 | **render** | Nothing. It previews, you confirm, it writes. |

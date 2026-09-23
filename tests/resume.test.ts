@@ -20,6 +20,7 @@ import {
 } from '../src/lib/resume.ts';
 import type { Answers, AnswerValue, Question } from '../src/lib/types.ts';
 import { version } from '../src/lib/version.ts';
+import { matchesWhen } from '../src/lib/when.ts';
 import { askPhase } from '../src/phases/run.ts';
 import { questionsFor } from '../src/questions/index.ts';
 import { cleanup, pickAll, tempDir } from './helpers.ts';
@@ -451,7 +452,16 @@ describe('the real question chain', () => {
       const tail = questions.at(-1);
       if (!fourth || !tail) throw new Error('the you phase is too short to interrupt');
 
-      expect(second.asked).toEqual(ids.slice(4));
+      // `model-light` (`haiku-tier` D1) is gated on `modelLightEnabled`, which this mock answers
+      // with a `second-…` placeholder rather than the literal `'yes'` its `when` requires — the
+      // one id in this phase whose gate depends on another question's answer rather than on the
+      // three track axes alone, so it is legitimately skipped here the same as it would be by a
+      // real run that never opted in.
+      const expectedTail = ids.slice(4).filter((id) => {
+        const question = questions.find((q) => q.id === id);
+        return matchesWhen(question?.when, answers);
+      });
+      expect(second.asked).toEqual(expectedTail);
       expect(answers[fourth.configKey]).toBe(`first-${fourth.id}`);
       expect(answers[tail.configKey]).toBe(`second-${tail.id}`);
     });

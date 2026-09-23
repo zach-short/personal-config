@@ -9,6 +9,7 @@ import { parseCli } from '../src/lib/args.ts';
 import { BACK, choiceOptions, type Prompter, READ_MORE } from '../src/lib/ask.ts';
 import { loadConfig } from '../src/lib/config.ts';
 import type { Answers, AnswerValue, Question } from '../src/lib/types.ts';
+import { matchesWhen } from '../src/lib/when.ts';
 import { askPhase } from '../src/phases/run.ts';
 import { questionsFor } from '../src/questions/index.ts';
 import { pickAll } from './helpers.ts';
@@ -142,12 +143,17 @@ describe('walking backwards', () => {
   });
 
   test('every question is answered by the end, however much walking happened', async () => {
-    // The track answers are `code`, `full`, `yes`, which is the one combination that asks the
-    // whole phase — so "every question" below is every question, not a shorter track's subset.
+    // The track answers are `code`, `full`, `yes`, which asks nearly the whole phase — every
+    // question whose own `when` resolves true against what this run actually answered.
+    // `model-light` is the one exception (`haiku-tier` D1): it is gated on `modelLightEnabled`,
+    // which this script never sets to `yes`, so the opt-in's own recommended default (`no`)
+    // correctly leaves it unasked — the same way a shorter track already leaves other
+    // conditional questions unasked.
     const prompter = scripted([...TRACK, 'x', BACK, 'x2']);
     const answers = await runYou(prompter);
 
     for (const question of questionsFor('you')) {
+      if (!matchesWhen(question.when, answers)) continue;
       expect(answers[question.configKey]).toBeDefined();
     }
   });
