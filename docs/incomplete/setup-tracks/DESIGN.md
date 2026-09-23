@@ -560,7 +560,8 @@ than opening a second section. Nothing named `0.2.6` is committed or published.
 ---
 ## 10. Amendments — 2026-09-22
 
-**Status: proposed 2026-09-22 by board row 58; ratification pending.** Written by an unattended
+**Status: `RATIFIED` 2026-09-22.** All seven questions in board row 58's hand-back are answered
+below, each *Ratified:* line dated; row 58 closes on this. Written by an unattended
 session, so each decision below is complete — stated flatly, defended, with the argument against
 it recorded — and carries a *Ratified:* line that is empty until Zach answers. His answers land
 on those lines, dated, the same turn they are given; a "no" stays on that line as the board's
@@ -599,7 +600,8 @@ Read at `f2b04e0` plus items 54 and 55's uncommitted trees (`src/render/target-g
 ### 10.2 Decisions
 
 **D20 — D2 stands. `uses-git` keeps two values; a person with both answers "yes", and the labels
-say so.** 2026-09-22. *Ratified:* —
+say so.** 2026-09-22. *Ratified:* 2026-09-22 — yes, taken as written: two values stand, the
+audit's third value declined; the reworded labels go out per §10.5.
 
 The audit recommended a third value meaning "some of it". Item 54 removed the reason for it:
 after `targetUsesGit` (G27), `yes` already means *git is in play somewhere and the target's kind
@@ -641,7 +643,9 @@ call: had `no` deferred to the disk, "some" and "no" would have converged instea
 "yes", and the conclusion would be the same.
 
 **D21 — §3.2's wording freeze is partially superseded: four strings change, for D11's reason.**
-2026-09-22. *Ratified:* —
+2026-09-22. *Ratified:* 2026-09-22 — yes, taken as written: `projects-dir`'s ask and
+`work-profile`'s ask settled by citation (G30, no register needed); `uses-git`'s two labels go
+out warm, the `hooks` first option's label plain (§10.5).
 
 *What is superseded, precisely:* §3.2's second bullet, *"the existing 30 questions keep … their
 wording"*, for four strings and no others — `projects-dir`'s ask, `work-profile`'s ask,
@@ -667,7 +671,9 @@ project" is a hedge where "this repo" was precise for the code+full person who s
 targets may still be a mix — item 54's whole case — so "project" is the honest word for them too.
 
 **D22 — A non-coder is asked who makes changes to a document: the analogue of `commit-policy`,
-as a policy area.** 2026-09-22. *Ratified:* —
+as a policy area.** 2026-09-22. *Ratified:* 2026-09-22 — yes, taken as written, including the
+recommendation: (1) the agent edits and names every change, first of the three, over "show me
+first." The ask goes out warm (§10.5).
 
 The audit's first candidate, taken. `commit-policy` decides who takes the irreversible step in a
 repo; item 56 confines it to code+git, correctly, and that leaves the non-coder with **no rule
@@ -712,7 +718,7 @@ code+no-git person without it: a repo without version control is a situation thi
 to design for, and says so rather than serving it badly.
 
 **D23 — A non-coder is asked, once per target, what the agent must not read or copy.**
-2026-09-22. *Ratified:* —
+2026-09-22. *Ratified:* 2026-09-22 — yes, taken as written. The ask goes out warm (§10.5).
 
 The audit's fourth candidate, taken — the only one of the seven about harm to someone other than
 the owner. A folder of non-code work is far likelier than a repo to hold other people's records,
@@ -742,7 +748,9 @@ settings — which §10.6 reserves rather than builds, because it is a second wr
 question has to exist before it is worth wiring.
 
 **D24 — Five candidates declined, each with its reason, so they are not proposed again.**
-2026-09-22. *Ratified:* —
+2026-09-22. *Ratified:* 2026-09-22 — yes, all five declines confirmed: (3) the number rule, (5)
+naming and placement, (6) format, (7) house vocabulary, and (2) the delete guard as D25 rather
+than a question.
 
 The discriminator, applied to all seven: **a preference only the person holds is a question; a
 fact the first session can read off the folder is the first session's job**, which the short
@@ -779,7 +787,9 @@ folder in view, is a screen spent to get a worse answer.
 - **(2) The delete guard** is not declined; it is D25, as a hook and not a question.
 
 **D25 — The `hooks` guard option installs a delete guard for non-code work: the analogue of the
-commit guard. Partially supersedes D16.** 2026-09-22. *Ratified:* —
+commit guard. Partially supersedes D16.** 2026-09-22. *Ratified:* 2026-09-22 — yes, taken as
+written: keyed on work kind, not git, and installed on both weights. The reworded `hooks` first
+option's label goes out plain (§10.5).
 
 Item 55 conditions the commit guard on git and asks, for the person who keeps none, *"does a
 no-git run get a guard of its own?"*, deferring the answer here (G35). It does — keyed on **work
@@ -821,7 +831,7 @@ non-coder gets a guard where a light coder gets none — which is D16's asymmetr
 decision's, and D16 is not reopened here.
 
 **D26 — The short track asks nothing it discards: `archive-home` and `mode` join item 56's
-six.** 2026-09-22. *Ratified:* —
+six.** 2026-09-22. *Ratified:* 2026-09-22 — yes, taken as written.
 
 G23 and G24: both are asked on every short-track shape, saved, and rendered into no document
 there. They take the spec item 56 writes for `work-profile` —
@@ -907,35 +917,36 @@ behind it, and harmless either way.
 
 ### 10.5 Copy going out under R7
 
-Settled by citation, no variants: **projects** and **this project** (G30). Unsettled, three
-registers each, the recommendation first. All four questions are on the non-coder's first
-screens, where §7.1 chose warm.
+**Ratified 2026-09-22. This is settled copy** (§7.1's precedent): re-opening it needs a dated
+supersession, not a better idea. Settled by citation, no variants: **projects** and **this
+project** (G30). The four registers below were unsettled, three each, the recommendation first;
+Zach chose the first-listed — warm, plain, warm, warm — matching every recommendation as given.
 
-`uses-git`, the two options (D20):
-- *warm* — **Yes, some or all of it** · commits and history, in at least one place /
+`uses-git`, the two options (D20) — **chosen: warm**:
+- **warm — CHOSEN** — **Yes, some or all of it** · commits and history, in at least one place /
   **No, none of it** · the files live on disk and that's it
 - *plain* — **Yes — at least some of it is in git** / **No — none of it is**
 - *terse* — **Some or all of it** / **None of it**
 
-`hooks`, the first option (D25):
-- *plain* — **Yes — block the commands that can't be undone** · `git commit` and `git push` in a
-  repo, `rm` for other work; the hook refuses and says what to do instead
+`hooks`, the first option (D25) — **chosen: plain**:
+- **plain — CHOSEN** — **Yes — block the commands that can't be undone** · `git commit` and
+  `git push` in a repo, `rm` for other work; the hook refuses and says what to do instead
 - *warm* — **Yes — guard the things you can't take back** · commits and pushes in a repo,
   deleting a file elsewhere; which one you get follows your answers above
 - *terse* — **Yes — guard commits and deletes** · the hook refuses them and prints the alternative
 
-`edit-policy`, the ask and three options (D22):
-- ask, *warm* — **When your agent changes a document, should it make the change, or show it to
-  you first?** · *plain* — Who makes changes to your documents — the agent, or you? · *terse* —
-  May the agent edit your documents directly?
+`edit-policy`, the ask and three options (D22) — **ask chosen: warm**:
+- ask, **warm — CHOSEN** — **When your agent changes a document, should it make the change, or
+  show it to you first?** · *plain* — Who makes changes to your documents — the agent, or you? ·
+  *terse* — May the agent edit your documents directly?
 - options — **The agent edits, and names every change** · it changes the file, says which part
   and what it said before, and never deletes one / **Show me first — I make the change** · it
   writes the new wording in chat; you put it in / **No rule** · nothing is written; the agent
   does what it would do by default
 
-`off-limits`, the ask and placeholder (D23):
-- ask, *warm* — **Is there anything here the agent must not read or copy?** · *plain* — What
-  must the agent never read or copy here? · *terse* — Anything off limits to the agent?
+`off-limits`, the ask and placeholder (D23) — **ask chosen: warm**:
+- ask, **warm — CHOSEN** — **Is there anything here the agent must not read or copy?** · *plain*
+  — What must the agent never read or copy here? · *terse* — Anything off limits to the agent?
 - placeholder — *e.g. a folder of other people's records — or leave this empty*
 
 ### 10.6 Seams reserved, deliberately not built
