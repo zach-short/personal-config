@@ -1,7 +1,7 @@
 # DESIGN — the stamp's two jobs, and a hash that moves on its own
 
-**Status:** `BUILT` 2026-09-23 — gates green, uncommitted when this line was written; the
-commit is the owner's, and the root `CHANGELOG.md`'s Unreleased entries describe what shipped.
+**Status:** `BUILT` 2026-09-23, commit `01e05d7` — gates green; the root `CHANGELOG.md`'s
+Unreleased entries describe what shipped.
 Opened 2026-09-23 as `SCOPE.md`; **GATE 1 completed 2026-09-23** and renamed the same day.
 Owner: Zach. One repo — `personal-config`.
 
