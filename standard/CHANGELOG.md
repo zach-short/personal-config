@@ -4,8 +4,12 @@ The version of the working standard — `AGENT-PRACTICES.boilerplate.md`, and fr
 form `AGENT-PRACTICES.short.md` beside it. One number covers both: a stamp records the standard's
 version and not which document a file was rendered from, so the two cannot be versioned apart.
 The CLI that renders them is versioned separately (see the root `CHANGELOG.md`). An adapted copy
-in another repo carries the version it was adapted from; `personal-config doctor` reports a copy
-whose stamp is older than `standard/VERSION`.
+in another repo carries the version it was adapted from in its stamp line, marked ` · adapted`
+so that `personal-config setup` leaves it alone, and `personal-config doctor` reports — as an
+advisory, not a failure — a copy whose stamp is older than `standard/VERSION`. Until 2026-09-23
+this paragraph claimed that without the marker: Part 0 told the adapting session to delete the
+stamp, and an unstamped copy was invisible to that check. A copy adapted before the marker
+existed still carries no stamp and stays invisible until `doctor --fix` writes one back.
 
 ## 1.2.0 — 2026-09-23
 

@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { runDoctorOn } from '../src/doctor/index.ts';
 import { settledSupersession } from '../src/doctor/rules/settled-supersession.ts';
 import { collectDocs } from '../src/doctor/scan.ts';
-import { cleanup, tempDir } from './helpers.ts';
+import { cleanup, tempDir, testConfig } from './helpers.ts';
 
 const LEDGER = [
   '# HANDOFF — example',
@@ -145,8 +145,8 @@ describe('R8 — a settled decision is not quietly reversed', () => {
     try {
       await Bun.write(join(repo, 'HANDOFF.md'), LEDGER.replace('one scale', 'two scales'));
       const report = await runDoctorOn(repo, {
-        configHash: 'abcd1234',
         standardVersion: '1.0.0',
+        config: testConfig(),
       });
       expect(report.findings.map((finding) => finding.rule)).toContain('settled-supersession');
     } finally {

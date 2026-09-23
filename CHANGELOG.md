@@ -5,6 +5,44 @@ The CLI. The working standard it installs is versioned separately — see
 
 ## Unreleased
 
+### Added
+
+- **A generated file can be marked `adapted`, and `doctor` can still see it.** One trailing word
+  on the stamp line — `standard v1.2.0 · adapted -->` — withdraws `setup`'s permission to
+  overwrite the file and keeps its provenance readable. The stamp guard refuses an adapted file
+  the way it refuses an unstamped one, named apart in the plan (`adapted`, not `no-stamp`)
+  because the way out differs; and the drift rule keeps reading it, so a standard version behind
+  the installed one reports as an *advisory* finding — printed and counted, not an exit code —
+  because an upgrade you have not done yet is work to schedule rather than a defect. Part 0's
+  §0.8 now says *add one word* where it said *delete the line and grep to prove none survive*;
+  deleting the line still takes a file back, at the cost of `doctor` never seeing it again. A
+  CLI older than this cannot parse the marked line and so sees no stamp on it, which is the safe
+  direction: it leaves the file alone rather than overwriting the one file it must not touch.
+  (`docs/incomplete/stamp-provenance/DESIGN.md` D1, D4.)
+- **`doctor --fix` migrates a copy adapted before the marker existed.** A file carrying Part 0's
+  `**Adapted to this repo <date>**` header and no stamp — what §0.8 used to produce, and what
+  both adapted copies this tool was scoped against look like — is a new finding,
+  `unstamped-adaptation`, and under `--fix` gets an adapted stamp at the standard version its
+  own preamble names, `unknown` where it names none. Every other byte is kept; the write is
+  backed up and `undo` restores it. The stamp's config hash is written as `00000000`, because
+  the answers that produced an adapted file are unknowable and nothing reads that field on an
+  adapted file. (D3.)
+
+### Changed
+
+- **Drift is decided by re-rendering, not by comparing a hash.** `doctor` rebuilds the plan
+  `setup` would write into a configured repo — the shape recorded in `.personal-config.json`, a
+  fresh scan of the directory, the merged answers it already loads — renders each file at the
+  date its own stamp names, and compares bytes. Two false answers went with the hash: a package
+  default the repo never saved moved every stamped file's hash and reported drift on files whose
+  bytes had not changed (`0c737ac`, 2026-09-22, did this to every configured repo by adding
+  `models.light`), and an answer that moved a byte without moving the hash reported nothing.
+  The stamp still records the config hash; what it *says* is unchanged, only what the rule
+  compares. `PART0-PROMPT.md` is not compared — it is a snapshot of discovery at the moment
+  `setup` ran, and re-deriving it after the run has written the ledger reports a different prompt
+  that is not the file being stale. A file `setup` would write differently now reports with the
+  same `+n −m` summary the preview uses. (D2.)
+
 ### Fixed
 
 - **A folded step whose title wrapped onto a second line lost that title.** `ledgerSteps` reads

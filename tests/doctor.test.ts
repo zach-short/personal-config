@@ -1,11 +1,11 @@
 import { describe, expect, test } from 'bun:test';
 import { join } from 'node:path';
 import { runDoctorOn } from '../src/doctor/index.ts';
-import { stampDrift } from '../src/doctor/rules/stamp-drift.ts';
+import { type StampExpectation, stampDrift } from '../src/doctor/rules/stamp-drift.ts';
 import { kindOf } from '../src/doctor/scan.ts';
-import { cleanup, tempDir } from './helpers.ts';
+import { cleanup, tempDir, testConfig } from './helpers.ts';
 
-const EXPECTATION = { configHash: 'abcd1234', standardVersion: '1.0.0' };
+const EXPECTATION = { standardVersion: '1.0.0', config: testConfig() };
 
 async function findingsFor(files: Record<string, string>): Promise<string[]> {
   const dir = await tempDir();
@@ -194,26 +194,40 @@ describe('§8.2 — archive index, both directions', () => {
 });
 
 describe('stamp drift', () => {
-  test('flags a config hash that no longer matches', () => {
+  /** A configured repo whose re-render produced exactly what is on disk. */
+  const current = (text: string): StampExpectation => ({
+    standardVersion: '1.0.0',
+    rendered: text,
+    configured: true,
+  });
+
+  test('flags a file `setup` would now write differently', () => {
+    const text =
+      '<!-- personal-config v0.1.0 · 2026-09-15 · config abcd1234 · standard v1.0.0 -->\n# x';
+    const findings = stampDrift(doc(text), { ...current(text), rendered: `${text}\n# y` });
+    expect(findings.map((f) => f.message)[0]).toContain('re-run');
+  });
+
+  test('a config hash that moved on unchanged bytes is not drift (D2)', () => {
     const text =
       '<!-- personal-config v0.1.0 · 2026-09-15 · config 11112222 · standard v1.0.0 -->\n# x';
-    expect(stampDrift(doc(text), EXPECTATION).map((f) => f.message)[0]).toContain('re-run');
+    expect(stampDrift(doc(text), current(text))).toHaveLength(0);
   });
 
   test('flags a standard version behind the current one', () => {
     const text =
       '<!-- personal-config v0.1.0 · 2026-09-15 · config abcd1234 · standard v0.9.0 -->\n# x';
-    expect(stampDrift(doc(text), EXPECTATION)).toHaveLength(1);
+    expect(stampDrift(doc(text), current(text))).toHaveLength(1);
   });
 
   test('passes on a current stamp', () => {
     const text =
       '<!-- personal-config v0.1.0 · 2026-09-15 · config abcd1234 · standard v1.0.0 -->\n# x';
-    expect(stampDrift(doc(text), EXPECTATION)).toHaveLength(0);
+    expect(stampDrift(doc(text), current(text))).toHaveLength(0);
   });
 
   test('ignores a file this tool did not write', () => {
-    expect(stampDrift(doc('# someone else\n'), EXPECTATION)).toHaveLength(0);
+    expect(stampDrift(doc('# someone else\n'), current(''))).toHaveLength(0);
   });
 });
 

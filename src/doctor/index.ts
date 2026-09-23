@@ -1,12 +1,15 @@
 import { readdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { configHash, loadConfig } from '../lib/config.ts';
-import { exists } from '../lib/disk.ts';
+import { loadConfig } from '../lib/config.ts';
+import { today } from '../lib/date.ts';
+import { exists, readText } from '../lib/disk.ts';
 import { isGitRepo } from '../lib/git.ts';
 import { expandHome } from '../lib/paths.ts';
-import type { Cli, Finding } from '../lib/types.ts';
+import type { Cli, Config, Finding, PlannedFile } from '../lib/types.ts';
+import { version } from '../lib/version.ts';
 import { commitPlan, resolvePlan } from '../lib/write-plan.ts';
 import { standardVersion } from '../render/standard.ts';
+import { type Rerender, rerender } from './rerender.ts';
 import { absenceEvidence } from './rules/absence-evidence.ts';
 import { archiveIndex } from './rules/archive-index.ts';
 import { archivedCitations } from './rules/archived-citations.ts';
@@ -18,6 +21,7 @@ import { settledSupersession } from './rules/settled-supersession.ts';
 import { stampDrift } from './rules/stamp-drift.ts';
 import { stepNumbers } from './rules/step-numbers.ts';
 import { unfolded } from './rules/unfolded.ts';
+import { adaptationFix, unstampedAdaptation } from './rules/unstamped-adaptation.ts';
 import { collectDocs, type Doc } from './scan.ts';
 
 const DOC_RULES = [
@@ -27,14 +31,26 @@ const DOC_RULES = [
   stepNumbers,
   boardStatus,
   unfolded,
+  unstampedAdaptation,
 ];
 
 export type DoctorReport = { findings: Finding[]; checked: number };
 
-/** Every rule reports `file:line`; any finding at all is a non-zero exit. */
+/**
+ * What every stamped file is judged against: the installed standard's version, and the config
+ * `doctor` loaded for this root, which is what a re-render draws its answers from
+ * (stamp-provenance `DESIGN.md` D2). Until 2026-09-23 this was `{configHash, standardVersion}`
+ * and the rule compared the hash — so a hash that moved on a package default the repo never
+ * saved was drift the owner did not cause (G12, G13), and an answer that moved a byte without
+ * moving the hash was not (G17). Handing the config over instead lets the rule ask the literal
+ * question: would `setup` write this file differently now?
+ */
+export type DoctorExpectation = { standardVersion: string; config: Config };
+
+/** Every rule reports `file:line`; any finding that is not advisory is a non-zero exit. */
 export async function runDoctorOn(
   root: string,
-  expectation: Expectation,
+  expectation: DoctorExpectation,
 ): Promise<DoctorReport> {
   const docs = await collectDocs(root);
 
@@ -48,11 +64,11 @@ export async function runDoctorOn(
     await Promise.all(docs.filter(archiveIndex.appliesTo).map((doc) => archiveIndex.check(doc)))
   ).flat();
 
-  // Drift and ignore-coverage are only meaningful in a repo this tool actually configured.
-  // Without a `.personal-config.json` there is no config for a stamp to have drifted from,
-  // and a `PART0-PROMPT.md` sitting in, say, a docs folder is not a personal file at all.
+  // Ignore coverage is only meaningful in a repo this tool actually configured, and so is a
+  // re-render: without a `.personal-config.json` there is no recorded shape to render from, and
+  // a `PART0-PROMPT.md` sitting in, say, a docs folder is not a personal file at all.
   const configured = await exists(join(root, '.personal-config.json'));
-  const fromStamps = configured ? docs.flatMap((doc) => stampDrift(doc, expectation)) : [];
+  const fromStamps = await stampFindings(root, docs, expectation, configured);
   const fromCitations = archivedCitations(docs, await archivedInfo(docs));
   // Ignore coverage is a question for git, and a plain folder (setup-tracks `DESIGN.md` D5) has
   // none to ask: `check-ignore` there resolves whatever repository *encloses* the folder, if any,
@@ -76,7 +92,30 @@ export async function runDoctorOn(
   };
 }
 
-type Expectation = { configHash: string; standardVersion: string };
+/**
+ * Drift, decided by re-rendering (D2). The plan is rebuilt only where the repo is configured —
+ * that is where the recorded shape and the saved answers are — but the rule runs over every
+ * doc regardless, because an adapted file's standard lag (D4) needs no config to be reported:
+ * its owner put the marker there, or asked `doctor --fix` to. The rule itself keeps a plain
+ * stamp quiet in an unconfigured tree; the gate that used to sit here did the same for less.
+ */
+async function stampFindings(
+  root: string,
+  docs: Doc[],
+  expectation: DoctorExpectation,
+  configured: boolean,
+): Promise<Finding[]> {
+  const render: Rerender = configured
+    ? await rerender(root, expectation.config, docs)
+    : () => null;
+  return docs.flatMap((doc) =>
+    stampDrift(doc, {
+      standardVersion: expectation.standardVersion,
+      rendered: render(doc),
+      configured,
+    }),
+  );
+}
 
 /**
  * Folder names sitting in an archive index's directory — what "now lives in the archive" means
@@ -105,56 +144,106 @@ export async function runDoctor(cli: Cli): Promise<number> {
   const roots = cli.paths.length > 0 ? cli.paths.map(expandHome) : [process.cwd()];
   const standard = await standardVersion();
 
-  let total = 0;
+  let failing = 0;
+  let advisory = 0;
   for (const root of roots) {
-    // Per root, not once for the run. Now that `setup` saves its answers into each repo's
-    // `.personal-config.json`, the expected hash is a property of the repo being checked —
-    // computing it once from `roots[0]` would judge every later repo against the first one's
-    // answers. Harmless while no answers were saved and both hashes were a profile's
-    // defaults; a false drift finding the moment they are.
+    // Per root, not once for the run. `setup` saves its answers into each repo's
+    // `.personal-config.json`, so what a re-render draws on is a property of the repo being
+    // checked — loading it once from `roots[0]` would judge every later repo against the first
+    // one's answers. Harmless while no answers were saved; a false drift finding the moment
+    // they are.
     const config = await loadConfig(cli, root);
-    const expectation: Expectation = {
-      configHash: await configHash(config),
-      standardVersion: standard,
-    };
-    const report = await runDoctorOn(root, expectation);
+    const report = await runDoctorOn(root, { standardVersion: standard, config });
     printReport(root, report);
-    total += report.findings.length - (await fixIfAsked(cli, root, report.findings));
+    const fixed = await fixIfAsked(cli, root, report.findings);
+    failing += report.findings.filter((f) => !f.advisory).length - fixed;
+    advisory += report.findings.filter((f) => f.advisory).length;
   }
 
-  console.log(total === 0 ? '\ndoctor: no findings.' : `\ndoctor: ${total} finding(s).`);
-  return total === 0 ? 0 : 1;
+  console.log(`\n${summary(failing, advisory)}`);
+  return failing === 0 ? 0 : 1;
 }
 
 /**
- * `--fix` applies only what a rule marked `fixable`, which today is one rule: a personal file
- * git can still see. It goes through the same `resolvePlan`/`commitPlan` as every other write
- * this tool makes, so the ignore file is backed up before it is touched and `personal-config
- * undo` puts it back. It returns how many findings it cleared, because the exit code has to
- * answer for what is left rather than for what was found.
+ * The exit code answers for what fails, and an advisory finding does not (stamp-provenance
+ * `DESIGN.md` D4): a stale standard behind an adapted file is work to schedule, not a defect in
+ * the repo, and a `doctor` that is red for an upgrade you have not done yet is a `doctor` people
+ * stop running — and one that goes red in CI once per standard release for something nobody
+ * caused. It is still counted and still printed, so the summary cannot read "no findings" over
+ * a report that has some.
+ */
+function summary(failing: number, advisory: number): string {
+  const tail = advisory > 0 ? `, ${advisory} advisory` : '';
+  if (failing === 0 && advisory === 0) return 'doctor: no findings.';
+  if (failing === 0) return `doctor: nothing failing; ${advisory} advisory finding(s).`;
+  return `doctor: ${failing} finding(s)${tail}.`;
+}
+
+type Fix = { file: PlannedFile; clears: Finding[] };
+
+/**
+ * `--fix` applies only what a rule marked `fixable`, which as of 2026-09-23 is two rules: a
+ * personal file git can still see gets an anchored ignore line, and a Part 0 adaptation that
+ * carries no stamp gets an adapted one (D3). Both go through the same `resolvePlan`/`commitPlan`
+ * as every other write this tool makes, so the file is backed up before it is touched and
+ * `personal-config undo` puts it back. It returns how many findings it cleared, because the exit
+ * code has to answer for what is left rather than for what was found.
  */
 async function fixIfAsked(cli: Cli, root: string, findings: Finding[]): Promise<number> {
   const fixable = findings.filter((finding) => finding.fixable);
   if (!cli.fix || fixable.length === 0) return 0;
 
-  const target = await ignoreTarget(root);
+  const fixes = await fixPlan(root, fixable);
+  const described = fixes.map(describeFix).join(', ');
   // `--dry-run` writes nothing, whatever else is asked for. It is the guarantee that makes the
   // flag worth having, and `--fix` is not an exception to it.
   if (cli.dryRun) {
-    console.log(`  would fix ${fixable.length} — ${target}, but --dry-run writes nothing`);
+    console.log(`  would fix ${fixable.length} — ${described}, but --dry-run writes nothing`);
     return 0;
   }
 
-  const { written } = await commitPlan(await resolvePlan([ignoreFix(root, target, fixable)]));
-  if (written.length === 0) return 0;
-  console.log(`  fixed ${fixable.length} — appended to ${target}`);
-  return fixable.length;
+  const { written } = await commitPlan(await resolvePlan(fixes.map((fix) => fix.file)));
+  const cleared = fixes
+    .filter((fix) => written.includes(fix.file.path))
+    .reduce((count, fix) => count + fix.clears.length, 0);
+  if (cleared === 0) return 0;
+  console.log(`  fixed ${cleared} — ${described}`);
+  return cleared;
+}
+
+/**
+ * One planned file per fix, with the findings it clears: every ignore finding lands in the one
+ * ignore file, and every unstamped adaptation is its own file. The adapted stamp is dated and
+ * versioned by *this* run, because this run is what writes it — the header's own date is the
+ * adaptation's, and the stamp's date field has always meant when the line was written.
+ */
+async function fixPlan(root: string, fixable: Finding[]): Promise<Fix[]> {
+  const ignored = fixable.filter((f) => f.rule === 'ignored');
+  const adapted = fixable.filter((f) => f.rule === unstampedAdaptation.id);
+  const fixes: Fix[] = [];
+  if (ignored.length > 0) {
+    fixes.push({ file: ignoreFix(root, await ignoreTarget(root), ignored), clears: ignored });
+  }
+  const at = { version: await version(), date: today() };
+  for (const finding of adapted) {
+    const file = adaptationFix(finding.file, await readText(finding.file), at);
+    fixes.push({ file, clears: [finding] });
+  }
+  return fixes;
+}
+
+function describeFix(fix: Fix): string {
+  const what = fix.file.strategy === 'mark-adapted' ? 'adapted stamp' : 'ignore lines';
+  return `${fix.file.path} (${what})`;
 }
 
 function printReport(root: string, report: DoctorReport): void {
   console.log(`\n${root} — ${report.checked} markdown file(s) checked`);
   for (const finding of report.findings) {
     const id = finding.standardId ? ` [${finding.standardId}]` : '';
-    console.log(`  ${finding.file}:${finding.line}  ${finding.rule}${id} — ${finding.message}`);
+    const tag = finding.advisory ? ' (advisory)' : '';
+    console.log(
+      `  ${finding.file}:${finding.line}  ${finding.rule}${id} — ${finding.message}${tag}`,
+    );
   }
 }

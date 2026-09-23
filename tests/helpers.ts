@@ -141,6 +141,7 @@ export function testContext(
       date: '2026-09-15',
       configHash: 'abcd1234',
       standardVersion: '1.0.0',
+      adapted: false,
     },
     date: '2026-09-15',
     repo,

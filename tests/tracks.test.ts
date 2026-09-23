@@ -15,6 +15,7 @@ import { join } from 'node:path';
 import { planRepo } from '../src/commands/setup.ts';
 import { runDoctorOn } from '../src/doctor/index.ts';
 import { defaultsPrompter } from '../src/lib/ask.ts';
+import { scanRepo } from '../src/lib/discover.ts';
 import { readText } from '../src/lib/disk.ts';
 import { contractHome, home, repoRoot } from '../src/lib/paths.ts';
 import { readStamp } from '../src/lib/stamp.ts';
@@ -128,6 +129,12 @@ const COMMIT_PARAGRAPH = '**Commits are the owner’s.**';
  * and not on the bump. All four are content changes to files this test already covers — 62 keys
  * before and after — so they are corrected here rather than exempted, and a file appearing or
  * disappearing would still fail.
+ *
+ * **One more moved on 2026-09-23, stamp-provenance D1.** `PART0-PROMPT.md`'s §0.8 no longer
+ * tells the adapting session to delete the generator's stamp and grep to prove none survive;
+ * it says to add ` · adapted` to the line, which is what lets `setup` leave the file alone while
+ * `doctor` can still read which standard it came from. One key per variant, 62 before and
+ * after, corrected here for the same reason as the rest.
  */
 describe('§3.1 row 1 — code + full + git is the 0.3.0 output, byte for byte bar one skill', () => {
   const FULL = answersFor(CODE_FULL_GIT);
@@ -491,15 +498,9 @@ describe('D7 — the proof line reaches the plan, the record and every document'
  */
 describe('doctor against a generated light target', () => {
   async function generate(dir: string) {
-    const scan = testScan({
-      kind: 'folder',
-      name: 'accounts',
-      path: dir,
-      remoteOwner: null,
-      languages: [],
-      packageManager: null,
-      hasCi: false,
-    });
+    // The scan `doctor` will re-run rather than a hand-written one (stamp-provenance `DESIGN.md`
+    // D2): a name the directory does not have would read back as drift.
+    const scan = await scanRepo(dir, 'folder');
     const answers = answersFor(NON_CODE_LIGHT, {
       proofLine: 'the totals agree with the source table',
     });
@@ -515,8 +516,8 @@ describe('doctor against a generated light target', () => {
     try {
       const ctx = await generate(dir);
       const report = await runDoctorOn(dir, {
-        configHash: ctx.stamp.configHash,
         standardVersion: ctx.stamp.standardVersion,
+        config: ctx.config,
       });
       const described = report.findings.map(
         (f) => `${f.file}:${f.line} ${f.rule} — ${f.message}`,
@@ -531,29 +532,65 @@ describe('doctor against a generated light target', () => {
     }
   });
 
-  test('violates: a moved standard version or config hash is drift on every stamped light file', async () => {
+  /**
+   * Drift by re-render (stamp-provenance `DESIGN.md` D2), on the light track. A standard behind
+   * the installed one reports on every stamped file; an answer that moves a rendered byte reports
+   * on every file that byte is in; and a config whose hash moved while the bytes did not — a
+   * package-supplied default the repo never saved (G12) — reports nothing, which is the whole
+   * reason the rule stopped comparing hashes.
+   */
+  test('violates: a standard version behind, or an answer that moves a byte, is drift on every stamped light file', async () => {
     const dir = await tempDir('pc-light-');
     try {
       const ctx = await generate(dir);
-      const behind = await runDoctorOn(dir, {
-        configHash: ctx.stamp.configHash,
-        standardVersion: '9.9.9',
-      });
-      const drifted = behind.findings
-        .filter((f) => f.rule === 'stamp-drift')
-        .map((f) => f.file);
-      expect(drifted.sort()).toEqual(
-        [
-          join(dir, 'CLAUDE.md'),
-          join(dir, 'HANDOFF.md'),
-          join(dir, 'docs', 'AGENT-PRACTICES.md'),
-        ].sort(),
+      const every = [
+        join(dir, 'CLAUDE.md'),
+        join(dir, 'HANDOFF.md'),
+        join(dir, 'docs', 'AGENT-PRACTICES.md'),
+      ].sort();
+      const drift = (findings: { rule: string; file: string; message: string }[]) =>
+        findings.filter((f) => f.rule === 'stamp-drift');
+
+      const behind = drift(
+        (await runDoctorOn(dir, { standardVersion: '9.9.9', config: ctx.config })).findings,
       );
-      const changed = await runDoctorOn(dir, {
-        configHash: '00000000',
+      expect(behind.map((f) => f.file).sort()).toEqual(every);
+      for (const f of behind) expect(f.message).toContain('behind v9.9.9');
+
+      const moved = drift(
+        (
+          await runDoctorOn(dir, {
+            standardVersion: ctx.stamp.standardVersion,
+            config: {
+              ...ctx.config,
+              answers: { ...ctx.config.answers, proofLine: 'the ledger balances' },
+            },
+          })
+        ).findings,
+      );
+      expect(moved.map((f) => f.file).sort()).toEqual(every);
+      for (const f of moved)
+        expect(f.message).toContain('would now write this file differently');
+    } finally {
+      await cleanup(dir);
+    }
+  });
+
+  test('passes: a config hash moved by a package default the repo never saved is not drift', async () => {
+    const dir = await tempDir('pc-light-');
+    try {
+      const ctx = await generate(dir);
+      // `models` is hashed wholesale (G10), and this track renders no tier table, so the hash
+      // moves and no byte does — the exact shape `0c737ac` shipped to every configured repo.
+      const config = {
+        ...ctx.config,
+        models: { ...ctx.config.models, light: 'Another Model' },
+      };
+      const report = await runDoctorOn(dir, {
         standardVersion: ctx.stamp.standardVersion,
+        config,
       });
-      expect(changed.findings.filter((f) => f.rule === 'stamp-drift')).toHaveLength(3);
+      expect(report.findings.filter((f) => f.rule === 'stamp-drift')).toEqual([]);
     } finally {
       await cleanup(dir);
     }

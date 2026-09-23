@@ -263,6 +263,9 @@ async function contextFor(
     date: today(),
     configHash: await configHash(config),
     standardVersion: await standardVersion(),
+    // Every renderer writes a file this tool may replace; only `doctor --fix` and a person's
+    // editor ever write the marker (stamp-provenance `DESIGN.md` D1).
+    adapted: false,
   };
   return { config, answers: forTarget, stamp, date: today(), repo };
 }

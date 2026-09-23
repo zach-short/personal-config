@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 import { join, relative } from 'node:path';
 import { runDoctorOn } from '../src/doctor/index.ts';
-import { cleanup, tempDir } from './helpers.ts';
+import { cleanup, tempDir, testConfig } from './helpers.ts';
 
-const EXPECTATION = { configHash: 'abcd1234', standardVersion: '1.0.0' };
+const EXPECTATION = { standardVersion: '1.0.0', config: testConfig() };
 
 /** Same scratch tree HANDOFF 16 hit the bug on: an index citing the folder it indexes, plus an
  * in-tree doc citing the same name from outside the archive. */

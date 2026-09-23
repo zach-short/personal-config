@@ -4,9 +4,16 @@ import { runDoctorOn } from '../src/doctor/index.ts';
 import { scanRepo } from '../src/lib/discover.ts';
 import { DEFAULT_DOC_NAMES, readDocNames } from '../src/lib/repo-config.ts';
 import { boardFile, ledgerFile } from '../src/render/context.ts';
-import { cleanup, DEFAULT_ANSWERS, tempDir, testContext, testRepoPlan } from './helpers.ts';
+import {
+  cleanup,
+  DEFAULT_ANSWERS,
+  tempDir,
+  testConfig,
+  testContext,
+  testRepoPlan,
+} from './helpers.ts';
 
-const EXPECTATION = { configHash: 'abcd1234', standardVersion: '1.0.0' };
+const EXPECTATION = { standardVersion: '1.0.0', config: testConfig() };
 
 /** §0.2: the repo keeps `NOTES.md` and `NEXT.md`, and nothing renames them. */
 const ADOPTED = `${JSON.stringify({ ledgerFile: 'NOTES.md', boardFile: 'NEXT.md' })}\n`;

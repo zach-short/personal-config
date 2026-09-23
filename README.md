@@ -115,8 +115,8 @@ fictional repo — that is what these look like after a few weeks of real use.
   until a run completes.
 - **Re-running replaces what the tool wrote and touches nothing else.** Every generated file
   carries a stamp naming the version, the date, a hash of your answers, and the standard
-  version. A file already sitting at one of those paths without that stamp is left alone and
-  named in the run's report — see below.
+  version. A file already sitting at one of those paths without that stamp — or with one marked
+  `adapted` — is left alone and named in the run's report — see below.
 - **Nothing leaves your machine.** The program makes two network calls and no others:
   `gh api user`, to find out your GitHub login, and only if `gh` is installed; and the fetch
   behind `setup --from <url|id>`, which happens only when you pass that flag and sends nothing
@@ -142,11 +142,28 @@ the tool can read, and guessing would mean either refusing every re-run or losin
 silently. It does neither: the overwrite is previewed, backed up, and `personal-config undo`
 puts it back.
 
-**Deleting the stamp line is how you take a generated file back.** One line, off the top of the
-file, and no re-run touches it again — and `doctor` stops asking you to re-render it, because a
-file the tool will not overwrite is not one it has standing to report drift on. That is the last
-step of Part 0: adaptation turns these documents into the repo's own, and a document that is the
-repo's own does not keep somebody else's stamp on it.
+**Adding one word to the stamp line is how you take a generated file back.** Append ` · adapted`
+after the standard version — `standard v1.2.0 · adapted -->` — and no re-run touches the file
+again, while `doctor` can still read where it came from: it stops asking you to re-render the
+file and instead says, when the standard moves on, that this adapted copy was made from an
+older one. That finding is *advisory* — printed and counted, not an exit code — because a
+standard you have not upgraded to yet is work to schedule, not a defect in the repo. This is the
+last step of Part 0: adaptation turns these documents into the repo's own, and a document that
+is the repo's own keeps its provenance and withdraws the permission.
+
+**Deleting the stamp line still works, and it is the third state.** One line, off the top of the
+file, and no re-run touches it again — and `doctor` never sees the file again either, because a
+file the tool will not overwrite and cannot place is not one it has standing to report on. Every
+adaptation made before the marker existed was told to do exactly this. `doctor` finds those files
+by Part 0's own `**Adapted to this repo <date>**` header and, under `--fix`, writes the adapted
+stamp back at the standard version the file's own preamble names — so an upgrade can reach them.
+
+**Drift is decided by re-rendering, not by comparing the hash.** `doctor` rebuilds what `setup`
+would write into the repo now — the shape recorded in `.personal-config.json`, a fresh scan of
+the directory, your merged answers — renders each file at the date its own stamp names, and
+compares bytes. A default this package added after you ran `setup` moves the hash in every stamp
+and changes no byte you have, so it reports nothing; an answer that changes a rendered byte
+reports on exactly the files that byte is in.
 
 Three writes are deliberately outside the guard, because none of them claims authorship: the
 JSON merge into `settings.json`, the lines appended to an ignore file, and the in-place edits
@@ -160,12 +177,14 @@ bun run doctor ~/code/app # or any path
 ```
 
 Checks what the documents claim against what is there, reporting `file:line` and exiting 1 on
-any finding: relative dates where an absolute one belongs; leftover `{{placeholders}}`;
+any finding — but one advisory kind, named under the stamp guard above, which is printed and
+counted and does not fail the run: relative dates where an absolute one belongs; leftover `{{placeholders}}`;
 duplicate or non-contiguous ledger step numbers; a board's `DONE` that does not point at a
 ledger step, `HELD` with nothing to wait on, `SUPERSEDED` with no replacement; archive entries
 whose folder is missing and folders missing from the index; in-tree citations of a path that has
-moved to the archive; a generated file whose stamp no longer matches your answers; and personal
-files that git can still see.
+moved to the archive; a generated file that `setup` would now write differently, or whose stamp
+names a standard version behind the installed one; a file Part 0 adapted that carries no stamp
+at all; and personal files that git can still see.
 
 One check reads git rather than the files: a line under a `## Settled` heading that your
 uncommitted work *removes or rewrites*, with no supersession stated anywhere in that file's
@@ -177,14 +196,18 @@ kept untracked all produce nothing.
 bun run doctor . --fix    # apply the mechanical fixes
 ```
 
-`--fix` applies only what a rule marks mechanical, which today is one thing: a personal file git
-can still see gets an anchored line in your ignore file — `.gitignore` where you track this
-repo's documents and `.git/info/exclude` where you do not, the same choice `setup` made, read
-back rather than guessed. Everything else is reported and left alone, because a relative date, a
-missing archive folder and a board row pointing at no ledger step are decisions rather than
-edits. The write goes the same way every other one does: backed up before it is touched, and
-`personal-config undo` puts it back. `--dry-run` says what it would append and writes nothing.
-The exit code answers for what is left, so a run that fixed everything exits 0.
+`--fix` applies only what a rule marks mechanical, which as of 2026-09-23 is two things. A
+personal file git can still see gets an anchored line in your ignore file — `.gitignore` where
+you track this repo's documents and `.git/info/exclude` where you do not, the same choice `setup`
+made, read back rather than guessed. And a file carrying Part 0's `**Adapted to this repo
+<date>**` header with no stamp at all — every adaptation made before the marker existed — gets an
+adapted stamp at the standard version its own preamble names, or `unknown` where it names none,
+with every other byte kept, so `doctor` can say when that standard moves. Everything else is
+reported and left alone, because a relative date, a missing archive folder and a board row
+pointing at no ledger step are decisions rather than edits. Each write goes the same way every
+other one does: backed up before it is touched, and `personal-config undo` puts it back.
+`--dry-run` says what it would write and writes nothing. The exit code answers for what is left,
+so a run that fixed everything exits 0.
 
 ## `passoff`, `handoff`, `archive` and `fold`
 

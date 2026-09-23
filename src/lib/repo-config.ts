@@ -1,5 +1,6 @@
 import { join } from 'node:path';
 import { exists, readJson } from './disk.ts';
+import type { TrackMode, WorkProfile } from './types.ts';
 
 /** The ledger and board filenames for one repo. */
 export type DocNames = { ledger: string; board: string };
@@ -59,6 +60,28 @@ export async function readArchiveHome(repoDir: string): Promise<string | null> {
 export async function readTrackMode(repoDir: string): Promise<'tracked' | 'untracked' | null> {
   const value = stringAt(await readRepoJson(repoDir), 'trackMode');
   return value === 'tracked' || value === 'untracked' ? value : null;
+}
+
+/**
+ * The shape `setup` rendered — a ledger, or project folders — as `renderRepoConfig` recorded it.
+ * `doctor` re-renders against this rather than against the `workProfile` *answer*, which is the
+ * shared default and not what this target got: `planRepo` writes an adopted profile into the
+ * per-repo answers only, and nothing copies it back (stamp-provenance `DESIGN.md` D2).
+ */
+export async function readWorkProfile(repoDir: string): Promise<WorkProfile | null> {
+  const value = stringAt(await readRepoJson(repoDir), 'workProfile');
+  return value === 'ledger' || value === 'folders' ? value : null;
+}
+
+/**
+ * The recorded mode as written, `n/a` included. `readTrackMode` above folds `n/a` into null
+ * because its one caller is choosing an ignore file and a folder has none; a re-render needs the
+ * distinction, since `n/a` is what keeps `renderIgnore` from planning a `.git/` that is not
+ * there (DIAL-11).
+ */
+export async function readRecordedTrackMode(repoDir: string): Promise<TrackMode | null> {
+  const value = stringAt(await readRepoJson(repoDir), 'trackMode');
+  return value === 'tracked' || value === 'untracked' || value === 'n/a' ? value : null;
 }
 
 /** One read of the file every reader here shares, so they cannot disagree about its shape. */

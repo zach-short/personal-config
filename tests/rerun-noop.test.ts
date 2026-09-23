@@ -11,6 +11,7 @@ const MONDAY: StampParts = {
   date: '2026-09-16',
   configHash: 'abcd1234',
   standardVersion: '1.0.3',
+  adapted: false,
 };
 
 const TUESDAY: StampParts = { ...MONDAY, date: '2026-09-17' };

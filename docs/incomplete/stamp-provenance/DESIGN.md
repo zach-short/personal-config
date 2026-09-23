@@ -1,7 +1,9 @@
 # DESIGN — the stamp's two jobs, and a hash that moves on its own
 
-**Status:** `RATIFIED`. Opened 2026-09-23 as `SCOPE.md`; **GATE 1 completed 2026-09-23** and
-renamed the same day. Owner: Zach. One repo — `personal-config`.
+**Status:** `BUILT` 2026-09-23 — gates green, uncommitted when this line was written; the
+commit is the owner's, and the root `CHANGELOG.md`'s Unreleased entries describe what shipped.
+Opened 2026-09-23 as `SCOPE.md`; **GATE 1 completed 2026-09-23** and renamed the same day.
+Owner: Zach. One repo — `personal-config`.
 
 **Why this exists.** Asked in chat 2026-09-23: how does someone upgrade or modify their setup
 gracefully as new versions come out. The audit behind that question found two things that make
@@ -106,6 +108,13 @@ and safe was preferred to loud and destructive.
 *Supersedes:* `templates/PART0-PROMPT.md:59-66` §0.8, and the README's "Deleting the stamp line
 is how you take a generated file back" (G23) — which survives as the third state, no longer as
 the only one. Ratified 2026-09-23.
+*As built, 2026-09-23:* `StampParts.adapted` is **required**, not optional — a writer cannot
+leave it out and a reader cannot take absence for `false`. `markAdapted` in `src/lib/stamp.ts`
+covers the three starting states (plain stamp, adapted stamp, no stamp). The guard's refusal is
+named `adapted`, apart from `no-stamp`, because the way out of each differs. H4 held without a
+change: the marker is appended after every field `blankStampDate` reads. The failure direction
+under an old CLI is pinned in `tests/adapted-stamp.test.ts` against the literal pattern `0.5.0`
+shipped (`git show 52898d1:src/lib/stamp.ts`), not reasoned about.
 
 **D2 — Drift is decided by re-rendering, not by comparing a hash.**
 `doctor` builds a render context, renders, and compares against what is on disk with the
@@ -120,6 +129,21 @@ doctor finding, and it needs a context it does not build as of 2026-09-23 (G19).
 *Not superseded:* the 2026-09-15 decision to keep `answers` in the hash (G16) stands untouched
 — this changes what the drift rule *compares*, not what the stamp *records*. The stamp keeps
 its config hash, which stays the provenance record it has always been. Ratified 2026-09-23.
+*As built, 2026-09-23:* G19's cost was paid as one module, `src/doctor/rerender.ts`, and two
+reads of `.personal-config.json` (`readWorkProfile`, `readRecordedTrackMode` in
+`src/lib/repo-config.ts`) — not by teaching `doctor` the discover phase. The scan is re-run on
+the directory, because that is what `setup` would do; the answers are the merged config
+`doctor` already loads. Each file is rendered **at its own stamp's date and fields**, once per
+distinct stamp, so the comparison is exact equality: the ledger's "Started <date>" and the
+router's "Detected <date>" would otherwise differ the day after setup. `PART0-PROMPT.md` is
+deliberately not compared — it is a snapshot of discovery, and re-deriving it after the run has
+written the ledger reports a different prompt. A file `setup` would write differently and a
+standard behind the installed one are two findings on one file, kept separate on purpose.
+`runDoctorOn` now takes `{standardVersion, config}` where it took `{configHash, standardVersion}`;
+`StampExpectation` is `{standardVersion, rendered, configured}`. Verified against a real `setup`
+run, not only unit tests: `tests/config-hash.test.ts` drives the bin end to end, and a freshly
+rendered repo reports no drift, then drift when a saved answer changes, then none when it is put
+back. `H3` held: `configHash` in `src/lib/config.ts` is untouched.
 
 **D3 — Already-adapted repos are migrated by a `doctor` rule with a `--fix`.**
 The rule spots a file carrying §0.7's `**Adapted to this repo <date>**` header and no stamp,
@@ -128,6 +152,20 @@ reports it, and under `--fix` writes an adapted stamp at the standard version th
 *Defense:* §0.8 told those repos to delete the stamp and grep to prove it (G3), so the header
 prose is the only surviving evidence (H2); `--fix` already exists and is already opt-in, so the
 write stays a thing the owner asks for. Ratified 2026-09-23.
+*As built, 2026-09-23:* `src/doctor/rules/unstamped-adaptation.ts`, a doc rule and therefore
+**not** gated on `.personal-config.json` — the repos it exists for have none. The header match
+is `^\*\*Adapted to this repo\b`, the seven words §0.7 dictates and nothing after them, because
+the two real copies diverge from the eighth word on. The version is read from the preamble above
+`# Part 1`, on a line that says "standard" and spells the version as `v1.0.2` or
+`version: 1.2.0`; a bare number does not count, so a runtime's version cannot be mistaken for
+the standard's. **One build-level call the design did not dial: the config hash in the written
+stamp is `00000000`.** The answers that produced an adapted file are unknowable, the current
+merged config's hash would claim exactly that knowledge, and nothing reads the field on an
+adapted file. Reverse by hashing the merged config in `adaptationFix` instead. The stamp's date
+and CLI version are the fixing run's, the way every stamp's are. `--fix` is now a small dispatch
+in `src/doctor/index.ts`, one planned file per fix; the ignore fix is unchanged. Ran read-only
+against both real adapted copies (board rows 4 and 18): each reports at line 3 from
+`v1.0.2`, and `--fix --dry-run` names the one write and makes none.
 
 **D4 — A standard-version lag in an adapted file reports, and exits 0.**
 Every other `doctor` finding keeps its non-zero exit; this one does not.
@@ -135,6 +173,12 @@ Every other `doctor` finding keeps its non-zero exit; this one does not.
 finding most likely to sit unresolved for weeks. A `doctor` that is permanently red for an
 upgrade you have not done yet is a `doctor` people stop running — and anyone with it in CI
 would go red once per standard release for something they did not cause. Ratified 2026-09-23.
+*As built, 2026-09-23:* `Finding.advisory?: boolean` — present and true is the whole signal.
+`runDoctor` counts advisory findings apart from the rest and exits on the rest; the summary line
+reads `nothing failing; N advisory finding(s)` rather than `no findings`, so a clean exit cannot
+read as a clean report, and each advisory line is tagged `(advisory)`. Exactly two messages
+carry the flag: an adapted file behind the installed standard, and an adapted file whose stamp
+names no version (`unknown`, DIAL-6), which keeps asking for one.
 
 ### Rules that survive unchanged
 
@@ -292,6 +336,16 @@ nothing.
 - **H8 — S1.** No personal strings in `src/`, `templates/` or `standard/`; a test greps.
 - **H9 — X2.** Every test here writes stamps and reads them back; all of it stays inside a temp
   directory with `$HOME` redirected.
+- **H10 — a stamp quoted in prose reads as the file's own** (found 2026-09-23 while building
+  D2, not fixed here). `readStamp` matches a stamp-shaped line *anywhere* in a file, so a
+  document that quotes one in a fenced block — this repo's own board did, in row 68's prompt,
+  quoting `examples/`' stamp — is "ours" to both readers: the guard would overwrite it on a
+  re-run and the drift rule re-renders and compares it. The pattern `0.5.0` shipped matches the
+  same line (`git show 52898d1:src/lib/stamp.ts`, probed 2026-09-23), so this predates the
+  item and both readers agree, which is why it was raised rather than changed: narrowing what
+  counts as a stamp changes the guard's reading of every file on disk (H7) and is its own
+  decision. The narrow fix is to accept a stamp only where a renderer puts one — line 1, or
+  the line after a shebang or a frontmatter block.
 
 ---
 

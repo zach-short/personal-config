@@ -1,7 +1,7 @@
 import { backupFiles, type Manifest } from './backup.ts';
 import { diffSummary } from './diff.ts';
 import { exists, modeOf, readText, setMode, writeText } from './disk.ts';
-import { isOurs, sameButForStampDate } from './stamp.ts';
+import { isOurs, markAdapted, readStamp, sameButForStampDate } from './stamp.ts';
 import type { PlannedFile } from './types.ts';
 
 export type PlannedChange = {
@@ -11,8 +11,13 @@ export type PlannedChange = {
   /** What will be on disk after. For merge/append strategies this is the merged result. */
   after: string;
   summary: string;
-  /** Why nothing is written, where the stamp guard refused it; `none` everywhere else. */
-  guard: 'none' | 'no-stamp';
+  /**
+   * Why nothing is written, where the stamp guard refused it; `none` everywhere else. Two
+   * refusals, named apart because the way out of each differs: a file with no stamp is generated
+   * fresh only if deleted, and a file marked `adapted` is the repo's own until its owner removes
+   * the word.
+   */
+  guard: 'none' | 'no-stamp' | 'adapted';
   /**
    * Permission bits to set once the bytes are down, absent where the file already carries them.
    * Present is the whole signal: a change with identical contents and a `chmod` is still work,
@@ -45,8 +50,8 @@ async function resolveOne(file: PlannedFile): Promise<PlannedChange> {
  *
  * Exact equality, not "executable enough": the mode of a generated file is this tool's to own,
  * the same way its bytes are. Someone who tightens a hook to 0700 gets it set back to 0755 on
- * the next run — visibly, in the preview — and the one way to take a generated file back for
- * good is still the documented one, deleting its stamp line.
+ * the next run — visibly, in the preview — and the ways to take a generated file back for good
+ * are still the documented ones: marking its stamp `adapted`, or deleting the line.
  *
  * Nothing calls this for a stamp-guarded file. A file we have refused to write is a file we
  * have refused to touch, and changing its bits would be exactly the write the guard declined.
@@ -79,9 +84,15 @@ export function willWrite(change: PlannedChange): boolean {
  *
  * A *stamped* file is written even where a person has edited it. Nothing in the stamp records
  * the bytes we wrote, so an edit to a generated file leaves no trace this can read; that
- * overwrite is backed up and `personal-config undo` restores it. Deleting the stamp line is how
- * a generated file is taken back for good — which is what Part 0 adaptation does to the
- * documents it rewrites.
+ * overwrite is backed up and `personal-config undo` restores it. A stamp marked `adapted` is how
+ * a generated file is taken back for good while keeping its provenance readable — which is what
+ * Part 0 adaptation does to the documents it rewrites (stamp-provenance `DESIGN.md` D1) — and
+ * deleting the line still takes it back too, at the cost of `doctor` never seeing it again.
+ *
+ * `mark-adapted` is admitted before the content test because its contents *is* a stamp line and
+ * the file it lands on has none: the one write allowed to add a stamp to a file this tool never
+ * produced. It keeps every byte and adds the provenance the owner asked `doctor --fix` for, so it
+ * claims nothing — the same reason the merge and the append are not guarded (D3).
  *
  * This one keys on *content* on purpose, unlike `onDiskNow` below, which had to stop. An empty
  * file carries no stamp and no bytes to lose, and refusing it would make `touch` a way to block
@@ -89,14 +100,30 @@ export function willWrite(change: PlannedChange): boolean {
  */
 function stampGuard(file: PlannedFile, before: string): PlannedChange['guard'] {
   if (before.length === 0) return 'none';
+  if (file.strategy === 'mark-adapted') return 'none';
   if (!isOurs(file.contents)) return 'none';
-  return isOurs(before) ? 'none' : 'no-stamp';
+  const stamp = readStamp(before);
+  if (stamp === null) return 'no-stamp';
+  return stamp.adapted ? 'adapted' : 'none';
 }
 
 function applyStrategy(file: PlannedFile, before: string): string {
   if (file.strategy === 'overwrite') return file.contents;
   if (file.strategy === 'append-lines') return appendMissingLines(before, file.contents);
+  if (file.strategy === 'mark-adapted') return markAdapted(before, adaptedLine(file));
   return mergeJson(before, file.contents);
+}
+
+/**
+ * The bound on what `mark-adapted` can put into a file: its contents must be one adapted stamp
+ * line, or the strategy would be a way to prepend anything to a file the guard has just waved
+ * through. A caller that gets here with anything else is a bug, and the throw names the path.
+ */
+function adaptedLine(file: PlannedFile): string {
+  if (readStamp(file.contents)?.adapted !== true) {
+    throw new Error(`mark-adapted needs an adapted stamp line as its contents: ${file.path}`);
+  }
+  return file.contents;
 }
 
 /** Ignore files: add only the lines that are not already there, and never reorder. */

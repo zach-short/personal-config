@@ -196,8 +196,13 @@ export type PlannedFile = {
   contents: string;
   /** What this file is, in the preview tree. */
   label: string;
-  /** JSON merge rather than overwrite (settings.json), or append (ignore files). */
-  strategy: 'overwrite' | 'merge-json' | 'append-lines';
+  /**
+   * JSON merge rather than overwrite (settings.json), or append (ignore files) — or
+   * `mark-adapted`, which prepends the adapted stamp line in `contents` to a file that has none
+   * and adds the marker to a stamp that lacks it, keeping every other byte. Only `doctor --fix`
+   * plans that one, for a file whose own header says a Part 0 session rewrote it (D3).
+   */
+  strategy: 'overwrite' | 'merge-json' | 'append-lines' | 'mark-adapted';
   /**
    * Permission bits this file needs, absent where the filesystem default will do. Set for the
    * hook scripts, which `settings.json` registers by bare path: a `command` entry invoking a
@@ -215,6 +220,14 @@ export type Finding = {
   line: number;
   message: string;
   fixable: boolean;
+  /**
+   * Present and true is the whole signal, the way `PlannedFile.mode` is: this finding is
+   * reported and does not fail the run (stamp-provenance `DESIGN.md` D4). Only a standard-version
+   * lag in an adapted file carries it — work to schedule rather than a defect in the repo, and
+   * the one finding most likely to sit for weeks — and every other finding keeps its non-zero
+   * exit by leaving it out.
+   */
+  advisory?: boolean;
 };
 
 /** One rule as the standard's §8.1 shape requires: ID, enforcement tag, pair, provenance. */

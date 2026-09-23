@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { join } from 'node:path';
-import { stampDrift } from '../src/doctor/rules/stamp-drift.ts';
+import { type StampExpectation, stampDrift } from '../src/doctor/rules/stamp-drift.ts';
 import { kindOf } from '../src/doctor/scan.ts';
 import { latestBackup, restore } from '../src/lib/backup.ts';
 import { isOurs, readStamp, type StampParts, withStamp } from '../src/lib/stamp.ts';
@@ -23,6 +23,7 @@ const STAMP: StampParts = {
   date: '2026-09-16',
   configHash: 'abcd1234',
   standardVersion: '1.0.0',
+  adapted: false,
 };
 
 /** A file the tool claims: the stamp in its contents is the claim. */
@@ -195,7 +196,12 @@ describe('taking a generated document back', () => {
 
   test('doctor goes quiet on exactly what the guard leaves alone', () => {
     const body = '# a document Part 0 rewrote\n';
-    const stale = { configHash: 'ffffffff', standardVersion: '9.9.9' };
+    // No render to compare against — the standard lag alone is what should tell the two apart.
+    const stale: StampExpectation = {
+      standardVersion: '9.9.9',
+      rendered: null,
+      configured: true,
+    };
     const doc = (text: string) => ({
       path: 'CLAUDE.md',
       kind: kindOf('CLAUDE.md'),

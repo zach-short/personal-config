@@ -2,9 +2,9 @@ import { describe, expect, test } from 'bun:test';
 import { join } from 'node:path';
 import { runDoctorOn } from '../src/doctor/index.ts';
 import { kindOf } from '../src/doctor/scan.ts';
-import { cleanup, tempDir } from './helpers.ts';
+import { cleanup, tempDir, testConfig } from './helpers.ts';
 
-const EXPECTATION = { configHash: 'abcd1234', standardVersion: '1.0.0' };
+const EXPECTATION = { standardVersion: '1.0.0', config: testConfig() };
 
 async function findingsFor(files: Record<string, string>): Promise<string[]> {
   const dir = await tempDir();
