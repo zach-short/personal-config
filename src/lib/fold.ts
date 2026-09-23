@@ -132,7 +132,28 @@ function stepBlock(lines: string[], step: LedgerStep, stops: number[], date: str
 function stubFor(step: LedgerStep, text: string, date: string): string {
   const done = text.match(/\b(\d{4}-\d{2}-\d{2})\b/)?.[1];
   const when = done === undefined ? '' : ` Done ${done}.`;
-  return `**${step.number}. ${step.title}**${when} Body folded ${date}.`;
+  return `**${step.number}. ${titleFrom(text, step.title)}**${when} Body folded ${date}.`;
+}
+
+/** `**12. Built it.**`, where the bold title is allowed to run onto the next line. */
+const WRAPPED_TITLE = /^\s*(?:[-*+]\s+)?\*\*\d+\.\s+([\s\S]*?)\*\*/;
+
+/**
+ * The step's title, healed back into one line where the heading wrapped.
+ *
+ * `ledgerSteps` reads the log line by line, so a `**N. Title**` whose bold closes on a *second*
+ * line leaves `step.title` empty and the stub reads `**4. ** Done 2026-09-15.` — 18 of this
+ * repo's own 58 steps, found folding it for the first time on 2026-09-23. The block text holds
+ * the rest of the heading, and the search is bounded to its first paragraph so a heading whose
+ * bold is never closed cannot pull body prose into the stub.
+ *
+ * The fallback is not dead: `**12.** Built it.` closes its bold before the title starts, which
+ * this pattern deliberately does not match and `PLAIN_TITLE` already reads.
+ */
+function titleFrom(text: string, fallback: string): string {
+  const heading = text.split(/\n\s*\n/)[0] ?? '';
+  const wrapped = heading.match(WRAPPED_TITLE)?.[1]?.replace(/\s+/g, ' ').trim();
+  return wrapped === undefined || wrapped === '' ? fallback : wrapped;
 }
 
 /**

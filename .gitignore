@@ -5,9 +5,12 @@ node_modules/
 tests/fixtures/
 
 # This repo's own ledger and board are personal process, not part of the public repo.
+# `.personal-config.json` is the same: one machine's archive path, which is what `setup`
+# itself keeps out of a tracked repo (`src/render/repo.ts` `renderIgnore`).
 /HANDOFF.md
 /PASSOFF.md
 /CLAUDE.local.md
+/.personal-config.json
 
 # But it *ships* files with those names, as templates and as worked examples. A global
 # gitignore of `HANDOFF.md` (unanchored, so it matches at every depth) would otherwise make

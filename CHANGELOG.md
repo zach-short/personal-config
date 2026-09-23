@@ -3,6 +3,20 @@
 The CLI. The working standard it installs is versioned separately — see
 [`standard/CHANGELOG.md`](standard/CHANGELOG.md).
 
+## Unreleased
+
+### Fixed
+
+- **A folded step whose title wrapped onto a second line lost that title.** `ledgerSteps` reads
+  the log line by line, so a `**N. Title**` whose bold closed on the *next* line left
+  `step.title` empty and the stub read `**4. ** Done 2026-09-15.` — 18 of this repo's own 58
+  steps, found the first time it folded itself, against a `0.5.0` entry claiming every step
+  keeps its number, title and date. The stub now reads the title out of the block it replaces,
+  bounded to the heading's own paragraph so a heading whose bold is never closed cannot pull
+  body prose into the log. **Re-folding does not repair a log already folded by `0.5.0`** — a
+  stubbed step has no body left to lift, by design — so those titles have to come back from the
+  archive file by hand, or from `personal-config undo` if the fold is still the latest write.
+
 ## 0.5.0 — 2026-09-23
 
 ### Added
