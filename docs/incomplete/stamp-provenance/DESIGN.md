@@ -337,7 +337,7 @@ nothing.
 - **H9 — X2.** Every test here writes stamps and reads them back; all of it stays inside a temp
   directory with `$HOME` redirected.
 - **H10 — a stamp quoted in prose reads as the file's own** (found 2026-09-23 while building
-  D2, not fixed here). `readStamp` matches a stamp-shaped line *anywhere* in a file, so a
+  D2; fixed 2026-09-24 as board row 71, HANDOFF 88 — *As built* below). `readStamp` matches a stamp-shaped line *anywhere* in a file, so a
   document that quotes one in a fenced block — this repo's own board did, in row 68's prompt,
   quoting `examples/`' stamp — is "ours" to both readers: the guard would overwrite it on a
   re-run and the drift rule re-renders and compares it. The pattern `0.5.0` shipped matches the
@@ -346,6 +346,33 @@ nothing.
   counts as a stamp changes the guard's reading of every file on disk (H7) and is its own
   decision. The narrow fix is to accept a stamp only where a renderer puts one — line 1, or
   the line after a shebang or a frontmatter block.
+
+  *As built, 2026-09-24:* the narrow fix, taken as its own decision (Zach, board row 71).
+  `stampIndex` in `src/lib/stamp.ts` names the one line a stamp may sit on: line 2 below a
+  `#!` line; below a frontmatter block, the first non-blank line after the closing `---`
+  (`stampAfterFrontmatter` leaves one blank line there); an unclosed frontmatter has none;
+  every other file, line 1. `readStamp`, `isOurs` and `markAdapted` all read through it, and
+  `STAMP_PATTERN`'s five groups are unchanged; it is now matched against that one line.
+  **The finding was wider than written.** The guard asks `isOurs(file.contents)` before it
+  asks about the disk, so a quoted stamp in *what we write* made an unclaimed write a claim:
+  a board gaining a prompt that quotes a stamp would have been refused `no-stamp`. And
+  `blankStampDate`, taking the first match, forgave a date change inside a quote on a file
+  with no stamp of its own, so an `edit()` whose only change was that date compared equal and
+  was silently dropped. It now blanks only the `stampIndex` line, and it keeps its own looser
+  regex, the one that stops at `config`, so H4 holds as before. Four tests in
+  `tests/stamp-guard.test.ts` were seen red against the old `stamp.ts` and green after. Four
+  more take every stamp the real renderers write, in all three shapes. On each they check the
+  round trip, the guard's three verdicts (`none`, `adapted`, `no-stamp`), `markAdapted`
+  touching one line, and date-only forgiveness. Those four pass against the old code as well,
+  which is the H7 claim: no stamp this tool ever wrote stops counting. What does stop
+  counting is any hand-placed stamp, such as a line moved lower by a person, or a stamp in a
+  file an old CLI wrote somewhere other than these positions. No old CLI did that: across
+  `git log -- src/lib/stamp.ts`, `withStamp` has had exactly two bodies, a prepend and
+  `stampAfterShebang`. `stampAfterFrontmatter` is unchanged since `skills.ts` was added. A
+  pre-2026-09-18 hook, with its stamp on line 1 above a displaced `#!`, still reads, and a
+  test pins that. Such a file now reads as unstamped: the guard leaves it alone and `doctor` goes
+  quiet, which is the safe direction. `doctor .` on this repo lost its two `PASSOFF.md:1`
+  findings.
 
 ---
 

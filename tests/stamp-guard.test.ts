@@ -3,7 +3,15 @@ import { join } from 'node:path';
 import { type StampExpectation, stampDrift } from '../src/doctor/rules/stamp-drift.ts';
 import { kindOf } from '../src/doctor/scan.ts';
 import { latestBackup, restore } from '../src/lib/backup.ts';
-import { isOurs, readStamp, type StampParts, withStamp } from '../src/lib/stamp.ts';
+import {
+  isOurs,
+  markAdapted,
+  readStamp,
+  type StampParts,
+  sameButForStampDate,
+  stampLine,
+  withStamp,
+} from '../src/lib/stamp.ts';
 import type { PlannedFile } from '../src/lib/types.ts';
 import { commitPlan, resolvePlan } from '../src/lib/write-plan.ts';
 import { edit } from '../src/render/context.ts';
@@ -62,6 +70,23 @@ describe('the stamp guard', () => {
       const result = await commitPlan(changes);
       expect(result.written).toEqual([]);
       expect(await Bun.file(target).text()).toBe('# written by a person\n');
+    } finally {
+      await cleanup(dir);
+    }
+  });
+
+  test('a person’s file that quotes a stamp in prose is left alone (H10)', async () => {
+    const dir = await tempDir();
+    try {
+      const target = join(dir, 'CLAUDE.md');
+      const theirs = `# written by a person\n\nOurs look like:\n\n    ${stampLine(STAMP)}\n`;
+      await Bun.write(target, theirs);
+
+      const changes = await resolvePlan([generated(target, '# generated\n')]);
+      expect(changes[0]?.guard).toBe('no-stamp');
+
+      await commitPlan(changes);
+      expect(await Bun.file(target).text()).toBe(theirs);
     } finally {
       await cleanup(dir);
     }
@@ -147,6 +172,24 @@ describe('what the guard must not refuse', () => {
     }
   });
 
+  test('a stamp quoted in prose is not a claim — the write lands (H10)', async () => {
+    const dir = await tempDir();
+    try {
+      // The shape that happened: a board gains a prompt that quotes a stamp, as row 68's did.
+      const target = join(dir, 'PASSOFF.md');
+      await Bun.write(target, '# board\n\n| 5 | OPEN | a thing |\n');
+      const quoting = `# board\n\n| 5 | OPEN | a thing |\n\nThe files carry:\n\n\`\`\`\n${stampLine(STAMP)}\n\`\`\`\n`;
+
+      const changes = await resolvePlan([unclaimed(target, quoting)]);
+      expect(changes[0]?.guard).toBe('none');
+
+      await commitPlan(changes);
+      expect(await Bun.file(target).text()).toBe(quoting);
+    } finally {
+      await cleanup(dir);
+    }
+  });
+
   test('an in-place edit still writes — `passoff claim` marks a board nobody stamped', async () => {
     const dir = await tempDir();
     try {
@@ -215,5 +258,127 @@ describe('taking a generated document back', () => {
     expect(stampDrift(doc(withStamp(body, STAMP)), stale).length).toBeGreaterThan(0);
     // Unstamped: no re-run will ever clear the finding, so there must not be one.
     expect(stampDrift(doc(body), stale)).toEqual([]);
+  });
+});
+
+/**
+ * H10's compatibility net (H7): narrowing where a stamp counts must not lose one a renderer
+ * wrote. Every stamp here comes from the real renderers, in all three shapes they produce —
+ * line 1, below a shebang (hook scripts), below frontmatter (skills).
+ */
+describe('a stamp where a renderer puts one still counts', () => {
+  const answers = { ...DEFAULT_ANSWERS, skills: 'all', hooks: 'both' } as const;
+
+  async function rendered(dir: string): Promise<PlannedFile[]> {
+    const repo = testRepoPlan({ scan: testScan({ path: dir, name: 'example' }) });
+    const ctx = testContext(answers, repo);
+    const files = await renderAll(ctx);
+    return files.filter((file) => /personal-config v\S+ · \d{4}-/.test(file.contents));
+  }
+
+  function shaped(files: PlannedFile[], opening: string): PlannedFile {
+    const file = files.find((f) => f.contents.startsWith(opening));
+    if (!file) throw new Error(`no rendered file opens with ${opening}`);
+    return file;
+  }
+
+  test('a hook written before 2026-09-18 — stamp above a displaced `#!` — still counts', () => {
+    const old = `${stampLine(STAMP, 'sh')}\n#!/usr/bin/env bash\nset -euo pipefail\n`;
+    expect(readStamp(old)).toEqual(STAMP);
+    expect(readStamp(markAdapted(old, ''))?.adapted).toBe(true);
+  });
+
+  test('every rendered stamp round-trips, in all three shapes', async () => {
+    const dir = await tempDir();
+    try {
+      const files = await rendered(dir);
+      for (const opening of ['<!--', '#!', '---\n']) shaped(files, opening);
+      for (const file of files) {
+        expect({ path: file.path, ours: isOurs(file.contents) }).toEqual({
+          path: file.path,
+          ours: true,
+        });
+        expect(readStamp(file.contents)?.adapted).toBe(false);
+      }
+    } finally {
+      await cleanup(dir);
+      await clearSavedAnswers();
+    }
+  });
+
+  test('the guard reads each shape as it did: stamped, adapted, stripped', async () => {
+    const dir = await tempDir();
+    try {
+      const files = await rendered(dir);
+      for (const opening of ['<!--', '#!', '---\n']) {
+        const file = shaped(files, opening);
+        const target = join(dir, `shape-${files.indexOf(file)}`);
+        const planned = { ...file, path: target };
+        const verdict = async (onDisk: string) => {
+          await Bun.write(target, onDisk);
+          return (await resolvePlan([planned]))[0]?.guard;
+        };
+
+        expect(await verdict(file.contents)).toBe('none');
+        expect(await verdict(markAdapted(file.contents, ''))).toBe('adapted');
+        expect(await verdict(stripStamp(file.contents))).toBe('no-stamp');
+      }
+    } finally {
+      await cleanup(dir);
+      await clearSavedAnswers();
+    }
+  });
+
+  test('markAdapted marks the anchored line and changes no other', async () => {
+    const dir = await tempDir();
+    try {
+      for (const file of await rendered(dir)) {
+        const before = file.contents.split('\n');
+        const after = markAdapted(file.contents, '').split('\n');
+        const changed = before.flatMap((line, i) => (line === after[i] ? [] : [i]));
+        expect(changed).toHaveLength(1);
+        expect(readStamp(after.join('\n'))?.adapted).toBe(true);
+      }
+    } finally {
+      await cleanup(dir);
+      await clearSavedAnswers();
+    }
+  });
+
+  test('only the anchored stamp’s date is forgiven, in each shape', async () => {
+    const dir = await tempDir();
+    try {
+      for (const file of await rendered(dir)) {
+        const redated = file.contents.replace(/ · \d{4}-\d{2}-\d{2} · /, ' · 2031-01-01 · ');
+        expect(redated).not.toBe(file.contents);
+        expect(sameButForStampDate(file.contents, redated)).toBe(true);
+      }
+    } finally {
+      await cleanup(dir);
+      await clearSavedAnswers();
+    }
+  });
+});
+
+describe('a quoted stamp’s date is prose, not provenance (H10)', () => {
+  const board = (date: string) =>
+    `# board\n\n| 5 | OPEN | a thing |\n\n    ${stampLine({ ...STAMP, date })}\n`;
+
+  test('an edit that only changes a quoted date is not mistaken for date churn', () => {
+    expect(sameButForStampDate(board('2026-09-16'), board('2026-09-24'))).toBe(false);
+  });
+
+  test('so the edit lands', async () => {
+    const dir = await tempDir();
+    try {
+      const target = join(dir, 'PASSOFF.md');
+      await Bun.write(target, board('2026-09-16'));
+
+      const changes = await resolvePlan([edit(target, 'board', board('2026-09-24'))]);
+      await commitPlan(changes);
+      expect(await Bun.file(target).text()).toBe(board('2026-09-24'));
+    } finally {
+      await cleanup(dir);
+    }
   });
 });

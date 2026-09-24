@@ -57,6 +57,15 @@ The CLI. The working standard it installs is versioned separately — see
 
 ### Fixed
 
+- **A stamp quoted in prose no longer counts as the file's own.** A stamp used to count on any
+  line of a file, so a document that quoted one (a README documenting the format, or a board
+  whose prompt showed an example) read as generated. `setup` would overwrite a person's file
+  that merely quoted one. It would refuse an in-place write whose new contents quoted one. And
+  it could silently drop an edit whose only change was a date inside such a quote. `doctor`
+  also re-rendered those files and reported drift on them. A stamp now counts only where this
+  tool puts one: line 1, the line below a `#!`, or the first line after a frontmatter block.
+  Every stamp any version wrote sits in one of those places, so no file this tool produced
+  changes status. (`docs/incomplete/stamp-provenance/DESIGN.md` H10.)
 - **A folded step whose title wrapped onto a second line lost that title.** `ledgerSteps` reads
   the log line by line, so a `**N. Title**` whose bold closed on the *next* line left
   `step.title` empty and the stub read `**4. ** Done 2026-09-15.` — 18 of this repo's own 58

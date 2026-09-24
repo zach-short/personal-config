@@ -89,12 +89,59 @@ function stampAfterShebang(contents: string, stamp: string): string {
 const STAMP_PATTERN =
   /personal-config v(\S+) · (\d{4}-\d{2}-\d{2}) · config ([0-9a-f]{8}) · standard v(\S+?)( · adapted)?\s*(?:-->)?$/m;
 
-export function readStamp(contents: string): StampParts | null {
-  const match = contents.match(STAMP_PATTERN);
+/**
+ * The one line a stamp may sit on, by index into `lines` — or `null` where the file's shape
+ * leaves no such line. These are the positions the three writers use and no others (H10):
+ * `withStamp` and `markAdapted` put it on line 1, or on line 2 below a shebang
+ * (`stampAfterShebang`); `stampAfterFrontmatter` in `render/skills.ts` puts it below a
+ * frontmatter block, after the blank line it leaves.
+ *
+ * A stamp-shaped line anywhere else is prose — a board quoting one in a prompt, a README
+ * documenting the format — and reading it as the file's own made both readers wrong at once: the
+ * guard overwrote a person's file that merely quoted a stamp, and refused a write whose contents
+ * did, while `doctor` re-rendered and compared a file this tool never produced. Anchoring is what
+ * makes "has a stamp" mean "was stamped".
+ *
+ * A frontmatter block with no closing `---` has no stamp line: `stampAfterFrontmatter` would have
+ * prepended one, so line 1 would be the stamp and not the `---`.
+ */
+function stampIndex(lines: string[]): number | null {
+  const first = lines[0]?.trimEnd() ?? '';
+  if (first.startsWith('#!')) return 1;
+  if (first !== '---') return 0;
+  const close = lines.findIndex((line, i) => i > 0 && line.trimEnd() === '---');
+  if (close === -1) return null;
+  const after = lines.findIndex((line, i) => i > close && line.trim() !== '');
+  return after === -1 ? null : after;
+}
+
+type FoundStamp = { index: number; parts: StampParts };
+
+function findStamp(contents: string): FoundStamp | null {
+  const lines = contents.split('\n');
+  const index = stampIndex(lines);
+  if (index === null) return null;
+  const match = lines[index]?.match(STAMP_PATTERN);
   if (!match) return null;
   const [, version, date, configHash, standardVersion, marker] = match;
   if (!version || !date || !configHash || !standardVersion) return null;
-  return { version, date, configHash, standardVersion, adapted: marker !== undefined };
+  return {
+    index,
+    parts: { version, date, configHash, standardVersion, adapted: marker !== undefined },
+  };
+}
+
+export function readStamp(contents: string): StampParts | null {
+  return findStamp(contents)?.parts ?? null;
+}
+
+/** `text` with the line at `index` passed through `change`, every other byte kept. */
+function replaceLine(text: string, index: number, change: (line: string) => string): string {
+  const lines = text.split('\n');
+  const line = lines[index];
+  if (line === undefined) return text;
+  lines[index] = change(line);
+  return lines.join('\n');
 }
 
 export function isOurs(contents: string): boolean {
@@ -110,11 +157,13 @@ export function isOurs(contents: string): boolean {
  * what lets the write guard admit this one write to a file this tool did not produce (D3).
  */
 export function markAdapted(text: string, line: string): string {
-  const stamp = readStamp(text);
+  const stamp = findStamp(text);
   if (stamp === null) return stampAfterShebang(text, line);
-  if (stamp.adapted) return text;
-  return text.replace(STAMP_PATTERN, (whole) =>
-    whole.replace(/(\s*(?:-->)?)$/, `${ADAPTED_MARKER}$1`),
+  if (stamp.parts.adapted) return text;
+  return replaceLine(text, stamp.index, (found) =>
+    found.replace(STAMP_PATTERN, (whole) =>
+      whole.replace(/(\s*(?:-->)?)$/, `${ADAPTED_MARKER}$1`),
+    ),
   );
 }
 
@@ -122,15 +171,18 @@ export function markAdapted(text: string, line: string): string {
  * The stamp's date field, and only it, blanked — so two renderings of the same file can be
  * compared for everything except when they were written.
  *
- * Non-global on purpose: a generated file carries exactly one stamp, and it is the first match
- * in both spellings (`withStamp` puts it on line 1, `stampAfterFrontmatter` just below the
- * frontmatter). A later stamp-shaped line is prose — `README.md` documenting the format,
- * `examples/` showing a filled one — and is not this file's provenance to normalise away.
+ * Only on the line `stampIndex` names, for the reason `readStamp` is (H10). "The first match"
+ * was the same bet with a hole in it: a file with no stamp of its own — a board, which `edit()`
+ * rewrites in place — has its first *quoted* stamp blanked instead, so an edit whose only change
+ * was a date inside that quote compared equal to the file on disk and was silently dropped. The
+ * date pattern stays its own and looser than `STAMP_PATTERN` on purpose: it stops at `config`, so
+ * a field appended after the standard version never desynchronises it (H4).
  */
 function blankStampDate(text: string): string {
-  return text.replace(
-    /(personal-config v\S+ · )\d{4}-\d{2}-\d{2}( · config )/,
-    '$1····-··-··$2',
+  const index = stampIndex(text.split('\n'));
+  if (index === null) return text;
+  return replaceLine(text, index, (line) =>
+    line.replace(/(personal-config v\S+ · )\d{4}-\d{2}-\d{2}( · config )/, '$1····-··-··$2'),
   );
 }
 
