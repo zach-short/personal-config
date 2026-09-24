@@ -24,11 +24,13 @@ export async function renderAll(ctx: RenderContext): Promise<PlannedFile[]> {
     renderRepoFiles(ctx, languages),
     standard.then((f) => (f ? [f] : [])),
     Promise.resolve(renderConventions(ctx, languages)),
-    renderPart0(ctx).then((f) => (f ? [f] : [])),
-    Promise.resolve(renderUserConfig(ctx)),
   ]);
+  const before = groups.flat();
+  const after = renderUserConfig(ctx);
+  // Rendered last because its "already written" list is the rest of this plan.
+  const part0 = await renderPart0(ctx, [...before, ...after]);
 
-  return groups.flat();
+  return [...before, ...(part0 ? [part0] : []), ...after];
 }
 
 export type { RenderContext };

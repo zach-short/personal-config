@@ -1,4 +1,4 @@
-import { join } from 'node:path';
+import { isAbsolute, join, relative, sep } from 'node:path';
 import { hashedAnswers } from '../lib/config.ts';
 import { expandHome } from '../lib/paths.ts';
 import { filledTemplate } from '../lib/template.ts';
@@ -417,8 +417,15 @@ function renderIgnore(ctx: RenderContext): PlannedFile | null {
  * it is left for a later session to fill, so there is no prompt to hand over and no 40–80k
  * session to spend on it (D6). The short track's first-session instructions live in the
  * standard itself.
+ *
+ * `written` is everything else this context plans. The prompt lists the files among them that
+ * land in the repo, so it takes them as an argument rather than re-deriving them: the list is
+ * then the plan itself and cannot drift from it.
  */
-export async function renderPart0(ctx: RenderContext): Promise<PlannedFile | null> {
+export async function renderPart0(
+  ctx: RenderContext,
+  written: PlannedFile[],
+): Promise<PlannedFile | null> {
   const repo = ctx.repo;
   if (!repo || isShortTrack(ctx)) return null;
 
@@ -437,7 +444,7 @@ export async function renderPart0(ctx: RenderContext): Promise<PlannedFile | nul
     BUILD_CMD_TOKEN: '{{BUILD_CMD}}',
     DISCOVERY_SUMMARY: discoverySummary(ctx),
     CUT_HINTS: cutHints(ctx),
-    WRITTEN_FILES: '(filled at write time)',
+    WRITTEN_FILES: writtenFiles(repo.scan.path, written),
     COMMIT_RULE: commitRule(ctx),
   });
 
@@ -447,6 +454,25 @@ export async function renderPart0(ctx: RenderContext): Promise<PlannedFile | nul
     'Part 0 prompt — paste into a fresh session',
     body,
   );
+}
+
+/**
+ * The repo's share of the plan, one line per file: its path from the repo root, padded to one
+ * column, then its preview label. Files outside the root — `~/.claude`, the saved answers, an
+ * archive home elsewhere — are not the Part 0 session's to recreate. Neither are `append-lines`
+ * targets: an ignore file gains lines this run did not author the rest of.
+ */
+function writtenFiles(root: string, written: PlannedFile[]): string {
+  const rows = written
+    .filter((file) => file.strategy !== 'append-lines')
+    .map((file) => ({
+      path: relative(root, file.path).split(sep).join('/'),
+      label: file.label,
+    }))
+    .filter(({ path }) => path !== '' && !path.startsWith('../') && !isAbsolute(path));
+  const width = Math.max(...rows.map((row) => row.path.length));
+  const lines = rows.map((row) => `${row.path.padEnd(width)} ${row.label}`);
+  return ['```', ...lines, '```'].join('\n');
 }
 
 function discoverySummary(ctx: RenderContext): string {

@@ -66,6 +66,12 @@ The CLI. The working standard it installs is versioned separately — see
   body prose into the log. **Re-folding does not repair a log already folded by `0.5.0`** — a
   stubbed step has no body left to lift, by design — so those titles have to come back from the
   archive file by hand, or from `personal-config undo` if the fold is still the latest write.
+- **`PART0-PROMPT.md` never listed the files it said were already written.** Under "Already
+  written, do not recreate" every prompt since 2026-09-15 read `(filled at write time)`, and
+  nothing filled it. It now lists the files the same run writes into the repo, each with its
+  path and the label the preview shows, and leaves out `~/.claude`, the prompt itself and the
+  lines appended to an ignore file. A prompt already on disk keeps the old text until `setup`
+  runs again.
 
 - **The `upgrade` docs never said what to do about a stale `npx` cache.** `npx personal-config`
   can silently run a version it already downloaded instead of the one just published —

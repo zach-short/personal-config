@@ -135,6 +135,11 @@ const COMMIT_PARAGRAPH = '**Commits are the owner’s.**';
  * it says to add ` · adapted` to the line, which is what lets `setup` leave the file alone while
  * `doctor` can still read which standard it came from. One key per variant, 62 before and
  * after, corrected here for the same reason as the rest.
+ *
+ * **And once more on 2026-09-23, board row 70.** `PART0-PROMPT.md`'s "Already written, do not
+ * recreate" section said `(filled at write time)` in every variant, because nothing ever filled
+ * it; it now lists the repo's share of the plan (`tests/part0-written-files.test.ts`). The 0.3.0
+ * bytes carried that bug, so they are not a target here. One key per variant, 62 before and after.
  */
 describe('§3.1 row 1 — code + full + git is the 0.3.0 output, byte for byte bar one skill', () => {
   const FULL = answersFor(CODE_FULL_GIT);
