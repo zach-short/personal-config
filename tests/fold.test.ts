@@ -24,11 +24,11 @@ const BOARD = [
   '',
   '| # | Task | Status | Model | Lane | Waits on | Files it owns |',
   '|---|------|--------|-------|------|----------|---------------|',
-  '| 1 | Build the thing | `DONE — HANDOFF 2` | Opus 5 | A | — | `src/a.ts` |',
-  '| 2 | Scope the other thing | `DONE — HANDOFF 3` | Opus 5 | A | — | `src/b.ts` |',
-  '| 3 | Park the third | `SETTLED AS NO` | Opus 5 | A | — | none |',
-  '| 4 | The replaced one | `SUPERSEDED` | Opus 5 | A | — | none |',
-  '| 5 | Still to do | `OPEN` | Opus 5 | A | — | `src/e.ts` |',
+  '| 1 | Build the thing | `DONE — HANDOFF 2` | Opus 5.5 | A | — | `src/a.ts` |',
+  '| 2 | Scope the other thing | `DONE — HANDOFF 3` | Opus 5.5 | A | — | `src/b.ts` |',
+  '| 3 | Park the third | `SETTLED AS NO` | Opus 5.5 | A | — | none |',
+  '| 4 | The replaced one | `SUPERSEDED` | Opus 5.5 | A | — | none |',
+  '| 5 | Still to do | `OPEN` | Opus 5.5 | A | — | `src/e.ts` |',
   '',
   '---',
   '',
@@ -70,7 +70,7 @@ function ledgerOf(steps: number, bodyLines = 4): string {
   const log = [];
   for (let n = 1; n <= steps; n += 1) {
     log.push(
-      `**${n}. Did thing ${n}.** Done 2026-09-${String((n % 28) + 1).padStart(2, '0')}, Opus 5.`,
+      `**${n}. Did thing ${n}.** Done 2026-09-${String((n % 28) + 1).padStart(2, '0')}, Opus 5.5.`,
     );
     for (let line = 0; line < bodyLines; line += 1) log.push(`Body line ${line} of step ${n}.`);
     log.push('');

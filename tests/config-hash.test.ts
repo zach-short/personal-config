@@ -138,7 +138,7 @@ describe('what the hash covers', () => {
   });
 
   test('the `models.*` answers do not move it on their own — the tiers already do', async () => {
-    const a = testConfig({ answers: { 'models.default': 'Opus 5' } });
+    const a = testConfig({ answers: { 'models.default': 'Opus 5.5' } });
     const b = testConfig({ answers: { 'models.default': 'Something Else' } });
     expect(await configHash(a)).toBe(await configHash(b));
 
@@ -158,7 +158,7 @@ describe('hashedAnswers', () => {
     const kept = hashedAnswers({
       projectsDir: '~/Projects',
       'models.deep': 'Fable 5.1',
-      'models.default': 'Opus 5',
+      'models.default': 'Opus 5.5',
       'models.fast': 'Sonnet 5',
       'models.light': 'Haiku 4.5',
       'practices.comments': 'why-only',

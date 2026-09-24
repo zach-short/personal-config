@@ -2,7 +2,7 @@
  {
   "id": "35",
   "title": "`setup` ignores `--force`, and `--yes` skips the confirm the help promises",
-  "model": "Opus 5",
+  "model": "Opus 5.5",
   "lane": "A",
   "waitsOn": [],
   "kind": "build",
@@ -11,7 +11,7 @@
  {
   "id": "37",
   "title": "Give the decline path in `setup` a testable seam",
-  "model": "Opus 5",
+  "model": "Opus 5.5",
   "lane": "A",
   "waitsOn": [
    "35"
@@ -22,7 +22,7 @@
  {
   "id": "36",
   "title": "Cut `0.2.6`",
-  "model": "Opus 5",
+  "model": "Opus 5.5",
   "lane": "A",
   "waitsOn": [
    "35",
@@ -34,7 +34,7 @@
  {
   "id": "38",
   "title": "Decide and implement how `requireSecure` treats loopback addresses",
-  "model": "Opus 5",
+  "model": "Opus 5.5",
   "lane": "B",
   "waitsOn": [],
   "kind": "build",

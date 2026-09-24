@@ -18,10 +18,10 @@ function logOf(...steps: string[]): string {
 
 const WRAPPED = logOf(
   "**1. Closed `doctor`'s coverage gaps, made the hooks parse, and fixed the conventions",
-  'catalog.** Done 2026-09-15, Opus 5, commit `abc1234`.',
+  'catalog.** Done 2026-09-15, Opus 5.5, commit `abc1234`.',
   'Body line one.',
   '',
-  '**2. Did the next thing.** Done 2026-09-16, Opus 5.',
+  '**2. Did the next thing.** Done 2026-09-16, Opus 5.5.',
   'Body line two.',
   '',
 );

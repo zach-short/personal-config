@@ -64,7 +64,7 @@ describe('a config layer is narrowed, not cast', () => {
   test('violates: a models field that is not an object is refused, naming the file and the field', async () => {
     const dir = await tempDir('pc-from-');
     try {
-      const path = await jsonFile(dir, 'profile.json', { models: 'Opus 5' });
+      const path = await jsonFile(dir, 'profile.json', { models: 'Opus 5.5' });
       const loading = loadConfig(parseCli(['setup', '--from', path]), null);
       await expect(loading).rejects.toThrow('"models" is not an object');
       await expect(loading).rejects.toThrow(path);

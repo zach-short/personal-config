@@ -7,7 +7,7 @@
   },
   "models": {
     "deep": "Fable 5.1",
-    "default": "Opus 5",
+    "default": "Opus 5.5",
     "fast": "Sonnet 5",
     "light": "Haiku 4.5"
   },

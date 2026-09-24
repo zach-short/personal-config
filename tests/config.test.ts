@@ -14,7 +14,7 @@ describe('profile merge', () => {
 
   test('--profile overrides starter', async () => {
     const config = await loadConfig(parseCli(['setup', '--profile', 'zach']), null);
-    expect(config.models.default).toBe('Opus 5');
+    expect(config.models.default).toBe('Opus 5.5');
   });
 
   test('an unknown profile is an error, not a silent starter', async () => {
