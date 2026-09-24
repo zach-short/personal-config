@@ -67,6 +67,12 @@ The CLI. The working standard it installs is versioned separately — see
   stubbed step has no body left to lift, by design — so those titles have to come back from the
   archive file by hand, or from `personal-config undo` if the fold is still the latest write.
 
+- **The `upgrade` docs never said what to do about a stale `npx` cache.** `npx personal-config`
+  can silently run a version it already downloaded instead of the one just published —
+  `docs/incomplete/upgrade-command/DESIGN.md` §2 named this as the one doc fix that item still
+  owed. `README.md`'s `upgrade` section now tells a stuck user to run
+  `npx personal-config@latest` to force the current release.
+
 ## 0.5.0 — 2026-09-23
 
 ### Added

@@ -239,6 +239,11 @@ a short-track setup, a repo never set up, and a copy adapted before the marker e
 newer than the installed standard exits 1: it means this copy of the tool is out of date, and
 reading the changelog backwards would tell you to undo a change.
 
+Upgrading the CLI itself is `npm`'s job, not this command's — but `npx personal-config` can run a
+copy it already cached instead of what was just published. If a stamp reports newer than
+installed when it should not, that stale cache is the first thing to rule out: run
+`npx personal-config@latest upgrade` (or `@latest setup`) to force the current release.
+
 ## `passoff`, `handoff`, `archive` and `fold`
 
 Four commands for the rituals the standard asks for at the start and the end of a piece of
