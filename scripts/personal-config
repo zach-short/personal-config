@@ -1,0 +1,99 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+
+# name:one-line description — single source of truth for both the menu and completion
+COMMANDS=(
+  "build:Bundle src/cli.ts to dist/cli.js"
+  "setup:Run the wizard against this repo (bun run src/cli.ts setup)"
+  "catalog:Regenerate catalog.json from the wizard's questions"
+  "doctor:Check this repo's generated docs against what setup would write now"
+  "undo:Restore the last run's overwritten files, once"
+  "test:Run the bun test suite"
+  "typecheck:Typecheck with tsc --noEmit"
+  "lint:Lint with biome"
+  "format:Format with biome --write"
+  "shell:Print the ~/.zshrc snippet for the personal-config function + completion"
+  "help:List commands"
+)
+
+cmd_build() { bun run build; }
+cmd_setup() { bun run setup; }
+cmd_catalog() { bun run catalog; }
+cmd_doctor() { bun run doctor; }
+cmd_undo() { bun run undo; }
+cmd_test() { bun run test; }
+cmd_typecheck() { bun run typecheck; }
+cmd_lint() { bun run lint; }
+cmd_format() { bun run format; }
+
+cmd_help() {
+  echo "usage: personal-config <command>"
+  echo
+  for entry in "${COMMANDS[@]}"; do
+    printf "  %-10s %s\n" "${entry%%:*}" "${entry#*:}"
+  done
+}
+
+cmd_shell() {
+  cat <<'EOF'
+# personal-config is also this tool's own published CLI (`npx personal-config`, or on PATH
+# after `bun link`) — only take over for our own subcommands, so `personal-config setup` run
+# against some OTHER repo still reaches the real, installed CLI.
+personal-config() {
+  local subs; subs=("cd" "--complete" $("$HOME/Projects/personal-config/scripts/personal-config" --complete | cut -d: -f1))
+  if [[ $# -eq 0 || " ${subs[*]} " == *" $1 "* ]]; then
+    if [[ "$1" == "cd" ]]; then cd "$HOME/Projects/personal-config"; else "$HOME/Projects/personal-config/scripts/personal-config" "$@"; fi
+  else
+    command personal-config "$@"
+  fi
+}
+
+_personal_config_complete() {
+  local -a subcmds
+  subcmds=("${(@f)$(personal-config --complete)}")
+  _describe 'command' subcmds
+}
+compdef _personal_config_complete personal-config
+EOF
+}
+
+cmd___complete() {
+  for entry in "${COMMANDS[@]}"; do
+    echo "$entry"
+  done
+}
+
+# Same table drives an fzf picker on bare invocation — only when it'd actually be
+# interactive, so a cron job or `personal-config test | something` never gets asked anything.
+interactive_pick() {
+  local lines
+  lines="$(for entry in "${COMMANDS[@]}"; do
+    printf "%-10s %s\n" "${entry%%:*}" "${entry#*:}"
+  done)"
+  echo "$lines" | fzf --prompt='personal-config> ' --height='~70%' --reverse --no-info \
+    --header='select a command' | awk '{print $1}'
+}
+
+if [[ $# -eq 0 && -t 0 && -t 1 ]] && command -v fzf >/dev/null 2>&1; then
+  picked="$(interactive_pick || true)"
+  [[ -n "$picked" ]] || exit 0
+  set -- "$picked"
+fi
+
+case "${1:-help}" in
+  build) cmd_build ;;
+  setup) cmd_setup ;;
+  catalog) cmd_catalog ;;
+  doctor) cmd_doctor ;;
+  undo) cmd_undo ;;
+  test) cmd_test ;;
+  typecheck) cmd_typecheck ;;
+  lint) cmd_lint ;;
+  format) cmd_format ;;
+  shell) cmd_shell ;;
+  --complete) cmd___complete ;;
+  help|*) cmd_help ;;
+esac
