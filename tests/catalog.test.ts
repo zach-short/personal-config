@@ -45,12 +45,16 @@ describe('the catalog carries the whole question set', () => {
   //
   // 39 → 46, 2026-09-25, item 72: `tier-ceiling` in `discover` (1), and model ID selection
   // questions in `you` (6 new). Total: you 22, discover 9, practices 15.
-  test('46 questions, phased 22 / 9 / 15', async () => {
+  //
+  // 22 / 9 → 16 / 15, 2026-09-26, the same item: the six model ID questions move from `you` to
+  // `discover`, right after the `tier-ceiling` answer they depend on. In `you` they were asked
+  // before any ceiling existed to read, so an unanswered `tierCeiling` satisfied `isNot: 'deep'`.
+  test('46 questions, phased 16 / 15 / 15', async () => {
     const catalog = await committed();
     const byPhase: Record<string, number> = {};
     for (const q of catalog.questions) byPhase[q.phase] = (byPhase[q.phase] ?? 0) + 1;
     expect(catalog.questions.length).toBe(46);
-    expect(byPhase).toEqual({ you: 22, discover: 9, practices: 15 });
+    expect(byPhase).toEqual({ you: 16, discover: 15, practices: 15 });
   });
 
   test('every question the wizard asks is present, in the wizard`s order', async () => {
@@ -103,30 +107,28 @@ describe('the conditionals and the one hidden question survive the trip', () => 
     // set that name `non-code`: both questions exist because confining `commit-policy` to a
     // repo left the non-coder with no rule about the step that cannot be taken back.
     const nonCodeOnly = { key: 'workKind', is: 'non-code' };
-    // Item 72: tier ceiling and model ID questions (D1). Model IDs are asked once per person
-    // when a repo picks a ceiling below Deep.
-    const tierCeilingNotDeep = { key: 'tierCeiling', isNot: 'deep' };
-    const tierCeilingNotDeepAndDefaultOther = {
-      all: [
-        { key: 'tierCeiling', isNot: 'deep' },
-        { key: 'modelIds.default', is: 'other' },
-      ],
+    // Item 72: tier ceiling and model ID questions (D1). The ceiling is asked on the code tracks
+    // only, and the model IDs when a code repo picks a ceiling below Deep. `workKind` rides in
+    // every model ID condition so that an *unasked* ceiling — `undefined`, which is not
+    // `'deep'` — cannot ask them; `any:` would say "default or mechanical" directly, and is
+    // absent from `WhenSpec` on purpose (setup-tracks `DESIGN.md` §8).
+    const capped = [
+      { key: 'workKind', is: 'code' },
+      { key: 'tierCeiling', isNot: 'deep' },
+    ];
+    const cappedOnly = { all: capped };
+    const cappedAndDefaultOther = {
+      all: [...capped, { key: 'modelIds.default', is: 'other' }],
     };
-    const tierCeilingNotDeepAndMechanicalOther = {
-      all: [
-        { key: 'tierCeiling', isNot: 'deep' },
-        { key: 'modelIds.mechanical', is: 'other' },
-      ],
+    const cappedAndMechanicalOther = {
+      all: [...capped, { key: 'modelIds.mechanical', is: 'other' }],
     };
-    const tierCeilingNotDeepAndLight = {
-      all: [
-        { key: 'tierCeiling', isNot: 'deep' },
-        { key: 'modelLightEnabled', is: 'yes' },
-      ],
+    const cappedAndLight = {
+      all: [...capped, { key: 'modelLightEnabled', is: 'yes' }],
     };
-    const tierCeilingNotDeepAndLightOther = {
+    const cappedAndLightOther = {
       all: [
-        { key: 'tierCeiling', isNot: 'deep' },
+        ...capped,
         { key: 'modelLightEnabled', is: 'yes' },
         { key: 'modelIds.light', is: 'other' },
       ],
@@ -185,12 +187,13 @@ describe('the conditionals and the one hidden question survive the trip', () => 
       states: codeOnly,
       'design-tokens': codeOnly,
       'test-policy': codeOnly,
-      'model-ids-default': tierCeilingNotDeep,
-      'model-ids-default-other': tierCeilingNotDeepAndDefaultOther,
-      'model-ids-mechanical': tierCeilingNotDeep,
-      'model-ids-mechanical-other': tierCeilingNotDeepAndMechanicalOther,
-      'model-ids-light': tierCeilingNotDeepAndLight,
-      'model-ids-light-other': tierCeilingNotDeepAndLightOther,
+      'tier-ceiling': codeOnly,
+      'model-ids-default': cappedOnly,
+      'model-ids-default-other': cappedAndDefaultOther,
+      'model-ids-mechanical': cappedOnly,
+      'model-ids-mechanical-other': cappedAndMechanicalOther,
+      'model-ids-light': cappedAndLight,
+      'model-ids-light-other': cappedAndLightOther,
     });
   });
 
@@ -270,11 +273,16 @@ describe('what each of the five shapes is actually asked', () => {
    * `mode` is supplied rather than asked-for because `tracker` reads it, and item 60 stopped
    * asking it on a short track (D26) — where an unasked `mode` reads as `solo`
    * (`pickShared`, `src/commands/setup.ts`), which is what `tracker`'s own condition then sees.
+   *
+   * `tierCeiling: 'deep'` is supplied for the same reason: the model ID questions read it, and
+   * `deep` is what the wizard's default is and what an unasked ceiling reads as everywhere
+   * (`planRepo`, the renderers). A capped repo asks up to six more, and that is the ceiling's
+   * own question, not the track's.
    */
   async function asked(answers: Answers): Promise<string[]> {
     const catalog = await committed();
     return catalog.questions
-      .filter((q) => matchesWhen(q.when, { mode: 'solo', ...answers }))
+      .filter((q) => matchesWhen(q.when, { mode: 'solo', tierCeiling: 'deep', ...answers }))
       .map((q) => q.id);
   }
 
@@ -297,7 +305,8 @@ describe('what each of the five shapes is actually asked', () => {
   test('code + full + git is asked everything — §3.1 row 1 renders 0.2.5 byte for byte', async () => {
     const ids = await asked({ workKind: 'code', configWeight: 'full', usesGit: 'yes' });
 
-    expect(ids).toHaveLength(34);
+    // 34 → 35, item 72: `tier-ceiling`, asked on every code track (starter, solo, teams).
+    expect(ids).toHaveLength(35);
     expect(ids).toContain('commit-policy');
     expect(ids).toContain('model-routing');
   });
@@ -305,8 +314,8 @@ describe('what each of the five shapes is actually asked', () => {
   test('code + full without git drops the two commit questions and nothing else', async () => {
     const ids = await asked({ workKind: 'code', configWeight: 'full', usesGit: 'no' });
 
-    // 34 − `track-mode`, which has always been git-gated, − the two of this row.
-    expect(ids).toHaveLength(31);
+    // 35 − `track-mode`, which has always been git-gated, − the two of this row.
+    expect(ids).toHaveLength(32);
     expect(ids).not.toContain('commit-policy');
     expect(ids).not.toContain('attribution');
     expect(ids).toContain('docs-mcp');
@@ -318,7 +327,8 @@ describe('what each of the five shapes is actually asked', () => {
     // 29 → 27 on item 60: `archive-home` and `mode` join the four (D26). Item 61 adds nothing
     // here — both of its questions are non-code, and this is the short track a *programmer*
     // walks, which is the half of "nothing on a code track" that is easy to lose.
-    expect(ids).toHaveLength(27);
+    // 27 → 28 on item 72: `tier-ceiling` is asked on the light code track too (starter).
+    expect(ids).toHaveLength(28);
     for (const id of DEAD_ON_A_SHORT_TRACK) expect(ids).not.toContain(id);
     expect(ids).not.toContain('off-limits');
     expect(ids).not.toContain('edit-policy');
@@ -399,6 +409,8 @@ describe('what each of the five shapes is actually asked', () => {
       'work-profile',
       'archive-home',
       'mode',
+      // Item 72: a ceiling is a code repo's budget, not asked on non-code.
+      'tier-ceiling',
       'comments',
       'function-length',
       'exports',

@@ -224,7 +224,25 @@ function trackModeFor(perRepo: Answers, folder: boolean): TrackMode {
 
 /** Answers that are about the person, not the repo, flow back so they are asked once. */
 function pickShared(perRepo: Answers): Answers {
-  return { mode: perRepo.mode ?? 'solo', tracker: perRepo.tracker ?? '' };
+  return {
+    mode: perRepo.mode ?? 'solo',
+    tracker: perRepo.tracker ?? '',
+    ...pickModelIds(perRepo),
+  };
+}
+
+/**
+ * The tier ceiling's model IDs are asked in `discover`, right after the ceiling that needs them,
+ * but they are the person's (D1, `PERSONAL_ANSWERS`): which model *is* Mechanical does not change
+ * between repos. So they flow back like `mode` does — the next capped repo offers them as its
+ * default, and they reach the saved config. Only keys actually answered are copied, so an
+ * uncapped run does not save an empty model ID.
+ */
+function pickModelIds(perRepo: Answers): Answers {
+  const keys = ['modelIds.default', 'modelIds.mechanical', 'modelIds.light'];
+  return Object.fromEntries(
+    keys.flatMap((key) => (perRepo[key] === undefined ? [] : [[key, perRepo[key]]])),
+  );
 }
 
 function archiveFor(answers: Answers, repoName: string): string {

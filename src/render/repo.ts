@@ -50,7 +50,7 @@ async function renderRouter(ctx: RenderContext, languages: string[]): Promise<Pl
 async function renderFullRouter(ctx: RenderContext, languages: string[]): Promise<PlannedFile> {
   const repoPath = ctx.repo?.scan.path ?? '';
   const untracked = ctx.repo?.trackMode === 'untracked';
-  const vars = {
+  const vars: Record<string, string | null> = {
     PROJECT_NAME: projectName(ctx),
     STANDARD_PATH: standardPath(ctx),
     LEDGER_FILE: ledgerFile(ctx),
@@ -179,10 +179,13 @@ function stackLine(ctx: RenderContext): string {
  * modelRouting is delegate-or-stop. This clause reminds the session about the cap and where to
  * find the available models configuration.
  */
-function tierCeilingSection(ctx: RenderContext): string {
+function tierCeilingSection(ctx: RenderContext): string | null {
   const ceiling = answer(ctx, 'tierCeiling', 'deep');
   const routing = answer(ctx, 'modelRouting', 'skip');
-  if (ceiling === 'deep' || routing !== 'delegate-or-stop') return '';
+  // `null`, not `''`: the token sits on a line of its own, and an empty string leaves that line
+  // behind as an extra blank one. Deep is "exactly today's behavior" (tier-ceiling DESIGN.md), so
+  // an uncapped router must be byte-for-byte the router from before this token existed.
+  if (ceiling === 'deep' || routing !== 'delegate-or-stop') return null;
 
   const tierName =
     ceiling === 'default' ? 'Default' : ceiling === 'mechanical' ? 'Mechanical' : ceiling;
@@ -193,7 +196,6 @@ function tierCeilingSection(ctx: RenderContext): string {
     `This repo is capped at the **${tierName}** tier. Work assigned to a higher tier is delegated to a subagent; higher tiers are not directly available in this session.`,
     '',
     "The cap is stored in `.claude/settings.local.json` (which is git-ignored), and it is this repo's answer to the **tier-ceiling** question — **a per-repo budget, not a property of the standard**. If the cap should change, run `personal-config setup` in this repo and pick a new ceiling.",
-    '',
   ].join('\n');
 }
 

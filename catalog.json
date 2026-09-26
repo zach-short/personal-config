@@ -1,5 +1,5 @@
 {
-  "catalogVersion": "0.5.0+31816a75",
+  "catalogVersion": "0.5.0+214507d4",
   "questions": [
     {
       "id": "work-kind",
@@ -352,261 +352,6 @@
       "configKey": "keepExistingGlobal"
     },
     {
-      "id": "model-ids-default",
-      "phase": "you",
-      "kind": "select",
-      "ask": "Which model ID represents your Default tier (for repos with a Default ceiling)?",
-      "options": [
-        {
-          "value": "opus",
-          "label": "claude-opus (latest)",
-          "example": "Opus family, any version",
-          "recommended": true
-        },
-        {
-          "value": "sonnet",
-          "label": "claude-sonnet (latest)",
-          "example": "Sonnet family, any version"
-        },
-        {
-          "value": "haiku",
-          "label": "claude-haiku (latest)",
-          "example": "Haiku family, any version"
-        },
-        {
-          "value": "fable",
-          "label": "claude-fable (latest)",
-          "example": "Fable family, any version"
-        },
-        {
-          "value": "claude-opus-5-5",
-          "label": "claude-opus-5-5 (specific)",
-          "example": "Exactly Opus 5.5, nothing else"
-        },
-        {
-          "value": "claude-sonnet-5",
-          "label": "claude-sonnet-5 (specific)",
-          "example": "Exactly Sonnet 5, nothing else"
-        },
-        {
-          "value": "claude-haiku-4-5",
-          "label": "claude-haiku-4-5 (specific)",
-          "example": "Exactly Haiku 4.5, nothing else"
-        },
-        {
-          "value": "claude-fable-5-1",
-          "label": "claude-fable-5-1 (specific)",
-          "example": "Exactly Fable 5.1, nothing else"
-        },
-        {
-          "value": "other",
-          "label": "Other — type it",
-          "example": "A model ID not listed above"
-        }
-      ],
-      "readMore": "model-ids",
-      "configKey": "modelIds.default",
-      "when": {
-        "key": "tierCeiling",
-        "isNot": "deep"
-      }
-    },
-    {
-      "id": "model-ids-default-other",
-      "phase": "you",
-      "kind": "text",
-      "ask": "Which Default model ID?",
-      "placeholder": "e.g. claude-opus-5-5",
-      "readMore": "model-ids",
-      "configKey": "modelIds.default",
-      "when": {
-        "all": [
-          {
-            "key": "tierCeiling",
-            "isNot": "deep"
-          },
-          {
-            "key": "modelIds.default",
-            "is": "other"
-          }
-        ]
-      }
-    },
-    {
-      "id": "model-ids-mechanical",
-      "phase": "you",
-      "kind": "select",
-      "ask": "Which model ID represents your Mechanical tier (for repos with a ceiling)?",
-      "options": [
-        {
-          "value": "opus",
-          "label": "claude-opus (latest)",
-          "example": "Opus family, any version",
-          "recommended": true
-        },
-        {
-          "value": "sonnet",
-          "label": "claude-sonnet (latest)",
-          "example": "Sonnet family, any version"
-        },
-        {
-          "value": "haiku",
-          "label": "claude-haiku (latest)",
-          "example": "Haiku family, any version"
-        },
-        {
-          "value": "fable",
-          "label": "claude-fable (latest)",
-          "example": "Fable family, any version"
-        },
-        {
-          "value": "claude-opus-5-5",
-          "label": "claude-opus-5-5 (specific)",
-          "example": "Exactly Opus 5.5, nothing else"
-        },
-        {
-          "value": "claude-sonnet-5",
-          "label": "claude-sonnet-5 (specific)",
-          "example": "Exactly Sonnet 5, nothing else"
-        },
-        {
-          "value": "claude-haiku-4-5",
-          "label": "claude-haiku-4-5 (specific)",
-          "example": "Exactly Haiku 4.5, nothing else"
-        },
-        {
-          "value": "claude-fable-5-1",
-          "label": "claude-fable-5-1 (specific)",
-          "example": "Exactly Fable 5.1, nothing else"
-        },
-        {
-          "value": "other",
-          "label": "Other — type it",
-          "example": "A model ID not listed above"
-        }
-      ],
-      "readMore": "model-ids",
-      "configKey": "modelIds.mechanical",
-      "when": {
-        "key": "tierCeiling",
-        "isNot": "deep"
-      }
-    },
-    {
-      "id": "model-ids-mechanical-other",
-      "phase": "you",
-      "kind": "text",
-      "ask": "Which Mechanical model ID?",
-      "placeholder": "e.g. claude-sonnet-5",
-      "readMore": "model-ids",
-      "configKey": "modelIds.mechanical",
-      "when": {
-        "all": [
-          {
-            "key": "tierCeiling",
-            "isNot": "deep"
-          },
-          {
-            "key": "modelIds.mechanical",
-            "is": "other"
-          }
-        ]
-      }
-    },
-    {
-      "id": "model-ids-light",
-      "phase": "you",
-      "kind": "select",
-      "ask": "Which model ID represents your Light tier (for repos with a ceiling)?",
-      "options": [
-        {
-          "value": "opus",
-          "label": "claude-opus (latest)",
-          "example": "Opus family, any version",
-          "recommended": true
-        },
-        {
-          "value": "sonnet",
-          "label": "claude-sonnet (latest)",
-          "example": "Sonnet family, any version"
-        },
-        {
-          "value": "haiku",
-          "label": "claude-haiku (latest)",
-          "example": "Haiku family, any version"
-        },
-        {
-          "value": "fable",
-          "label": "claude-fable (latest)",
-          "example": "Fable family, any version"
-        },
-        {
-          "value": "claude-opus-5-5",
-          "label": "claude-opus-5-5 (specific)",
-          "example": "Exactly Opus 5.5, nothing else"
-        },
-        {
-          "value": "claude-sonnet-5",
-          "label": "claude-sonnet-5 (specific)",
-          "example": "Exactly Sonnet 5, nothing else"
-        },
-        {
-          "value": "claude-haiku-4-5",
-          "label": "claude-haiku-4-5 (specific)",
-          "example": "Exactly Haiku 4.5, nothing else"
-        },
-        {
-          "value": "claude-fable-5-1",
-          "label": "claude-fable-5-1 (specific)",
-          "example": "Exactly Fable 5.1, nothing else"
-        },
-        {
-          "value": "other",
-          "label": "Other — type it",
-          "example": "A model ID not listed above"
-        }
-      ],
-      "readMore": "model-ids",
-      "configKey": "modelIds.light",
-      "when": {
-        "all": [
-          {
-            "key": "tierCeiling",
-            "isNot": "deep"
-          },
-          {
-            "key": "modelLightEnabled",
-            "is": "yes"
-          }
-        ]
-      }
-    },
-    {
-      "id": "model-ids-light-other",
-      "phase": "you",
-      "kind": "text",
-      "ask": "Which Light model ID?",
-      "placeholder": "e.g. claude-haiku-4-5",
-      "readMore": "model-ids",
-      "configKey": "modelIds.light",
-      "when": {
-        "all": [
-          {
-            "key": "tierCeiling",
-            "isNot": "deep"
-          },
-          {
-            "key": "modelLightEnabled",
-            "is": "yes"
-          },
-          {
-            "key": "modelIds.light",
-            "is": "other"
-          }
-        ]
-      }
-    },
-    {
       "id": "projects-dir",
       "phase": "discover",
       "kind": "text",
@@ -799,7 +544,298 @@
         }
       ],
       "readMore": "tier-ceiling",
-      "configKey": "tierCeiling"
+      "configKey": "tierCeiling",
+      "when": {
+        "key": "workKind",
+        "is": "code"
+      }
+    },
+    {
+      "id": "model-ids-default",
+      "phase": "discover",
+      "kind": "select",
+      "ask": "Which model ID represents your Default tier (for repos with a Default ceiling)?",
+      "options": [
+        {
+          "value": "opus",
+          "label": "claude-opus (latest)",
+          "example": "Opus family, any version",
+          "recommended": true
+        },
+        {
+          "value": "sonnet",
+          "label": "claude-sonnet (latest)",
+          "example": "Sonnet family, any version"
+        },
+        {
+          "value": "haiku",
+          "label": "claude-haiku (latest)",
+          "example": "Haiku family, any version"
+        },
+        {
+          "value": "fable",
+          "label": "claude-fable (latest)",
+          "example": "Fable family, any version"
+        },
+        {
+          "value": "claude-opus-5-5",
+          "label": "claude-opus-5-5 (specific)",
+          "example": "Exactly Opus 5.5, nothing else"
+        },
+        {
+          "value": "claude-sonnet-5",
+          "label": "claude-sonnet-5 (specific)",
+          "example": "Exactly Sonnet 5, nothing else"
+        },
+        {
+          "value": "claude-haiku-4-5",
+          "label": "claude-haiku-4-5 (specific)",
+          "example": "Exactly Haiku 4.5, nothing else"
+        },
+        {
+          "value": "claude-fable-5-1",
+          "label": "claude-fable-5-1 (specific)",
+          "example": "Exactly Fable 5.1, nothing else"
+        },
+        {
+          "value": "other",
+          "label": "Other — type it",
+          "example": "A model ID not listed above"
+        }
+      ],
+      "readMore": "model-ids",
+      "configKey": "modelIds.default",
+      "when": {
+        "all": [
+          {
+            "key": "workKind",
+            "is": "code"
+          },
+          {
+            "key": "tierCeiling",
+            "isNot": "deep"
+          }
+        ]
+      }
+    },
+    {
+      "id": "model-ids-default-other",
+      "phase": "discover",
+      "kind": "text",
+      "ask": "Which Default model ID?",
+      "placeholder": "e.g. claude-opus-5-5",
+      "readMore": "model-ids",
+      "configKey": "modelIds.default",
+      "when": {
+        "all": [
+          {
+            "key": "workKind",
+            "is": "code"
+          },
+          {
+            "key": "tierCeiling",
+            "isNot": "deep"
+          },
+          {
+            "key": "modelIds.default",
+            "is": "other"
+          }
+        ]
+      }
+    },
+    {
+      "id": "model-ids-mechanical",
+      "phase": "discover",
+      "kind": "select",
+      "ask": "Which model ID represents your Mechanical tier (for repos with a ceiling)?",
+      "options": [
+        {
+          "value": "opus",
+          "label": "claude-opus (latest)",
+          "example": "Opus family, any version",
+          "recommended": true
+        },
+        {
+          "value": "sonnet",
+          "label": "claude-sonnet (latest)",
+          "example": "Sonnet family, any version"
+        },
+        {
+          "value": "haiku",
+          "label": "claude-haiku (latest)",
+          "example": "Haiku family, any version"
+        },
+        {
+          "value": "fable",
+          "label": "claude-fable (latest)",
+          "example": "Fable family, any version"
+        },
+        {
+          "value": "claude-opus-5-5",
+          "label": "claude-opus-5-5 (specific)",
+          "example": "Exactly Opus 5.5, nothing else"
+        },
+        {
+          "value": "claude-sonnet-5",
+          "label": "claude-sonnet-5 (specific)",
+          "example": "Exactly Sonnet 5, nothing else"
+        },
+        {
+          "value": "claude-haiku-4-5",
+          "label": "claude-haiku-4-5 (specific)",
+          "example": "Exactly Haiku 4.5, nothing else"
+        },
+        {
+          "value": "claude-fable-5-1",
+          "label": "claude-fable-5-1 (specific)",
+          "example": "Exactly Fable 5.1, nothing else"
+        },
+        {
+          "value": "other",
+          "label": "Other — type it",
+          "example": "A model ID not listed above"
+        }
+      ],
+      "readMore": "model-ids",
+      "configKey": "modelIds.mechanical",
+      "when": {
+        "all": [
+          {
+            "key": "workKind",
+            "is": "code"
+          },
+          {
+            "key": "tierCeiling",
+            "isNot": "deep"
+          }
+        ]
+      }
+    },
+    {
+      "id": "model-ids-mechanical-other",
+      "phase": "discover",
+      "kind": "text",
+      "ask": "Which Mechanical model ID?",
+      "placeholder": "e.g. claude-sonnet-5",
+      "readMore": "model-ids",
+      "configKey": "modelIds.mechanical",
+      "when": {
+        "all": [
+          {
+            "key": "workKind",
+            "is": "code"
+          },
+          {
+            "key": "tierCeiling",
+            "isNot": "deep"
+          },
+          {
+            "key": "modelIds.mechanical",
+            "is": "other"
+          }
+        ]
+      }
+    },
+    {
+      "id": "model-ids-light",
+      "phase": "discover",
+      "kind": "select",
+      "ask": "Which model ID represents your Light tier (for repos with a ceiling)?",
+      "options": [
+        {
+          "value": "opus",
+          "label": "claude-opus (latest)",
+          "example": "Opus family, any version",
+          "recommended": true
+        },
+        {
+          "value": "sonnet",
+          "label": "claude-sonnet (latest)",
+          "example": "Sonnet family, any version"
+        },
+        {
+          "value": "haiku",
+          "label": "claude-haiku (latest)",
+          "example": "Haiku family, any version"
+        },
+        {
+          "value": "fable",
+          "label": "claude-fable (latest)",
+          "example": "Fable family, any version"
+        },
+        {
+          "value": "claude-opus-5-5",
+          "label": "claude-opus-5-5 (specific)",
+          "example": "Exactly Opus 5.5, nothing else"
+        },
+        {
+          "value": "claude-sonnet-5",
+          "label": "claude-sonnet-5 (specific)",
+          "example": "Exactly Sonnet 5, nothing else"
+        },
+        {
+          "value": "claude-haiku-4-5",
+          "label": "claude-haiku-4-5 (specific)",
+          "example": "Exactly Haiku 4.5, nothing else"
+        },
+        {
+          "value": "claude-fable-5-1",
+          "label": "claude-fable-5-1 (specific)",
+          "example": "Exactly Fable 5.1, nothing else"
+        },
+        {
+          "value": "other",
+          "label": "Other — type it",
+          "example": "A model ID not listed above"
+        }
+      ],
+      "readMore": "model-ids",
+      "configKey": "modelIds.light",
+      "when": {
+        "all": [
+          {
+            "key": "workKind",
+            "is": "code"
+          },
+          {
+            "key": "tierCeiling",
+            "isNot": "deep"
+          },
+          {
+            "key": "modelLightEnabled",
+            "is": "yes"
+          }
+        ]
+      }
+    },
+    {
+      "id": "model-ids-light-other",
+      "phase": "discover",
+      "kind": "text",
+      "ask": "Which Light model ID?",
+      "placeholder": "e.g. claude-haiku-4-5",
+      "readMore": "model-ids",
+      "configKey": "modelIds.light",
+      "when": {
+        "all": [
+          {
+            "key": "workKind",
+            "is": "code"
+          },
+          {
+            "key": "tierCeiling",
+            "isNot": "deep"
+          },
+          {
+            "key": "modelLightEnabled",
+            "is": "yes"
+          },
+          {
+            "key": "modelIds.light",
+            "is": "other"
+          }
+        ]
+      }
     },
     {
       "id": "comments",

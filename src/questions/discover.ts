@@ -1,4 +1,29 @@
-import type { Question } from '../lib/types.ts';
+import type { Question, QuestionOption, WhenSpec } from '../lib/types.ts';
+import { POPULAR_MODEL_IDS } from './model-ids.ts';
+
+// The first popular model, marked recommended, for the tier ceiling's model ID questions.
+const firstPopularModelWithRecommended: QuestionOption = {
+  value: 'opus',
+  label: 'claude-opus (latest)',
+  example: 'Opus family, any version',
+  recommended: true,
+};
+
+/**
+ * "This repo is capped below Deep", which is `tierCeiling` being `default` or `mechanical`.
+ * `isNot: 'deep'` alone is not that: an unasked `tierCeiling` is `undefined`, and `undefined` is
+ * not `'deep'`, so on a track where `tier-ceiling` is never asked the model ID questions would
+ * be. Written as a conjunction with `tier-ceiling`'s own condition rather than as
+ * `any: ['default', 'mechanical']`, because `any:` is deliberately absent from `WhenSpec` (see
+ * `src/lib/types.ts`) — and on every path where `tier-ceiling` is asked, it has been answered
+ * by the time these are reached, so the two forms agree.
+ */
+const CAPPED = {
+  all: [
+    { key: 'workKind', is: 'code' },
+    { key: 'tierCeiling', isNot: 'deep' },
+  ],
+} satisfies { all: WhenSpec[] };
 
 /**
  * Phase 2 — what is true of each repo. Only what a human knows is asked here; everything the
@@ -203,6 +228,12 @@ export const DISCOVER_QUESTIONS: Question[] = [
     ask: 'What is the most expensive model this repo may run?',
     configKey: 'tierCeiling',
     readMore: 'tier-ceiling',
+    // Asked on the three code tracks — starter (code + light), solo and teams (code + full) —
+    // and not on non-code. A design call, not a technical limit: a ceiling is a budget on the
+    // model a code repo's sessions may run, and someone building documents or a process in a
+    // folder is not the reader that budget is for. An unasked ceiling reads as `deep` everywhere
+    // it is read (`planRepo`, the renderers, `doctor`), which is exactly the uncapped output.
+    when: { key: 'workKind', is: 'code' },
     options: [
       {
         value: 'deep',
@@ -223,5 +254,101 @@ export const DISCOVER_QUESTIONS: Question[] = [
         recommended: false,
       },
     ],
+  },
+  {
+    id: 'model-ids-default',
+    phase: 'discover',
+    kind: 'select',
+    ask: 'Which model ID represents your Default tier (for repos with a Default ceiling)?',
+    configKey: 'modelIds.default',
+    readMore: 'model-ids',
+    options: [
+      firstPopularModelWithRecommended,
+      ...POPULAR_MODEL_IDS.slice(1),
+      {
+        value: 'other',
+        label: 'Other — type it',
+        example: 'A model ID not listed above',
+      },
+    ],
+    when: CAPPED,
+  },
+  {
+    id: 'model-ids-default-other',
+    phase: 'discover',
+    kind: 'text',
+    ask: 'Which Default model ID?',
+    configKey: 'modelIds.default',
+    readMore: 'model-ids',
+    placeholder: 'e.g. claude-opus-5-5',
+    when: {
+      all: [...CAPPED.all, { key: 'modelIds.default', is: 'other' }],
+    },
+  },
+  {
+    id: 'model-ids-mechanical',
+    phase: 'discover',
+    kind: 'select',
+    ask: 'Which model ID represents your Mechanical tier (for repos with a ceiling)?',
+    configKey: 'modelIds.mechanical',
+    readMore: 'model-ids',
+    options: [
+      firstPopularModelWithRecommended,
+      ...POPULAR_MODEL_IDS.slice(1),
+      {
+        value: 'other',
+        label: 'Other — type it',
+        example: 'A model ID not listed above',
+      },
+    ],
+    when: CAPPED,
+  },
+  {
+    id: 'model-ids-mechanical-other',
+    phase: 'discover',
+    kind: 'text',
+    ask: 'Which Mechanical model ID?',
+    configKey: 'modelIds.mechanical',
+    readMore: 'model-ids',
+    placeholder: 'e.g. claude-sonnet-5',
+    when: {
+      all: [...CAPPED.all, { key: 'modelIds.mechanical', is: 'other' }],
+    },
+  },
+  {
+    id: 'model-ids-light',
+    phase: 'discover',
+    kind: 'select',
+    ask: 'Which model ID represents your Light tier (for repos with a ceiling)?',
+    configKey: 'modelIds.light',
+    readMore: 'model-ids',
+    options: [
+      firstPopularModelWithRecommended,
+      ...POPULAR_MODEL_IDS.slice(1),
+      {
+        value: 'other',
+        label: 'Other — type it',
+        example: 'A model ID not listed above',
+      },
+    ],
+    when: {
+      all: [...CAPPED.all, { key: 'modelLightEnabled', is: 'yes' }],
+    },
+  },
+  {
+    id: 'model-ids-light-other',
+    phase: 'discover',
+    kind: 'text',
+    ask: 'Which Light model ID?',
+    configKey: 'modelIds.light',
+    readMore: 'model-ids',
+    placeholder: 'e.g. claude-haiku-4-5',
+    when: {
+      all: [
+        ...CAPPED.all,
+        { key: 'modelLightEnabled', is: 'yes' },
+        { key: 'modelIds.light', is: 'other' },
+      ],
+    },
   },
 ];
