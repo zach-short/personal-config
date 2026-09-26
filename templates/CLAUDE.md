@@ -14,6 +14,7 @@
      times to earn a place in every session's context. Fill it from the Part 0 inventory. -->
 
 {{BROKEN_RULES}}
+{{TIER_CEILING_SECTION}}
 
 ## Stack
 

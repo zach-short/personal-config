@@ -169,6 +169,32 @@ Three writes are deliberately outside the guard, because none of them claims aut
 JSON merge into `settings.json`, the lines appended to an ignore file, and the in-place edits
 `passoff claim` and `archive` make. All three read what is there and keep it.
 
+### Per-repo tier ceiling
+
+A repo can cap which model tier it is allowed to run, so work above that tier is delegated to a
+subagent. This is useful for production repositories where reasoning work should be constrained,
+or for large projects where you want to control costs per repository.
+
+When you set a repo's tier ceiling (during setup, under the `discover` phase), the tool:
+
+1. Asks which model IDs represent each allowed tier in your personal setup (asked once and reused
+   across all capped repos).
+2. Writes `.claude/settings.local.json` (git-ignored) with an `availableModels` list capping the
+   repo to that tier.
+3. Adds a clause to the repo's `CLAUDE.md` (if your routing rule is `delegate-or-stop`) explaining
+   the cap and where to change it.
+4. Ensures the session-start banner prints the ceiling.
+
+The cap is your personal budget choice, not part of the repo's tracked policy. A stranger
+cloning the repo will not inherit it.
+
+**A known limitation:** If your global `~/.claude/settings.json` lists a Deep model, it will
+silently override the repo's cap (Claude Code concatenates and deduplicates across settings
+files). The setup wizard warns about this; if it applies to you, remove the Deep model from your
+global settings.
+
+See `docs/choices/tier-ceiling.md` for the full options and their trade-offs.
+
 ## `doctor`
 
 ```bash

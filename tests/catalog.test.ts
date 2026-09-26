@@ -42,12 +42,15 @@ describe('the catalog carries the whole question set', () => {
   //
   // 37 → 39, same day, the `haiku-tier` effort: `model-light-enabled` and `model-light` in
   // `you`, the opt-in fourth tier (D1).
-  test('39 questions, phased 16 / 8 / 15', async () => {
+  //
+  // 39 → 46, 2026-09-25, item 72: `tier-ceiling` in `discover` (1), and model ID selection
+  // questions in `you` (6 new). Total: you 22, discover 9, practices 15.
+  test('46 questions, phased 22 / 9 / 15', async () => {
     const catalog = await committed();
     const byPhase: Record<string, number> = {};
     for (const q of catalog.questions) byPhase[q.phase] = (byPhase[q.phase] ?? 0) + 1;
-    expect(catalog.questions.length).toBe(39);
-    expect(byPhase).toEqual({ you: 16, discover: 8, practices: 15 });
+    expect(catalog.questions.length).toBe(46);
+    expect(byPhase).toEqual({ you: 22, discover: 9, practices: 15 });
   });
 
   test('every question the wizard asks is present, in the wizard`s order', async () => {
@@ -100,6 +103,34 @@ describe('the conditionals and the one hidden question survive the trip', () => 
     // set that name `non-code`: both questions exist because confining `commit-policy` to a
     // repo left the non-coder with no rule about the step that cannot be taken back.
     const nonCodeOnly = { key: 'workKind', is: 'non-code' };
+    // Item 72: tier ceiling and model ID questions (D1). Model IDs are asked once per person
+    // when a repo picks a ceiling below Deep.
+    const tierCeilingNotDeep = { key: 'tierCeiling', isNot: 'deep' };
+    const tierCeilingNotDeepAndDefaultOther = {
+      all: [
+        { key: 'tierCeiling', isNot: 'deep' },
+        { key: 'modelIds.default', is: 'other' },
+      ],
+    };
+    const tierCeilingNotDeepAndMechanicalOther = {
+      all: [
+        { key: 'tierCeiling', isNot: 'deep' },
+        { key: 'modelIds.mechanical', is: 'other' },
+      ],
+    };
+    const tierCeilingNotDeepAndLight = {
+      all: [
+        { key: 'tierCeiling', isNot: 'deep' },
+        { key: 'modelLightEnabled', is: 'yes' },
+      ],
+    };
+    const tierCeilingNotDeepAndLightOther = {
+      all: [
+        { key: 'tierCeiling', isNot: 'deep' },
+        { key: 'modelLightEnabled', is: 'yes' },
+        { key: 'modelIds.light', is: 'other' },
+      ],
+    };
     expect(conditions).toEqual({
       // Item 62: `commitRuleLine` is read by `repo.ts`, `standard.ts` and `short-standard.ts`
       // for any git target, non-code included — only `commits.md` (`rules.ts:24`) is code-only,
@@ -154,6 +185,12 @@ describe('the conditionals and the one hidden question survive the trip', () => 
       states: codeOnly,
       'design-tokens': codeOnly,
       'test-policy': codeOnly,
+      'model-ids-default': tierCeilingNotDeep,
+      'model-ids-default-other': tierCeilingNotDeepAndDefaultOther,
+      'model-ids-mechanical': tierCeilingNotDeep,
+      'model-ids-mechanical-other': tierCeilingNotDeepAndMechanicalOther,
+      'model-ids-light': tierCeilingNotDeepAndLight,
+      'model-ids-light-other': tierCeilingNotDeepAndLightOther,
     });
   });
 

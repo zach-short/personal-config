@@ -196,4 +196,32 @@ export const DISCOVER_QUESTIONS: Question[] = [
     placeholder: 'e.g. GitHub Issues on this repo',
     when: { key: 'mode', is: 'team' },
   },
+  {
+    id: 'tier-ceiling',
+    phase: 'discover',
+    kind: 'select',
+    ask: 'What is the most expensive model this repo may run?',
+    configKey: 'tierCeiling',
+    readMore: 'tier-ceiling',
+    options: [
+      {
+        value: 'deep',
+        label: 'Deep — no ceiling (the default)',
+        example: 'This repo can run any model you configure',
+        recommended: true,
+      },
+      {
+        value: 'default',
+        label: 'Default',
+        example: 'Deep-tier work is delegated to subagents; expensive operations are capped',
+        recommended: false,
+      },
+      {
+        value: 'mechanical',
+        label: 'Mechanical',
+        example: 'Only sweeps, renames, and mechanical work — no reasoning tiers',
+        recommended: false,
+      },
+    ],
+  },
 ];

@@ -59,6 +59,7 @@ async function renderFullRouter(ctx: RenderContext, languages: string[]): Promis
     COMMIT_LINE: commitLine(ctx),
     CONVENTIONS_LIST: conventionsList(languages),
     BROKEN_RULES: '',
+    TIER_CEILING_SECTION: tierCeilingSection(ctx),
     WORK_RECORD: workRecordLines(ctx),
   };
   const body = await filledTemplate(untracked ? 'CLAUDE.local.md' : 'CLAUDE.md', vars);
@@ -171,6 +172,29 @@ function stackLine(ctx: RenderContext): string {
     scan.migrations.length > 0 ? `migrations in ${scan.migrations.join(', ')}` : null,
   ].filter(Boolean);
   return `Detected ${ctx.date}: ${parts.join(' · ')}. <!-- Verify and expand — versions where they matter. -->`;
+}
+
+/**
+ * The tier ceiling clause (D3): written only when the repo has a ceiling below Deep AND
+ * modelRouting is delegate-or-stop. This clause reminds the session about the cap and where to
+ * find the available models configuration.
+ */
+function tierCeilingSection(ctx: RenderContext): string {
+  const ceiling = answer(ctx, 'tierCeiling', 'deep');
+  const routing = answer(ctx, 'modelRouting', 'skip');
+  if (ceiling === 'deep' || routing !== 'delegate-or-stop') return '';
+
+  const tierName =
+    ceiling === 'default' ? 'Default' : ceiling === 'mechanical' ? 'Mechanical' : ceiling;
+
+  return [
+    '## Tier ceiling',
+    '',
+    `This repo is capped at the **${tierName}** tier. Work assigned to a higher tier is delegated to a subagent; higher tiers are not directly available in this session.`,
+    '',
+    "The cap is stored in `.claude/settings.local.json` (which is git-ignored), and it is this repo's answer to the **tier-ceiling** question — **a per-repo budget, not a property of the standard**. If the cap should change, run `personal-config setup` in this repo and pick a new ceiling.",
+    '',
+  ].join('\n');
 }
 
 /**
@@ -395,6 +419,11 @@ function renderIgnore(ctx: RenderContext): PlannedFile | null {
     'CLAUDE.local.md',
     'AGENT-PRACTICES.local.md',
   ];
+  // Add tier ceiling's settings.local.json if the repo has a ceiling below Deep (F4).
+  const ceiling = answer(ctx, 'tierCeiling', 'deep');
+  if (ceiling !== 'deep') {
+    untracked.push('.claude/settings.local.json');
+  }
   const names = repo.trackMode === 'tracked' ? personal : [...personal, ...untracked];
   // Anchored to the repo root. A bare `HANDOFF.md` matches at every depth, so it would also
   // hide a `docs/HANDOFF.md` or an `examples/HANDOFF.md` the repo legitimately ships — and on

@@ -9,9 +9,11 @@ config=".personal-config.json"
 ledger="$(sed -n 's/.*"ledgerFile"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$config")"
 board="$(sed -n 's/.*"boardFile"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$config")"
 standard="$(sed -n 's/.*"standardPath"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$config")"
+ceiling="$(sed -n 's/.*"tierCeiling"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$config")"
 
 [ -n "$standard" ] && echo "Standard: $standard — read it in full before writing code."
 [ -n "$ledger" ] && [ -f "$ledger" ] && echo "Ledger: $ledger — what is true. Read first."
+[ -n "$ceiling" ] && [ "$ceiling" != "deep" ] && echo "Tier ceiling: $ceiling — work above this tier is delegated."
 
 if [ -n "$board" ] && [ -f "$board" ]; then
   # A table row, not the first line containing the word. Unanchored, this matched the status

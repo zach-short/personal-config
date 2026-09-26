@@ -111,6 +111,7 @@ export function testRepoPlan(overrides: Partial<RepoPlan> = {}): RepoPlan {
     owned: true,
     proofLine: '',
     offLimits: '',
+    tierCeiling: 'deep',
     ...overrides,
   };
 }

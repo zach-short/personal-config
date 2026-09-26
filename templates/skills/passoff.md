@@ -14,7 +14,9 @@ Nine parts, in this order. Skip one only when it is genuinely empty, and say so.
 1. **Title.** Imperative, naming the change, not the area. *"Drag the week grid: windows edited
    where they are drawn"*, not *"week grid work"*.
 2. **The header line.** `**Model: <tier>. Lane <X>. Waits on <what>.**` Plus the worktree
-   instruction when the item needs its own.
+   instruction when the item needs its own. **Important:** Never assign a model tier above the
+   repo's tier ceiling (if it has one). Check the repo's `CLAUDE.md` for its ceiling before
+   writing a pass-off for it.
 3. **Orientation.** Who they are picking up, what to read first and in what order, and the
    session rules restated **inline** — not by reference. A prompt is pasted alone, and a rule
    one file away is a rule that does not arrive.

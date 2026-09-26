@@ -1,5 +1,5 @@
 {
-  "catalogVersion": "0.5.0+e2b55565",
+  "catalogVersion": "0.5.0+31816a75",
   "questions": [
     {
       "id": "work-kind",
@@ -352,6 +352,261 @@
       "configKey": "keepExistingGlobal"
     },
     {
+      "id": "model-ids-default",
+      "phase": "you",
+      "kind": "select",
+      "ask": "Which model ID represents your Default tier (for repos with a Default ceiling)?",
+      "options": [
+        {
+          "value": "opus",
+          "label": "claude-opus (latest)",
+          "example": "Opus family, any version",
+          "recommended": true
+        },
+        {
+          "value": "sonnet",
+          "label": "claude-sonnet (latest)",
+          "example": "Sonnet family, any version"
+        },
+        {
+          "value": "haiku",
+          "label": "claude-haiku (latest)",
+          "example": "Haiku family, any version"
+        },
+        {
+          "value": "fable",
+          "label": "claude-fable (latest)",
+          "example": "Fable family, any version"
+        },
+        {
+          "value": "claude-opus-5-5",
+          "label": "claude-opus-5-5 (specific)",
+          "example": "Exactly Opus 5.5, nothing else"
+        },
+        {
+          "value": "claude-sonnet-5",
+          "label": "claude-sonnet-5 (specific)",
+          "example": "Exactly Sonnet 5, nothing else"
+        },
+        {
+          "value": "claude-haiku-4-5",
+          "label": "claude-haiku-4-5 (specific)",
+          "example": "Exactly Haiku 4.5, nothing else"
+        },
+        {
+          "value": "claude-fable-5-1",
+          "label": "claude-fable-5-1 (specific)",
+          "example": "Exactly Fable 5.1, nothing else"
+        },
+        {
+          "value": "other",
+          "label": "Other — type it",
+          "example": "A model ID not listed above"
+        }
+      ],
+      "readMore": "model-ids",
+      "configKey": "modelIds.default",
+      "when": {
+        "key": "tierCeiling",
+        "isNot": "deep"
+      }
+    },
+    {
+      "id": "model-ids-default-other",
+      "phase": "you",
+      "kind": "text",
+      "ask": "Which Default model ID?",
+      "placeholder": "e.g. claude-opus-5-5",
+      "readMore": "model-ids",
+      "configKey": "modelIds.default",
+      "when": {
+        "all": [
+          {
+            "key": "tierCeiling",
+            "isNot": "deep"
+          },
+          {
+            "key": "modelIds.default",
+            "is": "other"
+          }
+        ]
+      }
+    },
+    {
+      "id": "model-ids-mechanical",
+      "phase": "you",
+      "kind": "select",
+      "ask": "Which model ID represents your Mechanical tier (for repos with a ceiling)?",
+      "options": [
+        {
+          "value": "opus",
+          "label": "claude-opus (latest)",
+          "example": "Opus family, any version",
+          "recommended": true
+        },
+        {
+          "value": "sonnet",
+          "label": "claude-sonnet (latest)",
+          "example": "Sonnet family, any version"
+        },
+        {
+          "value": "haiku",
+          "label": "claude-haiku (latest)",
+          "example": "Haiku family, any version"
+        },
+        {
+          "value": "fable",
+          "label": "claude-fable (latest)",
+          "example": "Fable family, any version"
+        },
+        {
+          "value": "claude-opus-5-5",
+          "label": "claude-opus-5-5 (specific)",
+          "example": "Exactly Opus 5.5, nothing else"
+        },
+        {
+          "value": "claude-sonnet-5",
+          "label": "claude-sonnet-5 (specific)",
+          "example": "Exactly Sonnet 5, nothing else"
+        },
+        {
+          "value": "claude-haiku-4-5",
+          "label": "claude-haiku-4-5 (specific)",
+          "example": "Exactly Haiku 4.5, nothing else"
+        },
+        {
+          "value": "claude-fable-5-1",
+          "label": "claude-fable-5-1 (specific)",
+          "example": "Exactly Fable 5.1, nothing else"
+        },
+        {
+          "value": "other",
+          "label": "Other — type it",
+          "example": "A model ID not listed above"
+        }
+      ],
+      "readMore": "model-ids",
+      "configKey": "modelIds.mechanical",
+      "when": {
+        "key": "tierCeiling",
+        "isNot": "deep"
+      }
+    },
+    {
+      "id": "model-ids-mechanical-other",
+      "phase": "you",
+      "kind": "text",
+      "ask": "Which Mechanical model ID?",
+      "placeholder": "e.g. claude-sonnet-5",
+      "readMore": "model-ids",
+      "configKey": "modelIds.mechanical",
+      "when": {
+        "all": [
+          {
+            "key": "tierCeiling",
+            "isNot": "deep"
+          },
+          {
+            "key": "modelIds.mechanical",
+            "is": "other"
+          }
+        ]
+      }
+    },
+    {
+      "id": "model-ids-light",
+      "phase": "you",
+      "kind": "select",
+      "ask": "Which model ID represents your Light tier (for repos with a ceiling)?",
+      "options": [
+        {
+          "value": "opus",
+          "label": "claude-opus (latest)",
+          "example": "Opus family, any version",
+          "recommended": true
+        },
+        {
+          "value": "sonnet",
+          "label": "claude-sonnet (latest)",
+          "example": "Sonnet family, any version"
+        },
+        {
+          "value": "haiku",
+          "label": "claude-haiku (latest)",
+          "example": "Haiku family, any version"
+        },
+        {
+          "value": "fable",
+          "label": "claude-fable (latest)",
+          "example": "Fable family, any version"
+        },
+        {
+          "value": "claude-opus-5-5",
+          "label": "claude-opus-5-5 (specific)",
+          "example": "Exactly Opus 5.5, nothing else"
+        },
+        {
+          "value": "claude-sonnet-5",
+          "label": "claude-sonnet-5 (specific)",
+          "example": "Exactly Sonnet 5, nothing else"
+        },
+        {
+          "value": "claude-haiku-4-5",
+          "label": "claude-haiku-4-5 (specific)",
+          "example": "Exactly Haiku 4.5, nothing else"
+        },
+        {
+          "value": "claude-fable-5-1",
+          "label": "claude-fable-5-1 (specific)",
+          "example": "Exactly Fable 5.1, nothing else"
+        },
+        {
+          "value": "other",
+          "label": "Other — type it",
+          "example": "A model ID not listed above"
+        }
+      ],
+      "readMore": "model-ids",
+      "configKey": "modelIds.light",
+      "when": {
+        "all": [
+          {
+            "key": "tierCeiling",
+            "isNot": "deep"
+          },
+          {
+            "key": "modelLightEnabled",
+            "is": "yes"
+          }
+        ]
+      }
+    },
+    {
+      "id": "model-ids-light-other",
+      "phase": "you",
+      "kind": "text",
+      "ask": "Which Light model ID?",
+      "placeholder": "e.g. claude-haiku-4-5",
+      "readMore": "model-ids",
+      "configKey": "modelIds.light",
+      "when": {
+        "all": [
+          {
+            "key": "tierCeiling",
+            "isNot": "deep"
+          },
+          {
+            "key": "modelLightEnabled",
+            "is": "yes"
+          },
+          {
+            "key": "modelIds.light",
+            "is": "other"
+          }
+        ]
+      }
+    },
+    {
       "id": "projects-dir",
       "phase": "discover",
       "kind": "text",
@@ -517,6 +772,34 @@
         "key": "mode",
         "is": "team"
       }
+    },
+    {
+      "id": "tier-ceiling",
+      "phase": "discover",
+      "kind": "select",
+      "ask": "What is the most expensive model this repo may run?",
+      "options": [
+        {
+          "value": "deep",
+          "label": "Deep — no ceiling (the default)",
+          "example": "This repo can run any model you configure",
+          "recommended": true
+        },
+        {
+          "value": "default",
+          "label": "Default",
+          "example": "Deep-tier work is delegated to subagents; expensive operations are capped",
+          "recommended": false
+        },
+        {
+          "value": "mechanical",
+          "label": "Mechanical",
+          "example": "Only sweeps, renames, and mechanical work — no reasoning tiers",
+          "recommended": false
+        }
+      ],
+      "readMore": "tier-ceiling",
+      "configKey": "tierCeiling"
     },
     {
       "id": "comments",
@@ -1036,6 +1319,10 @@
       "body": "# One person deciding, or several\n\n## What this is\n\nWhether a decision in this repo can be someone other than the person running the session. It is\nnot about how many people commit — it is about who gets asked.\n\n## The options\n\n**One person — me.** *Recommended for personal repos.*\n\n*The defense.* Everything in the standard was written and measured for one person. Questions go\nto you in chat, in the same turn, batched; answers are recorded in the doc the same turn they\nare given. The teams part of the standard is cut entirely, which removes a whole part from every\nsession's reading.\n\n*The strongest argument against it.* If a second person ever joins, every construct has to move\nat once — and the cut version no longer tells you where. Re-running `setup` restores it, so this\nis cheap to reverse, but it is not free.\n\n**Several people merge code here.**\n\n*The defense.* In a team, a question in a chat log is a question nobody answered. The teams\nmapping moves every construct to where the team can see it: questions become one batched comment\non the item, the board becomes the tracker, the hand-back's three blocks land on items rather\nthan in a transcript, and someone who is not the author walks the runtime pass.\n\n*The strongest argument against it.* It is a whole extra part in every session's context, and\nin a repo where you are in fact the only decider, it adds ceremony that routes your own\nquestions away from the chat where you would actually answer them.\n\n## When you are asked this\n\nOnly for **code work on the full method**. Both readers of this answer are out of reach\notherwise: the Part 0 prompt, which a lighter or non-code setup does not write, and the long\nstandard, whose Part 12 is the teams mapping. On those tracks the question was asked and its\nanswer reached no document (setup-tracks `DESIGN.md` D26), so it is no longer asked, and an\nanswer that is not given reads as **one person — me**. That is what the short standard already\ntells its reader: the owner is the person who decides things here.\n\nThe cost is recorded rather than hidden: a non-code team — a small firm where several people\ndecide — is a real reader, and this makes the short track solo-only in its questions, as it\nalready was in its documents. A team version of the short standard is a piece of work waiting on\nsomeone who needs it.\n\n## What it writes and where\n\nSolo cuts Part 12 from the standard copy and writes `none` for the tracker. Team keeps Part 12\nand fills the tracker you name. `tracker` is asked only when you answer team, so it follows this\nquestion wherever it goes.\n\n## How to undo it\n\nRe-run `setup` with the other answer; the standard copy is stamped and re-rendered.\n"
     },
     {
+      "id": "model-ids",
+      "body": "# Model IDs for tier ceilings\n\nWhen you set a tier ceiling on a repo, this tool asks which model ID represents each tier in your\nsetup. This is asked once per person and reused across all capped repos.\n\n## Why model IDs matter\n\nModel IDs control what the Agent tool, the model picker, and Claude Code accept or reject. A\nceiling on \"Default\" in the `availableModels` list means:\n\n- Family names like `opus` match every Opus version.\n- Version prefixes like `claude-opus-5` match Opus 5 and later versions.\n- An exact model like `claude-opus-5-5` turns off the family's wildcard and allows only that\n  version.\n\nIf you pick \"sonnet\" for your Mechanical tier, the ceiling allows Sonnet 5.0, 5.1, and any\nfuture Sonnet version. If you pick `claude-sonnet-5`, only that exact version is allowed.\n\n## The options\n\n### Family names (recommended)\n\n- **claude-opus** (matches Opus 4, 5, 5.5, future versions)\n- **claude-sonnet** (matches Sonnet 4, 4.1, 5, future versions)\n- **claude-haiku** (matches Haiku 3, 4, 4.5, future versions)\n- **claude-fable** (matches Fable 5, 5.1, future versions)\n\nFamily names survive new releases. When Claude releases Opus 5.6, your ceiling on \"opus\" will\nautomatically include it.\n\n**Best for:** People who want future model versions to work without reconfiguring.\n\n### Exact versions\n\n- **claude-opus-5-5** (exactly Opus 5.5, nothing else)\n- **claude-sonnet-5** (exactly Sonnet 5, nothing else)\n- **claude-haiku-4-5** (exactly Haiku 4.5, nothing else)\n- **claude-fable-5-1** (exactly Fable 5.1, nothing else)\n\nExact versions freeze at that release and never match newer versions. They give you predictable\nbehavior across sessions.\n\n**Best for:** Teams or workflows where consistency and predictability matter more than automatic\nupgrades.\n\n### Other — type it\n\nIf your setup uses a model not listed, type its ID exactly as Claude Code names it. Examples:\n\n- `claude-opus-5` (prefix form)\n- `gpt-4` (if using an OpenAI provider integration)\n- A custom model ID from your organization's setup\n\n**Best for:** Uncommon setups or local models.\n\n## How to undo\n\nRun setup again and pick a different model ID, or edit `.claude/settings.local.json` in the\naffected repos directly.\n\n## Related\n\n- `tier-ceiling` — the per-repo ceiling that caps which tiers are available\n- `model-tiers` — your personal configuration of Deep, Default, Mechanical, and Light models\n"
+    },
+    {
       "id": "model-routing",
       "body": "# What a session does when it is running the wrong model\n\n## What this is\n\nTasks get assigned a model on purpose — a board's Model column, a pass-off prompt's\n`**Model: X**` line, a doc that names one. This decides what happens when a session reads such\na task and is not running that model.\n\n## The options\n\n**Delegate to that model, or stop and hand off.** *Recommended.* The check happens first,\nbefore reading the codebase and before planning. If the models match, the session says so in one\nline and carries on. If not, what happens depends on the task: a review or a sweep is delegated\nto a subagent running the assigned model, because its whole output is a verdict or a list and\nthat survives the subagent boundary; a build is handed off — the session stops, writes a\npass-off carrying everything it has already established, and tells you to run it elsewhere.\n\n*The defense.* The assignment is a safety choice, not a preference. The whole point of a Deep\ntier is work whose failure is silent — so a lighter model doing that work produces something\nthat looks fine and is not, which is exactly the outcome the label exists to prevent. \"It turned\nout to be simple\" is a judgement only the assigned model gets to make, because judging it\nrequires doing the work.\n\n*The strongest argument against it.* Every mismatch costs something — a delegated review pays a\nround trip and a second context, a handed-off build pays a session restart — and on a task that\nreally was trivial, that cost buys nothing. The rule accepts the price because \"trivial\" is a\njudgement the assigned model was supposed to make; it is still a real price.\n\n**Say so in one line, then carry on.** The mismatch is noted; the work proceeds.\n\n*The defense.* You keep the information and lose none of the momentum. If you are in the room\nwatching, you can intervene.\n\n*The strongest argument against it.* A line in a transcript you are not reading is not a\nsafeguard. This is very close to having no rule, with extra words.\n\n**No rule.** Skip this if you do not tag tasks with models.\n\n## What it writes and where\n\n`~/.claude/rules/model-routing.md`, which also carries the tier table.\n\n**Asked only if you take the whole method.** A lighter setup does not write this rule at all —\non a small budget its advice to delegate a task to a second model is the most expensive thing\non the page — so the question is skipped rather than asked and discarded. It *is* asked for\nnon-code work on the full setup: routing a task to the right model is not a fact about source\ncode.\n\n## How to undo it\n\nDelete `~/.claude/rules/model-routing.md`.\n"
     },
@@ -1070,6 +1357,10 @@
     {
       "id": "test-policy",
       "body": "# What a change owes in tests\n\n## What this is\n\nA rule in `docs/conventions-<lang>.md` — the per-language code standard an agent reads in full\nbefore writing any code, and the file a reviewer checks a diff against — saying what tests a\nchange owes and where they live. The agent follows it before declaring a change done.\n\n## The options\n\n**Pure logic is tested, in a new file named for the feature.** *Recommended.*\n\n*The defense.* The \"new file\" half is the part that is not obvious: two sessions working in\nparallel that both append to `tests/misc.test.ts` collide in one file, and that is a merge\nconflict in the least interesting place possible. A file per feature also makes the test suite\na map of the features.\n\nThe other half matters more. **Write characterization tests *before* moving logic, not after.**\nA test written after the move proves the new shape works; it says nothing about whether the\nbehaviour survived the move, which is the only thing you actually wanted to know.\n\n*The strongest argument against it.* You get a lot of small files, and \"named for the feature\"\ngoes stale the moment the feature is renamed — so the map is only as good as the last rename.\n\n**Colocated `foo.test.*` beside the source.**\n\n*The defense.* You never wonder where a file's tests are, and deleting a module deletes its\ntests with it.\n\n*The strongest argument against it.* It nudges toward testing every file rather than the logic\nthat matters, and it puts the collision back.\n\n## What it writes and where\n\nRule `X1` in each `docs/conventions-<lang>.md`, tagged *review*.\n\n## How to undo it\n\nDelete the rule, or re-run `setup`.\n"
+    },
+    {
+      "id": "tier-ceiling",
+      "body": "# Per-repo tier ceiling\n\nCap the most expensive model this repo may use. The ceiling is enforced by Claude Code's\n`availableModels` setting in `.claude/settings.local.json`.\n\n## Options\n\n### Deep — no ceiling (the default)\n\nThis repo can run any of the models you configure. Work here is not constrained by expense or\nmodel size. Choose this for unrestricted reasoning, for work where every tier is allowed, or for\nrepos where you want the full flexibility of your personal model assignments.\n\n**What it writes:** No `.claude/settings.local.json` file. The repo inherits the full set of\navailable models from your personal configuration.\n\n**Strongest argument against:** Unrestricted runs can be expensive, especially for reasoning-heavy\nwork on large codebases. If you want to ensure work here stays within budget, pick a lower\nceiling.\n\n**How to undo:** Run setup again and select a different ceiling, or delete\n`.claude/settings.local.json` from the repo if it exists.\n\n### Default\n\nDeep-tier work is delegated to subagents; operations beyond Default are capped. This is the most\ncommon choice for production repositories where reasoning should be constrained but mechanical\nwork is still allowed.\n\nA session running on the Default model will see Deep-tier tasks and delegate them via the Agent\ntool to a subagent with full access. Work assigned as Default or Mechanical runs normally.\n\n**What it writes:** `.claude/settings.local.json` with `availableModels` set to allow only\nDefault and Mechanical tiers. This ceiling applies to `/model`, `--model`, the model picker, and\nthe Agent tool's `model` parameter.\n\n**Strongest argument against:** Some work that *could* run on Default takes longer or produces\nworse results than running Deep. A ceiling trades time and quality for cost predictability.\n\n**How to undo:** Run setup again and select a higher ceiling, or delete\n`.claude/settings.local.json`.\n\n### Mechanical\n\nOnly sweeps, renames, mechanical transforms, and read-only work. No reasoning tiers (Deep,\nDefault) are available. This is the strictest setting and is useful for repos where you want to\nguarantee all work stays within the cheapest, most predictable tier.\n\nA session running on the Mechanical model will delegate any Default or Deep work to a subagent.\n\n**What it writes:** `.claude/settings.local.json` with `availableModels` set to allow only\nMechanical tier and Light (if enabled). This is the tightest cap.\n\n**Strongest argument against:** Many real tasks genuinely need a higher reasoning tier. A\nMechanical-only ceiling will force frequent delegation and may not be practical for day-to-day\nwork on complex codebases.\n\n**How to undo:** Run setup again and select a higher ceiling, or delete\n`.claude/settings.local.json`.\n\n---\n\n## How the ceiling works\n\nWhen you set a ceiling below Deep, this tool:\n\n1. Asks you which model ID represents each allowed tier (e.g., which model runs at the Default\n   level in your setup).\n2. Writes `.claude/settings.local.json` with `availableModels` set to allow only that tier and\n   any tiers below it.\n3. Adds a clause to your repo's `CLAUDE.md` reminding sessions about the cap, but only if your\n   `modelRouting` answer is `delegate-or-stop` (so the routing rule is actually in place).\n4. Ensures `.claude/settings.local.json` is git-ignored so the cap doesn't spread to other people\n   cloning the repo.\n\nThe cap is applied per-repository and is your personal budget choice, not part of the repo's\ntracked policy. A stranger cloning the repo will not inherit it.\n\n## Silent failures to watch for\n\n- **Global settings override per-repo ceilings.** If your `~/.claude/settings.json` lists Deep\n  models, it silently undoes every repo's cap (F2 in the design). `doctor` warns when this\n  happens, but it is a silent failure in Claude Code itself.\n- **Managed settings (organization-wide) replace the list outright.** An organization's managed\n  settings take precedence and cannot be overridden by project or local settings. This tool\n  cannot prevent that.\n\n## Related\n\n- `model-routing` — what to do when a task names a model your session is not running on\n- `model-tiers` — your personal configuration of the Deep, Default, Mechanical, and (optionally)\n  Light models\n"
     },
     {
       "id": "track-mode",

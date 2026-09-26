@@ -1,4 +1,6 @@
 import type { PlannedFile } from '../lib/types.ts';
+
+import { renderCeiling } from './ceiling.ts';
 import type { RenderContext } from './context.ts';
 import { isShortTrack } from './context.ts';
 import { renderConventions } from './conventions.ts';
@@ -24,6 +26,7 @@ export async function renderAll(ctx: RenderContext): Promise<PlannedFile[]> {
     renderRepoFiles(ctx, languages),
     standard.then((f) => (f ? [f] : [])),
     Promise.resolve(renderConventions(ctx, languages)),
+    renderCeiling(ctx).then((f) => (f ? [f] : [])),
   ]);
   const before = groups.flat();
   const after = renderUserConfig(ctx);

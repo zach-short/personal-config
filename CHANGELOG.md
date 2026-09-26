@@ -7,6 +7,13 @@ The CLI. The working standard it installs is versioned separately — see
 
 ### Added
 
+- **Per-repo tier ceiling.** Cap the most expensive model a repo may run via a new `tier-ceiling`
+  question in the `discover` phase. When a ceiling below Deep is set, the tool asks for model IDs
+  for each allowed tier (once per person, reused across all capped repos), writes
+  `.claude/settings.local.json` (git-ignored) with an `availableModels` list, and adds a clause
+  to the repo's `CLAUDE.md` explaining the cap. Work assigned above the ceiling is delegated to a
+  subagent. The setup wizard warns when global `availableModels` would override a repo's cap.
+  (`docs/incomplete/tier-ceiling/DESIGN.md` ratified 2026-09-25.)
 - **A generated file can be marked `adapted`, and `doctor` can still see it.** One trailing word
   on the stamp line — `standard v1.2.0 · adapted -->` — withdraws `setup`'s permission to
   overwrite the file and keeps its provenance readable. The stamp guard refuses an adapted file

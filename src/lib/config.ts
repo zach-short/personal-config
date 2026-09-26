@@ -143,6 +143,9 @@ const PERSONAL_ANSWERS = new Set([
   'models.light',
   'modelRouting',
   'skills',
+  'modelIds.default',
+  'modelIds.mechanical',
+  'modelIds.light',
 ]);
 
 /** The subset of `answers` that is saved for the person, sorted so the file is diff-stable. */

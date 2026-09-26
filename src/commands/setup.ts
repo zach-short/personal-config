@@ -209,6 +209,10 @@ export async function planRepo(
     // `pickShared` because it is this target's and not the person's, and carried here so
     // `targetAnswers` can lay it back over the shared answers for the renderers and the record.
     offLimits: String(perRepo.offLimits ?? '').trim(),
+    // Tier ceiling is per-repo, asked in discover phase, and carried here for renderers.
+    tierCeiling: (perRepo.tierCeiling === 'default' || perRepo.tierCeiling === 'mechanical'
+      ? perRepo.tierCeiling
+      : 'deep') as 'deep' | 'default' | 'mechanical',
   };
 }
 
@@ -302,6 +306,35 @@ function modelsFrom(answers: Answers, config: Config): Config['models'] {
  * `process.stdin.isTTY`, which a test can define over. `tests/decline-seam.test.ts` is the
  * caller, and what it pins is that the confirm happens at all — see `confirmBatch` below.
  */
+/**
+ * Check if any repo has a tier ceiling that would be overridden by global availableModels.
+ * Warns the user but does not edit the global file — that is the person's call (F2, F4).
+ */
+async function checkTierCeilingOverrides(changes: PlannedChange[]): Promise<string | null> {
+  const global = await savedUserConfig();
+  const globalModels = global.models;
+  if (!globalModels) return null;
+
+  // Check if any of the global models would override a repo ceiling
+  const hasMismatch = changes.some((change) => {
+    if (!change.file.path.includes('.claude/settings.local.json')) return false;
+    // This change is for a repo's tier ceiling
+    // The global models would override if Deep is in the global list
+    const globalDeep = globalModels.deep;
+    return globalDeep && globalDeep.length > 0;
+  });
+
+  if (!hasMismatch) return null;
+
+  return [
+    '\n⚠️  Tier ceiling override detected:',
+    'Your global `~/.claude/settings.json` has a Deep model configured.',
+    'This will silently override the tier ceilings in any repo that sets them.',
+    'To enforce the ceilings, remove the Deep model from your global settings.json or adjust your model assignments.',
+    '',
+  ].join('\n');
+}
+
 export async function finish(
   cli: Cli,
   changes: PlannedChange[],
@@ -318,6 +351,10 @@ export async function finish(
   const current = changes.length - real.length - guarded.length;
   say(`\n${real.length} file(s) to write, ${current} already current.`);
   if (guarded.length > 0) say(leftAlone(guarded));
+
+  // Check for tier ceiling override warnings (F2/F4)
+  const ceilingWarning = await checkTierCeilingOverrides(changes);
+  if (ceilingWarning) say(ceilingWarning);
 
   if (cli.dryRun) {
     say('\n--dry-run: nothing was written.');

@@ -107,6 +107,7 @@ async function recordedPlan(root: string, config: Config): Promise<RepoPlan> {
     readWorkProfile(root),
     readRecordedTrackMode(root),
   ]);
+  const ceiling = config.answers.tierCeiling;
   return {
     scan,
     workProfile: workProfile ?? 'ledger',
@@ -115,5 +116,9 @@ async function recordedPlan(root: string, config: Config): Promise<RepoPlan> {
     owned: true,
     proofLine: String(config.answers.proofLine ?? '').trim(),
     offLimits: String(config.answers.offLimits ?? '').trim(),
+    tierCeiling: (ceiling === 'default' || ceiling === 'mechanical' ? ceiling : 'deep') as
+      | 'deep'
+      | 'default'
+      | 'mechanical',
   };
 }

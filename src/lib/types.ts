@@ -141,6 +141,11 @@ export type RepoPlan = {
    * person — and empty is a complete answer rather than an unanswered one.
    */
   offLimits: string;
+  /**
+   * Per-repo tier ceiling. 'deep' means no ceiling; 'default' or 'mechanical' caps the models
+   * available in this repo via `.claude/settings.local.json`.
+   */
+  tierCeiling: 'deep' | 'default' | 'mechanical';
 };
 
 export type Config = {
