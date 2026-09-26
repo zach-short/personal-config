@@ -140,6 +140,14 @@ const COMMIT_PARAGRAPH = '**Commits are the owner’s.**';
  * recreate" section said `(filled at write time)` in every variant, because nothing ever filled
  * it; it now lists the repo's share of the plan (`tests/part0-written-files.test.ts`). The 0.3.0
  * bytes carried that bug, so they are not a target here. One key per variant, 62 before and after.
+ *
+ * **Two more moved on 2026-09-26, the tier ceiling (board row 72).**
+ * `hooks/personal-config/session-banner.sh` now reads `tierCeiling` from the repo's record and
+ * prints a ceiling line when it is below Deep, and `skills/passoff/SKILL.md` says never to assign
+ * a tier above the repo's ceiling. Both are unconditional template text, so they move in every
+ * variant even though `EVERYTHING` never sets a ceiling; the ceiling's CLAUDE.md clause and
+ * `.claude/settings.local.json` are conditional on a cap and correctly render nothing here. Two
+ * keys per variant, 62 before and after.
  */
 describe('§3.1 row 1 — code + full + git is the 0.3.0 output, byte for byte bar one skill', () => {
   const FULL = answersFor(CODE_FULL_GIT);
