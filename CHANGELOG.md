@@ -3,6 +3,23 @@
 The CLI. The working standard it installs is versioned separately — see
 [`standard/CHANGELOG.md`](standard/CHANGELOG.md).
 
+## 0.6.1 — 2026-09-29
+
+### Fixed
+
+- **An existing code standard is adopted under its own name, not duplicated.** `setup` always
+  named the file `docs/conventions-<language>.md` from the language id, so a repo that already
+  kept `docs/conventions-ts.md` got a second TypeScript standard, `docs/conventions-typescript.md`,
+  written beside it. Discovery now records every `docs/conventions-*.md` and maps it to a
+  language — `ts`, `tsx`, `py`, `rs` and `golang` as well as the full names, and `js` standing in
+  for TypeScript, since the scanner cannot tell the two apart — and the renderer targets that
+  file. A stamped one is updated in place; an unstamped one is left alone by the stamp guard, as
+  before. The `CLAUDE.md` router and the cross-references between standards cite the real
+  filename. Two languages are still two files: `conventions-go.md` beside
+  `conventions-typescript.md` is not a duplicate. Where a repo holds both a name of its own and
+  the default for one language, its own name wins. The duplicate left behind by 0.6.0 is not
+  removed — delete it by hand.
+
 ## 0.6.0 — 2026-09-29
 
 ### Added

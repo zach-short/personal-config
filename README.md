@@ -410,7 +410,7 @@ bun run catalog
 Writes `catalog.json` in the repo root: every question the wizard asks — its text, its options
 with their examples, and the condition deciding whether it is asked at all — plus the long forms
 from [`docs/choices/`](docs/choices), keyed by the id each question cites. Forty-six questions
-and thirty-seven long forms as of `0.6.0+a96e489b` — and nobody is asked all forty-six, because
+and thirty-seven long forms as of `0.6.1+a96e489b` — and nobody is asked all forty-six, because
 thirty-four of them carry a condition: a code setup with the whole method in git is asked
 thirty-five, and someone doing other work on the lighter setup is asked sixteen, or fourteen if
 they keep none of it in git.
