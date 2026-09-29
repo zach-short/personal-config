@@ -3,7 +3,7 @@
 The CLI. The working standard it installs is versioned separately — see
 [`standard/CHANGELOG.md`](standard/CHANGELOG.md).
 
-## Unreleased
+## 0.6.0 — 2026-09-29
 
 ### Added
 
