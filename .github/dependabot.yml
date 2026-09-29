@@ -4,9 +4,12 @@
 # accepts, and a pinned `actions/checkout@v4` keeps working until the day it does not. Grouped
 # and monthly on purpose — this repo has three dev dependencies and one runtime dependency, so
 # a weekly per-package PR stream would be noise around a signal that moves a few times a year.
+#
+# `bun`, not `npm`: the repo is locked by `bun.lock` alone, and the `npm_and_yarn` updater
+# refuses to touch it — every run failed on 2026-09-29 saying exactly that.
 version: 2
 updates:
-  - package-ecosystem: npm
+  - package-ecosystem: bun
     directory: /
     schedule:
       interval: monthly

@@ -38,7 +38,7 @@ The cap is the person's budget, not a property of the repo, and a stranger cloni
 
 ### F5: The shape is a ceiling with three levels
 
-Deep (no ceiling; the recommended default, exactly today's behavior), Default, Mechanical. No floor, because the allowlist can only forbid and nothing can make a model required.
+Deep (no ceiling; the recommended default, exactly the behavior before this feature), Default, Mechanical. No floor, because the allowlist can only forbid and nothing can make a model required.
 
 ### F6: Model-ID picker
 
@@ -99,7 +99,7 @@ The ceiling's `CLAUDE.md` clause and the tier-table filter (if any) are per-repo
 
 *Zach's call, 2026-09-25.*
 
-With no routing rule, there is no deadlock to break, so the clause has no job. The clause is a mitigation; repos with no routing rule do not need it.
+With no routing rule, nothing can deadlock, so the clause has no job. The clause is a mitigation; repos with no routing rule do not need it.
 
 **Rationale:** simpler rendered output. Alternative rejected: always write it for consistency.
 
