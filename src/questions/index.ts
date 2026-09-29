@@ -15,7 +15,7 @@ export const ALL_QUESTIONS: Question[] = [
   ...PRACTICE_QUESTIONS,
 ];
 
-export { YOU_QUESTIONS, DISCOVER_QUESTIONS };
+export { DISCOVER_QUESTIONS, YOU_QUESTIONS };
 
 export function questionsFor(phase: Question['phase']): Question[] {
   return ALL_QUESTIONS.filter((q) => q.phase === phase);
