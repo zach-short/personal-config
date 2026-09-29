@@ -2,7 +2,6 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "$ROOT"
 
 # name:one-line description — single source of truth for both the menu and completion
 COMMANDS=(
@@ -19,15 +18,24 @@ COMMANDS=(
   "help:List commands"
 )
 
-cmd_build() { bun run build; }
-cmd_setup() { bun run setup; }
-cmd_catalog() { bun run catalog; }
-cmd_doctor() { bun run doctor; }
-cmd_undo() { bun run undo; }
-cmd_test() { bun run test; }
-cmd_typecheck() { bun run typecheck; }
-cmd_lint() { bun run lint; }
-cmd_format() { bun run format; }
+# The CLI's own subcommands run from the caller's directory, never from $ROOT: they act on
+# whatever repo you are standing in, and `doctor .` or `setup` resolved against this checkout
+# instead reads — or rewrites — personal-config's own documents. The CLI finds its templates
+# through import.meta.url, so it does not need the cd.
+cli() { bun "$ROOT/src/cli.ts" "$@"; }
+
+# Dev tasks are about this checkout, so they, and only they, run inside it.
+dev() { (cd "$ROOT" && bun run "$@"); }
+
+cmd_build() { dev build "$@"; }
+cmd_setup() { cli setup "$@"; }
+cmd_catalog() { cli catalog "$@"; }
+cmd_doctor() { cli doctor "$@"; }
+cmd_undo() { cli undo "$@"; }
+cmd_test() { dev test "$@"; }
+cmd_typecheck() { dev typecheck "$@"; }
+cmd_lint() { dev lint "$@"; }
+cmd_format() { dev format "$@"; }
 
 cmd_help() {
   echo "usage: personal-config <command>"
@@ -83,16 +91,19 @@ if [[ $# -eq 0 && -t 0 && -t 1 ]] && command -v fzf >/dev/null 2>&1; then
   set -- "$picked"
 fi
 
-case "${1:-help}" in
-  build) cmd_build ;;
-  setup) cmd_setup ;;
-  catalog) cmd_catalog ;;
-  doctor) cmd_doctor ;;
-  undo) cmd_undo ;;
-  test) cmd_test ;;
-  typecheck) cmd_typecheck ;;
-  lint) cmd_lint ;;
-  format) cmd_format ;;
+sub="${1:-help}"
+shift || true
+
+case "$sub" in
+  build) cmd_build "$@" ;;
+  setup) cmd_setup "$@" ;;
+  catalog) cmd_catalog "$@" ;;
+  doctor) cmd_doctor "$@" ;;
+  undo) cmd_undo "$@" ;;
+  test) cmd_test "$@" ;;
+  typecheck) cmd_typecheck "$@" ;;
+  lint) cmd_lint "$@" ;;
+  format) cmd_format "$@" ;;
   shell) cmd_shell ;;
   --complete) cmd___complete ;;
   help|*) cmd_help ;;
