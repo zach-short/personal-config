@@ -148,6 +148,11 @@ const COMMIT_PARAGRAPH = '**Commits are the owner’s.**';
  * variant even though `EVERYTHING` never sets a ceiling; the ceiling's CLAUDE.md clause and
  * `.claude/settings.local.json` are conditional on a cap and correctly render nothing here. Two
  * keys per variant, 62 before and after.
+ *
+ * **One file appeared on 2026-09-29, `/clean-up`.** `skills/clean-up/SKILL.md` is new in every
+ * variant: the skill ships on code + full only, which is exactly this shape, and it moves no
+ * other file's bytes. One key per variant — 62 → 65 — the first time this snapshot has grown
+ * rather than been corrected, and deliberately so.
  */
 describe('§3.1 row 1 — code + full + git is the 0.3.0 output, byte for byte bar one skill', () => {
   const FULL = answersFor(CODE_FULL_GIT);
@@ -179,7 +184,7 @@ describe('§3.1 row 1 — code + full + git is the 0.3.0 output, byte for byte b
   }
 
   test('the snapshot is not empty', async () => {
-    expect(Object.keys(await golden()).length).toBe(62);
+    expect(Object.keys(await golden()).length).toBe(65);
   });
 
   for (const [variant, { answers, plan }] of Object.entries(VARIANTS)) {
@@ -266,7 +271,7 @@ describe('§3.1 row 2 — code + full + no git', () => {
     expect(paths).toContain('/tmp/scripts/PART0-PROMPT.md');
     expect(paths).toContain('~/.claude/rules/model-routing.md');
     expect(paths).toContain('~/.claude/rules/docs-lookup.md');
-    expect(paths.filter((p) => p.includes('/skills/'))).toHaveLength(4);
+    expect(paths.filter((p) => p.includes('/skills/'))).toHaveLength(5);
 
     // The commit rules go, everywhere they were restated.
     expect(paths).not.toContain('~/.claude/rules/commits.md');

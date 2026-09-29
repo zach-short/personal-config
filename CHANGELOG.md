@@ -7,6 +7,14 @@ The CLI. The working standard it installs is versioned separately — see
 
 ### Added
 
+- **`/clean-up`, a fifth workflow skill.** Sweeps finished work out of the live documents: it
+  decides what is actually finished (a `DONE` row whose step exists, a design folder no open row
+  still cites), runs `personal-config fold` and `personal-config archive` behind a `--dry-run`
+  preview and a yes in chat — without a terminal both write without asking — then repairs what
+  pointed at what moved, repointing live text and leaving history as written. It reports work
+  that looks finished but is not marked, and never marks it. Installed on code + full only: both
+  commands refuse without an archive home, and only that track is asked for one. The `skills`
+  question now reads "the workflow skills" rather than "the four".
 - **Per-repo tier ceiling.** Cap the most expensive model a repo may run via a new `tier-ceiling`
   question in the `discover` phase. When a ceiling below Deep is set, the tool asks for model IDs
   for each allowed tier (once per person, reused across all capped repos), writes

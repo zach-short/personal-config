@@ -14,7 +14,7 @@ import {
   workRecordShape,
 } from './context.ts';
 
-const SKILLS = ['close-out', 'scope', 'passoff', 'handoff'] as const;
+const SKILLS = ['close-out', 'scope', 'passoff', 'handoff', 'clean-up'] as const;
 
 /**
  * DIAL-6: the two that work without gates, commits or a board. `/scope` opens a project folder
@@ -32,9 +32,19 @@ export async function renderSkills(ctx: RenderContext): Promise<PlannedFile[]> {
   const choice = answer(ctx, 'skills', 'none');
   if (choice === 'none') return [];
 
-  const offered: readonly string[] = trackOf(ctx).weight === 'light' ? LIGHT_SKILLS : SKILLS;
+  const offered = offeredSkills(ctx);
   const wanted = choice === 'all' ? [...offered] : selected(ctx, offered);
   return Promise.all(wanted.map((name) => renderSkill(ctx, name)));
+}
+
+/**
+ * `/clean-up` drives `fold` and `archive`, and both refuse without an archive home — which only
+ * the code + full track is asked for (setup-tracks `DESIGN.md` D26). Anywhere else its first
+ * command would fail, and a skill whose first step fails is worse than no skill.
+ */
+function offeredSkills(ctx: RenderContext): readonly string[] {
+  if (trackOf(ctx).weight === 'light') return LIGHT_SKILLS;
+  return isShortTrack(ctx) ? SKILLS.filter((name) => name !== 'clean-up') : SKILLS;
 }
 
 function selected(ctx: RenderContext, offered: readonly string[]): string[] {
@@ -94,7 +104,86 @@ function shapeOf(ctx: RenderContext): SkillShape {
 function variables(name: string, shape: SkillShape): Record<string, string> {
   if (name === 'close-out') return closeOutVars(shape);
   if (name === 'handoff') return handoffVars(shape);
+  if (name === 'clean-up') return cleanUpVars(shape);
   return {};
+}
+
+/**
+ * `/clean-up`. Only ever rendered for code + full (`offeredSkills`), so the board is always there
+ * and the two axes left are the work-record shape and git. Profile P has no ledger or board to
+ * fold, only folders; and without git `archive` refuses outright, because both of its checks —
+ * who cites the folder, whether its final state is recorded — are questions for git.
+ */
+function cleanUpVars(shape: SkillShape): Record<string, string> {
+  return {
+    WHAT_MOVES: shape.folders
+      ? 'closed project folders'
+      : 'closed board prompts, old ledger step bodies, finished design folders',
+    FINISHED: shape.folders ? finishedFolders() : finishedLedger(),
+    MOVE_STEPS: [shape.folders ? '' : foldMove(), folderMove(shape)]
+      .filter((step) => step !== '')
+      .join('\n'),
+    GREP_WHERE: shape.folders
+      ? 'across every document in the tree'
+      : 'across the ledger, the board and every document in the tree',
+    LIVE_TEXT: shape.folders
+      ? 'an open project folder'
+      : 'an open board row, a ledger standing section',
+    HISTORICAL_TEXT: shape.folders
+      ? "a closed phase's `As built:` paragraph"
+      : 'a `DONE` row, a ledger step',
+    COMMIT_CLAUSE: shape.git
+      ? [
+          ' Then the',
+          'commit blocks for everything the sweep changed. **The archive may be its own repository**:',
+          'its commit is rooted there and names its own files, exactly as the command printed it.',
+        ].join('\n')
+      : '',
+  };
+}
+
+function finishedLedger(): string {
+  return [
+    '- **A board row** is finished when it says `DONE — <step>` and that step is in the ledger.',
+    '  `SUPERSEDED` and `SETTLED AS NO` are finished too, but their sections stay: each carries a',
+    '  fact written nowhere else.',
+    '- **A ledger step** gives up its body only once it is older than the newest twenty. Its',
+    '  number, title and date stay, because every citation of it depends on that line.',
+    '- **A design folder** is finished when every board row that names it is. One open row citing',
+    '  it keeps it in the tree.',
+  ].join('\n');
+}
+
+function finishedFolders(): string {
+  return [
+    'A project folder is finished when every phase in it is checked off and its status says so.',
+    'A folder with a phase left, or one marked `HELD`, stays in the tree.',
+  ].join('\n');
+}
+
+function foldMove(): string {
+  return [
+    '1. **The board and the ledger** — `personal-config fold --dry-run`, then `personal-config fold`.',
+    '   Every row and every step number stays; prompts and old bodies go.',
+  ].join('\n');
+}
+
+function folderMove(shape: SkillShape): string {
+  const n = shape.folders ? '1' : '2';
+  if (!shape.git)
+    return [
+      `${n}. **Each finished folder** — \`personal-config archive\` needs git and refuses without it, so`,
+      '   do its steps yourself: grep for what cites the folder, copy it to the archive, **verify',
+      '   every file arrived before deleting the original**, and give it one line in the',
+      "   archive's `INDEX.md`.",
+    ].join('\n');
+  return [
+    `${n}. **Each finished folder** — \`personal-config archive <slug>\`. It lists what cites the`,
+    '   folder and whether the repo has recorded its final state. A path read at runtime blocks',
+    '   the move: repoint it first. Uncommitted changes block it too, and **the commit is the',
+    "   owner's** — post the blocks it prints and stop there for that folder. Once it is committed,",
+    '   `personal-config archive <slug> --move --dry-run`, then again without `--dry-run`.',
+  ].join('\n');
 }
 
 /**

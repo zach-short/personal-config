@@ -356,13 +356,13 @@ export const YOU_QUESTIONS: Question[] = [
     id: 'skills',
     phase: 'you',
     kind: 'select',
-    ask: 'Should the four workflow skills be installed?',
+    ask: 'Should the workflow skills be installed?',
     configKey: 'skills',
     readMore: 'skills',
     options: [
       {
         value: 'all',
-        label: 'All four — /close-out, /scope, /passoff, /handoff',
+        label: 'All of them — /close-out, /scope, /passoff, /handoff, /clean-up',
         example: 'You type `/close-out`; the agent runs the whole end-of-work ritual',
         recommended: true,
       },

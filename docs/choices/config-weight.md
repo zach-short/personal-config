@@ -3,7 +3,7 @@
 ## What this is
 
 How much of the method you want installed. The full setup is every document and every skill —
-a standard of about 1,100 lines, a ledger, a board, a router, four workflow skills, a set of
+a standard of about 1,100 lines, a ledger, a board, a router, five workflow skills, a set of
 global rules and a model-routing rule with three tiers in it. The lighter setup is the same
 method with the machinery that assumes a large context budget taken out.
 
@@ -32,7 +32,7 @@ budget is small, the method's advice to delegate work to a second agent is not m
 next, and say what "done" means before starting. Those survive at a tenth of the size. The cut
 is aimed at exactly the parts that assume budget — one model instead of three tiers, no
 model-routing rule, a short standard, a shorter router, a ledger and no board, and the two
-workflow skills that work without gates and commits rather than all four.
+workflow skills that work without gates and commits rather than all five.
 
 *The strongest argument against it.* This is the option with the most conditionals behind it,
 and every conditional is a branch that can drift from what this page promises. A light run that
@@ -46,12 +46,12 @@ you have moved off "lighter" by then, not that "lighter" should carry a board.
 ## What it writes and where
 
 **The whole method** writes every document: the long standard (about 1,100 lines, with a Part 0
-prompt for the session that adapts it), the router, the ledger and the board, the four skills, the
+prompt for the session that adapts it), the router, the ledger and the board, the five skills, the
 global rules including model routing, and whichever hooks you chose.
 
 **Lighter** writes the short form of the standard in its place — `docs/AGENT-PRACTICES.md`,
 under 200 lines, with no Part 0 because nothing in it is left to fill in — a shorter router, the
-ledger and **no board**, two skills (`/handoff` and `/close-out`) instead of four, **no
+ledger and **no board**, two skills (`/handoff` and `/close-out`) instead of five, **no
 `model-routing.md`**, and of the hooks only the completion gate. Everything else you answered is
 written as it would be otherwise: a code repo on the lighter setup still gets its per-language
 code standard and, if it is in git, its commit rule.
@@ -65,6 +65,6 @@ saved profile supplies it.
 Run `personal-config setup` again and answer the other way. Every run previews the full list of
 files before writing, and `personal-config undo` restores anything an accepted run overwrote.
 Going from lighter to the whole method replaces the short standard and router with the long ones
-and adds the board, the two other skills and the routing rule. Going the other way replaces the
+and adds the board, the three other skills and the routing rule. Going the other way replaces the
 standard and the router and leaves the board, the extra skills and `model-routing.md` on disk —
 delete the ones you no longer want.
