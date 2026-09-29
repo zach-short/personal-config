@@ -107,6 +107,12 @@ export type RepoScan = {
   /** The ledger and board this repo already keeps, under whatever name (standard §0.2). */
   ledgerDoc: string | null;
   boardDoc: string | null;
+  /**
+   * The code standard this repo already keeps per language, as a repo-relative path, under
+   * whatever name — `{ typescript: 'docs/conventions-ts.md' }` (standard §0.2). A language absent
+   * here gets the default name.
+   */
+  conventionsDocs: Record<string, string>;
   worktrees: number;
   remoteOwner: string | null;
   /** Set when an existing ledger/board/project-folder fixes the profile (standard §0.2). */

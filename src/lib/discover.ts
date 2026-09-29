@@ -1,5 +1,6 @@
 import { readdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
+import { detectConventionsDocs } from './conventions-docs.ts';
 import { exists as isFile } from './disk.ts';
 import { isGitRepo, ownerFromRemote, remoteUrl, worktreeCount } from './git.ts';
 import { expandHome } from './paths.ts';
@@ -111,16 +112,25 @@ async function admitsFolder(path: string, name: string): Promise<boolean> {
 export async function scanRepo(path: string, kind: TargetKind = 'git'): Promise<RepoScan> {
   const names = await readDocNames(path);
   const git = kind === 'git';
-  const [languages, packageManager, hasCi, migrations, existingDocs, worktrees, owner] =
-    await Promise.all([
-      detectLanguages(path),
-      detectPackageManager(path),
-      exists(join(path, '.github', 'workflows')),
-      detectPresent(path, MIGRATION_DIRS),
-      detectPresent(path, [names.ledger, names.board, ...DOC_MARKERS]),
-      git ? worktreeCount(path) : 0,
-      git ? remoteUrl(path).then(ownerFromRemote) : null,
-    ]);
+  const [
+    languages,
+    packageManager,
+    hasCi,
+    migrations,
+    existingDocs,
+    conventionsDocs,
+    worktrees,
+    owner,
+  ] = await Promise.all([
+    detectLanguages(path),
+    detectPackageManager(path),
+    exists(join(path, '.github', 'workflows')),
+    detectPresent(path, MIGRATION_DIRS),
+    detectPresent(path, [names.ledger, names.board, ...DOC_MARKERS]),
+    detectConventionsDocs(path),
+    git ? worktreeCount(path) : 0,
+    git ? remoteUrl(path).then(ownerFromRemote) : null,
+  ]);
 
   const adopted = adoptedDocs(names, existingDocs);
   return {
@@ -133,6 +143,7 @@ export async function scanRepo(path: string, kind: TargetKind = 'git'): Promise<
     migrations,
     existingDocs,
     ...adopted,
+    conventionsDocs,
     worktrees,
     remoteOwner: owner,
     impliedProfile: impliedProfile(existingDocs, adopted),

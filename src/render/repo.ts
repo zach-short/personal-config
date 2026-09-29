@@ -57,7 +57,7 @@ async function renderFullRouter(ctx: RenderContext, languages: string[]): Promis
     BOARD_FILE: boardFile(ctx),
     STACK_LINE: stackLine(ctx),
     COMMIT_LINE: commitLine(ctx),
-    CONVENTIONS_LIST: conventionsList(languages),
+    CONVENTIONS_LIST: conventionsList(ctx, languages),
     BROKEN_RULES: '',
     TIER_CEILING_SECTION: tierCeilingSection(ctx),
     WORK_RECORD: workRecordLines(ctx),
@@ -87,7 +87,7 @@ async function renderShortRouter(
     TITLE_SUFFIX: untracked ? ' — personal router (not repo policy — untracked)' : '',
     STANDARD_PATH: standardPath(ctx),
     LEDGER_FILE: ledgerFile(ctx),
-    CONVENTIONS_NOTE: code ? codeStandardNote(languages) : '',
+    CONVENTIONS_NOTE: code ? codeStandardNote(ctx, languages) : '',
     PRECEDENCE: untracked ? PRECEDENCE : '',
     WORK_RECORD: workRecordLines(ctx),
     PROOF_BLOCK: proofBlock(ctx),
@@ -107,11 +107,11 @@ function routerLabel(ctx: RenderContext): string {
   return 'router';
 }
 
-function codeStandardNote(languages: string[]): string {
+function codeStandardNote(ctx: RenderContext, languages: string[]): string {
   return [
     '',
     '> **Before writing or editing any code, read the matching code standard in full —',
-    `> ${conventionsList(languages)}. Not optional, not conditional on task size.**`,
+    `> ${conventionsList(ctx, languages)}. Not optional, not conditional on task size.**`,
     '',
   ].join('\n');
 }
@@ -156,9 +156,9 @@ function tidy(text: string): string {
   return `${text.replaceAll(/\n{3,}/g, '\n\n').replace(/\n+$/, '')}\n`;
 }
 
-function conventionsList(languages: string[]): string {
+function conventionsList(ctx: RenderContext, languages: string[]): string {
   if (languages.length === 0) return 'the code standard for this repo';
-  return languages.map((l) => `\`${conventionsPath(l)}\` for ${l}`).join(', ');
+  return languages.map((l) => `\`${conventionsPath(ctx, l)}\` for ${l}`).join(', ');
 }
 
 function stackLine(ctx: RenderContext): string {
@@ -320,7 +320,7 @@ async function renderShortLedger(ctx: RenderContext): Promise<PlannedFile> {
 function conventionsNote(ctx: RenderContext): string {
   const languages = ctx.repo?.scan.languages ?? [];
   if (languages.length === 0) return 'not yet written';
-  return languages.map((l) => `\`${conventionsPath(l)}\``).join(' and ');
+  return languages.map((l) => `\`${conventionsPath(ctx, l)}\``).join(' and ');
 }
 
 async function renderFolders(ctx: RenderContext): Promise<PlannedFile[]> {

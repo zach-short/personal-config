@@ -139,8 +139,9 @@ export function standardPath(ctx: RenderContext): string {
     : 'docs/AGENT-PRACTICES.md';
 }
 
-export function conventionsPath(language: string): string {
-  return `docs/conventions-${language}.md`;
+/** The code standard for one language, honouring an adopted file's name (standard §0.2). */
+export function conventionsPath(ctx: RenderContext, language: string): string {
+  return ctx.repo?.scan.conventionsDocs[language] ?? `docs/conventions-${language}.md`;
 }
 
 export function projectName(ctx: RenderContext): string {

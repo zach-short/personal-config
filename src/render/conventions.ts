@@ -41,9 +41,9 @@ export function renderConventions(ctx: RenderContext, languages: string[]): Plan
       if (rules.length === 0) return null;
       return planned(
         ctx,
-        join(root, conventionsPath(language)),
+        join(root, conventionsPath(ctx, language)),
         `code standard — ${LANGUAGE_LABELS[language] ?? language}`,
-        document(language, rules, languages),
+        document(ctx, language, rules, languages),
       );
     })
     .filter((f): f is PlannedFile => f !== null);
@@ -56,13 +56,18 @@ function rulesFor(ctx: RenderContext, language: string): ConventionRule[] {
     .filter((rule): rule is ConventionRule => rule !== null);
 }
 
-function document(language: string, rules: ConventionRule[], all: string[]): string {
+function document(
+  ctx: RenderContext,
+  language: string,
+  rules: ConventionRule[],
+  all: string[],
+): string {
   const label = LANGUAGE_LABELS[language] ?? language;
   const siblings = all.filter((l) => l !== language);
   const crossRef =
     siblings.length > 0
       ? ` Other languages here have their own file — ${siblings
-          .map((l) => `\`docs/conventions-${l}.md\``)
+          .map((l) => `\`${conventionsPath(ctx, l)}\``)
           .join(
             ', ',
           )} — and **the file extension decides which applies**. Where two of them contradict each other, it is on purpose and both say so.`
