@@ -3,6 +3,16 @@
 The CLI. The working standard it installs is versioned separately — see
 [`standard/CHANGELOG.md`](standard/CHANGELOG.md).
 
+## 0.7.0 — 2026-09-29
+
+### Added
+
+- **A `pro` profile.** For someone new to coding on a small usage budget: the lighter setup on
+  one model (`Sonnet`), no Deep tier, no workflow skills, no docs MCP, `commit-guard` as the only
+  hook, and every code-standard rule off except `comments` and `drive-by-fixes`. On the Go
+  fixture it writes about 18 KB of session-start documents against 73 KB for `starter`.
+  `--profile pro`. The `README.md` profiles section names both shipped profiles.
+
 ## 0.6.1 — 2026-09-29
 
 ### Fixed
