@@ -17,6 +17,17 @@ describe('profile merge', () => {
     expect(config.models.default).toBe('Opus 5.5');
   });
 
+  test('pro is the light track on one model, with nothing that adds to every session', async () => {
+    const config = await loadConfig(parseCli(['setup', '--profile', 'pro']), null);
+    expect(config.answers).toMatchObject({
+      configWeight: 'light',
+      skills: 'none',
+      docsMcp: 'none',
+    });
+    expect(config.models.deep).toBe('');
+    expect(config.models.default).not.toBe('');
+  });
+
   test('an unknown profile is an error, not a silent starter', async () => {
     await expect(loadConfig(parseCli(['setup', '--profile', 'nope']), null)).rejects.toThrow(
       'nope',

@@ -372,6 +372,16 @@ A profile is a JSON file of default answers. `--profile <name>` reads `profiles/
 bun run setup --profile starter --yes --dry-run
 ```
 
+Two ship with the tool. `starter` is the whole method with every answer at its recommended
+value. `pro` is for someone new to coding on a small usage budget: the lighter setup on a single
+model, no Deep tier, no skills, no docs MCP, and no code-standard rules beyond comments and
+drive-by fixes, so the files a session reads at the start come to roughly a quarter of the size.
+Raise any of those answers when you want the rule back.
+
+```bash
+bun run setup --profile pro
+```
+
 To write your own, copy [`profiles/starter.json`](profiles/starter.json) and change the answers.
 They merge, lowest precedence first:
 

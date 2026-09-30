@@ -1,0 +1,42 @@
+{
+  "profile": "pro",
+  "projectsDir": "~/Projects",
+  "archiveHome": "",
+  "models": {
+    "deep": "",
+    "default": "Sonnet",
+    "fast": "",
+    "light": ""
+  },
+  "answers": {
+    "workKind": "code",
+    "configWeight": "light",
+    "usesGit": "yes",
+    "commitPolicy": "print-blocks",
+    "attribution": "none",
+    "modelLightEnabled": "no",
+    "docsMcp": "none",
+    "keepExistingGlobal": "keep",
+    "workProfile": "ledger",
+    "trackMode": "tracked",
+    "mode": "solo",
+    "tracker": "",
+    "hooks": "commit-guard",
+    "outputStyle": "check-first",
+    "skills": "none",
+    "tierCeiling": "deep",
+    "practices.comments": "why-only",
+    "practices.function-length": "none",
+    "practices.exports": "none",
+    "practices.file-naming": "none",
+    "practices.imports": "none",
+    "practices.types": "none",
+    "practices.logic-placement": "none",
+    "practices.data-layer": "none",
+    "practices.states": "none",
+    "practices.design-tokens": "none",
+    "practices.test-policy": "none",
+    "practices.copy-registers": "none",
+    "practices.drive-by-fixes": "note-and-raise"
+  }
+}
