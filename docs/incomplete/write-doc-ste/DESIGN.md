@@ -11,7 +11,7 @@ place. `PLAN.md` beside it is Stage 4, approved at GATE 2 on 2026-10-01. GATE 2 
 design questions the first gate left open; they are D9 and D10.
 
 **Built.** `BUILT` 2026-10-01, all three phases: Phase 1 in `611f766` (HANDOFF 91), Phase 2 in
-`6e30450` (HANDOFF 92), and Phase 3 on `main`, not yet committed (HANDOFF 93). The `As built:`
+`6e30450` (HANDOFF 92), and Phase 3 in `0b5c3a8` (HANDOFF 93). The `As built:`
 notes sit under D2, D3 and D7. Still owed, both Zach's: the `0.8.0` cut and the portfolio's pin
 bump (`PLAN.md` §4). The runtime pass in `RUNTIME-PASS.md` is his to walk, and the folder is
 archived at close-out once it is.

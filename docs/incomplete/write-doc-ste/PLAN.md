@@ -100,7 +100,7 @@ are written after GATE 2, one per phase.
 
 ### Phase 1. `chat-style`
 
-**Status.** `BUILT` 2026-10-01, Opus 5.5, on `main` at `58eaf93`, not yet committed (Zach commits).
+**Status.** `BUILT` 2026-10-01, commit `611f766`, Opus 5.5, built on `main` from `58eaf93`.
 HANDOFF 91, board row 73. The `As built:` notes follow "Watch for".
 
 **Scope.**
@@ -185,8 +185,8 @@ findings.
 
 ### Phase 2. `write-doc` and the check script
 
-**Status.** `BUILT` 2026-10-01, Opus 5.5, in a worktree on `611f766`, not yet committed (Zach
-commits). Board row 74. The `As built:` notes follow "Watch for".
+**Status.** `BUILT` 2026-10-01, commit `6e30450`, Opus 5.5, built in a worktree from `611f766`.
+HANDOFF 92, board row 74. The `As built:` notes follow "Watch for".
 
 **Scope.**
 
@@ -307,8 +307,8 @@ findings.
 
 ### Phase 3. `write-doc-check` and the hook
 
-**Status.** `BUILT` 2026-10-01, Opus 5.5, on `main` at `6e30450`, not yet committed (Zach
-commits). HANDOFF 93, board row 75. The `As built:` notes follow "Watch for".
+**Status.** `BUILT` 2026-10-01, commit `0b5c3a8`, Opus 5.5, built on `main` from `6e30450`.
+HANDOFF 93, board row 75. The `As built:` notes follow "Watch for".
 
 **Scope.**
 
