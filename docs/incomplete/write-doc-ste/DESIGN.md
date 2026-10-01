@@ -10,6 +10,12 @@ frozen: it changes by a new dated `D<n>` or an `As built:` note, never by an edi
 place. `PLAN.md` beside it is Stage 4, approved at GATE 2 on 2026-10-01. GATE 2 also settled two
 design questions the first gate left open; they are D9 and D10.
 
+**Built.** `BUILT` 2026-10-01, all three phases: Phase 1 in `611f766` (HANDOFF 91), Phase 2 in
+`6e30450` (HANDOFF 92), and Phase 3 on `main`, not yet committed (HANDOFF 93). The `As built:`
+notes sit under D2, D3 and D7. Still owed, both Zach's: the `0.8.0` cut and the portfolio's pin
+bump (`PLAN.md` §4). The runtime pass in `RUNTIME-PASS.md` is his to walk, and the folder is
+archived at close-out once it is.
+
 **Labels.** G1 to G20 in §1 are the ground truth the gate saw; `PLAN.md` §0 continues from G21.
 A1, A2, Bundles 1 to 3, E1 to E3 and DIAL-1 to DIAL-9 are the scope's names, kept so §8 reads
 against them. The scope also named two texts for the chat rule "D1" and "D2"; this file calls them
@@ -241,6 +247,16 @@ three new screens; a coder sees one. The catalog goes from 46 to 49 questions.
 
 **Amended 2026-10-01.** The `when` above gains two conditions, and its two stand: `workKind` is
 `non-code` (`PLAN.md` BD-2) and `skills` is not `none` (D10).
+
+**As built: 2026-10-01, Phase 3 (HANDOFF 93).** The skip reads the stamp from the saved file on
+disk, through a Perl port of `stampIndex` inside `check.sh`, and one fixture set in
+`tests/write-doc-check.test.ts` holds the port and `readStamp` to the same verdict. The hook
+checks only the new text of the save, so an Edit that leaves an older em dash elsewhere in the
+file passes. It exits 2 on every outcome the agent must see, a missing `jq` included, because a
+`PostToolUse` hook's stderr reaches the agent on exit 2 and on no other code (`PLAN.md` BD-8). The
+entry is planned only where the skill folder is, and the skill's last limit says the check runs
+on every save only where the entry is planned. A declined run's printed snippet leaves the entry
+out; that finding is open, in Phase 3's notes.
 
 ### D8. The copy is the warm register, for all three questions
 

@@ -53,12 +53,14 @@ describe('the catalog carries the whole question set', () => {
   // 46 → 47, 2026-10-01, write-doc-ste Phase 1: `chat-style` in `you`, after `output-style`.
   //
   // 47 → 48, 2026-10-01, write-doc-ste Phase 2: `write-doc` in `you`, after `skills`.
-  test('48 questions, phased 18 / 15 / 15', async () => {
+  //
+  // 48 → 49, 2026-10-01, write-doc-ste Phase 3: `write-doc-check` in `you`, after `write-doc`.
+  test('49 questions, phased 19 / 15 / 15', async () => {
     const catalog = await committed();
     const byPhase: Record<string, number> = {};
     for (const q of catalog.questions) byPhase[q.phase] = (byPhase[q.phase] ?? 0) + 1;
-    expect(catalog.questions.length).toBe(48);
-    expect(byPhase).toEqual({ you: 18, discover: 15, practices: 15 });
+    expect(catalog.questions.length).toBe(49);
+    expect(byPhase).toEqual({ you: 19, discover: 15, practices: 15 });
   });
 
   test('every question the wizard asks is present, in the wizard`s order', async () => {
@@ -114,6 +116,16 @@ describe('the conditionals and the one hidden question survive the trip', () => 
     // write-doc-ste D5 and D10: non-code work only, and never under `skills: none`, whose option
     // promises an empty skills folder.
     const nonCodeWithSkills = { all: [nonCodeOnly, { key: 'skills', isNot: 'none' }] };
+    // write-doc-ste D7, amended by BD-2 and D10: the follow-up needs the skill installed, and
+    // `hooks` not `none`, whose option promises that nothing is added to `settings.json`.
+    const writeDocWithHooks = {
+      all: [
+        nonCodeOnly,
+        { key: 'writeDoc', is: 'yes' },
+        { key: 'hooks', isNot: 'none' },
+        { key: 'skills', isNot: 'none' },
+      ],
+    };
     // Item 72: tier ceiling and model ID questions (D1). The ceiling is asked on the code tracks
     // only, and the model IDs when a code repo picks a ceiling below Deep. `workKind` rides in
     // every model ID condition so that an *unasked* ceiling — `undefined`, which is not
@@ -202,6 +214,7 @@ describe('the conditionals and the one hidden question survive the trip', () => 
       'model-ids-light': cappedAndLight,
       'model-ids-light-other': cappedAndLightOther,
       'write-doc': nonCodeWithSkills,
+      'write-doc-check': writeDocWithHooks,
     });
   });
 

@@ -4,7 +4,8 @@ Design: `DESIGN.md`, `RATIFIED` 2026-10-01 (D1 to D10). This plan turns it into 
 
 **Status.** `PLANNED` 2026-10-01, Opus 5.5. Approved at GATE 2 the same day; the questions and
 answers are §7. The plan authorizes the whole run, and the phases do not each need approval again.
-Board rows 73, 74 and 75 carry the three phases.
+Board rows 73, 74 and 75 carry the three phases. All three were `BUILT` on 2026-10-01 (HANDOFF 91,
+92 and 93).
 
 ## 0. Facts verified 2026-10-01 (supersede the design where they differ)
 
@@ -69,6 +70,21 @@ Build-level calls that implement the design. Each carries its reversal.
   and anything under `$HOME/.claude/`, never `*/.claude/worktrees/*`, and reads a relative path
   as absolute so `.claude/x.md` and `./.claude/x.md` agree. *Reversal:* restore the one pattern
   `*/.claude/*` in `skips_banned`.
+- **BD-8. In hook mode, a missing `jq` exits 2 and names `jq` on stderr.** Taken 2026-10-01 in
+  Phase 3, before any hook code, from Claude Code's hooks reference (Context7
+  `/websites/code_claude`, pages `hooks` and `hooks-guide`, queried 2026-10-01). Phase 3 item 2
+  and board row 75 asked for this as BD-7, but Phase 2 had already spent that number. A
+  `PostToolUse` hook cannot block, because the tool already ran. Exit 2 shows stderr to Claude.
+  Any other non-zero exit is a non-blocking error: the person's transcript shows a notice with the
+  first line of stderr, and Claude does not see it. Exit 0 sends stderr to the debug log only. So
+  exit 2 is the one code that tells the agent its save was not checked, and the agent can act on
+  it at once, because `check.sh check FILE` needs no `jq`. The cost: with no `jq` the script
+  cannot read which file was saved, so the message follows every `Write` and `Edit`, of any file
+  type, until `jq` is installed or the entry is removed. Every other way hook mode can fail to
+  check a prose file exits 2 for the same reason, and so does a file with problems, so in hook
+  mode exit 2 means "the agent must read this" and exit 0 means nothing to report. Neither prints
+  `PASS`. *Reversal:* exit 1 from `fail` in hook mode, so the notice reaches the person's
+  transcript and not the agent.
 
 ## 2. Phases
 
@@ -291,7 +307,8 @@ findings.
 
 ### Phase 3. `write-doc-check` and the hook
 
-**Status.** Not started. Waits on Phase 2.
+**Status.** `BUILT` 2026-10-01, Opus 5.5, on `main` at `6e30450`, not yet committed (Zach
+commits). HANDOFF 93, board row 75. The `As built:` notes follow "Watch for".
 
 **Scope.**
 
@@ -339,6 +356,64 @@ back says so. The live check is a runtime entry for Zach.
 
 **Watch for.** The bash port of `stampIndex` against the TypeScript: the shared fixtures are the
 only thing that keeps them in step. BD-6: the command string cannot change after release.
+
+**As built: 2026-10-01.** Scope items 1 to 7 were built as written, with these departures and
+findings.
+
+- **Item 2, the exit code.** BD-8, decided from the hooks reference before any hook code was
+  written. Every outcome the agent must see exits 2: problems in the new text, a missing tool
+  (`jq` included), an empty payload or one `jq` cannot parse, a payload with no file or no new
+  text, new text that is not a string or holds a NUL byte, and a saved file that is not on disk.
+  Exit 0 prints nothing at all. Hook mode never prints `PASS`.
+- **Item 2, the stamp port.** `stamped` in `check.sh` ports `stampIndex` and `STAMP_PATTERN` to
+  Perl, on bytes, with a lookahead in place of JavaScript's multiline `$`, which also ends a line
+  at a carriage return. Perl, because the script already requires it and bash 3.2's own regex has
+  no lookahead and no lazy match. The shared fixtures pinned one shape the plan did not list: the
+  pattern is not anchored at the start of its line, so a line 1 that reads "Quoted: " and then a
+  stamp counts as stamped, in `readStamp` and in the port alike. The fixture holds both to it;
+  whether it is right is a question about `readStamp`, outside this phase.
+- **Item 2, the order and the extension.** The script looks for its seven tools first, in both
+  modes, and for `jq` next, so a missing `perl` or `jq` reports after every save of any file, not
+  only a prose file. The extension is read without regard to case, as `check` mode reads it; the
+  owner's hook matches lowercase only.
+- **Item 3.** `renderHooks` reads `wantsWriteDocHook` from `src/render/write-doc.ts`, which the
+  skill's sentence reads too, so the entry and the sentence cannot disagree. It requires
+  `wantsWriteDoc`, so the entry is never planned without the script it runs. The early return
+  names the entry beside the four scripts, although, as the plan says, the completion gate keeps
+  it open whenever hooks are on. The entry has no timeout, as the guards have none.
+- **Item 4.** The last item of the skill's Limits section became `{{SAVE_CHECK}}`. Under `skill`
+  it renders the sentence it had before.
+- **Item 5.** The long form's paragraph that said no hook is added to `settings.json` was
+  corrected. Its undo now removes the entry before the folder, and says why: a deleted folder with
+  the entry left in place fails the hook after every save. It also says when `personal-config
+  undo` removes the entry and when it does not.
+- **Item 6.** `README.md`: the `you` row, the `/write-doc` row, a bullet for the hook, the
+  uninstall line, and the per-track counts. Other work on the lighter setup is asked nineteen
+  questions, or seventeen without git, measured by a scratch script that first reproduced the old
+  36, 18 and 16. Catalog `0.7.0+6bd9a9f2`: 49 questions, 39 long forms.
+- **Item 7, the tests.** `tests/write-doc-check.test.ts` holds 51 tests. Four mutations of the
+  port and one of the entry were each caught, one only after a fixture was rewritten: the fixture
+  for a frontmatter block that never closes had a plain line where a broken reader would look, so
+  the stamp now sits there. `tests/check-script.test.ts`, which this row did not list, lost `hook`
+  from its list of unknown modes, because it is a mode now; its failures are in the new suite.
+  `tests/catalog.test.ts`: 49 questions, `you: 19`, and the `when` map. The golden did not move.
+- **Found while building, open.** A declined run prints the entries it would have merged
+  (`declinedHookHelp`, `src/render/hooks.ts`), and builds them from the plan's paths. The new
+  entry's script is planned under either answer, so the paths cannot show it, and under `every`
+  the printed snippet leaves the `PostToolUse` entry out. The fix passes the planned merge to that
+  function, a change to `src/commands/setup.ts:390`, outside this row's files. Put to Zach.
+- **Gates, 2026-10-01.** `bun run typecheck` clean; `bun run lint` clean, 156 files; `bun test`
+  921 pass, 0 fail, 70 files; `bun run doctor . examples` no findings.
+- **The proof**, in a temporary home under the scratchpad, with a profile answering `every` for
+  other work on the lighter setup and one folder to configure. `settings.json` held one
+  `PostToolUse` entry, matcher `Write|Edit`, command the installed `check.sh` and `hook`. The
+  script was `-rwxr-xr-x`, shebang on line 1, stamp on line 2. Through `/bin/sh -c` and that
+  command: a hand-made Write payload for an unstamped draft with an em dash exited 2 and named the
+  em dash; a Write payload carrying the rendered short ledger (its stamp on line 1, eight em
+  dashes) exited 0; an Edit payload adding an em dash to that ledger exited 0. A second run wrote
+  nothing, and the entry count stayed at one. The real `~/.claude/settings.json` kept its
+  modification time and size. **R10:** the payloads were piped by hand, not sent by a live
+  session; the live check is runtime entry 3.
 
 ## 3. Dials
 

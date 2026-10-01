@@ -437,6 +437,44 @@ export const YOU_QUESTIONS: Question[] = [
     ],
   },
   {
+    // The follow-up to `write-doc` (write-doc-ste D7), directly after it (DIAL-12), asked only
+    // where its answer can do something: non-code work (BD-2, because a saved `writeDoc: yes`
+    // stays in the answers on a later code run), the skill installed, `hooks` not `none` (whose
+    // option above promises nothing is added to `settings.json`) and `skills` not `none` (D10).
+    // `skill` is recommended and installs no hook, so this question returns to the pattern that
+    // `chat-style` and `write-doc` leave: its recommended answer is the one that changes nothing,
+    // and an absent answer reads `skill` in the renderer as well (`src/render/write-doc.ts`).
+    id: 'write-doc-check',
+    phase: 'you',
+    kind: 'select',
+    ask: 'Should your agent check every document it saves, or only what /write-doc writes?',
+    configKey: 'writeDocCheck',
+    readMore: 'write-doc',
+    when: {
+      all: [
+        { key: 'workKind', is: 'non-code' },
+        { key: 'writeDoc', is: 'yes' },
+        { key: 'hooks', isNot: 'none' },
+        { key: 'skills', isNot: 'none' },
+      ],
+    },
+    options: [
+      {
+        value: 'skill',
+        label: 'Only what /write-doc writes',
+        example: 'no hook is installed',
+        recommended: true,
+      },
+      {
+        value: 'every',
+        label: 'Every document it saves',
+        example:
+          'a hook flags em dashes, contractions and stock AI phrases; files this setup generated are skipped',
+        recommended: false,
+      },
+    ],
+  },
+  {
     id: 'keep-existing-global',
     phase: 'you',
     kind: 'select',

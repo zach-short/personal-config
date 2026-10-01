@@ -29,6 +29,17 @@ The CLI. The working standard it installs is versioned separately — see
   A profile saved on a non-code run before the question existed reads **Yes**; none of the
   shipped profiles is for non-code work, so none of them changes. The long form is
   `docs/choices/write-doc.md`.
+- **A choice of when the `/write-doc` check runs.** `write-doc-check` follows a yes to
+  `/write-doc`, and is asked only for other work, with the workflow skills installed and hooks
+  allowed. **Only what /write-doc writes**, the recommended answer, adds nothing. **Every document
+  it saves** merges one `PostToolUse` entry on `Write|Edit` into `~/.claude/settings.json`. It runs
+  `check.sh hook` on the new text of every `.md`, `.mdx`, `.txt`, `.rst`, `.tex` and `.adoc` file
+  the agent saves, and skips a file that carries a `personal-config` stamp where this tool puts
+  one, so the generated ledger, router and short standard are left alone. It exits 2 with the
+  problems, the one exit code whose message Claude Code shows the agent after a save, and never
+  prints `PASS`. It reads the payload with `jq`, and with no `jq` it tells the agent after every
+  save that nothing was checked. A later run does not remove the entry; `docs/choices/write-doc.md`
+  says how to.
 
 ## 0.7.0 — 2026-09-29
 

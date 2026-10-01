@@ -169,6 +169,10 @@ read. Keep anything you cannot lose in git, or in a backup you control.
 an overwrite: existing hooks are preserved, and duplicate entries are not added. The merge is
 shown as a diff, confirmed on its own, and the previous file is backed up.
 
+One more entry can come from a later question, for work that is not code: the answer **Every
+document it saves** to the `write-doc-check` question adds a `PostToolUse` entry that runs the
+`/write-doc` check script on every save. `write-doc.md` describes it, and how to remove it.
+
 **Your answer here is not the only input.** Two earlier answers also decide — what kind of work
 you do, and whether you keep it in git — because the guards protect things you may have already
 said you do not have:

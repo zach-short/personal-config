@@ -57,15 +57,41 @@ export function wantsWriteDoc(ctx: RenderContext): boolean {
 }
 
 /**
+ * Whether `settings.json` gets the `PostToolUse` entry that runs `check.sh hook` on every save
+ * (D7, the `write-doc-check` question). The entry runs a script inside the skill folder, so it is
+ * planned only where `wantsWriteDoc` plans that folder: an entry pointing at a script no run wrote
+ * would fail on every save. Then `hooks` must not be `none`, whose option promises that nothing
+ * reaches `settings.json`, read with the fallback `wantedHooks` uses (G26). An absent
+ * `writeDocCheck` reads `skill`, the recommended answer, which installs nothing.
+ *
+ * `renderHooks` reads this for the entry and `skillVariables` for the sentence that says the check
+ * runs on every save, so the skill says so exactly where the entry exists.
+ */
+export function wantsWriteDocHook(ctx: RenderContext): boolean {
+  if (!wantsWriteDoc(ctx)) return false;
+  if (answer(ctx, 'hooks', 'none') === 'none') return false;
+  return answer(ctx, 'writeDocCheck', 'skill') === 'every';
+}
+
+/** One path for the script the skill's last step runs and the hook entry runs. */
+export function writeDocCheckScript(): string {
+  return join(claudeSkillsDir(), 'write-doc', 'check.sh');
+}
+
+/**
  * The answer-dependent passages (design hazard 4). The STE report and the pointer at
  * `language-style.md` exist only where that rule was written; with no rule, the skill names no
- * chat style at all.
+ * chat style at all. The last limit says the check also runs on every save only where the hook
+ * entry is planned (Phase 3 item 4); everywhere else it says that nothing checks a file on its own.
  */
 function skillVariables(ctx: RenderContext, dir: string): Record<string, string> {
   const ste = answer(ctx, 'chatStyle', 'ste') === 'ste';
   return {
     STYLE_PATH: join(dir, 'style.md'),
-    CHECK_PATH: join(dir, 'check.sh'),
+    CHECK_PATH: writeDocCheckScript(),
+    SAVE_CHECK: wantsWriteDocHook(ctx)
+      ? 'A hook also runs this check on the new text of every `.md`, `.mdx`, `.txt`, `.rst`, `.tex` and `.adoc` file saved with Write or Edit, and shows you the problems it finds. It does not read Word files, and it skips the files `personal-config` generated, so always run step 9.'
+      : 'The check runs only when step 9 runs. Nothing checks a file automatically, so always run step 9.',
     CHAT_SCOPE: ste
       ? 'This skill covers written work only. Chat replies follow the ASD-STE100 rule in `language-style.md` and nothing else.'
       : 'This skill covers written work only. Chat replies are outside it.',

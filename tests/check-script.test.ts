@@ -292,8 +292,10 @@ describe('hazard 2: it never prints PASS on text it did not read', () => {
     expect(result.stderr).toContain('no text was read');
   });
 
+  // `hook` left this list on 2026-10-01, when write-doc-ste Phase 3 made it a mode; its own
+  // failures, an empty payload among them, are in `tests/write-doc-check.test.ts`.
   test('no mode, an unknown mode, or a missing file argument: exit 2, no PASS', async () => {
-    for (const args of [[], ['hook'], ['check'], ['check', 'clean.md', 'extra']]) {
+    for (const args of [[], ['lint'], ['check'], ['check', 'clean.md', 'extra']]) {
       const result = await run(args);
       expect(result.code, args.join(' ')).toBe(2);
       expect(result.stdout, args.join(' ')).toBe('');

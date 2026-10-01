@@ -3,6 +3,7 @@ import { claudeHooksDir, claudeSettingsFile, contractHome } from '../lib/paths.t
 import { template } from '../lib/template.ts';
 import type { PlannedFile } from '../lib/types.ts';
 import { answer, planned, type RenderContext, trackOf } from './context.ts';
+import { wantsWriteDocHook, writeDocCheckScript } from './write-doc.ts';
 
 /**
  * Which of the four hook scripts a run installs. `guard` is the *commit* guard, keyed on git;
@@ -23,8 +24,11 @@ type HookSet = { guard: boolean; deleteGuard: boolean; banner: boolean; gate: bo
 export async function renderHooks(ctx: RenderContext): Promise<PlannedFile[]> {
   const want = wantedHooks(ctx);
   const style = outputStyleFor(ctx);
-  if (!want.guard && !want.deleteGuard && !want.banner && !want.gate && style === null)
-    return [];
+  // Its script lives in the `/write-doc` folder, not in the hooks folder, so it is not one of the
+  // four in `HookSet`; it is planned by `renderWriteDoc` and only its entry is merged here.
+  const docCheck = wantsWriteDocHook(ctx);
+  const nothing = !want.guard && !want.deleteGuard && !want.banner && !want.gate;
+  if (nothing && style === null && !docCheck) return [];
 
   const files: PlannedFile[] = [];
   if (want.guard)
@@ -35,7 +39,7 @@ export async function renderHooks(ctx: RenderContext): Promise<PlannedFile[]> {
     files.push(await scriptFile(ctx, 'session-banner.sh', 'hook — session start banner'));
   if (want.gate)
     files.push(await scriptFile(ctx, 'completion-gate.sh', 'hook — completion gate on Stop'));
-  files.push(settingsMerge(ctx, want, style));
+  files.push(settingsMerge(ctx, want, style, docCheck));
   return files;
 }
 
@@ -155,12 +159,33 @@ function bashGuardEntry(script: string): Record<string, unknown> {
   };
 }
 
-function settingsMerge(ctx: RenderContext, want: HookSet, style: string | null): PlannedFile {
+/**
+ * The entry `write-doc-check: every` adds (write-doc-ste D7): `check.sh hook` on every `Write` and
+ * `Edit`. The command is the script's absolute path and the word `hook`, unquoted, the form the
+ * guards' entries take (`PLAN.md` BD-6). Like every string in this file, it is fixed once a
+ * release carries it: the merge de-duplicates by exact JSON, so a changed spelling would sit
+ * beside the old entry and check every save twice (see `gateCommand`). No timeout, as the guards
+ * have none: the script reads one payload and one file.
+ */
+function writeDocCheckEntry(): Record<string, unknown> {
+  return {
+    matcher: 'Write|Edit',
+    hooks: [{ type: 'command', command: `${writeDocCheckScript()} hook` }],
+  };
+}
+
+function settingsMerge(
+  ctx: RenderContext,
+  want: HookSet,
+  style: string | null,
+  docCheck: boolean,
+): PlannedFile {
   const hooks: Record<string, unknown[]> = {};
   const guards: Record<string, unknown>[] = [];
   if (want.guard) guards.push(bashGuardEntry('commit-guard.sh'));
   if (want.deleteGuard) guards.push(bashGuardEntry('delete-guard.sh'));
   if (guards.length > 0) hooks.PreToolUse = guards;
+  if (docCheck) hooks.PostToolUse = [writeDocCheckEntry()];
   if (want.banner) {
     hooks.SessionStart = [
       {

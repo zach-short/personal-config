@@ -86,4 +86,4 @@ A subagent may not load the rules file. Paste these into its prompt: the banned 
 - The script catches words, phrases, em dashes and contractions. It cannot catch layout, participle tails or vague attribution. Step 6 covers those, and it depends on your own careful re-read.
 - No script checks provenance or citations. Steps 4 and 7 depend on your own labels. When you are not sure whether a claim is first-hand, label it **Needs the author**.
 - The word rules and the check script address what a human reader notices. They do not lower AI-detector scores. Do not promise the author a detector result.
-- The check runs only when step 9 runs. Nothing checks a file automatically, so always run step 9.
+- {{SAVE_CHECK}}

@@ -71,3 +71,43 @@ builder's harness refused to run.
      saw and what you think, and it does not invent either. After it saves the file it runs
      `check.sh check <file>` by absolute path and reports the result, with a report in
      ASD-STE100 when the chat rule was written.
+
+## Phase 3. `write-doc-check` and the hook (HANDOFF 93, board row 75)
+
+Seen by the agent on 2026-10-01, in a temporary home: entry 2, and the piped payloads in entry
+3's first half (`PLAN.md`, Phase 3's `As built:` note). The payloads were piped by hand, not sent
+by a live session. Not seen: entry 1, and entry 3 in a live session.
+
+1. **The follow-up is asked after a yes to the skill, and only when hooks are on.**
+   - *Where.* A real terminal in this repo: `bun run setup --dry-run`. Answer that the work is
+     something other than code, any hooks answer but **No hooks**, **All of them** to the skills
+     question, and **Yes, install /write-doc**.
+   - *Right answer.* The next screen is "Should your agent check every document it saves, or
+     only what /write-doc writes?", with **Only what /write-doc writes** (no hook is installed)
+     first and selected, and **Every document it saves** second. Walk `← back` to the hooks
+     question, answer **No hooks**, and go forward: the follow-up is not asked. Answer **No** to
+     the skill instead: it is not asked either.
+
+2. **One entry is merged, it runs the installed script, and a second run adds nothing.**
+   - *Where.* Any shell, in this checkout. `export T="$(mktemp -d)"`, then `mkdir -p
+     "$T/work/essays"`. Write a profile file with `"projectsDir"` set to `"$T/work"` and these
+     answers: `"workKind": "non-code"`, `"configWeight": "light"`, `"usesGit": "no"`, `"hooks":
+     "commit-guard"`, `"skills": "all"`, `"writeDoc": "yes"`, `"writeDocCheck": "every"`. Run
+     `HOME="$T" bun run setup --from <that file> --yes --force --projects-dir "$T/work"` twice.
+   - *Right answer.* `jq '.hooks.PostToolUse' "$T/.claude/settings.json"` shows one entry,
+     matcher `Write|Edit`, command `$T/.claude/skills/write-doc/check.sh hook`, after each run.
+     The second run prints "Everything is already current." Your own `~/.claude` is not touched.
+     **Seen by the agent 2026-10-01.**
+
+3. **A live session is told about an em dash right after it saves one, and the generated ledger
+   is left alone.** The live check, for you to run.
+   - *Where.* After entry 2, in a terminal: `cd "$T/work/essays"`, then start a session with
+     the entry loaded for that session only: `claude --settings '{"hooks":{"PostToolUse":[{"matcher":"Write|Edit","hooks":[{"type":"command","command":"'"$T"'/.claude/skills/write-doc/check.sh hook"}]}]}}'`.
+     Ask it to write `draft.md` with one sentence that joins two clauses with an em dash. Then
+     ask it to append one line with an em dash to `HANDOFF.md`.
+   - *Right answer.* After the first save the agent is shown a message that starts "check.sh
+     found problems in the text just saved to" and names the em dash, and it edits `draft.md` to
+     remove it. After the second save no message from `check.sh` appears, because `HANDOFF.md`
+     carries a stamp on line 1. Your own em-dash hook may also run on both saves; its message
+     starts "In" and the file path, and it is not this entry's. Seen by the agent with piped
+     payloads only: exit 2 naming the em dash for the draft, exit 0 for the ledger.
