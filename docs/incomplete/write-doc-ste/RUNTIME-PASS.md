@@ -76,7 +76,9 @@ builder's harness refused to run.
 
 Seen by the agent on 2026-10-01, in a temporary home: entry 2, and the piped payloads in entry
 3's first half (`PLAN.md`, Phase 3's `As built:` note). The payloads were piped by hand, not sent
-by a live session. Not seen: entry 1, and entry 3 in a live session.
+by a live session. Entry 4, added with board row 76 (HANDOFF 94), was seen the same day with its
+answers read from a profile file. Not seen: entry 1, entry 3 in a live session, and entry 4's
+questions answered by hand.
 
 1. **The follow-up is asked after a yes to the skill, and only when hooks are on.**
    - *Where.* A real terminal in this repo: `bun run setup --dry-run`. Answer that the work is
@@ -111,3 +113,19 @@ by a live session. Not seen: entry 1, and entry 3 in a live session.
      carries a stamp on line 1. Your own em-dash hook may also run on both saves; its message
      starts "In" and the file path, and it is not this entry's. Seen by the agent with piped
      payloads only: exit 2 naming the em dash for the draft, exit 0 for the ledger.
+
+4. **A declined run hands over the write-doc check entry with the others.** Board row 76.
+   - *Where.* A real terminal in this repo: `bun run setup`. Answer that the work is something
+     other than code, any hooks answer but **No hooks**, **All of them** to the skills question,
+     **Yes, install /write-doc**, and **Every document it saves**. Answer **No** at "Write these N
+     file(s)?". A declined run keeps the resume checkpoint (`retiresCheckpoint`,
+     `src/lib/resume.ts`), so the next `setup` offers to resume it.
+   - *Right answer.* "Nothing was written.", then the snippet. It holds `"PostToolUse"` with
+     matcher `Write|Edit` and command `<home>/.claude/skills/write-doc/check.sh hook`, beside the
+     other entries the plan holds. The last line names `~/.claude/hooks/personal-config and
+     ~/.claude/skills/write-doc`. **Seen by the agent 2026-10-01**, at `5f4d17a`, in a
+     pseudo-terminal driven by `expect`, with a temporary home and the answers of entry 2 read by
+     `--from <that file> --yes`. Both confirms were real prompts, answered **No**. The snippet held
+     `PreToolUse`, `PostToolUse` and `Stop`, in that order, and the last line read as above.
+     Nothing was written to the temporary home, and your own `~/.claude/settings.json` kept its
+     modification time and size. The questions were not answered by hand.
