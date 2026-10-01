@@ -39,7 +39,9 @@ The CLI. The working standard it installs is versioned separately — see
   problems, the one exit code whose message Claude Code shows the agent after a save, and never
   prints `PASS`. It reads the payload with `jq`, and with no `jq` it tells the agent after every
   save that nothing was checked. A later run does not remove the entry; `docs/choices/write-doc.md`
-  says how to.
+  says how to. Declining the run prints the entry with the other hook entries, to add by hand: the
+  snippet a declined run prints is now read from the planned `settings.json` merge, so it holds
+  every event the run would have merged.
 
 ## 0.7.0 — 2026-09-29
 

@@ -387,7 +387,7 @@ export async function finish(
   // thirty answers behind this confirmation went with it.
   if (!(await confirmBatch(cli, real, prompter))) {
     say(cancelMessage());
-    const hookHelp = declinedHookHelp(changes.map((c) => c.file.path));
+    const hookHelp = declinedHookHelp(changes.map((c) => c.file));
     if (hookHelp !== null) say(hookHelp);
     return endRun('declined');
   }

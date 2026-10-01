@@ -1,4 +1,4 @@
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { claudeHooksDir, claudeSettingsFile, contractHome } from '../lib/paths.ts';
 import { template } from '../lib/template.ts';
 import type { PlannedFile } from '../lib/types.ts';
@@ -236,47 +236,91 @@ function settingsLabel(hasHooks: boolean, hasStyle: boolean): string {
  * stopping. The confirm is for the whole batch, so the scripts are unwritten too: the snippet is
  * therefore shown as what a run *would* merge, never as something already live.
  *
- * The output style is not in here, and cannot be: this reads the plan's *paths*, and a style is
- * a key with no file of its own. A declined run leaves it unwritten like everything else.
+ * It reads the planned merge itself, not the plan's paths (board row 76). It used to infer the
+ * entries from which hook scripts were planned, and the `PostToolUse` entry `write-doc-check:
+ * every` adds runs a script the plan holds under either answer, so the paths could not show it
+ * and the snippet left it out. Read from the merge, an entry `settingsMerge` gains later is
+ * handed over without a change here.
+ *
+ * The output style is not in here. The merge holds it beside `hooks`, but this hands over only
+ * the `hooks` object: it is the answer to the hooks risk above, and a style-only merge prints
+ * nothing, as it did when this read paths. A declined run leaves the style unwritten like
+ * everything else.
  */
-export function declinedHookHelp(plannedPaths: string[]): string | null {
-  const want = {
-    guard: plannedPaths.includes(join(claudeHooksDir(), 'commit-guard.sh')),
-    deleteGuard: plannedPaths.includes(join(claudeHooksDir(), 'delete-guard.sh')),
-    banner: plannedPaths.includes(join(claudeHooksDir(), 'session-banner.sh')),
-    gate: plannedPaths.includes(join(claudeHooksDir(), 'completion-gate.sh')),
-  };
-  if (!want.guard && !want.deleteGuard && !want.banner && !want.gate) return null;
+export function declinedHookHelp(plan: PlannedFile[]): string | null {
+  const hooks = plannedHooks(plan);
+  if (hooks === null) return null;
+  const dirs = scriptDirs(plan, hooks);
   return [
     `\nHooks were in that plan, so ${contractHome(claudeSettingsFile())} is untouched. This is what`,
     'a run would merge into it, if you would rather add it by hand:',
     '',
-    hookSnippet(want),
-    '',
-    `Its scripts are written to ${contractHome(claudeHooksDir())} when you accept a run.`,
+    hookSnippet(hooks),
+    ...(dirs.length > 0
+      ? ['', `Its scripts are written to ${dirs.join(' and ')} when you accept a run.`]
+      : []),
   ].join('\n');
 }
 
-/** One `PreToolUse` line per guard, in the shape `settingsMerge` writes them. */
-function guardLine(script: string): string {
-  return `    { "matcher": "Bash", "hooks": [{ "type": "command", "command": "${join(claudeHooksDir(), script)}" }] }`;
+/** The `hooks` object of the planned `settings.json` merge, or null where it has none. */
+function plannedHooks(plan: PlannedFile[]): Record<string, unknown> | null {
+  const merge = plan.find(
+    (f) => f.path === claudeSettingsFile() && f.strategy === 'merge-json',
+  );
+  if (merge === undefined) return null;
+  const body: unknown = JSON.parse(merge.contents);
+  const hooks = isRecord(body) ? body.hooks : undefined;
+  return isRecord(hooks) && Object.keys(hooks).length > 0 ? hooks : null;
 }
 
-function hookSnippet(want: HookSet): string {
-  const parts: string[] = [];
-  const guards: string[] = [];
-  if (want.guard) guards.push(guardLine('commit-guard.sh'));
-  if (want.deleteGuard) guards.push(guardLine('delete-guard.sh'));
-  if (guards.length > 0) parts.push(`  "PreToolUse": [\n${guards.join(',\n')}\n  ]`);
-  if (want.banner) {
-    parts.push(
-      `  "SessionStart": [\n    { "matcher": "startup|resume", "hooks": [{ "type": "command", "command": "${join(claudeHooksDir(), 'session-banner.sh')}", "timeout": 5 }] }\n  ]`,
+/**
+ * Where the scripts the entries run are written: the folder of each planned file a command names,
+ * in the order the entries print. The write-doc check lives in its skill folder and not in the
+ * hooks folder, so naming only the hooks folder would send a person looking in the wrong place.
+ */
+function scriptDirs(plan: PlannedFile[], hooks: Record<string, unknown>): string[] {
+  const dirs = commandsIn(hooks).flatMap((command) =>
+    plan.filter((f) => command.includes(f.path)).map((f) => contractHome(dirname(f.path))),
+  );
+  return [...new Set(dirs)];
+}
+
+function commandsIn(hooks: Record<string, unknown>): string[] {
+  return Object.values(hooks)
+    .flatMap((entries) => (Array.isArray(entries) ? entries : []))
+    .flatMap((entry) => (isRecord(entry) && Array.isArray(entry.hooks) ? entry.hooks : []))
+    .flatMap((hook) =>
+      isRecord(hook) && typeof hook.command === 'string' ? [hook.command] : [],
     );
-  }
-  if (want.gate) {
-    parts.push(
-      `  "Stop": [\n    { "hooks": [{ "type": "command", "command": ${JSON.stringify(gateCommand())}, "timeout": 120 }] }\n  ]`,
-    );
-  }
+}
+
+/**
+ * One line per entry, under its event, in the order the merge holds them. Each entry is printed
+ * by `inline` in the spacing the snippet has always had, so the four entries it printed before it
+ * read the merge come out byte for byte as they did (`tests/decline-every-event.test.ts` pins it).
+ */
+function hookSnippet(hooks: Record<string, unknown>): string {
+  const parts = Object.entries(hooks).map(([event, entries]) => {
+    const lines = (Array.isArray(entries) ? entries : [entries]).map((e) => `    ${inline(e)}`);
+    return `  ${JSON.stringify(event)}: [\n${lines.join(',\n')}\n  ]`;
+  });
   return `"hooks": {\n${parts.join(',\n')}\n}`;
+}
+
+/**
+ * `{ "key": value }` with spaces inside braces and `[…]` without. Strings go through
+ * `JSON.stringify`, so a path is escaped as JSON requires. The guard lines used to interpolate it
+ * raw, which is the same bytes for any path without a quote, a backslash or a control character.
+ */
+function inline(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(inline).join(', ')}]`;
+  if (isRecord(value)) {
+    const fields = Object.entries(value).map(([k, v]) => `${JSON.stringify(k)}: ${inline(v)}`);
+    return `{ ${fields.join(', ')} }`;
+  }
+  return JSON.stringify(value);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

@@ -402,6 +402,10 @@ findings.
   entry's script is planned under either answer, so the paths cannot show it, and under `every`
   the printed snippet leaves the `PostToolUse` entry out. The fix passes the planned merge to that
   function, a change to `src/commands/setup.ts:390`, outside this row's files. Put to Zach.
+  **Fixed 2026-10-01, board row 76, HANDOFF 94.** `declinedHookHelp` now takes the planned files
+  and reads the `hooks` object of the `settings.json` merge, and `setup.ts:390` passes it the
+  files, not their paths. Under `every` the snippet holds `PostToolUse`. The four entries it
+  printed before come out byte for byte, pinned by `tests/decline-every-event.test.ts`.
 - **Gates, 2026-10-01.** `bun run typecheck` clean; `bun run lint` clean, 156 files; `bun test`
   921 pass, 0 fail, 70 files; `bun run doctor . examples` no findings.
 - **The proof**, in a temporary home under the scratchpad, with a profile answering `every` for

@@ -1,17 +1,18 @@
 import { describe, expect, test } from 'bun:test';
 import { existsSync } from 'node:fs';
-import { rm } from 'node:fs/promises';
+import { readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { finish } from '../src/commands/setup.ts';
 import { parseCli } from '../src/lib/args.ts';
 import { cancelMessage } from '../src/lib/ask.ts';
-import { claudeHooksDir } from '../src/lib/paths.ts';
+import { claudeHooksDir, claudeSettingsFile } from '../src/lib/paths.ts';
 import type { PlannedChange } from '../src/lib/write-plan.ts';
 import { declinedHookHelp } from '../src/render/hooks.ts';
 import { cleanup, recordingPrompter, tempDir, withTty } from './helpers.ts';
 
 const HOOKS_DIR = claudeHooksDir();
 const GUARD = join(HOOKS_DIR, 'commit-guard.sh');
+const SETTINGS = claudeSettingsFile();
 
 /** A new file, which is what a first run plans: nothing on disk, and something to write. */
 function newFile(path: string, contents: string): PlannedChange {
@@ -22,6 +23,27 @@ function newFile(path: string, contents: string): PlannedChange {
     summary: '+1 -0',
     guard: 'none',
   };
+}
+
+/**
+ * The `settings.json` merge a run plans beside the guard script, holding the entry that runs it.
+ * The decline's snippet is read from this merge (board row 76), so a plan without one hands over
+ * nothing, however many hook scripts it holds.
+ */
+function guardMerge(): PlannedChange {
+  const entry = { matcher: 'Bash', hooks: [{ type: 'command', command: GUARD }] };
+  const contents = `${JSON.stringify({ hooks: { PreToolUse: [entry] } }, null, 2)}\n`;
+  return {
+    file: { path: SETTINGS, contents, label: 'settings.json', strategy: 'merge-json' },
+    before: '',
+    after: contents,
+    summary: '+1 -0',
+    guard: 'none',
+  };
+}
+
+async function settingsNow(): Promise<string | null> {
+  return existsSync(SETTINGS) ? readFile(SETTINGS, 'utf8') : null;
 }
 
 /**
@@ -44,30 +66,34 @@ async function captured(run: () => Promise<number>): Promise<{ code: number; out
 
 /**
  * The real decline path, driven end to end through `finish` rather than stood in for. The plan
- * holds one file in a throwaway directory and one hook script, because the decline owes the
- * person two things: nothing written, and the hook snippet it did not merge.
+ * holds one file in a throwaway directory, one hook script and the merge that registers it,
+ * because the decline owes the person two things: nothing written, and the hook snippet it did
+ * not merge.
  *
- * The hook path is the real `~/.claude` one — under `tests/preload.ts`'s sandbox `$HOME` — since
- * `declinedHookHelp` matches on exactly that spelling. Nothing else in the suite plans a hook
- * (`DEFAULT_ANSWERS` answers `hooks: 'none'`), so the `rm` in each `finally` clears up only what
- * these tests could have caused: on a green run there is nothing there to remove.
+ * The paths are the real `~/.claude` ones — under `tests/preload.ts`'s sandbox `$HOME` — since
+ * `declinedHookHelp` finds the merge by exactly that spelling. Nothing else in the suite plans a
+ * hook (`DEFAULT_ANSWERS` answers `hooks: 'none'`), so the `rm` in each `finally` clears up only
+ * what these tests could have caused: on a green run there is nothing there to remove. Other
+ * suites do write the sandbox's `settings.json`, so it is restored to its bytes rather than
+ * removed.
  */
 describe('the decline path, through the seam that makes it drivable', () => {
   test('a no at the confirm writes nothing, and says what it did not write', async () => {
     const dir = await tempDir('pc-decline-seam-');
     const doc = join(dir, 'AGENTS.md');
-    const plan = [newFile(doc, 'generated\n'), newFile(GUARD, '#!/bin/sh\n')];
+    const plan = [newFile(doc, 'generated\n'), newFile(GUARD, '#!/bin/sh\n'), guardMerge()];
+    const settings = await settingsNow();
     try {
       const { prompter, asked } = recordingPrompter([false, false]);
       const { code, out } = await captured(() =>
         withTty(true, () => finish(parseCli(['setup']), plan, prompter)),
       );
-      const help = declinedHookHelp(plan.map((c) => c.file.path)) ?? '';
+      const help = declinedHookHelp(plan.map((c) => c.file)) ?? '';
 
       expect(code).toBe(0);
       expect(asked.map((a) => a.message)).toEqual([
         'Show the per-file diff first?',
-        'Write these 2 file(s)?',
+        'Write these 3 file(s)?',
       ]);
       expect(out).toContain('This run would write:');
       expect(out).toContain(cancelMessage());
@@ -76,9 +102,12 @@ describe('the decline path, through the seam that makes it drivable', () => {
       // The guarantee. `commitPlan` is not reached, so neither path exists afterwards.
       expect(existsSync(doc)).toBe(false);
       expect(existsSync(GUARD)).toBe(false);
+      expect(await settingsNow()).toBe(settings);
     } finally {
       await cleanup(dir);
       await rm(HOOKS_DIR, { recursive: true, force: true });
+      if (settings === null) await rm(SETTINGS, { force: true });
+      else await writeFile(SETTINGS, settings);
     }
   });
 
