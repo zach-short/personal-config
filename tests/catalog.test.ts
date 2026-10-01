@@ -51,12 +51,14 @@ describe('the catalog carries the whole question set', () => {
   // before any ceiling existed to read, so an unanswered `tierCeiling` satisfied `isNot: 'deep'`.
   //
   // 46 → 47, 2026-10-01, write-doc-ste Phase 1: `chat-style` in `you`, after `output-style`.
-  test('47 questions, phased 17 / 15 / 15', async () => {
+  //
+  // 47 → 48, 2026-10-01, write-doc-ste Phase 2: `write-doc` in `you`, after `skills`.
+  test('48 questions, phased 18 / 15 / 15', async () => {
     const catalog = await committed();
     const byPhase: Record<string, number> = {};
     for (const q of catalog.questions) byPhase[q.phase] = (byPhase[q.phase] ?? 0) + 1;
-    expect(catalog.questions.length).toBe(47);
-    expect(byPhase).toEqual({ you: 17, discover: 15, practices: 15 });
+    expect(catalog.questions.length).toBe(48);
+    expect(byPhase).toEqual({ you: 18, discover: 15, practices: 15 });
   });
 
   test('every question the wizard asks is present, in the wizard`s order', async () => {
@@ -109,6 +111,9 @@ describe('the conditionals and the one hidden question survive the trip', () => 
     // set that name `non-code`: both questions exist because confining `commit-policy` to a
     // repo left the non-coder with no rule about the step that cannot be taken back.
     const nonCodeOnly = { key: 'workKind', is: 'non-code' };
+    // write-doc-ste D5 and D10: non-code work only, and never under `skills: none`, whose option
+    // promises an empty skills folder.
+    const nonCodeWithSkills = { all: [nonCodeOnly, { key: 'skills', isNot: 'none' }] };
     // Item 72: tier ceiling and model ID questions (D1). The ceiling is asked on the code tracks
     // only, and the model IDs when a code repo picks a ceiling below Deep. `workKind` rides in
     // every model ID condition so that an *unasked* ceiling — `undefined`, which is not
@@ -196,6 +201,7 @@ describe('the conditionals and the one hidden question survive the trip', () => 
       'model-ids-mechanical-other': cappedAndMechanicalOther,
       'model-ids-light': cappedAndLight,
       'model-ids-light-other': cappedAndLightOther,
+      'write-doc': nonCodeWithSkills,
     });
   });
 
@@ -359,8 +365,10 @@ describe('what each of the five shapes is actually asked', () => {
     // other tier question, so a light non-code run never sees it either.
     //
     // 20 and 16 → 21 and 17 on write-doc-ste Phase 1: `chat-style`, on both weights.
-    expect(full).toHaveLength(21);
-    expect(light).toHaveLength(17);
+    //
+    // 21 and 17 → 22 and 18 on write-doc-ste Phase 2: `write-doc`, on both weights (D5).
+    expect(full).toHaveLength(22);
+    expect(light).toHaveLength(18);
     for (const ids of [full, light]) {
       expect(ids).toContain('commit-policy');
       expect(ids).toContain('off-limits');
@@ -384,7 +392,8 @@ describe('what each of the five shapes is actually asked', () => {
     // shape of §10.3's table, which had no case of its own until item 60: it is the one a
     // non-programmer actually walks, and §10.3's "After D22 + D23" column says 14 for it.
     // 14 → 15 on write-doc-ste Phase 1: `chat-style`, which no track skips.
-    expect(ids).toHaveLength(15);
+    // 15 → 16 on write-doc-ste Phase 2: `write-doc`, asked of non-code work on both weights.
+    expect(ids).toHaveLength(16);
     for (const id of DEAD_ON_A_SHORT_TRACK) expect(ids).not.toContain(id);
     // The two this shape gained: a rule about the step that cannot be taken back where there is
     // no commit to gate it on, and the one question in the set about somebody else's material.
@@ -438,8 +447,11 @@ describe('what each of the five shapes is actually asked', () => {
    * the empty list: the short non-code track is now asked two things the full code track is
    * not. Pinned as a list rather than a count, because "a non-coder is asked something a
    * programmer is not" is the whole of D22 and D23 and an added third would be a decision.
+   *
+   * The third, 2026-10-01: `write-doc`, write-doc-ste D5, decided at that design's GATE 1. On
+   * this track the documents are the work.
    */
-  test('and the two that go the other way — the only questions a programmer is never asked', async () => {
+  test('and the three that go the other way — the only questions a programmer is never asked', async () => {
     const code = await asked({ workKind: 'code', configWeight: 'full', usesGit: 'yes' });
     const nonCode = await asked({
       workKind: 'non-code',
@@ -447,7 +459,11 @@ describe('what each of the five shapes is actually asked', () => {
       usesGit: 'yes',
     });
 
-    expect(nonCode.filter((id) => !code.includes(id))).toEqual(['off-limits', 'edit-policy']);
+    expect(nonCode.filter((id) => !code.includes(id))).toEqual([
+      'write-doc',
+      'off-limits',
+      'edit-policy',
+    ]);
   });
 });
 

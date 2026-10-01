@@ -391,7 +391,11 @@ describe('§3.1 row 4 — non-code, whatever the weight and whatever git says', 
     const paths = names(files);
 
     expect(paths).toContain('/tmp/example/PASSOFF.md');
-    expect(paths.filter((p) => p.includes('/skills/'))).toHaveLength(4);
+    const skills = paths.filter((p) => p.includes('/skills/'));
+    expect(skills.filter((p) => !p.includes('/skills/write-doc/'))).toHaveLength(4);
+    // write-doc-ste Phase 2: `/write-doc` is a folder of its own beside the four, rendered for
+    // non-code work with skills installed; `EVERYTHING` gives no `writeDoc`, which reads `yes` (D9).
+    expect(skills.filter((p) => p.includes('/skills/write-doc/'))).toHaveLength(3);
     expect(paths).toContain('~/.claude/rules/model-routing.md');
     const standard = text(files, 'docs/AGENT-PRACTICES.md');
     expect(standard).toContain('## What is next — `PASSOFF.md`');
@@ -423,6 +427,11 @@ describe('§3.1 row 4 — non-code, whatever the weight and whatever git says', 
         '~/.claude/settings.json',
         '~/.claude/skills/close-out/SKILL.md',
         '~/.claude/skills/handoff/SKILL.md',
+        // write-doc-ste Phase 2: on non-code work the documents are the work (D5), and an absent
+        // `writeDoc` reads `yes` (D9), so the smallest setup gains the skill's folder.
+        '~/.claude/skills/write-doc/SKILL.md',
+        '~/.claude/skills/write-doc/check.sh',
+        '~/.claude/skills/write-doc/style.md',
         '~/.config/personal-config/config.json',
       ].sort(),
     );

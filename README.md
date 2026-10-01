@@ -53,12 +53,12 @@ The wizard runs in four phases.
 
 | Phase | Asks about |
 |---|---|
-| you | Whether the work is code or something else, whether you want the whole method or a lighter setup, and whether you keep the work in git. Who runs `git commit`, and whether agent commits carry an attribution trailer. Your model tiers (three, or four if you want a narrow one below Mechanical) and what a session does when a task names a model it is not running. A docs-lookup tool. Hooks, output style, how your agent talks to you, and skills. What to do with rules you already have in `~/.claude`. |
+| you | Whether the work is code or something else, whether you want the whole method or a lighter setup, and whether you keep the work in git. Who runs `git commit`, and whether agent commits carry an attribution trailer. Your model tiers (three, or four if you want a narrow one below Mechanical) and what a session does when a task names a model it is not running. A docs-lookup tool. Hooks, output style, how your agent talks to you, and skills. For other work, whether to install `/write-doc`, a skill for writing documents. What to do with rules you already have in `~/.claude`. |
 | discover | Which directory holds your projects. The tool lists the git repos and plain folders one level below it, and you pick which to set up. Then, for each one: how work arrives, whether the files are committed or private, what proves work is sound, what the agent must not read (other work only), where closed work goes, whether one person decides, and the most expensive model tier the repo may run. |
 | practices | Code work is asked eleven conventions: comments, function length, exports, file naming, imports, types, logic placement, the data layer, loading, error and empty states, design tokens, and tests. All work is asked who picks the words a user reads and what happens to an unrelated problem found mid-task. Other work is also asked whether the agent edits a document or shows the change first. |
 | render | Nothing new. The tool previews, you confirm, it writes. |
 
-Not every question is asked. A code setup with the whole method, kept in git, is asked thirty-six questions, and more if you cap a repo's model tier. Someone doing other work on the lighter setup is asked seventeen, or fifteen if they keep none of it in git.
+Not every question is asked. A code setup with the whole method, kept in git, is asked thirty-six questions, and more if you cap a repo's model tier. Someone doing other work on the lighter setup is asked eighteen, or sixteen if they keep none of it in git.
 
 The wizard asks only what a person knows. It does not guess what the repo knows: the gate commands, the gates that lie, the directory map, the hazards. For code work with the whole method it writes `<repo>/PART0-PROMPT.md` instead, and where `pbcopy` exists (macOS) it copies the prompt to your clipboard. You paste it into a fresh agent session in that repo, and that session does Part 0 of the standard, the step that adapts it to the repo.
 
@@ -71,6 +71,7 @@ The wizard asks only what a person knows. It does not guess what the repo knows:
 | `docs-lookup.md` | `~/.claude/rules/` | Prefer your docs tool over memory for library APIs. Code work only, and not written if you answer "none". |
 | `language-style.md` | `~/.claude/rules/` | Your agent replies to you in chat in ASD-STE100 Simplified Technical English, with no irony, sarcasm or litotes. Every track, and not written if you answer "However it likes". |
 | `<name>/SKILL.md` | `~/.claude/skills/` | The skills `/close-out`, `/scope`, `/passoff`, `/handoff` and `/clean-up`. The lighter setup installs `/close-out` and `/handoff`. `/clean-up` is written for code work with the whole method only. |
+| `write-doc/SKILL.md`, `style.md`, `check.sh` | `~/.claude/skills/` | The `/write-doc` skill, for other work only, and only when the workflow skills are installed. It asks you for every claim only you can make before it drafts, reviews the draft against `style.md`, and runs `check.sh` on the saved file for em dashes, contractions and stock AI phrases. Not written if you answer "No". |
 | `commit-guard.sh`, `delete-guard.sh`, `session-banner.sh`, `completion-gate.sh` | `~/.claude/hooks/personal-config/` | Optional hooks, merged into `~/.claude/settings.json`. See below. |
 | `config.json` | `~/.config/personal-config/` | Your saved answers for all repos, so the next run opens with them. |
 | `CLAUDE.md` or `CLAUDE.local.md` | repo root | The router every session reads. The `.local` name is used when the files are private. |
@@ -293,7 +294,7 @@ The three forms are told apart by shape. Eight characters of `[a-z0-9]` with no 
 bun run catalog
 ```
 
-This writes `catalog.json` in the repo root. It holds every question the wizard asks: its text, its options with their examples, and the condition that decides whether it is asked at all. It also holds the long forms from [`docs/choices/`](docs/choices), keyed by the id each question cites. As of `0.7.0+b8cca551` that is forty-seven questions and thirty-eight long forms. Thirty-four of the questions carry a condition, so nobody is asked all forty-seven.
+This writes `catalog.json` in the repo root. It holds every question the wizard asks: its text, its options with their examples, and the condition that decides whether it is asked at all. It also holds the long forms from [`docs/choices/`](docs/choices), keyed by the id each question cites. As of `0.7.0+d15d7f52` that is forty-eight questions and thirty-nine long forms. Thirty-five of the questions carry a condition, so nobody is asked all forty-eight.
 
 It exists so another surface can ask the same questions without importing the wizard, which is not browser-safe. The catalog version is the package version plus a hash of the questions it was built from, so a consumer can tell which questions it pinned. `bun test` fails when the questions change and the catalog was not rebuilt, because a second copy of the questions is only accurate if something checks it.
 
@@ -333,7 +334,7 @@ personal-config undo    # restore whatever the last run overwrote
 Then delete what you no longer want:
 
 - `~/.claude/rules/commits.md`, `model-routing.md`, `docs-lookup.md` and `language-style.md`
-- the skill directories under `~/.claude/skills/` (`close-out`, `scope`, `passoff`, `handoff` and `clean-up`)
+- the skill directories under `~/.claude/skills/` (`close-out`, `scope`, `passoff`, `handoff`, `clean-up` and `write-doc`)
 - `~/.claude/hooks/personal-config/`, and the `hooks` entries and `outputStyle` it added to `~/.claude/settings.json`
 - the generated files in each repo, and the `availableModels` list in any repo's `.claude/settings.local.json`
 

@@ -1,7 +1,7 @@
 import { join } from 'node:path';
 import { readText } from '../lib/disk.ts';
 import { claudeSkillsDir, repoRoot } from '../lib/paths.ts';
-import { stampLine } from '../lib/stamp.ts';
+import { stampAfterFrontmatter, stampLine } from '../lib/stamp.ts';
 import { fill } from '../lib/template.ts';
 import type { PlannedFile } from '../lib/types.ts';
 import {
@@ -60,15 +60,6 @@ async function renderSkill(ctx: RenderContext, name: string): Promise<PlannedFil
   return planned(ctx, join(claudeSkillsDir(), name, 'SKILL.md'), `skill — /${name}`, body, {
     stamp: false,
   });
-}
-
-/** The harness reads frontmatter only when `---` is the first line, so the stamp goes below it. */
-function stampAfterFrontmatter(source: string, stamp: string): string {
-  if (!source.startsWith('---\n')) return `${stamp}\n${source}`;
-  const close = source.indexOf('\n---\n', 4);
-  if (close === -1) return `${stamp}\n${source}`;
-  const cut = close + '\n---\n'.length;
-  return `${source.slice(0, cut)}\n${stamp}\n${source.slice(cut)}`;
 }
 
 /**

@@ -37,3 +37,37 @@ the question in a terminal (entry 1) and a session that loads the rule (entry 3)
      on line 1. The replies use short sentences, one instruction in each sentence, and the active
      voice, with no irony, sarcasm or litotes. Code, commit messages and files the agent writes
      keep their own project's style.
+
+## Phase 2. `write-doc` and the check script (board row 74)
+
+Seen by the agent on 2026-10-01: the check script run by hand on a clean draft, a draft with an
+em dash, a `.docx`, and the same `.docx` with `textutil` off `PATH` (`PLAN.md`, Phase 2's
+`As built:` note). Not seen: entries 1 to 3. Entry 2 is the half of the plan's proof that the
+builder's harness refused to run.
+
+1. **The question is asked of other work only, after the skills question.**
+   - *Where.* A real terminal in this repo: `bun run setup --dry-run`. In the `you` phase, answer
+     that the work is something other than code, then **All of them** to the skills question.
+   - *Right answer.* The next screen is "Do you want help writing documents you can stand
+     behind?", with **Yes, install /write-doc** first and selected, and **No** second. Walk
+     `← back` to the skills question, answer **None**, and go forward: the question is not asked.
+     Start again and answer that the work is code: it is never asked.
+
+2. **The skill folder is written, and the script is executable.**
+   - *Where.* Any shell, in this checkout: `export HOME="$(mktemp -d)"`, write a profile file with
+     `"workKind": "non-code"`, `"configWeight": "light"`, `"usesGit": "no"`, `"skills": "all"`
+     and no `writeDoc`, then `bun run setup --from <that file> --yes --force --projects-dir
+     "$HOME"`. Then `ls -l "$HOME/.claude/skills/write-doc/"`.
+   - *Right answer.* `SKILL.md`, `style.md` and `check.sh`, with `check.sh` as `-rwxr-xr-x`.
+     `head -2 check.sh` shows `#!/usr/bin/env bash` and then the `personal-config` stamp.
+     `"$HOME/.claude/skills/write-doc/check.sh" check <a clean .md>` prints `PASS` and exits 0.
+     The real `~/.claude` is not touched.
+
+3. **The skill asks before it writes a first-hand claim, and runs the check.**
+   - *Where.* After entry 2, or on an account set up for other work: open a Claude Code session
+     with that home and ask it to write a one-page reflection on a talk you attended, giving it
+     only the talk's title.
+   - *Right answer.* `/write-doc` fires. Before it drafts, it asks you in one message for what you
+     saw and what you think, and it does not invent either. After it saves the file it runs
+     `check.sh check <file>` by absolute path and reports the result, with a report in
+     ASD-STE100 when the chat rule was written.

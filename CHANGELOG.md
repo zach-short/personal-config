@@ -17,6 +17,18 @@ The CLI. The working standard it installs is versioned separately — see
   re-run of an old profile adds the file to its preview; it is the first recommended answer that
   adds a file to what an older profile writes. All three shipped profiles answer `ste`. The long
   form is `docs/choices/chat-style.md`.
+- **`/write-doc`, offered when the work is not code.** `write-doc` sits after the skills
+  question, and is asked only for other work and only when the workflow skills are installed.
+  **Yes, install /write-doc**, the recommended answer, writes `~/.claude/skills/write-doc/` with
+  three files: the skill, the `style.md` it reads first, and `check.sh`, which it runs on the saved
+  file. The skill asks the author for every claim only the author can make before it drafts, then
+  reviews the draft, checks its sources and citations, and checks the saved file. `check.sh check
+  FILE` finds em dashes, contractions and stock AI phrases; it prints `PASS` only when every check
+  ran on text it read, and exits 2 with the reason, and no `PASS`, when it could not check. It
+  runs under bash 3.2 and needs `perl`; a Word file needs macOS `textutil`. **No** writes nothing.
+  A profile saved on a non-code run before the question existed reads **Yes**; none of the
+  shipped profiles is for non-code work, so none of them changes. The long form is
+  `docs/choices/write-doc.md`.
 
 ## 0.7.0 — 2026-09-29
 

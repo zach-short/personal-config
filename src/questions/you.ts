@@ -402,6 +402,41 @@ export const YOU_QUESTIONS: Question[] = [
     ],
   },
   {
+    // Sits after `skills` (write-doc-ste DIAL-8) and only for non-code work (D5): on that track the
+    // documents are the work. Not asked under `skills: none` (D10), whose option above promises an
+    // empty skills folder. Like `chat-style`, its recommended answer is not the one that changes
+    // nothing: `yes` writes `~/.claude/skills/write-doc/`, and a profile saved on a non-code run
+    // before this question existed reads `yes` too (D9), so a re-run adds the folder to its
+    // preview. That is deliberate, and it is why `writeDoc` has no entry in
+    // `STORED_PROFILE_DEFAULTS`.
+    id: 'write-doc',
+    phase: 'you',
+    kind: 'select',
+    ask: 'Do you want help writing documents you can stand behind?',
+    configKey: 'writeDoc',
+    readMore: 'write-doc',
+    when: {
+      all: [
+        { key: 'workKind', is: 'non-code' },
+        { key: 'skills', isNot: 'none' },
+      ],
+    },
+    options: [
+      {
+        value: 'yes',
+        label: 'Yes, install /write-doc',
+        example: 'it asks you for anything only you can say, then checks the draft',
+        recommended: true,
+      },
+      {
+        value: 'no',
+        label: 'No',
+        example: 'nothing is written to `~/.claude/skills/write-doc/`',
+        recommended: false,
+      },
+    ],
+  },
+  {
     id: 'keep-existing-global',
     phase: 'you',
     kind: 'select',

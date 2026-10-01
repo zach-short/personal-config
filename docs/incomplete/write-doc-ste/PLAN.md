@@ -60,6 +60,15 @@ Build-level calls that implement the design. Each carries its reversal.
   for good: the merge de-duplicates by exact JSON, so a changed string is a second entry beside
   the first (the `gateCommand` comment, `src/render/hooks.ts:120-141`). *Reversal:* free until the
   first release that carries it; after that, none.
+- **BD-7. `check.sh` skips banned words only in a rule or skill file, not under any `/.claude/`
+  path.** Taken 2026-10-01 in Phase 2, on the Deep review's first finding. Phase 2 item 2 said
+  to keep the owner's skip, which matches `*/.claude/*`. Claude Code puts an agent worktree at
+  `<repo>/.claude/worktrees/<name>/`, so that pattern skipped the banned-word check on every
+  document written in one, and the PASS line made the skip look intended. The skip exists for
+  files that list the words on purpose, so it now matches `*/.claude/rules/*`, `*/.claude/skills/*`
+  and anything under `$HOME/.claude/`, never `*/.claude/worktrees/*`, and reads a relative path
+  as absolute so `.claude/x.md` and `./.claude/x.md` agree. *Reversal:* restore the one pattern
+  `*/.claude/*` in `skips_banned`.
 
 ## 2. Phases
 
@@ -160,7 +169,8 @@ findings.
 
 ### Phase 2. `write-doc` and the check script
 
-**Status.** Not started. Waits on Phase 1.
+**Status.** `BUILT` 2026-10-01, Opus 5.5, in a worktree on `611f766`, not yet committed (Zach
+commits). Board row 74. The `As built:` notes follow "Watch for".
 
 **Scope.**
 
@@ -227,6 +237,57 @@ that has one and exits 1, and on a `.docx` with `textutil` off `PATH` fails loud
 `stampAfterFrontmatter` must not change a byte of the five existing skills; the golden catches it.
 The skill's description is what makes it fire, so a reworded description changes when it fires:
 keep the trigger list.
+
+**As built: 2026-10-01.** Scope items 1 to 6 were built as written, with these departures and
+findings.
+
+- **Item 2, `style.md`.** Written through Bash (BD-5). The register section's "STE sentence
+  limits do not apply here" became "Sentence limits for chat replies do not apply here", because
+  under `chatStyle: none` no STE rule exists for the sentence to refer to.
+- **Item 2, `check.sh`.** It reads only the ten file types the skill names and exits 2 on any
+  other, where the owner's script read any file with `cat`. It looks for every tool it pipes
+  through (`perl`, `grep`, `tr`, `sort`, `head`, `paste`, `cat`) before reading any text, since a
+  missing one empties a pipe and an empty pipe reads as a clean text, and it treats a `grep`
+  status above 1 as a failure, not as "no match". Three more ways to pass on text it did not read
+  were found and closed. First, `textutil` reads a file it cannot parse as plain text and exits
+  0, so a misnamed `.docx` was checked as raw bytes and passed; the script now checks each Word
+  type's signature first (found by `tests/check-script.test.ts`). Second and third, from the
+  Deep review below: binary data under a text extension, and a NUL byte, which bash drops from a
+  command substitution without a warning.
+- **Item 2, the `/.claude/` skip.** Narrowed, BD-7.
+- **Item 3.** `wantsWriteDoc` reads `skills` with the fallback `renderSkills` uses, so the two
+  renderers agree on what "skills are installed" means. `src/lib/stored-profile-defaults.ts`
+  gained one sentence saying `writeDoc` is absent on purpose, as Phase 1 did for `chatStyle`.
+- **Item 3, the move.** `stampAfterFrontmatter` moved to `src/lib/stamp.ts`, beside `stampIndex`,
+  the reader that must find what it writes. The golden did not move.
+- **Item 6, the tests.** `tests/write-doc.test.ts` holds 28 tests, `tests/check-script.test.ts`
+  35. The plan's grep for `close-out/SKILL.md` found `tests/tracks.test.ts`, whose two non-code
+  cases moved. The run found the rest: the count pins in `tests/catalog.test.ts` (48 questions,
+  `you: 18`, the non-code shapes 22, 18 and 16, the `when` map) and the list of questions a
+  programmer is never asked, which gains `write-doc` as its third. Each carries a dated comment.
+- **The README** also had per-track counts that moved: other work on the lighter setup is asked
+  eighteen questions, or sixteen without git.
+- **The Deep review**, Fable 5.1, in its own worktree, which the harness removed unchanged. On
+  bash 4: none. On a pass for text not read or not checked, six findings, reproduced by running
+  the script under `/bin/bash` 3.2.57 unless marked. 1, the `/.claude/` skip matched every agent
+  worktree: fixed, BD-7. 2, binary data under a text extension passed: fixed, a NUL byte in a
+  text-type file exits 2. 3, three backticks in a sentence paired with a later fence and hid the
+  prose between them: fixed, a fence counts only at the start of a line, and a fence that never
+  closes is checked. 4, a NUL byte glued two words into one no pattern matched: fixed by 2. 5, a
+  phrase split across two lines was missed, because `grep` reads one line at a time: fixed, the
+  banned-word check reads the text with its line breaks turned to spaces. 6, `textutil` may parse
+  a damaged Word file in part and exit 0 (reasoning only): open, stated in the script's header,
+  for Zach to park. Each fix has a test.
+- **Gates, 2026-10-01.** `bun run typecheck` clean; `bun run lint` clean, 155 files; `bun test`
+  870 pass, 0 fail, 69 files; `bun run doctor . examples` no findings.
+- **The proof.** The installed script, run by hand under `/bin/bash`, printed `PASS: clean.md`
+  and exit 0 on a clean draft, named the em dash and exited 1 on a draft with one, printed
+  `PASS: report.docx` on a `.docx` made by `textutil`, and with `textutil` off `PATH` printed
+  "textutil was not found on PATH, so report.docx was not checked" and exited 2 with no `PASS`.
+  It ran from `templates/write-doc/check.sh`, which `tests/write-doc.test.ts` shows is the
+  rendered file byte for byte apart from the stamp on line 2. **Not seen:** the render into a
+  temporary home and `ls -l` on the written `check.sh`. The builder's harness refused every
+  command that sets `HOME`, so that half is runtime entry 2.
 
 ### Phase 3. `write-doc-check` and the hook
 

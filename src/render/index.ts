@@ -11,6 +11,7 @@ import { renderShortStandard } from './short-standard.ts';
 import { renderSkills } from './skills.ts';
 import { renderStandard } from './standard.ts';
 import { renderUserConfig } from './user-config.ts';
+import { renderWriteDoc } from './write-doc.ts';
 
 /** Everything one run would write, in the order the preview shows it. */
 export async function renderAll(ctx: RenderContext): Promise<PlannedFile[]> {
@@ -22,6 +23,7 @@ export async function renderAll(ctx: RenderContext): Promise<PlannedFile[]> {
   const groups = await Promise.all([
     Promise.resolve(renderGlobalRules(ctx)),
     renderSkills(ctx),
+    renderWriteDoc(ctx),
     renderHooks(ctx),
     renderRepoFiles(ctx, languages),
     standard.then((f) => (f ? [f] : [])),

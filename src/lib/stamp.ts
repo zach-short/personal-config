@@ -75,15 +75,30 @@ export function withStamp(contents: string, parts: StampParts, extension = 'md')
  * with an unexplained error. Restoring the shebang to line 1 is what keeps the script's declared
  * interpreter its actual one, rather than whatever the caller happens to be.
  *
- * The same shape, and the same reason, as `stampAfterFrontmatter` in `render/skills.ts`: a
- * format that reserves line 1 gets the stamp on line 2. Kept here rather than keyed on the
- * `sh` extension because the constraint belongs to the `#!`, not to the file's name.
+ * The same shape, and the same reason, as `stampAfterFrontmatter` below: a format that reserves
+ * line 1 gets the stamp on line 2. Kept here rather than keyed on the `sh` extension because the
+ * constraint belongs to the `#!`, not to the file's name.
  */
 function stampAfterShebang(contents: string, stamp: string): string {
   if (!contents.startsWith('#!')) return `${stamp}\n${contents}`;
   const end = contents.indexOf('\n');
   if (end === -1) return `${contents}\n${stamp}\n`;
   return `${contents.slice(0, end + 1)}${stamp}\n${contents.slice(end + 1)}`;
+}
+
+/**
+ * The harness reads a skill's frontmatter only when `---` is the first line, so the stamp goes
+ * below it. Lives here, beside the reader that must find it (`stampIndex`), because two renderers
+ * place it: `render/skills.ts` for the workflow skills and `render/write-doc.ts` for `/write-doc`
+ * (write-doc-ste `PLAN.md` BD-4). Moved out of `render/skills.ts` on 2026-10-01 rather than
+ * copied, so the writer and the reader of this position stay one pair.
+ */
+export function stampAfterFrontmatter(source: string, stamp: string): string {
+  if (!source.startsWith('---\n')) return `${stamp}\n${source}`;
+  const close = source.indexOf('\n---\n', 4);
+  if (close === -1) return `${stamp}\n${source}`;
+  const cut = close + '\n---\n'.length;
+  return `${source.slice(0, cut)}\n${stamp}\n${source.slice(cut)}`;
 }
 
 const STAMP_PATTERN =
@@ -93,7 +108,7 @@ const STAMP_PATTERN =
  * The one line a stamp may sit on, by index into `lines` — or `null` where the file's shape
  * leaves no such line. These are the positions the three writers use and no others (H10):
  * `withStamp` and `markAdapted` put it on line 1, or on line 2 below a shebang
- * (`stampAfterShebang`); `stampAfterFrontmatter` in `render/skills.ts` puts it below a
+ * (`stampAfterShebang`); `stampAfterFrontmatter`, in this module, puts it below a
  * frontmatter block, after the blank line it leaves.
  *
  * A stamp-shaped line anywhere else is prose — a board quoting one in a prompt, a README

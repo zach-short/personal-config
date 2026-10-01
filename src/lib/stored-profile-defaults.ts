@@ -21,6 +21,9 @@ import type { AnswerValue } from './types.ts';
  * decided that a profile saved before `chat-style` existed reads its recommended answer, `ste`,
  * and gains `language-style.md` on a re-run. A stored `none` here would also start every fresh
  * run on `none` under a Recommended label, while the site starts on `ste`.
+ *
+ * `writeDoc` is absent for the same reason (write-doc-ste D9): a profile saved on a non-code run
+ * before `write-doc` existed reads `yes` and gains `~/.claude/skills/write-doc/` on a re-run.
  */
 export const STORED_PROFILE_DEFAULTS: Record<string, AnswerValue> = {
   workKind: 'code',
