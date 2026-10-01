@@ -153,6 +153,13 @@ const COMMIT_PARAGRAPH = '**Commits are the owner’s.**';
  * variant: the skill ships on code + full only, which is exactly this shape, and it moves no
  * other file's bytes. One key per variant — 62 → 65 — the first time this snapshot has grown
  * rather than been corrected, and deliberately so.
+ *
+ * **One more file appeared on 2026-10-01, write-doc-ste Phase 1: `~/.claude/rules/language-style.md`.**
+ * `chat-style` is asked on every track with `ste` recommended (D2), and an absent answer reads
+ * `ste` in the renderer as well as in the wizard (D4). `EVERYTHING` gives no `chatStyle`, so the
+ * rule renders in all three variants with the same bytes. No other key moved: the stamp's config
+ * hash is fixed in `testContext`, and the saved answers carry no new key. One key per variant,
+ * 65 → 68, and the diff was read key by key before it was accepted.
  */
 describe('§3.1 row 1 — code + full + git is the 0.3.0 output, byte for byte bar one skill', () => {
   const FULL = answersFor(CODE_FULL_GIT);
@@ -184,7 +191,7 @@ describe('§3.1 row 1 — code + full + git is the 0.3.0 output, byte for byte b
   }
 
   test('the snapshot is not empty', async () => {
-    expect(Object.keys(await golden()).length).toBe(65);
+    expect(Object.keys(await golden()).length).toBe(68);
   });
 
   for (const [variant, { answers, plan }] of Object.entries(VARIANTS)) {
@@ -410,6 +417,9 @@ describe('§3.1 row 4 — non-code, whatever the weight and whatever git says', 
         // git-specific; that reason does not reach a guard against `rm`, and this reader — a
         // non-coder, on a folder — is the one with no commit to restore a deleted file from.
         '~/.claude/hooks/personal-config/delete-guard.sh',
+        // Every track gets the chat rule unless the person answers `none` (write-doc-ste D2),
+        // and `EVERYTHING` gives no answer, which reads `ste` (D4).
+        '~/.claude/rules/language-style.md',
         '~/.claude/settings.json',
         '~/.claude/skills/close-out/SKILL.md',
         '~/.claude/skills/handoff/SKILL.md',

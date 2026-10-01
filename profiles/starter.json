@@ -19,6 +19,7 @@
     "mode": "solo",
     "tracker": "",
     "hooks": "commit-guard",
+    "chatStyle": "ste",
     "skills": "none",
     "practices.comments": "why-only",
     "practices.function-length": "house-6-15",

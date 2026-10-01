@@ -23,6 +23,7 @@
     "tracker": "",
     "hooks": "commit-guard",
     "outputStyle": "check-first",
+    "chatStyle": "ste",
     "skills": "none",
     "tierCeiling": "deep",
     "practices.comments": "why-only",

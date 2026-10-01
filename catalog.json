@@ -1,5 +1,5 @@
 {
-  "catalogVersion": "0.7.0+a96e489b",
+  "catalogVersion": "0.7.0+b8cca551",
   "questions": [
     {
       "id": "work-kind",
@@ -307,6 +307,28 @@
       ],
       "readMore": "output-style",
       "configKey": "outputStyle"
+    },
+    {
+      "id": "chat-style",
+      "phase": "you",
+      "kind": "select",
+      "ask": "How should your agent talk to you?",
+      "options": [
+        {
+          "value": "ste",
+          "label": "Short and plain",
+          "example": "ASD-STE100: short sentences, one word for one meaning, no irony",
+          "recommended": true
+        },
+        {
+          "value": "none",
+          "label": "However it likes",
+          "example": "no rule is written",
+          "recommended": false
+        }
+      ],
+      "readMore": "chat-style",
+      "configKey": "chatStyle"
     },
     {
       "id": "skills",
@@ -1281,6 +1303,10 @@
     {
       "id": "attribution",
       "body": "# Attribution trailers on agent commits\n\n## What this is\n\nWhether commits an agent helps produce carry a line saying so — `Co-Authored-By:` on the commit,\nor a \"Generated with\" line on a pull request description.\n\n## The options\n\n**No trailers.** *Recommended.* The commit message is the message and nothing else.\n\n*The defense.* The history is your record of your own work. An attribution you did not choose\nis a claim you did not make — and it is the kind of claim that shows up in a `git blame` a\nreviewer, an employer or a grader reads later. Harnesses add these by default and sometimes\nre-add them via instructions that claim to override earlier guidance, so the rule is written to\nsay explicitly that it wins.\n\n*The strongest argument against it.* Some teams and some courses genuinely want AI assistance\ndisclosed, and a trailer is the cheapest honest way to do it. If that is your situation, no\ntrailers is the wrong answer and you should say so out loud somewhere else instead.\n\n**Add a `Co-Authored-By:` trailer.** Every agent commit carries it.\n\n*The defense.* Disclosure by default, in a machine-readable place, with no effort.\n\n*The strongest argument against it.* It attributes authorship to a tool on commits you\nreviewed, edited and take responsibility for — and once it is in the history it is effectively\npermanent.\n\n## What it writes and where\n\nA section in `~/.claude/rules/commits.md`, alongside the commit policy.\n\n**Asked only when that file is written** — code work you keep in git, which is exactly the\ncondition on `commit-policy`. A trailer rule with no commit rule to sit in has nowhere to go.\n\n## How to undo it\n\nDelete `~/.claude/rules/commits.md`, or edit its Attribution section.\n"
+    },
+    {
+      "id": "chat-style",
+      "body": "# How your agent talks to you\n\n## What this is\n\nEvery reply your agent sends you in chat has a style, and this question decides whether a rule\nsets it. The rule on offer is ASD-STE100 Simplified Technical English, a controlled form of English\nthat the aerospace industry wrote for maintenance documentation, so that a reader whose first\nlanguage is not English reads each sentence one way. Its writing rules ask for short sentences, one\nword for one meaning, simple tenses in the active voice, and one instruction in each sentence.\n\nThe rule this tool writes adds one line that the standard itself does not have: no irony, no\nsarcasm and no litotes. Litotes is saying a thing by denying its opposite, such as \"not bad\" for\n\"good\". A reader who skims a reply between other tasks can take any of the three at face value.\n\nThe answer becomes one file, `~/.claude/rules/language-style.md`. Claude Code reads the rule files\nin that folder in every session, so the rule applies to every chat reply in every project. It\ncovers chat replies only. Code, commit messages and the files the agent writes keep the style rules\nof their own project, and papers and other documents are outside it.\n\n## The options\n\n**Short and plain.** *Recommended. Writes the rule.*\n\n*The defense.* Agent replies are read in a hurry, between other work, and often on a small screen.\nA short sentence that carries one instruction is one you can act on without reading it twice. One\nword for one meaning stops a reply from calling the same file by three names, which a reader can\ntake for three files. And a reply with no irony says what it means: after a failed run, \"that went\nwell\" is read as a fact by anyone who skims it.\n\n*The strongest argument against it.* It costs tokens in every session, and it follows a standard\nit does not carry. The rendered rule is 894 bytes, about 220 tokens at four bytes a token, read at\nthe start of every session in every project, whether that session talks to you much or not.\nASD-STE100 is defined by its dictionary of approved words as much as by its writing rules. The rule\nnames the standard but does not ship the dictionary, so the agent follows the writing rules and\napproximates the words. The standard is also English only: a reply in another language gets the\nrule's intent and nothing more. Some readers find the style abrupt, and an explanation that needs\none long sentence becomes several short ones that can lose the link between them.\n\n**However it likes.** *Writes nothing.*\n\n*The defense.* You pay nothing for it in any session, and your agent replies in the style it uses\nfor everyone. If you already keep a chat style rule of your own, a second one would compete with\nit. If you like long explanations that keep their reasoning together in one paragraph, this is the\nanswer that leaves them alone.\n\n*The strongest argument against it.* With no rule, nothing stops long replies, hedged sentences and\nfigures of speech, and a reader who skims between tasks pays for each one. The irony line goes as\nwell: a reply can say the opposite of what it means and rely on you to notice.\n\n## What it writes and where\n\n**Short and plain** writes one file, `~/.claude/rules/language-style.md`, with a `personal-config`\nstamp on its first line. It holds the five ASD-STE100 lines (short sentences, at most 20 words for\nan instruction and 25 for a description; one word for one meaning; simple tenses and the active\nvoice; no idioms, slang or unclear phrasal verbs; one instruction in each sentence), the line on\nirony, sarcasm and litotes, and a sentence saying that code, commit messages and file contents keep\nthe rules of their own project. It names no other file, and your own `~/.claude/CLAUDE.md` is not\nedited.\n\nIf a file already sits at that path with no `personal-config` stamp, this tool did not write it,\nand the run refuses to replace it. The preview lists the refusal, and the file stays as it is.\n\n**However it likes** writes nothing.\n\n### A profile saved before this question existed\n\nA profile saved before this question existed has no answer for it, and it reads as the recommended\nanswer, **Short and plain**. So re-running an old profile adds `language-style.md` to the preview.\nThat is a cost, taken on purpose. This is the first question in this tool whose recommended answer\nadds a file to what an older profile writes; every question before it recommends the answer that\nleaves the output as it was. The new file is listed in the preview and confirmed with the rest of\nthe batch, so nothing is written before you can see it. If you re-run to change one other answer,\nlook for this file in the preview before you accept.\n\n## How to undo it\n\nDelete `~/.claude/rules/language-style.md`. It is one file, and nothing else this tool writes\nreads it.\n\n`personal-config undo` restores files the last run replaced, and leaves files it created in place.\nSo it brings back an earlier version of the rule if a run replaced one, and it does not remove a\nrule that a run added. Running setup again and answering **However it likes** does not remove the\nfile either: that answer plans nothing, and this tool does not delete a file an earlier run wrote.\n\nTo keep your own edited version through later runs, delete the stamp on its first line. A file with\nno stamp is refused, not replaced, as above.\n"
     },
     {
       "id": "comments",

@@ -3,6 +3,21 @@
 The CLI. The working standard it installs is versioned separately — see
 [`standard/CHANGELOG.md`](standard/CHANGELOG.md).
 
+## Unreleased
+
+### Added
+
+- **A question on how your agent talks to you, asked on every track.** `chat-style` sits after
+  the output style question. **Short and plain**, the recommended answer, writes
+  `~/.claude/rules/language-style.md`: chat replies in ASD-STE100 Simplified Technical English
+  (short sentences, at most 20 words for an instruction and 25 for a description, one word for one
+  meaning, the active voice, one instruction in each sentence), with no irony, sarcasm or litotes.
+  Code, commit messages, file contents and documents are outside the rule. **However it likes**
+  writes nothing. A profile saved before the question existed reads the recommended answer, so a
+  re-run of an old profile adds the file to its preview; it is the first recommended answer that
+  adds a file to what an older profile writes. All three shipped profiles answer `ste`. The long
+  form is `docs/choices/chat-style.md`.
+
 ## 0.7.0 — 2026-09-29
 
 ### Added

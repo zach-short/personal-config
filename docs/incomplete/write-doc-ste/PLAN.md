@@ -75,7 +75,8 @@ are written after GATE 2, one per phase.
 
 ### Phase 1. `chat-style`
 
-**Status.** Not started.
+**Status.** `BUILT` 2026-10-01, Opus 5.5, on `main` at `58eaf93`, not yet committed (Zach commits).
+HANDOFF 91, board row 73. The `As built:` notes follow "Watch for".
 
 **Scope.**
 
@@ -123,6 +124,39 @@ lines, the caps, the irony and litotes line, the sentence about documents, and n
 that carry the config hash. Any other file that moves is a real change, and the phase stops on it.
 The rule body is prose inside a `.ts` file, where Zach's hook does not look, so read it by eye
 against the writing rules.
+
+**As built: 2026-10-01.** Scope items 1 to 8 were built as written, with these departures and
+findings.
+
+- **Item 4, the undo.** The plan gave "delete the file or `personal-config undo`" as two equal
+  ways out. They are not equal: `undo` restores files a run replaced and leaves files it created
+  in place (`src/commands/undo.ts:6`). So the long form gives deleting the file as the undo, and
+  says what `undo` does and does not do.
+- **Item 6, the README.** Three more claims became false when the question was added, and were
+  corrected beside the two rows the plan named: the `you` row of the phases table; the per-track
+  question counts, 35, 16 and 14 to 36, 17 and 15 (a scratch script that walks `ALL_QUESTIONS`
+  through `askable` and `defaultFor` reproduced the old three before it gave the new three); and
+  the catalog paragraph, now `0.7.0+b8cca551`, 47 questions, 38 long forms, 34 with a condition.
+- **Item 8, the tests.** `grep -rln "model-routing.md" tests` found four suites, and all four
+  test a rule list with `toContain`, so none moved. The test run found the pins that did move: the
+  five per-shape counts in `tests/catalog.test.ts`, one more each, and the exact file list of the
+  smallest setup in `tests/tracks.test.ts`. Each change carries a dated comment.
+  `tests/chat-style.test.ts` holds 18 tests.
+- **The golden.** 65 keys to 68: one new key per variant, `~/.claude/rules/language-style.md`,
+  the same hash in all three. No other key moved, the config-hash files included, because
+  `testContext` fixes the stamp's hash and `DEFAULT_ANSWERS` carries no `chatStyle`. The diff was
+  read key by key before it was accepted, and the hash was computed again by a separate script.
+- **Order.** `languageRule` is the last entry in `renderGlobalRules`, so the preview lists the
+  rule after `docs-lookup.md`.
+- **Gates, 2026-10-01.** `bun run typecheck` clean; `bun run lint` clean, 152 files; `bun test`
+  807 pass, 0 fail, 67 files; `bun run doctor . examples` no findings. §5's baseline was 789
+  tests, 66 files and 151 linted files.
+- **The proof.** The dry run in "Done when", on Zach's machine, lists `language-style.md` under
+  `~/.claude/rules` with the stamp guard's tag (no stamp, left alone), and names it among the two
+  files left alone. His own copy is unchanged: 730 bytes, last modified 2026-09-30. The same dry
+  run with `HOME` in a new temporary directory tags it as new and writes nothing. The rendered
+  rule was read against D3: the five STE lines, the 20 and 25 word caps, the irony and litotes
+  line, the sentence about documents, and no personal name.
 
 ### Phase 2. `write-doc` and the check script
 

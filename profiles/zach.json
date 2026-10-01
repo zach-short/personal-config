@@ -23,6 +23,7 @@
     "mode": "solo",
     "tracker": "",
     "hooks": "both",
+    "chatStyle": "ste",
     "skills": "all",
     "modelIds.default": "claude-opus-5-5",
     "modelIds.mechanical": "claude-sonnet-5",

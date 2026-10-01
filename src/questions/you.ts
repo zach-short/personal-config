@@ -353,6 +353,34 @@ export const YOU_QUESTIONS: Question[] = [
     ],
   },
   {
+    // Sits after `output-style` because both shape how the agent behaves in every session
+    // (write-doc-ste DIAL-8), and has no `when` because a reply style is a fact about the person,
+    // not the work (D2). Unlike the questions above, its recommended answer is not the one that
+    // changes nothing: `ste` writes `language-style.md`, and a profile saved before this question
+    // existed reads `ste` as well (D4), so re-running an old profile adds the file to its preview.
+    // That is deliberate, and it is why `chatStyle` has no entry in `STORED_PROFILE_DEFAULTS`.
+    id: 'chat-style',
+    phase: 'you',
+    kind: 'select',
+    ask: 'How should your agent talk to you?',
+    configKey: 'chatStyle',
+    readMore: 'chat-style',
+    options: [
+      {
+        value: 'ste',
+        label: 'Short and plain',
+        example: 'ASD-STE100: short sentences, one word for one meaning, no irony',
+        recommended: true,
+      },
+      {
+        value: 'none',
+        label: 'However it likes',
+        example: 'no rule is written',
+        recommended: false,
+      },
+    ],
+  },
+  {
     id: 'skills',
     phase: 'you',
     kind: 'select',

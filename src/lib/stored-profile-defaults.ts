@@ -16,6 +16,11 @@ import type { AnswerValue } from './types.ts';
  *
  * `proofLine` is deliberately absent. It is a `text` question, an unanswered one is the empty
  * string, and the empty string is what 0.2.6 rendered: nothing.
+ *
+ * `chatStyle` is deliberately absent too, and is not a gap to fill. write-doc-ste `DESIGN.md` D4
+ * decided that a profile saved before `chat-style` existed reads its recommended answer, `ste`,
+ * and gains `language-style.md` on a re-run. A stored `none` here would also start every fresh
+ * run on `none` under a Recommended label, while the site starts on `ste`.
  */
 export const STORED_PROFILE_DEFAULTS: Record<string, AnswerValue> = {
   workKind: 'code',

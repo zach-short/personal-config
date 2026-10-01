@@ -110,6 +110,10 @@ knowing them.
 
 **Date.** 2026-10-01.
 
+**As built: 2026-10-01, Phase 1 (HANDOFF 91).** The rendered rule is 894 bytes with its stamp,
+about 220 tokens at four bytes a token, against the 730 bytes of the owner's copy that this
+defense used. `docs/choices/chat-style.md` states the rendered figure.
+
 ### D3. The rule is the owner's, generalized, with one line added on irony and litotes
 
 **Decision.** `language-style.md` carries the owner's rule (G2) in general form: the five STE lines
@@ -127,6 +131,13 @@ object, and Zach did not object (§8.2).
 **Rejected.** Rule option 2, the generalized rule with nothing added, lost on G19.
 
 **Date.** 2026-10-01.
+
+**As built: 2026-10-01, Phase 1 (HANDOFF 91).** The wording this decision left open, as
+`src/render/rules.ts` renders it. The irony line is the sixth item of the list, after the five STE
+lines: "Do not use irony, sarcasm or litotes. Say the direct thing", followed by the example of
+"good" in place of "not bad". The scope sentence says "chat replies" where the owner's says
+"replies". BD-3's sentence reads "Papers, documents and other written work are outside this
+rule." The rule is in the first person, as `commits.md` is.
 
 ### D4. A profile saved before `chat-style` existed reads "on" (E1)
 

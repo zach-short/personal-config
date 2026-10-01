@@ -14,8 +14,9 @@ import { answer, planned, type RenderContext, trackOf } from './context.ts';
  * instead, where the wording is the target's own. `docs-lookup.md` is entirely library APIs and
  * goes to code work only. `model-routing.md` is domain-neutral but a light setup cuts it (D6):
  * on a small budget its advice — delegate to a subagent, or stop and hand off — is the most
- * expensive thing on the page. Each question's own `skip`, `none` or `no-rule` answer still
- * cuts its rule on every track, below.
+ * expensive thing on the page. `language-style.md` is about how the person is spoken to, not
+ * about the work, so it goes to every track and both weights (write-doc-ste D2). Each question's
+ * own `skip`, `none` or `no-rule` answer still cuts its rule on every track, below.
  */
 export function renderGlobalRules(ctx: RenderContext): PlannedFile[] {
   const track = trackOf(ctx);
@@ -24,6 +25,7 @@ export function renderGlobalRules(ctx: RenderContext): PlannedFile[] {
     code && track.usesGit ? commitRule(ctx) : null,
     track.weight === 'full' ? modelRoutingRule(ctx) : null,
     code ? docsRule(ctx) : null,
+    languageRule(ctx),
   ].filter((f): f is PlannedFile => f !== null);
 }
 
@@ -145,6 +147,37 @@ Two rules about subagents, from getting this wrong: **a subagent spawned into th
 worktree will edit source even when asked only to review** — give anything analytical its own
 worktree and check the diffstat when it returns. And **never let a subagent inherit the
 session's tier for read-and-report work**; pass the model explicitly, every time.
+`;
+
+/**
+ * The fallback is `ste`, not the empty string, because `doctor` renders from saved answers
+ * without the wizard (`src/doctor/rerender.ts`), and write-doc-ste D4 says a profile saved before
+ * `chat-style` existed reads "on" wherever an answer is read, here as much as in `defaultFor`.
+ *
+ * The rule names no style file for documents (BD-3): `/write-doc`'s style file exists only after
+ * a yes to a question this rule's reader may never have been asked.
+ */
+function languageRule(ctx: RenderContext): PlannedFile | null {
+  if (answer(ctx, 'chatStyle', 'ste') !== 'ste') return null;
+  return planned(ctx, rulePath('language-style'), 'global rule — chat style', LANGUAGE_STYLE);
+}
+
+const LANGUAGE_STYLE = `# Talk in ASD-STE100 Simplified Technical English
+
+Always use ASD-STE100 Simplified Technical English when you talk to me in chat. This applies to
+every reply in every project.
+
+This rule covers chat replies to me only. It is the only style rule for chat replies. Papers,
+documents and other written work are outside this rule.
+
+- Use short sentences. Maximum 20 words for instructions and 25 words for descriptions.
+- Use one word for one meaning. Use the approved word, not a synonym.
+- Use simple verb tenses and the active voice.
+- Do not use idioms, slang or phrasal verbs with unclear meaning.
+- Give one instruction in each sentence.
+- Do not use irony, sarcasm or litotes. Say the direct thing: "good", not "not bad".
+
+Code, commit messages and file contents keep the style rules of their own project.
 `;
 
 function docsRule(ctx: RenderContext): PlannedFile | null {

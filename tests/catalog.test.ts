@@ -49,12 +49,14 @@ describe('the catalog carries the whole question set', () => {
   // 22 / 9 → 16 / 15, 2026-09-26, the same item: the six model ID questions move from `you` to
   // `discover`, right after the `tier-ceiling` answer they depend on. In `you` they were asked
   // before any ceiling existed to read, so an unanswered `tierCeiling` satisfied `isNot: 'deep'`.
-  test('46 questions, phased 16 / 15 / 15', async () => {
+  //
+  // 46 → 47, 2026-10-01, write-doc-ste Phase 1: `chat-style` in `you`, after `output-style`.
+  test('47 questions, phased 17 / 15 / 15', async () => {
     const catalog = await committed();
     const byPhase: Record<string, number> = {};
     for (const q of catalog.questions) byPhase[q.phase] = (byPhase[q.phase] ?? 0) + 1;
-    expect(catalog.questions.length).toBe(46);
-    expect(byPhase).toEqual({ you: 16, discover: 15, practices: 15 });
+    expect(catalog.questions.length).toBe(47);
+    expect(byPhase).toEqual({ you: 17, discover: 15, practices: 15 });
   });
 
   test('every question the wizard asks is present, in the wizard`s order', async () => {
@@ -306,7 +308,9 @@ describe('what each of the five shapes is actually asked', () => {
     const ids = await asked({ workKind: 'code', configWeight: 'full', usesGit: 'yes' });
 
     // 34 → 35, item 72: `tier-ceiling`, asked on every code track (starter, solo, teams).
-    expect(ids).toHaveLength(35);
+    // 35 → 36, 2026-10-01, write-doc-ste Phase 1: `chat-style` has no `when`, so every shape
+    // below gains it too (D2).
+    expect(ids).toHaveLength(36);
     expect(ids).toContain('commit-policy');
     expect(ids).toContain('model-routing');
   });
@@ -314,8 +318,8 @@ describe('what each of the five shapes is actually asked', () => {
   test('code + full without git drops the two commit questions and nothing else', async () => {
     const ids = await asked({ workKind: 'code', configWeight: 'full', usesGit: 'no' });
 
-    // 35 − `track-mode`, which has always been git-gated, − the two of this row.
-    expect(ids).toHaveLength(32);
+    // 36 − `track-mode`, which has always been git-gated, − the two of this row.
+    expect(ids).toHaveLength(33);
     expect(ids).not.toContain('commit-policy');
     expect(ids).not.toContain('attribution');
     expect(ids).toContain('docs-mcp');
@@ -328,7 +332,8 @@ describe('what each of the five shapes is actually asked', () => {
     // here — both of its questions are non-code, and this is the short track a *programmer*
     // walks, which is the half of "nothing on a code track" that is easy to lose.
     // 27 → 28 on item 72: `tier-ceiling` is asked on the light code track too (starter).
-    expect(ids).toHaveLength(28);
+    // 28 → 29 on write-doc-ste Phase 1: `chat-style`.
+    expect(ids).toHaveLength(29);
     for (const id of DEAD_ON_A_SHORT_TRACK) expect(ids).not.toContain(id);
     expect(ids).not.toContain('off-limits');
     expect(ids).not.toContain('edit-policy');
@@ -352,8 +357,10 @@ describe('what each of the five shapes is actually asked', () => {
     // the weight alone, non-code included (same reasoning as `model-deep`/`model-fast` above).
     // The light shape is untouched — `model-light-enabled` is also weight-gated, same as every
     // other tier question, so a light non-code run never sees it either.
-    expect(full).toHaveLength(20);
-    expect(light).toHaveLength(16);
+    //
+    // 20 and 16 → 21 and 17 on write-doc-ste Phase 1: `chat-style`, on both weights.
+    expect(full).toHaveLength(21);
+    expect(light).toHaveLength(17);
     for (const ids of [full, light]) {
       expect(ids).toContain('commit-policy');
       expect(ids).toContain('off-limits');
@@ -376,7 +383,8 @@ describe('what each of the five shapes is actually asked', () => {
     // 21 before item 56, 14 after it, 12 after D26, 14 again after item 61's two. The fifth
     // shape of §10.3's table, which had no case of its own until item 60: it is the one a
     // non-programmer actually walks, and §10.3's "After D22 + D23" column says 14 for it.
-    expect(ids).toHaveLength(14);
+    // 14 → 15 on write-doc-ste Phase 1: `chat-style`, which no track skips.
+    expect(ids).toHaveLength(15);
     for (const id of DEAD_ON_A_SHORT_TRACK) expect(ids).not.toContain(id);
     // The two this shape gained: a rule about the step that cannot be taken back where there is
     // no commit to gate it on, and the one question in the set about somebody else's material.
