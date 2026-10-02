@@ -9,6 +9,7 @@ import {
   ledgerSteps,
   missingSteps,
   nextFreeStep,
+  stepHeading,
 } from '../lib/ledger.ts';
 import { readDocNames } from '../lib/repo-config.ts';
 import type { Cli } from '../lib/types.ts';
@@ -92,7 +93,7 @@ async function scaffold(root: string, next: number, steps: LedgerStep[]): Promis
   return [
     'Scaffold — what §2.1 says a step names:',
     '',
-    `**${next}. <Imperative title>.** Done ${today()}, <model>, on \`${branch}\`, commit \`<hash>\`.`,
+    `${stepHeading(previous?.form ?? 'bold', next, '<Imperative title>.')} Done ${today()}, <model>, on \`${branch}\`, commit \`<hash>\`.`,
     '<What changed and why.> <What is now fixed.> <Which questions it answered.>',
     '<New files, added to the code map above.> **Left owed:** <what this did not do>.',
     '',

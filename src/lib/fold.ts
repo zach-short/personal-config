@@ -1,5 +1,5 @@
 import { type BoardRow, parseBoard } from './board.ts';
-import { type LedgerStep, ledgerSteps } from './ledger.ts';
+import { type LedgerStep, ledgerSteps, type StepForm, stepHeading } from './ledger.ts';
 import { headingBlock, proseLines } from './markdown.ts';
 
 /**
@@ -128,15 +128,23 @@ function stepBlock(lines: string[], step: LedgerStep, stops: number[], date: str
  * contiguity check reports a gap that is not one; the board's `DONE — HANDOFF n` must still
  * resolve, which is the same read; and a person scanning the log must still learn what the
  * step was. So: the original bold heading, its own date, and where the body went.
+ *
+ * The heading is written in the log's own form. A list-form log is only read as one while no
+ * bold step stands outside a list item, so a `**1. …**` stub at column 0 would flip the whole
+ * file to the bold form, and every step the fold kept would vanish from the parser.
  */
 function stubFor(step: LedgerStep, text: string, date: string): string {
   const done = text.match(/\b(\d{4}-\d{2}-\d{2})\b/)?.[1];
   const when = done === undefined ? '' : ` Done ${done}.`;
-  return `**${step.number}. ${titleFrom(text, step.title)}**${when} Body folded ${date}.`;
+  const title = titleFrom(text, step.title, step.form);
+  return `${stepHeading(step.form, step.number, title)}${when} Body folded ${date}.`;
 }
 
-/** `**12. Built it.**`, where the bold title is allowed to run onto the next line. */
-const WRAPPED_TITLE = /^\s*(?:[-*+]\s+)?\*\*\d+\.\s+([\s\S]*?)\*\*/;
+/** `**12. Built it.**` or `12. **Built it.**`, with the bold allowed to run onto the next line. */
+const WRAPPED_TITLE: Record<StepForm, RegExp> = {
+  bold: /^\s*(?:[-*+]\s+)?\*\*\d+\.\s+([\s\S]*?)\*\*/,
+  list: /^ {0,3}\d+\.\s+\*\*([\s\S]*?)\*\*/,
+};
 
 /**
  * The step's title, healed back into one line where the heading wrapped.
@@ -150,9 +158,9 @@ const WRAPPED_TITLE = /^\s*(?:[-*+]\s+)?\*\*\d+\.\s+([\s\S]*?)\*\*/;
  * The fallback is not dead: `**12.** Built it.` closes its bold before the title starts, which
  * this pattern deliberately does not match and `PLAIN_TITLE` already reads.
  */
-function titleFrom(text: string, fallback: string): string {
+function titleFrom(text: string, fallback: string, form: StepForm): string {
   const heading = text.split(/\n\s*\n/)[0] ?? '';
-  const wrapped = heading.match(WRAPPED_TITLE)?.[1]?.replace(/\s+/g, ' ').trim();
+  const wrapped = heading.match(WRAPPED_TITLE[form])?.[1]?.replace(/\s+/g, ' ').trim();
   return wrapped === undefined || wrapped === '' ? fallback : wrapped;
 }
 
