@@ -37,8 +37,8 @@ ledger, a board or a model tier.
 
 ## Stack
 
-Bun 1.2.9 (build tool and test runner) · TypeScript 5.9.2 (`strict`, `noUncheckedIndexedAccess`) ·
-`@clack/prompts` 1.8.1 · Biome 2.2.4 · `bun test`. The published bin is Node, not Bun:
+Bun 1.2.9 (build tool and test runner) · TypeScript 7.0.2 (`strict`, `noUncheckedIndexedAccess`) ·
+`@clack/prompts` 1.8.1 · Biome 2.5.14 · `bun test`. The published bin is Node, not Bun:
 `bun run build` compiles `src/cli.ts` into `dist/cli.js` (`#!/usr/bin/env node`), and Bun-only
 APIs are deliberately kept out of `src/` so it runs under plain Node — see `src/lib/disk.ts`.
 
