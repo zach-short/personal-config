@@ -43,6 +43,24 @@ The CLI. The working standard it installs is versioned separately — see
   snippet a declined run prints is now read from the planned `settings.json` merge, so it holds
   every event the run would have merged.
 
+### Changed
+
+- **The commit guard blocks every git verb that writes a commit, and `gh pr merge`.** Until
+  now it blocked `git commit`, `git push` and the stage-everything forms of `git add`, while its
+  message said commits were the owner's; `git cherry-pick`, `revert`, `merge`, `rebase`, `am`
+  and `pull` passed it and wrote commits. All six are now blocked, with every flag. Two forms are
+  let through because they write no commit: `--abort` or `--quit` on any of them but `pull`,
+  and `git merge --ff-only <branch>` with no other flag but `-q` or `-v`, no global option but
+  `-C`, no `GIT_*` assignment in the same command, and no `merge.autoStash` in the config git
+  finds from the hook's own environment and the `-C` directory. Neither form passes behind
+  `xargs`, or with a word that the shell expands after the hook reads it: a backslash, `$`,
+  backtick, brace or glob character. `gh pr merge` is blocked as a push. The message gains one
+  paragraph saying so, and naming `git fetch` then `git merge --ff-only <branch>` as the way to
+  catch up. Not caught, and pinned passing: `git commit-tree`, `gh api`, and an autostash set
+  from an earlier command or through another `HOME` or `XDG_CONFIG_HOME`.
+  `docs/choices/hooks.md` lists both halves. An installed guard changes when `setup` is run
+  again.
+
 ## 0.7.0 — 2026-09-29
 
 ### Added

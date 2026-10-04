@@ -14,8 +14,9 @@ command the agent is about to run, refuses it, and prints what to do instead.
 **Which commands those are follows your other answers**, which is why the option no longer names
 them. Until 2026-09-22 it read *"Yes — block `git commit`, `git push` and `git add -A`"* — the
 recommended answer, naming three git commands, shown to a person who had just answered that they
-keep none of their work in git (setup-tracks `DESIGN.md` D21, D25). In a repo those three are
-still exactly what is blocked, and the hook prints the two-block ritual. For work that is not
+keep none of their work in git (setup-tracks `DESIGN.md` D21, D25). In a repo the hook blocks
+those three and every other git verb that writes a commit, which the guard's own section below
+lists, and prints the two-block ritual. For work that is not
 code, the blocked commands are `rm`, `rmdir` and `unlink`, and the hook asks for the file to be
 moved aside rather than removed. If you keep both kinds of work you get both guards — the table
 further down says exactly who gets which.
@@ -116,10 +117,74 @@ command (`ls && git commit`), on a later line, and inside a shell wrapper (`sh -
 `git add -A`, `--all`, `-Av` and `git add .` are caught; `git add <named files>` is not,
 because that is the ritual.
 
+Since 2026-10-04 (board row 77) it also catches the six other git verbs that write a commit:
+`cherry-pick`, `revert`, `merge`, `rebase`, `am` and `pull`, in all the same forms. Every flag
+on them is caught, `-n`, `--continue`, `--skip` and `pull --ff-only` included. Two forms are let
+through, because they write no commit and a session needs them. The first is backing out of an
+operation: `--abort` or `--quit` on any of the five that take one, while `pull` is always
+blocked. The second is the refresh of a stale worktree, `git merge --ff-only <branch>` after a
+`git fetch`. `git pull --ff-only` does the same job and is blocked, so the refresh has one
+spelling. `gh pr merge` is caught as a push, because it writes a commit on the remote's branch.
+`gh` is recognised by name or by full path, and any `merge` after `pr` counts.
+
+The two carve-outs are exact, because a carve-out is where a commit can pass without a sound. A
+flag's argument is a word too, so `git merge -m --abort main`, a merge whose message is
+"--abort", is caught: every flag beside `--abort` or `--quit` has to be one of them. Beside
+`--ff-only` only `-q`, `--quiet`, `-v` and `--verbose` are let through, because git obeys a
+later `--no-ff` over `--ff-only` and accepts any unambiguous abbreviation of `--autostash`. An
+autostash stashes the whole working tree, other sessions' edits included, and git reads it from
+config as readily as from the flag. So before it lets the refresh through, the hook asks git
+(`git config --bool merge.autoStash`, in the repo the command names with `-C`) and blocks when it
+is set. For the same reason it blocks the refresh behind any of git's global options except
+`-C`, which catches `git -c merge.autoStash=true`, and behind a `GIT_*` assignment in the same
+command, which can set config from the environment. That check reads only the command in front
+of it and the config git finds from the hook's own environment, so the "Not caught" list below
+names the ways around it.
+
+A carve-out also has to read each word as git will receive it. The shell can turn one word
+into another after the hook has read it: `\--no-ff`, `$(echo --no-ff)`, `{--no-ff,main}`, and a
+`*` in a folder that holds a file named `--no-ff` all reach git as the flag that makes a merge
+commit. So a word beside `--ff-only`, `--abort` or `--quit` that holds a backslash, `$`, a
+backtick, `{`, `}`, `*`, `?` or `[` is blocked. A branch name cannot hold `*`, `?` or `[`, so
+`feature/x` and `origin/main` still pass. Neither carve-out holds behind `xargs`, because it adds
+the words it reads from its input after the ones the hook can see. `env`, `sudo`, `nohup` and
+`time` add none, and `sh -c` hands its extra words only to a `$`, which is already refused.
+
+**Why this guard grew when the delete guard does not.** The delete guard refuses new verbs on
+purpose, as its section below says: a list that grows every time someone thinks of a verb is a
+list nobody can read. The commit guard's six are not new acts. Each one writes a commit, the one
+act this guard exists to keep the owner's, and its message already said "commits and pushes are
+the owner's" while it passed them. On 2026-10-01 a session ran `git cherry-pick` on `main`
+through the installed guard and made a commit there. The decision is Zach's, of 2026-10-02
+(board row 77, option B).
+
+*The strongest argument against it.* The parser grew a check per verb, on bash 3.2, and every
+carve-out is a place where a commit could pass without a sound, which is the silent failure this
+guard exists to prevent. The guard is also still incomplete, as the next paragraph lists, so
+"commits are the owner's" stays a claim about the common cases.
+
 **Not caught:** a commit a script makes when you run the script, since the hook sees
 `./deploy.sh` and nothing more; a commit written into a heredoc or a file and executed later;
-and any git wrapper of your own under a different name. It is a guard against a session
-reaching for a commit, not against a determined one.
+and any git wrapper of your own under a different name. Three more are pinned passing in
+`tests/commit-guard-verbs.test.ts` or named here, so that catching one later is a deliberate
+change: `git commit-tree`, plumbing that writes a commit object; `gh api`, which reaches the same
+merge endpoint as `gh pr merge`; and a `gh` alias of your own for `pr merge`. Nor does the hook
+see a `merge.autoStash` it does not read: one in a repo the command reaches with `cd` rather than
+`-C`, since `cd other && git merge --ff-only main` is read as two commands and the config is
+asked in the hook's own directory; one exported in an earlier command, as in
+`export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=merge.autoStash GIT_CONFIG_VALUE_0=true; git merge
+--ff-only main`, or an `export GIT_CONFIG_GLOBAL=<file>` before it; and one in another config
+file reached with `HOME=` or `XDG_CONFIG_HOME=` in front of the merge, since only `GIT_*`
+assignments are read. The last four are pinned passing. The word walk itself has gaps that pass
+plain `git commit` as well, and which the hook did not catch before row 77 either: `git
+{commit,-m,x}`, `echo commit -m x | xargs git`, `xargs -n 1 git ...`, `xargs` or `sudo` spelled
+with a path or given an option that takes an argument (`sudo -u me git rebase main`), a `-C`
+argument quoted around a space (`git -C "a b" merge ...`), and `gh${IFS}pr merge 1`. They are
+open, not settled. It is a guard against a session reaching for a commit, not against a
+determined one.
+
+**Over-blocked:** `gh pr list --search merge`, and anything else with `merge` somewhere after
+`pr`. That is the direction to err in, for the reason in the next paragraph.
 
 It needs `jq` on your `PATH`. Without it the hook says so and falls back to matching the raw
 payload, which over-blocks — a `grep` for the phrase gets refused. That is the deliberate
@@ -186,8 +251,11 @@ said you do not have:
 | Work that is not code | The lighter one | The **delete guard** and the completion gate. No commit guard, no banner. |
 | Anything | Either, "No hooks" | Nothing. No script, no entry. |
 
-The commit guard goes when you keep nothing in git because it guards `git commit`, `git push`
-and `git add -A` and nothing else: on a setup with no git in it, it is a hook that can never fire
+The commit guard goes when you keep nothing in git because it guards only the commands that
+write or push a commit and `git add -A`, and nothing else. Each git command among them needs a
+repository. `gh pr merge` does not, since `gh pr merge 26 -R owner/repo` names its repository on
+GitHub, but it merges a pull request, and a setup with no git in it has none to merge. So there
+it is a hook that will not fire
 and a `settings.json` entry you would have to read the script to explain. The completion gate
 stays on every setup, because what it checks — unfinished markers and your own proof command —
 has nothing to do with git; where there is no repository to ask, it walks your project folder
@@ -218,6 +286,17 @@ this tool writes still refuses a delete.
 > git and then took this question's recommendation, because it is the recommendation, had a
 > `PreToolUse` hook installed over a tool they do not use. Corrected in the code and here on
 > 2026-09-22 (board item 55); `tests/hooks.test.ts` pins every row of the table above.
+
+> **Wrong from 2026-10-04, kept here rather than deleted (R5).** Two sentences on this page named
+> the commit guard's whole list, and board row 77 made both short. The option's paragraph said
+> "In a repo those three are still exactly what is blocked", meaning `git commit`, `git push` and
+> `git add -A`. This section said the commit guard goes on a setup with no git "because it guards
+> `git commit`, `git push` and `git add -A` and nothing else". From 2026-10-04 the guard also
+> blocks `cherry-pick`, `revert`, `merge`, `rebase`, `am`, `pull` and `gh pr merge`, on Zach's
+> answer of 2026-10-02. Both sentences are corrected in place. The reason the guard leaves a
+> setup with no git is unchanged: every git command it blocks still needs a repository, and
+> `gh pr merge`, which does not (`-R owner/repo` names one on GitHub), merges a pull request that
+> a setup with no git does not have.
 
 ## How to undo it
 

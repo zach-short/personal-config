@@ -160,6 +160,13 @@ const COMMIT_PARAGRAPH = '**Commits are the owner’s.**';
  * rule renders in all three variants with the same bytes. No other key moved: the stamp's config
  * hash is fixed in `testContext`, and the saved answers carry no new key. One key per variant,
  * 65 → 68, and the diff was read key by key before it was accepted.
+ *
+ * **One more moved on 2026-10-04, board row 77.** `hooks/personal-config/commit-guard.sh` now
+ * blocks every git verb that writes a commit, and `gh pr merge`, and its message gained one
+ * paragraph saying so. It is unconditional template text, so it moves in every variant. One key
+ * per variant, 68 before and after, and no other key moved. It moved once more the same day,
+ * when the audit of row 77 made the carve-outs refuse brace, glob and `xargs` spellings; the
+ * same three keys, 68 still.
  */
 describe('§3.1 row 1 — code + full + git is the 0.3.0 output, byte for byte bar one skill', () => {
   const FULL = answersFor(CODE_FULL_GIT);
