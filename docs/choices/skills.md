@@ -2,7 +2,7 @@
 
 ## What this is
 
-Up to six skills under `~/.claude/skills/`, each a short document the agent loads when you type
+Up to seven skills under `~/.claude/skills/`, each a short document the agent loads when you type
 its name or when the description matches what you asked for.
 
 - **`/close-out`** — the end-of-work ritual: update the record, then post the three hand-back
@@ -19,13 +19,17 @@ its name or when the description matches what you asked for.
   with a builder subagent and a separate auditor subagent, each in its own git worktree on the
   model the item names, then record it and post the hand-back blocks. You stay in one session
   and paste nothing.
+- **`/autopilot`**: run the whole board with nobody at the keyboard. One round of questions sets
+  the budget, then every runnable row goes through `/delegate`, several at once, until the board
+  is done or a cap is reached, and a rundown is written at the end. It runs only when you type it.
 
 How many you get depends on the setup. The lighter setup gets `/close-out` and `/handoff` only.
 Non-code work on the full setup gets four: `/clean-up` drives commands that need an archive
 home, and only the full code setup is asked for one. `/delegate` is written only for code work on
 the full setup in git, with a board or with project folders: each subagent needs a worktree of
 its own, which needs git, and the auditor re-runs the gates the full standard names, which the
-lighter setup and non-code work do not have.
+lighter setup and non-code work do not have. `/autopilot` is written beside it only where there
+is a board, because it reads the board at every step, and project folders keep none.
 
 ## The defense
 
@@ -46,6 +50,13 @@ second agent that reproduces the change in its own worktree and re-runs the gate
 work is recorded. It never builds a Deep item unless you typed `/delegate` on that item, and it
 follows your commit policy: under "only me" its builder never commits.
 
+`/autopilot` is for the hours you are away. The questions a row needs are asked before you leave,
+and a row that would need you later is held with its reason on the board, so nothing is decided
+for you overnight. Every row it builds is still built, audited and recorded by `/delegate`, and
+the rundown says what ran, what was held, what the budget was and what nobody saw running. Its
+skill file sets `disable-model-invocation: true`, so the agent cannot start it on its own; its
+description is not even in the agent's context until you type it.
+
 ## The strongest argument against it
 
 Several more skills in a list you already scroll past, and their descriptions compete with
@@ -64,6 +75,13 @@ session sees of its work, so a mistake neither one reports reaches your ledger a
 It also adds an exception to the model-routing rule (see `model-routing.md`), and every item it
 builds costs at least two agents where one session would have done.
 
+`/autopilot` is that risk run all night. "All of them" now puts an overnight loop in the skills
+list of a person who chose "all" for `/close-out`. The loop rests on the harness's `/loop` skill
+and its timer, whose text this tool does not control, so a change there can break the loop with
+no error: the run stops early, or never stops scheduling. The rundown's readings, one per wake,
+are the only sign of a missed wake. And where your harness has no usage tool, the budget is an end
+time or a row count, not a share of your plan.
+
 ## What it writes and where
 
 `~/.claude/skills/<name>/SKILL.md`, one directory each. Existing skills of other names are not
@@ -77,6 +95,13 @@ runs.
 Where `/delegate` is written, `~/.claude/rules/model-routing.md` gains one sentence, described in
 that question's long form.
 
+`/autopilot` writes nothing at setup beyond its skill file. When it runs, it makes
+`docs/incomplete/autopilot-<date>/` in the repo, holding `STATE.md`, written on every wake, and
+`RUNDOWN.md`, written at the end, and it writes one ledger step per row it signs off and one for
+the run. The builders' work stays in their worktrees; landing it is yours.
+
 ## How to undo it
 
-Delete the skill directories, or run `personal-config undo` to restore anything overwritten.
+Delete the skill directories, or run `personal-config undo` to restore anything overwritten. A
+run's folder under `docs/incomplete/` is an ordinary folder: archive it with `personal-config
+archive` or delete it.

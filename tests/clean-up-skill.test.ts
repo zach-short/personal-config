@@ -34,9 +34,10 @@ async function cleanUp(shape: Shape, workProfile: WorkProfile = 'ledger'): Promi
 }
 
 describe('who gets /clean-up', () => {
-  test('passes: code + full installs it beside the others, /delegate among them in git', async () => {
+  test('passes: code + full installs it beside the others, /delegate and /autopilot among them in git', async () => {
     const files = await render(CODE_FULL_GIT);
     expect(files.map((f) => f.path.split('/').at(-2)).sort()).toEqual([
+      'autopilot',
       'clean-up',
       'close-out',
       'delegate',

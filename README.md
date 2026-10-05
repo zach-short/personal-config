@@ -70,7 +70,7 @@ The wizard asks only what a person knows. It does not guess what the repo knows:
 | `model-routing.md` | `~/.claude/rules/` | The model tier table and what a session does when a task names another model. Whole method only, and not written if you choose no rule. |
 | `docs-lookup.md` | `~/.claude/rules/` | Prefer your docs tool over memory for library APIs. Code work only, and not written if you answer "none". |
 | `language-style.md` | `~/.claude/rules/` | Your agent replies to you in chat in ASD-STE100 Simplified Technical English, with no irony, sarcasm or litotes. Every track, and not written if you answer "However it likes". |
-| `<name>/SKILL.md` | `~/.claude/skills/` | The skills `/close-out`, `/scope`, `/passoff`, `/handoff`, `/clean-up` and `/delegate`. The lighter setup installs `/close-out` and `/handoff`. `/clean-up` is written for code work with the whole method only, and `/delegate` for code work with the whole method in git. A skill of the same name that this tool did not write is left alone. |
+| `<name>/SKILL.md` | `~/.claude/skills/` | The skills `/close-out`, `/scope`, `/passoff`, `/handoff`, `/clean-up`, `/delegate` and `/autopilot`. The lighter setup installs `/close-out` and `/handoff`. `/clean-up` is written for code work with the whole method only, `/delegate` for code work with the whole method in git, and `/autopilot` beside it where there is a board. `/autopilot` runs only when you type it. A skill of the same name that this tool did not write is left alone. |
 | `write-doc/SKILL.md`, `style.md`, `check.sh` | `~/.claude/skills/` | The `/write-doc` skill, for other work only, and only when the workflow skills are installed. It asks you for every claim only you can make before it drafts, reviews the draft against `style.md`, and runs `check.sh` on the saved file for em dashes, contractions and stock AI phrases. Not written if you answer "No". If you also answer "Every document it saves", a `PostToolUse` entry merged into `~/.claude/settings.json` runs the same check on every prose file the agent saves. |
 | `commit-guard.sh`, `delete-guard.sh`, `session-banner.sh`, `completion-gate.sh`, and `commit-policy` beside the commit guard | `~/.claude/hooks/personal-config/` | Optional hooks, merged into `~/.claude/settings.json`. See below. |
 | `config.json` | `~/.config/personal-config/` | Your saved answers for all repos, so the next run opens with them. |
@@ -295,7 +295,7 @@ The three forms are told apart by shape. Eight characters of `[a-z0-9]` with no 
 bun run catalog
 ```
 
-This writes `catalog.json` in the repo root. It holds every question the wizard asks: its text, its options with their examples, and the condition that decides whether it is asked at all. It also holds the long forms from [`docs/choices/`](docs/choices), keyed by the id each question cites. As of `0.7.0+483020e2` that is forty-eight questions and thirty-nine long forms. Thirty-five of the questions carry a condition, so nobody is asked all forty-eight.
+This writes `catalog.json` in the repo root. It holds every question the wizard asks: its text, its options with their examples, and the condition that decides whether it is asked at all. It also holds the long forms from [`docs/choices/`](docs/choices), keyed by the id each question cites. As of `0.7.0+70079494` that is forty-eight questions and thirty-nine long forms. Thirty-five of the questions carry a condition, so nobody is asked all forty-eight.
 
 It exists so another surface can ask the same questions without importing the wizard, which is not browser-safe. The catalog version is the package version plus a hash of the questions it was built from, so a consumer can tell which questions it pinned. `bun test` fails when the questions change and the catalog was not rebuilt, because a second copy of the questions is only accurate if something checks it.
 
@@ -335,7 +335,7 @@ personal-config undo    # restore whatever the last run overwrote
 Then delete what you no longer want:
 
 - `~/.claude/rules/commits.md`, `model-routing.md`, `docs-lookup.md` and `language-style.md`
-- the skill directories under `~/.claude/skills/` (`close-out`, `scope`, `passoff`, `handoff`, `clean-up`, `delegate` and `write-doc`)
+- the skill directories under `~/.claude/skills/` (`close-out`, `scope`, `passoff`, `handoff`, `clean-up`, `delegate`, `autopilot` and `write-doc`)
 - `~/.claude/hooks/personal-config/`, and the `hooks` entries and `outputStyle` it added to `~/.claude/settings.json`. Remove the `PostToolUse` entry that runs `write-doc/check.sh hook` before you delete the `write-doc` folder, or every save reports a hook error.
 - the generated files in each repo, and the `availableModels` list in any repo's `.claude/settings.local.json`
 

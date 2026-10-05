@@ -798,6 +798,21 @@ Each line is a hazard in §7 turned into an instruction (`PLAN.md` BD-12).
 - "Files it owns" is only as good as the column: a builder that must touch a file its row does not
   list stops and reports.
 
+**As built, 2026-10-05 (board row 84, HANDOFF 104).** The text follows this outline with these
+departures, each a build-level call in `PLAN.md` §1, most of them fixes to findings of the Fable
+review. §4.2.2: a row runs only when every row before it in its lane is finished, not when it is the
+first `OPEN` one, so a `HELD` row holds its lane (BD-22); the overlap check covers the launch set as
+well as the rows in flight; a load-bearing row whose Deep review the ceiling forbids is held; under
+`agent-commits` a predecessor whose commit a hook blocked counts as not committed, so D24's hold
+applies to it (BD-21). §4.2.4: `STATE.md` gains a **Reports** section, and the rundown is written
+from the state file (BD-21). §4.2.5: the wake prompt reloads either skill after a compaction
+(BD-24). §4.2.6: a builder's question for the owner gets its own step, and the launch comes before
+the stop rules (BD-21). §4.2.7: a cap ends the run once nothing is in flight, and the run ends
+whenever nothing is in flight after a wake's launches, except a hold with a timer (BD-21). §4.2.9's
+orders are carried into each builder's brief. §4.1: the auditor's brief gains its own rules
+(BD-23), and the `/autopilot` lines render on a board only, where that skill renders (D22). §4.3
+renders in its final form on a board, and in its Phase 1 form on project folders (BD-20).
+
 ### 4.3 The sentence in `model-routing.md`
 
 It follows "a Deep subagent never builds, because the boundary discards the sustained reasoning

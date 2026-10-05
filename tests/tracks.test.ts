@@ -198,6 +198,15 @@ const COMMIT_PARAGRAPH = '**Commits are the owner’s.**';
  * where `/delegate` renders, `delegate-or-stop` gains its one Deep exception (D6, §4.3, BD-1). One
  * new key and one moved key per variant, 71 → 74, and no other key moved. The `/autopilot` phase
  * moves the same `model-routing.md` keys again (BD-14).
+ *
+ * **One file appeared and two moved on 2026-10-04, board row 84 (delegate-autopilot Phase 2).**
+ * `skills/autopilot/SKILL.md` is new in every variant: it ships beside `/delegate` where a board is
+ * written, which is exactly this shape (D22). `rules/model-routing.md` moved, because the Deep
+ * exception gains its `/autopilot` clause (§4.3, BD-14). `skills/delegate/SKILL.md` moved, because
+ * on a board it now says what happens under `/autopilot` (BD-17's reversal); the plan's watch line
+ * named only the first two, and this third is the same phase's own file. One new key and two moved
+ * keys per variant, 74 → 77, and no other key moved. Both skill keys moved once more the same
+ * day, after the Fable review of both texts; the same six keys, 77 still.
  */
 describe('§3.1 row 1 — code + full + git is the 0.3.0 output, byte for byte bar one skill', () => {
   const FULL = answersFor(CODE_FULL_GIT);
@@ -229,7 +238,7 @@ describe('§3.1 row 1 — code + full + git is the 0.3.0 output, byte for byte b
   }
 
   test('the snapshot is not empty', async () => {
-    expect(Object.keys(await golden()).length).toBe(74);
+    expect(Object.keys(await golden()).length).toBe(77);
   });
 
   for (const [variant, { answers, plan }] of Object.entries(VARIANTS)) {

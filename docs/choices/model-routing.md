@@ -43,8 +43,9 @@ safeguard. This is very close to having no rule, with extra words.
 Where the `/delegate` skill is written (code work on the full setup in git, with the skills
 installed) and you take the recommended answer, the rule names one exception to "a Deep subagent
 never builds": a Deep item may be built by a Deep subagent when you named that item yourself, by
-running `/delegate` on it, and that build then gets an independent Deep review. Under "say so in
-one line, then carry on" the rule has no such line, so it gets no exception.
+running `/delegate` on it or, where `/autopilot` is written too, by lifting its hold at the start
+of `/autopilot`, and that build then gets an independent Deep review. Under "say so in one line,
+then carry on" the rule has no such line, so it gets no exception.
 
 **Asked only if you take the whole method.** A lighter setup does not write this rule at all —
 on a small budget its advice to delegate a task to a second model is the most expensive thing

@@ -16,16 +16,16 @@ parallel sessions and closing work. It replaces none of them.
 
 Pass the Agent tool's `model` parameter the family each name belongs to, as that parameter lists
 its values. Where a name maps to no family the tool lists, or a tier is `<unset>`, ask the owner
-before step 2. Never guess.
+before step 2{{TIER_HOLD}}. Never guess.
 
 ## 0. Preconditions
 
 - **The item has cleared its gate.**
   {{GATE_CLEARED}}
 - **Open owner questions are asked here**, in chat, in one batch, before step 1. A subagent cannot
-  reach the owner, so a question is never handed to a builder to guess at.
-- **A Deep item is held** unless the person typed `/delegate` on that item in this session. That
-  is the authorization: say so in one line, and record it in the sign-off. A `/delegate` you
+  reach the owner, so a question is never handed to a builder to guess at.{{QUESTIONS_HELD}}
+- **A Deep item is held** unless the person typed `/delegate` on that item in this session{{DEEP_LIFT}}.
+  That is the authorization: say so in one line, and record it in the sign-off. A `/delegate` you
   loaded on your own lifts nothing. A named Deep item gets a Deep builder, and then an
   independent Deep review in step 3.
 - **Never spawn a model above the repo's tier ceiling**, where its router has a "Tier ceiling"
@@ -36,8 +36,8 @@ before step 2. Never guess.
 
 ## 1. Read and claim
 
-Read the item fresh: never trust a status read earlier in this conversation. Check its "Files it
-owns" against every other item marked `IN FLIGHT`. Two items that name the same file never run at
+Read the item fresh: never trust a status read earlier in this conversation.
+Check {{OWNS}} against every other item marked `IN FLIGHT`. Two items that name the same file never run at
 once, whatever their lanes say.
 {{CLAIM}}
 
@@ -79,14 +79,22 @@ sign-off names them.
 
 Spawn a second Agent with its own `isolation: "worktree"`, never the builder's. A subagent in a
 shared worktree edits source even when it is told only to review. Use the Default tier, or Deep
-for a Deep item and for an item the owner named load-bearing.
+for a Deep item and for an item the owner named load-bearing. Where the repo's tier ceiling is
+below Deep, an item that needs a Deep review is held, never reviewed on a lower tier.
 
 Its brief: the item's done-when (the gate commands, and the proof a green gate cannot give), its
-"What is fixed" and "Not in scope", and the builder's worktree path and branch.
-{{AUDIT_SOURCE}}
-It never writes the builder's worktree. It re-runs the gates itself, and returns one of: clean,
-non-blocking findings, or blocking findings, each with a citation. When it returns, check its
-diffstat.
+"What is fixed" and "Not in scope", the builder's worktree path and branch, and these rules:
+
+- Do not edit {{RECORD_FILES_OBJECT}}, and never write the builder's worktree.
+- Bring your own worktree to the base branch with `git merge --ff-only <base>`, then reproduce the
+  change there. {{AUDIT_SOURCE}}
+- Re-run every gate yourself. Report each command with its output, and the diffstat of your
+  worktree after the change is reproduced.
+- Return one of: clean, non-blocking findings, or blocking findings, each with a citation.
+
+When it returns, check that its diffstat matches the builder's and that its verdict carries the
+gate output. A verdict without them is not a reproduction: audit again with a fresh auditor,
+once. A second verdict without them holds the item.
 
 ## 4. Sign off
 
@@ -99,7 +107,7 @@ diffstat.
 
 ## 5. Several items at once
 
-Only items in different lanes whose "Files it owns" do not overlap, checked across all of them at
+Only items in different lanes whose {{OWNS_PLURAL}} do not overlap, checked across all of them at
 once, not in pairs as you go. Their step 2 Agent calls go out in one message. From there each
 item's loop is independent.
 
@@ -109,4 +117,4 @@ Every subagent starts with no memory of an earlier call and keeps its working co
 Only its final report crosses back, so this session collects a few short reports per item and
 never a transcript. If this session runs long across several items, measure it with
 `personal-config context --sentinel "<a phrase from this conversation>"`, and land at the working
-standard's context budget instead of running into a compaction of its own.
+standard's context budget instead of running into a compaction of its own.{{CONTEXT_RULE}}

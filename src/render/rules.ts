@@ -2,7 +2,7 @@ import { join } from 'node:path';
 import { claudeRulesDir } from '../lib/paths.ts';
 import type { PlannedFile } from '../lib/types.ts';
 import { answer, planned, type RenderContext, trackOf } from './context.ts';
-import { rendersDelegate } from './skills.ts';
+import { rendersAutopilot, rendersDelegate } from './skills.ts';
 
 /**
  * One file per rule under `~/.claude/rules/`, never a managed section spliced into the user's
@@ -131,14 +131,20 @@ function modelRoutingRule(ctx: RenderContext): PlannedFile | null {
 /**
  * delegate-autopilot D6 and §4.3: where `/delegate` renders, "a Deep subagent never builds" gains
  * its one named exception, in the same paragraph. Everywhere else the paragraph is unchanged. The
- * clause naming `/autopilot` arrives with that skill (BD-14).
+ * clause naming `/autopilot` renders only where that skill does: on project folders `/delegate`
+ * renders alone (D22), and the sentence must not name a skill that is not installed (BD-20).
  */
 function delegateOrStop(ctx: RenderContext): string {
   if (!rendersDelegate(ctx)) return `${DELEGATE_OR_STOP_HEAD}\n${DELEGATE_OR_STOP_TAIL}`;
-  return `${DELEGATE_OR_STOP_HEAD}\n${DEEP_EXCEPTION}\n${DELEGATE_OR_STOP_TAIL}`;
+  const exception = rendersAutopilot(ctx) ? DEEP_EXCEPTION_BOTH : DEEP_EXCEPTION_DELEGATE;
+  return `${DELEGATE_OR_STOP_HEAD}\n${exception}\n${DELEGATE_OR_STOP_TAIL}`;
 }
 
-const DEEP_EXCEPTION = `One exception, and only one: a Deep row may be built by a Deep subagent when I named that row
+const DEEP_EXCEPTION_BOTH = `One exception, and only one: a Deep row may be built by a Deep subagent when I named that row
+myself, by running \`/delegate\` on it or by lifting its hold at the start of \`/autopilot\`, and
+that build then gets an independent Deep review.`;
+
+const DEEP_EXCEPTION_DELEGATE = `One exception, and only one: a Deep row may be built by a Deep subagent when I named that row
 myself, by running \`/delegate\` on it, and that build then gets an independent Deep review.`;
 
 const DELEGATE_OR_STOP_HEAD = `If they do not, pick one of these two, never a third:

@@ -63,6 +63,15 @@ A second pass, run on `3fadd95` in the primary checkout by the session that wrot
 | G42 | **Moved.** Row 78 added `hooks/personal-config/commit-policy` to every variant, so the golden holds 71 keys, pinned at `tests/tracks.test.ts:225`; the no-git pin of five skills is at `:312`. Phase 1 takes the golden from 71 to 74, and Phase 2 from 74 to 77 | `tests/tracks.test.ts:225`, `:312`; `tests/golden/full-track.json` |
 | G54 | An array `skills` answer renders no skill at all: `answer()` returns its fallback for a value that is not a string, so `renderSkills` reads `none` and `selected()` is never reached. Older than this effort, and outside its files | `src/render/context.ts:14-17`; `src/render/skills.ts`, `selected` |
 
+### Re-check for Phase 2, 2026-10-05, at `f6f13ea` (row 83 committed)
+
+G1, G2 and G4 hold at their Phase 1 lines (`src/render/skills.ts:19`, `:26`; `src/questions/you.ts:393`).
+G42 holds at 74 keys (`tests/tracks.test.ts:232`), so Phase 2 takes the golden from 74 to 77. Part 5's
+Default ceiling is still about 400k, measured 2026-08-16 (`standard/AGENT-PRACTICES.boilerplate.md:547`,
+`:551`); row 82 is still `OPEN`, so D14's dated sentence cites that figure. G46 holds in this session:
+`ScheduleWakeup` and `Agent` are loaded, and `SendMessage`, `PushNotification` and
+`mcp__ccd_session_mgmt__get_usage` are deferred tools.
+
 ## 1. Decisions taken since ratification
 
 Build-level calls that implement the design. Each carries its reversal. BD-14 and BD-15 change a
@@ -136,6 +145,32 @@ file a person reads, so they are named in GATE 2's question 7.
   `tierTable` renders it". The `<unset>` rule and the Light row's condition are `tierTable`'s; its
   "Use for" column is left out, because its text carries em dashes the template's style forbids,
   and the item names its own tier. *Reversal:* add the column with that text reworded.
+- **BD-20. The `model-routing.md` sentence takes its form from the skills that render.** On a
+  board both skills render and the sentence is §4.3's final form; on project folders `/delegate`
+  renders alone (D22), and the sentence keeps its Phase 1 form, which names no `/autopilot`. This
+  is BD-1 and BD-14 applied to D22's shape. *Reversal:* the final form everywhere `/delegate`
+  renders.
+- **BD-21. The Fable review's blocking findings are fixed in the text, each inside a ratified
+  decision** (Phase 2, As built). A cap with rows still runnable ends the run once nothing is in
+  flight (D5). Each wake launches before it checks the stop rules, and the run ends when nothing is
+  in flight after the launches, except a hold with a timer (D3). Two runnable rows that overlap each
+  other never launch together (§4.1 step 5). A hook-blocked commit under `agent-commits` is recorded
+  as not committed, and its successor is held for it (D10, D24). A builder's question for the owner
+  is taken only where it implements a settled decision, and otherwise holds the row (D8). `STATE.md`
+  gains a **Reports** section holding everything the rundown needs, and the rundown is written from
+  it (D13, D14). *Reversal:* none; each restores a decision the text broke.
+- **BD-22. A lane runs in order through its finished rows only.** §4.2.2's "the first `OPEN` row of
+  its lane" let a row run past a `HELD` predecessor. The text now requires every row before it in
+  its lane to be `DONE`, `SUPERSEDED` or `SETTLED AS NO`, which is the reason §4.2.2 gives. *Reversal:*
+  §4.2.2's words.
+- **BD-23. `/delegate`'s auditor brief carries rules of its own**: no edit to the ledger, the board or
+  the builder's worktree (D9); its worktree brought to the base branch before it reproduces the change;
+  each gate reported with its output and its diffstat. A verdict without them is audited again once,
+  then the item is held. An item that needs a Deep review the tier ceiling forbids is held (BD-10).
+  On project folders the collision check reads the files a phase names, where it names them (D22).
+  *Reversal:* drop any line.
+- **BD-24. `/delegate` is loaded once and again after a compaction** (BD-3 amended). The wake prompt
+  says to reload either skill when it is no longer in context. *Reversal:* BD-3's words.
 
 ## 2. Phases
 
@@ -219,7 +254,32 @@ personal-string test.
 
 ### Phase 2. `/autopilot` and the Deep review
 
-**Status.** Not started. Board row 84. Waits on row 83.
+**Status.** `BUILT 2026-10-05`, not yet committed (HANDOFF 104). Board row 84.
+
+**As built.** Opus 5.5, in the primary checkout on `main` at `f6f13ea`. Scope items 1 to 8 as written,
+with BD-17 reversed (the `/autopilot` lines added to `/delegate` on a board only) and BD-20 to BD-24.
+The golden went from 74 to 77 keys: three new `skills/autopilot/SKILL.md` keys and three moved
+`rules/model-routing.md` hashes, as planned, and three moved `skills/delegate/SKILL.md` hashes, which
+the watch line did not name and which this phase's own `delegate.md` edit moves. No other key moved.
+
+*The Deep review.* One Fable 5.1 subagent (`model: fable`, `isolation: "worktree"`), 2026-10-05, read
+only; its worktree was removed unchanged, and the scratch inputs were unchanged after it. Input: both
+rendered skills under both commit policies, on a board and on project folders, the rendered
+`model-routing.md` and `commits.md`, `DESIGN.md` §3 to §5 and this file's §1 and §3. Verdict: six
+blocking and seven non-blocking findings, all fixed in this phase, none parked. Blocking: (1) a cap
+with rows still runnable never ended the run; (2) without a timer the run ended before launching the
+next rows; (3) two runnable rows that overlap each other launched together; (4) under `agent-commits`
+a hook-blocked commit was recorded as a commit and the next row built on an empty branch; (5) a
+builder's question for the owner had no route and could be signed off; (6) the rundown's content lived
+only in context. Fixed by BD-21. Non-blocking: (7) the auditor's brief lacked the no-write rule and
+gate output, and (8) its base-branch step, BD-23; (9) a Deep review above the ceiling, BD-23; (10) a
+`HELD` row unblocked its lane, BD-22; (11) no timer and a limit, the stop rules; (12) no reload after a
+compaction, BD-24; (13) project folders have no "Files it owns", BD-23. None changed a D decision, so
+none went to Zach before its edit (R12).
+
+Gates: `bun run typecheck` 0, `bun run lint` clean over 163 files, `bun test` 1520 pass and 0 fail over
+77 files, `bun run doctor . examples` no findings. Both texts were rendered and read against §4.2 and
+§4.1 after the fixes. `RUNTIME-PASS.md` carries Phase 2's entries and the supervised run.
 
 **Scope.**
 

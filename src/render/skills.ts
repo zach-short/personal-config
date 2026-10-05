@@ -50,6 +50,11 @@ export function rendersDelegate(ctx: RenderContext): boolean {
   return wantedSkills(ctx).includes('delegate');
 }
 
+/** The sentence's `/autopilot` clause renders only where that skill does (BD-1, BD-20). */
+export function rendersAutopilot(ctx: RenderContext): boolean {
+  return wantedSkills(ctx).includes('autopilot');
+}
+
 /**
  * `/clean-up` drives `fold` and `archive`, and both refuse without an archive home — which only
  * the code + full track is asked for (setup-tracks `DESIGN.md` D26). Anywhere else its first
@@ -57,12 +62,16 @@ export function rendersDelegate(ctx: RenderContext): boolean {
  *
  * `/delegate` needs a worktree per subagent, so git, and the full standard's gates for its
  * auditor to re-run, which the short track has none of (delegate-autopilot D1). It renders on both
- * work-record shapes (D22).
+ * work-record shapes (D22). `/autopilot` reads the board at every step, and project folders write
+ * none, so it renders only where a board is written (D22).
  */
 function offeredSkills(ctx: RenderContext): readonly string[] {
   if (trackOf(ctx).weight === 'light') return LIGHT_SKILLS;
   if (isShortTrack(ctx)) return SKILLS.filter((name) => name !== 'clean-up');
-  return trackOf(ctx).usesGit ? [...SKILLS, 'delegate'] : SKILLS;
+  if (!trackOf(ctx).usesGit) return SKILLS;
+  return workRecordShape(ctx) === 'folders'
+    ? [...SKILLS, 'delegate']
+    : [...SKILLS, 'delegate', 'autopilot'];
 }
 
 function selected(ctx: RenderContext, offered: readonly string[]): string[] {
@@ -119,6 +128,7 @@ function variables(
   if (name === 'handoff') return handoffVars(shape);
   if (name === 'clean-up') return cleanUpVars(shape);
   if (name === 'delegate') return delegateVars(ctx, shape);
+  if (name === 'autopilot') return autopilotVars(ctx);
   return {};
 }
 
@@ -126,14 +136,15 @@ function variables(
  * `/delegate`. Rendered only for code + full + git (`offeredSkills`), so the two axes left are the
  * work-record shape (D22: a board, or project folders recorded through the phase header) and the
  * commit policy (D10). The tier names are the person's own, filled here so the template carries no
- * model family name (D12). No `/autopilot` clause until that skill ships (BD-14, BD-17).
+ * model family name (D12). Its `/autopilot` clauses render only on a board, where that skill does
+ * (D22); on project folders they would name a skill that is not installed.
  */
 function delegateVars(ctx: RenderContext, shape: SkillShape): Record<string, string> {
   const commits = answer(ctx, 'commitPolicy', 'print-blocks') === 'agent-commits';
   const vars = shape.folders ? delegateFolderVars() : delegateBoardVars(ctx, commits);
   return {
     ...vars,
-    TIER_TABLE: delegateTiers(ctx),
+    TIER_TABLE: tierTable(ctx, ''),
     COMMIT_RULE: commits
       ? [
           'Commit on your own worktree branch, naming the exact files in both the `git add` and',
@@ -142,10 +153,10 @@ function delegateVars(ctx: RenderContext, shape: SkillShape): Record<string, str
         ].join('\n')
       : 'Do not commit. Leave the change in the worktree, and list every untracked file it adds.',
     AUDIT_SOURCE: commits
-      ? "It reproduces the change in its own worktree from the builder's branch."
+      ? "Take it from the builder's branch."
       : [
-          "It reproduces the change in its own worktree from the builder's diff against `HEAD`",
-          "(`git -C <builder's worktree> diff HEAD`) and the untracked files the builder listed.",
+          "Take it from the builder's diff against `HEAD` (`git -C <builder's",
+          '  worktree> diff HEAD`) and the untracked files the builder listed.',
         ].join('\n'),
   };
 }
@@ -155,7 +166,7 @@ function delegateVars(ctx: RenderContext, shape: SkillShape): Record<string, str
  * row only where that tier is on), less its "Use for" column, which carries prose the template's
  * own style rule forbids and which the skill does not need: the item names its tier.
  */
-function delegateTiers(ctx: RenderContext): string {
+function tierTable(ctx: RenderContext, indent: string): string {
   const tiers = ctx.config.models;
   const rows = [
     `| Deep | ${tiers.deep || '<unset>'} |`,
@@ -164,18 +175,72 @@ function delegateTiers(ctx: RenderContext): string {
   ];
   if (answer(ctx, 'modelLightEnabled') === 'yes')
     rows.push(`| Light | ${tiers.light || '<unset>'} |`);
-  return `| Tier | Model |\n|---|---|\n${rows.join('\n')}`;
+  return ['| Tier | Model |', '|---|---|', ...rows]
+    .map((row) => indent + row)
+    .join('\n')
+    .trimStart();
+}
+
+/**
+ * `/autopilot`. Rendered only on code + full + git with a board (`offeredSkills`), so the axis left
+ * is the commit policy: under `print-blocks` a row after one this run signed off but did not commit
+ * is held for that commit, and under `agent-commits` it builds from that row's branch (D24). The
+ * rundown's last section follows the same policy (D10).
+ */
+function autopilotVars(ctx: RenderContext): Record<string, string> {
+  const commits = answer(ctx, 'commitPolicy', 'print-blocks') === 'agent-commits';
+  return {
+    LEDGER_FILE: ledgerFile(ctx),
+    BOARD_FILE: boardFile(ctx),
+    TIER_TABLE: tierTable(ctx, '   '),
+    AFTER_UNCOMMITTED: commits
+      ? [
+          '- A row whose predecessor in its lane, or an item its "Waits on" names, was signed off in',
+          "  this run builds from that row's worktree branch, and the rundown's merge order lists the",
+          '  predecessor first. Where a hook blocked that commit, the predecessor is not committed:',
+          '  the row is held, and its "Waits on" names the commit it waits for.',
+        ].join('\n')
+      : [
+          '- No row before it in its lane, and no item its "Waits on" names, was signed off in this',
+          '  run without a commit. Such a row is held, and its "Waits on" names the commit it waits',
+          '  for. Nothing is built on work the owner has not seen.',
+        ].join('\n'),
+    COMMIT_BLOCKS: commits
+      ? [
+          'for each worktree, its branch, in the merge order above, and the two',
+          '      blocks for a worktree whose commit a hook blocked. No branch is pushed or merged.',
+        ].join('\n')
+      : [
+          'for each worktree, the two blocks the owner runs, `git -C <worktree>',
+          '      add <files>` and `git -C <worktree> commit <files> -m "..."`, naming the same files.',
+        ].join('\n'),
+  };
 }
 
 function delegateBoardVars(ctx: RenderContext, commits: boolean): Record<string, string> {
   const ledger = ledgerFile(ctx);
   const board = boardFile(ctx);
-  const state = commits ? 'committed on its branch and not merged' : '"not yet committed"';
+  // Finding 4 of the Deep review: a hook can still block an agent's commit, and the record must
+  // say so, because `/autopilot` builds the next row from this branch only if it holds a commit.
+  const state = commits
+    ? 'committed on its branch and not merged, or "not committed" where a hook blocked it'
+    : '"not yet committed"';
   return {
     GATE_CLEARED: [
       `On the board (\`${board}\`): an \`OPEN\` row with a model and a written prompt, every item`,
       '  its "Waits on" names `DONE`, and no "scope first". Otherwise stop and run `/scope`.',
     ].join('\n'),
+    TIER_HOLD: ', or, under `/autopilot`, hold the row',
+    QUESTIONS_HELD: [
+      ' Under',
+      '  `/autopilot` its opening round asked them, and a row whose questions it did not reach is',
+      '  held.',
+    ].join('\n'),
+    DEEP_LIFT: ", or lifted it in\n  `/autopilot`'s opening round",
+    CONTEXT_RULE:
+      " Under\n`/autopilot`, that skill's own rule on this session's context governs.",
+    OWNS: 'its "Files it owns"',
+    OWNS_PLURAL: '"Files it owns"',
     RECORD_FILES: 'the ledger and the board are',
     RECORD_FILES_OBJECT: `the ledger (\`${ledger}\`) or the board (\`${board}\`)`,
     CLAIM: [
@@ -187,7 +252,7 @@ function delegateBoardVars(ctx: RenderContext, commits: boolean): Record<string,
       "  the builder's and the auditor's models, the worktree, the branch, the commit state",
       `  (${state}), the relay passes, the verdict, each finding as \`open\`, and a Deep lift`,
       "  as the person's call. Then mark the row `DONE` against that step, and post the `/close-out`",
-      '  hand-back blocks in chat.',
+      "  hand-back blocks: in chat, or into the run's state file under `/autopilot`.",
     ].join('\n'),
     HELD: [
       'After that the row is `HELD`: its "Waits on" names the file the open findings are written in,',
@@ -202,6 +267,12 @@ function delegateFolderVars(): Record<string, string> {
       'A `PLANNED` phase in its project folder, with its subagents and its done-when stated.',
       '  Otherwise stop and run `/scope`.',
     ].join('\n'),
+    TIER_HOLD: '',
+    QUESTIONS_HELD: '',
+    DEEP_LIFT: '',
+    CONTEXT_RULE: '',
+    OWNS: 'the files its phase names, where it names them,',
+    OWNS_PLURAL: 'phases name files that',
     RECORD_FILES: 'the project folders are',
     RECORD_FILES_OBJECT: "the project folder's phase header, design or runtime-pass file",
     CLAIM: [

@@ -1,5 +1,5 @@
 /**
- * `/delegate` (delegate-autopilot Phase 1, board row 83). It is offered only on code + full + git
+ * `/delegate` (delegate-autopilot Phase 1, board row 83; its `/autopilot` lines, Phase 2, row 84). It is offered only on code + full + git
  * (D1), on a board or on project folders (D22), and where it renders, `model-routing.md` names it
  * as the one exception to "a Deep subagent never builds" (D6, §4.3, BD-1). The template carries no
  * model family name (D12) and no Part number of the standard (BD-2); the tier names are filled in
@@ -16,7 +16,12 @@ import { DEFAULT_ANSWERS, testConfig, testContext, testRepoPlan } from './helper
 
 const CODE_FULL_GIT = { workKind: 'code', configWeight: 'full', usesGit: 'yes' } as const;
 
+/** §4.3's final form, where both skills render (a board). */
 const EXCEPTION =
+  'One exception, and only one: a Deep row may be built by a Deep subagent when I named that row\nmyself, by running `/delegate` on it or by lifting its hold at the start of `/autopilot`, and\nthat build then gets an independent Deep review.';
+
+/** Project folders get `/delegate` alone (D22), so the sentence names no `/autopilot` (BD-20). */
+const EXCEPTION_FOLDERS =
   'One exception, and only one: a Deep row may be built by a Deep subagent when I named that row\nmyself, by running `/delegate` on it, and that build then gets an independent Deep review.';
 
 async function render(
@@ -45,8 +50,9 @@ function skillNames(files: PlannedFile[]): string[] {
 }
 
 describe('who gets /delegate', () => {
-  test('passes: code + full + git with every skill gets it beside the other five', async () => {
+  test('passes: code + full + git with every skill gets it beside the other six', async () => {
     expect(skillNames(await render())).toEqual([
+      'autopilot',
       'clean-up',
       'close-out',
       'delegate',
@@ -124,8 +130,31 @@ describe('what /delegate says', () => {
     expect(text).not.toContain('- Do not commit.');
   });
 
-  test('it names no skill that does not ship yet (BD-14, BD-17)', async () => {
+  test('on a board it says what changes under /autopilot, which renders beside it', async () => {
     const text = find(await render(), 'delegate/SKILL.md') ?? '';
+    for (const phrase of [
+      'or, under `/autopilot`, hold the row',
+      "`/autopilot`'s opening round",
+      "into the run's state file under `/autopilot`",
+      "that skill's own rule on this session's context governs",
+    ])
+      expect(text.replace(/\s+/g, ' '), phrase).toContain(phrase.replace(/\s+/g, ' '));
+  });
+
+  test('the auditor reproduces from the base branch, writes no record, and must show its gates', async () => {
+    const text = (find(await render(), 'delegate/SKILL.md') ?? '').replace(/\s+/g, ' ');
+    for (const phrase of [
+      "Do not edit the ledger (`HANDOFF.md`) or the board (`PASSOFF.md`), and never write the builder's worktree.",
+      'Bring your own worktree to the base branch with `git merge --ff-only <base>`',
+      'Report each command with its output',
+      'A verdict without them is not a reproduction',
+      'an item that needs a Deep review is held, never reviewed on a lower tier',
+    ])
+      expect(text, phrase).toContain(phrase);
+  });
+
+  test('on project folders it names no /autopilot, which is not installed there (D22)', async () => {
+    const text = find(await render({}, 'folders'), 'delegate/SKILL.md') ?? '';
     expect(text).not.toContain('autopilot');
   });
 
@@ -145,6 +174,12 @@ describe("model-routing.md names /delegate's Deep exception only where /delegate
     const rule = find(await render(), 'rules/model-routing.md') ?? '';
     expect(rule.split(EXCEPTION)).toHaveLength(2);
     expect(rule).toContain(`that tier is for.\n${EXCEPTION}\nNever do the work yourself`);
+  });
+
+  test('passes: on project folders the sentence names /delegate alone (BD-20)', async () => {
+    const rule = find(await render({}, 'folders'), 'rules/model-routing.md') ?? '';
+    expect(rule.split(EXCEPTION_FOLDERS)).toHaveLength(2);
+    expect(rule).not.toContain('autopilot');
   });
 
   const without: Array<[string, Answers]> = [

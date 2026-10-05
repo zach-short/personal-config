@@ -7,6 +7,21 @@ The CLI. The working standard it installs is versioned separately — see
 
 ### Added
 
+- **`/autopilot`, a seventh workflow skill.** It runs the whole board with nobody at the
+  keyboard. One round of questions sets the budget (an end time, a share of the weekly window
+  where the harness has a usage tool, or a number of rows), the agents in flight, the model
+  mapping, which Deep rows to lift and each row's own open questions. Then every runnable row
+  goes through `/delegate`, several at once and lowest row number first, on wakes the harness's
+  `/loop` timer schedules, until the board is done or the first cap is reached. Its state is a
+  file in `docs/incomplete/autopilot-<date>/`, read first on every wake, and it ends with a
+  `RUNDOWN.md` in fixed sections. Only the session writes the board and the ledger. A row that
+  would need the owner later is held with its reason. Under "only me" a row after one this run
+  did not commit is held for that commit; under "the agent may commit" it builds from that row's
+  branch. Its skill file sets `disable-model-invocation: true`, so only a person can start it.
+  It is written beside `/delegate` where there is a board, and not on project folders. The `all`
+  option of the skills question now names it, and the Deep exception in `model-routing.md` names
+  lifting a row's hold at the start of `/autopilot` where it is written. `/delegate` gains the
+  lines that say what happens under `/autopilot`.
 - **`/delegate`, a sixth workflow skill.** It builds one item that has cleared its gate, a
   board row or a planned phase, with a builder subagent and a separate auditor subagent, each in
   its own git worktree on the model the item names, then records it and posts the hand-back
