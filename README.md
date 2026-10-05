@@ -295,7 +295,7 @@ The three forms are told apart by shape. Eight characters of `[a-z0-9]` with no 
 bun run catalog
 ```
 
-This writes `catalog.json` in the repo root. It holds every question the wizard asks: its text, its options with their examples, and the condition that decides whether it is asked at all. It also holds the long forms from [`docs/choices/`](docs/choices), keyed by the id each question cites. As of `0.7.0+70079494` that is forty-eight questions and thirty-nine long forms. Thirty-five of the questions carry a condition, so nobody is asked all forty-eight.
+This writes `catalog.json` in the repo root. It holds every question the wizard asks: its text, its options with their examples, and the condition that decides whether it is asked at all. It also holds the long forms from [`docs/choices/`](docs/choices), keyed by the id each question cites. As of `0.7.0+1ee4ab0f` that is forty-nine questions and thirty-nine long forms. Thirty-six of the questions carry a condition, so nobody is asked all forty-nine.
 
 It exists so another surface can ask the same questions without importing the wizard, which is not browser-safe. The catalog version is the package version plus a hash of the questions it was built from, so a consumer can tell which questions it pinned. `bun test` fails when the questions change and the catalog was not rebuilt, because a second copy of the questions is only accurate if something checks it.
 

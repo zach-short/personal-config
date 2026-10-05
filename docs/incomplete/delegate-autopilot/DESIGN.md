@@ -855,6 +855,14 @@ A build phase does not touch these, however helpful the edit looks.
 - **The `skills` question's two values**, `all` and `none`, its id, its `configKey` and its place
   in the phase. Only the `all` label changes (D16). The renderer's acceptance of an array from a
   profile stays as it is.
+
+  **As built, 2026-10-05 (G54, Zach's call).** The renderer never accepted an array: `answer()`
+  returns its fallback for a value that is not a string, so an array read as `none` and the
+  per-skill path in `src/render/skills.ts` was unreachable. Zach chose to remove that path, not to
+  wire it up, because no question, catalog option or long form describes a per-skill answer. An
+  array still renders no skill, so no rendered byte moves. One residue stays: `when: skills isNot
+  none` reads an array as answered, so `/write-doc`'s question is still asked under one, and
+  `src/render/write-doc.ts:55` renders nothing for it.
 - **The offer on every other track.** Light keeps `/close-out` and `/handoff`; non-code, full keeps
   four; code, full without git keeps five (G2, and the pin at `tests/tracks.test.ts:281`).
 - **`standard/`**, both standards, byte for byte. Board row 82 owns the ceiling lead (D18).

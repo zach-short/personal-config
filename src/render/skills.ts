@@ -34,11 +34,14 @@ export async function renderSkills(ctx: RenderContext): Promise<PlannedFile[]> {
   return Promise.all(wantedSkills(ctx).map((name) => renderSkill(ctx, name)));
 }
 
+/**
+ * The question offers `all` and `none` and nothing else. An array from a hand-edited profile reads
+ * as `none` through `answer()` and renders no skill. A per-skill path for it was here and never
+ * reachable; it was removed rather than wired up because a selection that no question, catalog
+ * option or long form describes is a hidden third answer (delegate-autopilot G54, 2026-10-05).
+ */
 function wantedSkills(ctx: RenderContext): string[] {
-  const choice = answer(ctx, 'skills', 'none');
-  if (choice === 'none') return [];
-  const offered = offeredSkills(ctx);
-  return choice === 'all' ? [...offered] : selected(ctx, offered);
+  return answer(ctx, 'skills', 'none') === 'all' ? [...offeredSkills(ctx)] : [];
 }
 
 /**
@@ -72,12 +75,6 @@ function offeredSkills(ctx: RenderContext): readonly string[] {
   return workRecordShape(ctx) === 'folders'
     ? [...SKILLS, 'delegate']
     : [...SKILLS, 'delegate', 'autopilot'];
-}
-
-function selected(ctx: RenderContext, offered: readonly string[]): string[] {
-  const value = ctx.answers.skills;
-  if (Array.isArray(value)) return value.filter((v) => offered.includes(v));
-  return [];
 }
 
 async function renderSkill(ctx: RenderContext, name: string): Promise<PlannedFile> {

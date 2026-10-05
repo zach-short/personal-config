@@ -61,7 +61,7 @@ A second pass, run on `3fadd95` in the primary checkout by the session that wrot
 | G14 | Holds | `src/lib/write-plan.ts:20`, `:35` |
 | G41 | Holds | `src/render/context.ts:98-100`; `src/render/repo.ts:373-374` |
 | G42 | **Moved.** Row 78 added `hooks/personal-config/commit-policy` to every variant, so the golden holds 71 keys, pinned at `tests/tracks.test.ts:225`; the no-git pin of five skills is at `:312`. Phase 1 takes the golden from 71 to 74, and Phase 2 from 74 to 77 | `tests/tracks.test.ts:225`, `:312`; `tests/golden/full-track.json` |
-| G54 | An array `skills` answer renders no skill at all: `answer()` returns its fallback for a value that is not a string, so `renderSkills` reads `none` and `selected()` is never reached. Older than this effort, and outside its files | `src/render/context.ts:14-17`; `src/render/skills.ts`, `selected` |
+| G54 | An array `skills` answer renders no skill at all: `answer()` returns its fallback for a value that is not a string, so `renderSkills` reads `none` and `selected()` is never reached. Older than this effort, and outside its files. **Closed 2026-10-05**: Zach chose removal; `selected()` is gone and `DESIGN.md` §6 carries the `As built` note | `src/render/context.ts:14-17`; `src/render/skills.ts`, `selected` |
 
 ### Re-check for Phase 2, 2026-10-05, at `f6f13ea` (row 83 committed)
 
