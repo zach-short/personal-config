@@ -7,6 +7,18 @@ The CLI. The working standard it installs is versioned separately — see
 
 ### Added
 
+- **`/delegate`, a sixth workflow skill.** It builds one item that has cleared its gate, a
+  board row or a planned phase, with a builder subagent and a separate auditor subagent, each in
+  its own git worktree on the model the item names, then records it and posts the hand-back
+  blocks. It is written for code work on the full setup in git, with a board or with project
+  folders, when the skills answer is "all". The tier names in it are the ones you gave, and it
+  names no model family. A Deep item is held unless you type `/delegate` on that item. Its
+  builder follows your commit policy: under "only me" it never commits, and the auditor
+  reproduces the builder's diff in a worktree of its own. Where it is written, and model routing
+  is "Delegate to that model, or stop and hand off", `~/.claude/rules/model-routing.md` gains one sentence naming that Deep
+  exception. The `all` option of the skills question now names `/delegate`. A hand-written skill
+  of the same name is left alone, as any unstamped file is; the skills long form said it was
+  backed up and replaced, which was wrong, and now says how to take the shipped one instead.
 - **A question on how your agent talks to you, asked on every track.** `chat-style` sits after
   the output style question. **Short and plain**, the recommended answer, writes
   `~/.claude/rules/language-style.md`: chat replies in ASD-STE100 Simplified Technical English

@@ -2,6 +2,7 @@ import { join } from 'node:path';
 import { claudeRulesDir } from '../lib/paths.ts';
 import type { PlannedFile } from '../lib/types.ts';
 import { answer, planned, type RenderContext, trackOf } from './context.ts';
+import { rendersDelegate } from './skills.ts';
 
 /**
  * One file per rule under `~/.claude/rules/`, never a managed section spliced into the user's
@@ -117,7 +118,7 @@ function modelRoutingRule(ctx: RenderContext): PlannedFile | null {
   const action =
     mode === 'warn-only'
       ? 'If they do not match, say so in one line and carry on.\n'
-      : DELEGATE_OR_STOP;
+      : delegateOrStop(ctx);
 
   return planned(
     ctx,
@@ -127,7 +128,20 @@ function modelRoutingRule(ctx: RenderContext): PlannedFile | null {
   );
 }
 
-const DELEGATE_OR_STOP = `If they do not, pick one of these two, never a third:
+/**
+ * delegate-autopilot D6 and §4.3: where `/delegate` renders, "a Deep subagent never builds" gains
+ * its one named exception, in the same paragraph. Everywhere else the paragraph is unchanged. The
+ * clause naming `/autopilot` arrives with that skill (BD-14).
+ */
+function delegateOrStop(ctx: RenderContext): string {
+  if (!rendersDelegate(ctx)) return `${DELEGATE_OR_STOP_HEAD}\n${DELEGATE_OR_STOP_TAIL}`;
+  return `${DELEGATE_OR_STOP_HEAD}\n${DEEP_EXCEPTION}\n${DELEGATE_OR_STOP_TAIL}`;
+}
+
+const DEEP_EXCEPTION = `One exception, and only one: a Deep row may be built by a Deep subagent when I named that row
+myself, by running \`/delegate\` on it, and that build then gets an independent Deep review.`;
+
+const DELEGATE_OR_STOP_HEAD = `If they do not, pick one of these two, never a third:
 
 1. **Delegate it, in session — for a review or a sweep.** Spawn a subagent with the model
    parameter set to the assigned model and hand it the whole prompt. This file is the
@@ -141,8 +155,9 @@ const DELEGATE_OR_STOP = `If they do not, pick one of these two, never a third:
 Prefer 1 when the task's whole output is a verdict or a list — a subagent keeps only its final
 text, which is all a review or a sweep produces. Prefer 2 when the task builds, needs my
 decisions along the way, or when the context already built is worth more than the work; a Deep
-subagent never builds, because the boundary discards the sustained reasoning that tier is for.
-Never do the work yourself on the wrong model, and never quietly downgrade an assignment because
+subagent never builds, because the boundary discards the sustained reasoning that tier is for.`;
+
+const DELEGATE_OR_STOP_TAIL = `Never do the work yourself on the wrong model, and never quietly downgrade an assignment because
 the task looks small from here — "it turned out to be simple" is a judgement only the assigned
 model gets to make. If an assignment looks wrong, say so and ask; do not overrule it.
 

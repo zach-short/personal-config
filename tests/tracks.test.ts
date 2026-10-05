@@ -191,6 +191,13 @@ const COMMIT_PARAGRAPH = '**Commits are the owner’s.**';
  * with a message of its own. Unconditional template text again: the same three keys, 71 still.
  * `commits.md` does not move, because only `AGENT_COMMITS` gained a line and every variant here
  * answers `print-blocks`.
+ *
+ * **One file appeared and one moved on 2026-10-04, board row 83 (delegate-autopilot Phase 1).**
+ * `skills/delegate/SKILL.md` is new in every variant: it ships on code + full + git with `skills:
+ * all`, which is exactly this shape (D1). `rules/model-routing.md` moved in every variant, because
+ * where `/delegate` renders, `delegate-or-stop` gains its one Deep exception (D6, §4.3, BD-1). One
+ * new key and one moved key per variant, 71 → 74, and no other key moved. The `/autopilot` phase
+ * moves the same `model-routing.md` keys again (BD-14).
  */
 describe('§3.1 row 1 — code + full + git is the 0.3.0 output, byte for byte bar one skill', () => {
   const FULL = answersFor(CODE_FULL_GIT);
@@ -222,7 +229,7 @@ describe('§3.1 row 1 — code + full + git is the 0.3.0 output, byte for byte b
   }
 
   test('the snapshot is not empty', async () => {
-    expect(Object.keys(await golden()).length).toBe(71);
+    expect(Object.keys(await golden()).length).toBe(74);
   });
 
   for (const [variant, { answers, plan }] of Object.entries(VARIANTS)) {

@@ -6,8 +6,10 @@ import { fill } from '../lib/template.ts';
 import type { PlannedFile } from '../lib/types.ts';
 import {
   answer,
+  boardFile,
   hasBoard,
   isShortTrack,
+  ledgerFile,
   planned,
   type RenderContext,
   trackOf,
@@ -29,22 +31,38 @@ const LIGHT_SKILLS = ['close-out', 'handoff'] as const;
  * the phrasings a user actually types rather than describing the skill to itself.
  */
 export async function renderSkills(ctx: RenderContext): Promise<PlannedFile[]> {
+  return Promise.all(wantedSkills(ctx).map((name) => renderSkill(ctx, name)));
+}
+
+function wantedSkills(ctx: RenderContext): string[] {
   const choice = answer(ctx, 'skills', 'none');
   if (choice === 'none') return [];
-
   const offered = offeredSkills(ctx);
-  const wanted = choice === 'all' ? [...offered] : selected(ctx, offered);
-  return Promise.all(wanted.map((name) => renderSkill(ctx, name)));
+  return choice === 'all' ? [...offered] : selected(ctx, offered);
+}
+
+/**
+ * delegate-autopilot BD-1: `model-routing.md` names `/delegate` as the one exception to "a Deep
+ * subagent never builds", so the rules renderer asks this rather than repeating the offer's
+ * conditions, and the sentence and the skill cannot disagree.
+ */
+export function rendersDelegate(ctx: RenderContext): boolean {
+  return wantedSkills(ctx).includes('delegate');
 }
 
 /**
  * `/clean-up` drives `fold` and `archive`, and both refuse without an archive home — which only
  * the code + full track is asked for (setup-tracks `DESIGN.md` D26). Anywhere else its first
  * command would fail, and a skill whose first step fails is worse than no skill.
+ *
+ * `/delegate` needs a worktree per subagent, so git, and the full standard's gates for its
+ * auditor to re-run, which the short track has none of (delegate-autopilot D1). It renders on both
+ * work-record shapes (D22).
  */
 function offeredSkills(ctx: RenderContext): readonly string[] {
   if (trackOf(ctx).weight === 'light') return LIGHT_SKILLS;
-  return isShortTrack(ctx) ? SKILLS.filter((name) => name !== 'clean-up') : SKILLS;
+  if (isShortTrack(ctx)) return SKILLS.filter((name) => name !== 'clean-up');
+  return trackOf(ctx).usesGit ? [...SKILLS, 'delegate'] : SKILLS;
 }
 
 function selected(ctx: RenderContext, offered: readonly string[]): string[] {
@@ -55,7 +73,7 @@ function selected(ctx: RenderContext, offered: readonly string[]): string[] {
 
 async function renderSkill(ctx: RenderContext, name: string): Promise<PlannedFile> {
   const source = await readText(join(repoRoot(), 'templates', 'skills', `${name}.md`));
-  const filled = fill(source, variables(name, shapeOf(ctx)));
+  const filled = fill(source, variables(ctx, name, shapeOf(ctx)));
   const body = stampAfterFrontmatter(filled, stampLine(ctx.stamp));
   return planned(ctx, join(claudeSkillsDir(), name, 'SKILL.md'), `skill — /${name}`, body, {
     stamp: false,
@@ -92,11 +110,116 @@ function shapeOf(ctx: RenderContext): SkillShape {
   };
 }
 
-function variables(name: string, shape: SkillShape): Record<string, string> {
+function variables(
+  ctx: RenderContext,
+  name: string,
+  shape: SkillShape,
+): Record<string, string> {
   if (name === 'close-out') return closeOutVars(shape);
   if (name === 'handoff') return handoffVars(shape);
   if (name === 'clean-up') return cleanUpVars(shape);
+  if (name === 'delegate') return delegateVars(ctx, shape);
   return {};
+}
+
+/**
+ * `/delegate`. Rendered only for code + full + git (`offeredSkills`), so the two axes left are the
+ * work-record shape (D22: a board, or project folders recorded through the phase header) and the
+ * commit policy (D10). The tier names are the person's own, filled here so the template carries no
+ * model family name (D12). No `/autopilot` clause until that skill ships (BD-14, BD-17).
+ */
+function delegateVars(ctx: RenderContext, shape: SkillShape): Record<string, string> {
+  const commits = answer(ctx, 'commitPolicy', 'print-blocks') === 'agent-commits';
+  const vars = shape.folders ? delegateFolderVars() : delegateBoardVars(ctx, commits);
+  return {
+    ...vars,
+    TIER_TABLE: delegateTiers(ctx),
+    COMMIT_RULE: commits
+      ? [
+          'Commit on your own worktree branch, naming the exact files in both the `git add` and',
+          '  the commit. Never push and never merge. If a hook blocks the commit, print the two',
+          '  commit blocks and do not work around it.',
+        ].join('\n')
+      : 'Do not commit. Leave the change in the worktree, and list every untracked file it adds.',
+    AUDIT_SOURCE: commits
+      ? "It reproduces the change in its own worktree from the builder's branch."
+      : [
+          "It reproduces the change in its own worktree from the builder's diff against `HEAD`",
+          "(`git -C <builder's worktree> diff HEAD`) and the untracked files the builder listed.",
+        ].join('\n'),
+  };
+}
+
+/**
+ * The tier table as `tierTable` in `rules.ts` renders it (`<unset>` for an empty name, the Light
+ * row only where that tier is on), less its "Use for" column, which carries prose the template's
+ * own style rule forbids and which the skill does not need: the item names its tier.
+ */
+function delegateTiers(ctx: RenderContext): string {
+  const tiers = ctx.config.models;
+  const rows = [
+    `| Deep | ${tiers.deep || '<unset>'} |`,
+    `| Default | ${tiers.default || '<unset>'} |`,
+    `| Mechanical | ${tiers.fast || '<unset>'} |`,
+  ];
+  if (answer(ctx, 'modelLightEnabled') === 'yes')
+    rows.push(`| Light | ${tiers.light || '<unset>'} |`);
+  return `| Tier | Model |\n|---|---|\n${rows.join('\n')}`;
+}
+
+function delegateBoardVars(ctx: RenderContext, commits: boolean): Record<string, string> {
+  const ledger = ledgerFile(ctx);
+  const board = boardFile(ctx);
+  const state = commits ? 'committed on its branch and not merged' : '"not yet committed"';
+  return {
+    GATE_CLEARED: [
+      `On the board (\`${board}\`): an \`OPEN\` row with a model and a written prompt, every item`,
+      '  its "Waits on" names `DONE`, and no "scope first". Otherwise stop and run `/scope`.',
+    ].join('\n'),
+    RECORD_FILES: 'the ledger and the board are',
+    RECORD_FILES_OBJECT: `the ledger (\`${ledger}\`) or the board (\`${board}\`)`,
+    CLAIM: [
+      'Claim it with `personal-config passoff claim <n>` before spawning anything, so a parallel',
+      'session sees the claim.',
+    ].join('\n'),
+    RECORD: [
+      `Write one step in \`${ledger}\` at the next free number, read from the file now. Name`,
+      "  the builder's and the auditor's models, the worktree, the branch, the commit state",
+      `  (${state}), the relay passes, the verdict, each finding as \`open\`, and a Deep lift`,
+      "  as the person's call. Then mark the row `DONE` against that step, and post the `/close-out`",
+      '  hand-back blocks in chat.',
+    ].join('\n'),
+    HELD: [
+      'After that the row is `HELD`: its "Waits on" names the file the open findings are written in,',
+      '  and its section gets a dated note of what is done and what is left.',
+    ].join('\n'),
+  };
+}
+
+function delegateFolderVars(): Record<string, string> {
+  return {
+    GATE_CLEARED: [
+      'A `PLANNED` phase in its project folder, with its subagents and its done-when stated.',
+      '  Otherwise stop and run `/scope`.',
+    ].join('\n'),
+    RECORD_FILES: 'the project folders are',
+    RECORD_FILES_OBJECT: "the project folder's phase header, design or runtime-pass file",
+    CLAIM: [
+      'Mark the phase header `IN FLIGHT` before spawning anything, so a parallel session sees the',
+      'claim.',
+    ].join('\n'),
+    RECORD: [
+      "The phase header becomes `BUILT <date>`, with the builder's and the auditor's models, the",
+      '  worktree, the branch, the commit state, the relay passes, the verdict, each finding as',
+      "  `open`, and a Deep lift as the person's call. The design gets `As built:` notes where the",
+      "  build departed from a decision, and the runtime-pass file gets this phase's entries. Then",
+      '  post the `/close-out` hand-back blocks in chat.',
+    ].join('\n'),
+    HELD: [
+      'After that the phase is `HELD`, with a dated note in its header of what is done, what is left',
+      '  and where the open findings are written.',
+    ].join('\n'),
+  };
 }
 
 /**

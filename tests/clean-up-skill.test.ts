@@ -34,11 +34,12 @@ async function cleanUp(shape: Shape, workProfile: WorkProfile = 'ledger'): Promi
 }
 
 describe('who gets /clean-up', () => {
-  test('passes: code + full installs it beside the other four', async () => {
+  test('passes: code + full installs it beside the others, /delegate among them in git', async () => {
     const files = await render(CODE_FULL_GIT);
     expect(files.map((f) => f.path.split('/').at(-2)).sort()).toEqual([
       'clean-up',
       'close-out',
+      'delegate',
       'handoff',
       'passoff',
       'scope',

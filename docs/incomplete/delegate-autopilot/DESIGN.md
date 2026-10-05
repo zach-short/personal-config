@@ -662,6 +662,12 @@ How to measure this session: `personal-config context --sentinel "<a phrase from
 conversation>"`. A person's `/delegate` lands at the standard's context budget; under `/autopilot`,
 D14 governs.
 
+**As built, 2026-10-04 (board row 83, HANDOFF 103).** Two departures, both build-level calls in
+`PLAN.md`. The three clauses that say what happens "under `/autopilot`" are not in the Phase 1
+text, because that skill does not ship until Phase 2 (BD-17). The tier table has two columns,
+Tier and Model, with `tierTable`'s `<unset>` rule and Light-row condition and without its "Use
+for" column (BD-19). Everything else follows this outline in order, with the step numbers kept.
+
 ### 4.2 `/autopilot`
 
 **Frontmatter.** `name: autopilot`, D16's description, `disable-model-invocation: true`.

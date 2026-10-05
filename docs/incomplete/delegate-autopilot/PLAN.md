@@ -50,6 +50,19 @@ A second pass, run on `3fadd95` in the primary checkout by the session that wrot
 | G52 | A worktree session cannot write the primary checkout | HANDOFF 96: the harness refused an edit to the main checkout from a worktree session, and Zach inserted the rows by hand | `HANDOFF.md:1352` |
 | G53 | G20's citation is stale | `HANDOFF.md:1456` predates the folds; step 92 is at `HANDOFF.md:1266`, and its audit paragraph at `:1274` | the file |
 
+### Re-check for Phase 1, 2026-10-04, at `d9d7e1e` (rows 77, 78 and 79 committed)
+
+| # | At `d9d7e1e` | Citation |
+|---|---|---|
+| G1 | Holds | `src/render/skills.ts:17`, `:56` |
+| G2 | Holds | `src/render/skills.ts:24`, `:47` |
+| G4 | Holds | `src/questions/you.ts:384-403`, the `all` label at `:393` |
+| G9 | **Moved lines**, same text: "a Deep subagent never builds" | `src/render/rules.ts:143-144` |
+| G14 | Holds | `src/lib/write-plan.ts:20`, `:35` |
+| G41 | Holds | `src/render/context.ts:98-100`; `src/render/repo.ts:373-374` |
+| G42 | **Moved.** Row 78 added `hooks/personal-config/commit-policy` to every variant, so the golden holds 71 keys, pinned at `tests/tracks.test.ts:225`; the no-git pin of five skills is at `:312`. Phase 1 takes the golden from 71 to 74, and Phase 2 from 74 to 77 | `tests/tracks.test.ts:225`, `:312`; `tests/golden/full-track.json` |
+| G54 | An array `skills` answer renders no skill at all: `answer()` returns its fallback for a value that is not a string, so `renderSkills` reads `none` and `selected()` is never reached. Older than this effort, and outside its files | `src/render/context.ts:14-17`; `src/render/skills.ts`, `selected` |
+
 ## 1. Decisions taken since ratification
 
 Build-level calls that implement the design. Each carries its reversal. BD-14 and BD-15 change a
@@ -109,6 +122,20 @@ file a person reads, so they are named in GATE 2's question 7.
 - **BD-16. A held row's "Waits on" cell names the file its reason is written in**, the run's
   `RUNDOWN.md` or the row's findings, so `doctor`'s `HELD` rule passes (G48). *Reversal:* any other
   wording with a digit, a slash or an extension.
+- **BD-17. The Phase 1 `/delegate` text leaves out §4.1's `/autopilot` clauses**, the three
+  places it says what happens "under `/autopilot`": an owner question the opening round asked, a
+  Deep row the opening round lifted, and hand-back blocks that go to the rundown. BD-14 applies
+  the same rule to the sentence and the label: between the two commits, nothing names a skill
+  that does not exist yet. Phase 2 adds them, and owns `templates/skills/delegate.md` for it.
+  *Reversal:* write the clauses now.
+- **BD-18. `tests/clean-up-skill.test.ts` gains `delegate` in its list of what code + full + git
+  installs.** The file is not in Phase 1's list, but its first test pins the exact skill names on
+  that track, so it goes red the moment the offer changes. One name added, and the test's title.
+  *Reversal:* none; the pin is wrong without it.
+- **BD-19. The skill's tier table has two columns, Tier and Model**, where §4.1 asks for it "as
+  `tierTable` renders it". The `<unset>` rule and the Light row's condition are `tierTable`'s; its
+  "Use for" column is left out, because its text carries em dashes the template's style forbids,
+  and the item names its own tier. *Reversal:* add the column with that text reworded.
 
 ## 2. Phases
 
@@ -125,7 +152,21 @@ Board rows 83, 84 and 85 carry Phases 1, 2 and 3.
 
 ### Phase 1. `/delegate`
 
-**Status.** Not started. Board row 83. Waits on rows 77, 78 and 79.
+**Status.** `BUILT 2026-10-04`, not yet committed (HANDOFF 103). Board row 83.
+
+**As built.** Opus 5.5, in the primary checkout on `main` at `d9d7e1e`, with no subagent, as the
+phase says. Scope items 1 to 8 as written, with three build-level calls: BD-17 (no `/autopilot`
+clause in the skill yet), BD-18 (`tests/clean-up-skill.test.ts` gains one name) and BD-19 (a
+two-column tier table). The golden went from 71 to 74 keys (G42 moved), and the diff was exactly
+three new `skills/delegate/SKILL.md` keys and three moved `rules/model-routing.md` hashes. Gates:
+`bun run typecheck` 0, `bun run lint` clean over 162 files, `bun test` 1497 pass and 0 fail over
+76 files, `bun run doctor . examples` no findings. The rendered skill was read against §4.1 step by
+step, for a board and for project folders, under `print-blocks` and `agent-commits`; the rendered
+`model-routing.md` holds the sentence once, between "that tier is for." and "Never do the work
+yourself". `bun run setup --profile zach --yes --dry-run --projects-dir tests/fixtures` lists
+`~/.claude/skills/delegate/SKILL.md` as "no stamp, left alone". Found and left open:
+`docs/choices/config-weight.md` still says "five workflow skills" (`:6`, `:49`), a file outside
+this phase's list; and G54.
 
 **Scope.**
 

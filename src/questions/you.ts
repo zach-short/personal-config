@@ -390,7 +390,7 @@ export const YOU_QUESTIONS: Question[] = [
     options: [
       {
         value: 'all',
-        label: 'All of them — /close-out, /scope, /passoff, /handoff, /clean-up',
+        label: 'All of them — /close-out, /scope, /passoff, /handoff, /clean-up, /delegate',
         example: 'You type `/close-out`; the agent runs the whole end-of-work ritual',
         recommended: true,
       },
