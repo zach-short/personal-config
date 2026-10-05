@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# PreToolUse guard: refuses the git commands the owner reserved for themselves.
+# PreToolUse guard: refuses the git commands the owner reserved for themselves, and the ones that
+# throw away uncommitted work another session may own.
 # Exit 2 is the code Claude Code treats as "blocked, tell the model why" — stderr reaches the
 # model, so the message is the ritual it should follow instead.
 #
@@ -426,6 +427,103 @@ merge_writes_none() {
   fast_forward_only $((s + 1)) && refresh_without_autostash "$p" "$s"
 }
 
+# ---- Commands that throw away uncommitted work (board row 79, 2026-10-04) ----
+#
+# The rule the wizard writes forbids `git checkout --` and `git stash` to undo an experiment,
+# because both reach files another session is working on. This enforces that rule and the other
+# spellings of the same act: `checkout .` and `-f`, `restore` of the working tree, `reset --hard`
+# and `switch --discard-changes` or `-f`. `stash` is blocked in every form but `list` and `show`,
+# because `refs/stash` is shared by every worktree, so `drop`, `clear` and `pop` reach the stash
+# of every session. It fires under every commit policy, and in a linked worktree too.
+#
+# Not blocked, on purpose (the owner's answers of 2026-10-04): `git clean`, which the delete
+# guard decided to leave alone; `restore --staged` and a bare `reset`, which unstage and lose no
+# content; `stash list` and `stash show`, which only read.
+
+# Whether the shell can turn the word into other words after the guard has read it. The same test
+# as `is_literal` below, except that a brace pair is refused only where it expands (it holds a
+# comma or `..`), so a reflog name such as `HEAD@{1}` or `@{-1}` still passes.
+rewritable() {
+  case "$1" in
+    *'\'* | *'$'* | *'`'* | *'*'* | *'?'* | *'['*) return 0 ;;
+    *'{'*,*'}'* | *'{'*..*'}'*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# Whether $1 is a long flag git reads as $2. git takes any unambiguous abbreviation, so `--har`
+# is `--hard`. $3 is the shortest abbreviation that is unambiguous for this subcommand.
+abbreviates() {
+  ((${#1} >= $3)) || return 1
+  case "$2" in "$1"*) return 0 ;; esac
+  return 1
+}
+
+# Whether the short cluster $1 holds the letter $2. Letters in $3 take a value, and git reads the
+# rest of the cluster as that value, so the scan stops there: in `-bf`, `f` is a branch name.
+short_has() {
+  local w=${1#-} j=0 c
+  case "$1" in --* | -) return 1 ;; -*) ;; *) return 1 ;; esac
+  while ((j < ${#w})); do
+    c=${w:j:1}
+    [ "$c" != "$2" ] || return 0
+    case "$3" in *"$c"*) return 1 ;; esac
+    j=$((j + 1))
+  done
+  return 1
+}
+
+# `checkout` and `switch` throw away changes with `--` before a path, a whole-tree path, `-f` or
+# `--force`, and `--discard-changes`. `-b`, `-B`, `-c` and `-C` take a branch name as a value.
+checkout_discards() {
+  local i w
+  for ((i = $1; i < n; i++)); do
+    w=${words[i]}
+    case "$w" in -- | . | ./ | :/) return 0 ;; esac
+    abbreviates "$w" --force 3 && return 0
+    abbreviates "$w" --discard-changes 4 && return 0
+    short_has "$w" f bBcC && return 0
+  done
+  return 1
+}
+
+# `restore` writes the working tree unless it is told `--staged` (or `-S`) and not `--worktree`
+# (or `-W`). `-s` takes a commit as a value, so `-sS` restores the working tree from `S`.
+restore_discards() {
+  local i w staged=no
+  for ((i = $1; i < n; i++)); do
+    w=${words[i]}
+    abbreviates "$w" --worktree 3 && return 0
+    short_has "$w" W s && return 0
+    if [ "$w" = --staged ] || short_has "$w" S s; then staged=yes; fi
+  done
+  [ "$staged" = no ]
+}
+
+reset_discards() {
+  local i
+  for ((i = $1; i < n; i++)); do
+    abbreviates "${words[i]}" --hard 3 && return 0
+  done
+  return 1
+}
+
+# A word the shell can still rewrite blocks, and so does a command reached through `xargs`,
+# which adds words the guard cannot see: either could turn `checkout main` into `checkout -f`.
+discards_work() {
+  local p=$1 s=$2 i
+  reached_through_xargs "$p" && return 0
+  for ((i = s + 1; i < n; i++)); do
+    ! rewritable "${words[i]}" || return 0
+  done
+  case "${words[s]}" in
+    stash) case "${words[s + 1]:-}" in list | show) return 1 ;; esac ;;
+    checkout | switch) checkout_discards $((s + 1)) ;;
+    restore) restore_discards $((s + 1)) ;;
+    reset) reset_discards $((s + 1)) ;;
+  esac
+}
+
 # Every verb that writes a commit is the owner's, not only `commit` (board row 77, 2026-10-02).
 # A form earns a pass only by matching a carve-out exactly; an unknown flag never earns one.
 # Every commit blocks here, under every policy. The one commit `agent-commits` lets through has
@@ -443,6 +541,7 @@ git_blocks() {
     add) stages_everything $((s + 1)) ;;
     cherry-pick | revert | rebase | am) reached_through_xargs "$p" || ! backs_out $((s + 1)) ;;
     merge) reached_through_xargs "$p" || ! merge_writes_none "$p" "$s" ;;
+    stash | checkout | switch | restore | reset) discards_work "$p" "$s" && reason=discard ;;
     *) return 1 ;;
   esac
 }
@@ -476,6 +575,9 @@ is_blocked() {
 # One segment per shell separator, so `ls && git commit` is two commands and both are read.
 segments="${cmd//[;|&()]/$'\n'}"
 
+# Which message to print. `git_blocks` sets `discard` when the command throws away uncommitted
+# work, because that remedy is `cp`, not the commit ritual.
+reason=commit
 blocked=no
 while IFS= read -r segment; do
   [ -n "$segment" ] || continue
@@ -488,6 +590,17 @@ while IFS= read -r segment; do
 done <<<"$segments"
 
 [ "$blocked" = yes ] || exit 0
+
+if [ "$reason" = discard ]; then
+  cat >&2 <<'MESSAGE'
+Blocked: git stash, git checkout -- <path>, git checkout . or -f, git restore, git reset --hard
+and git switch --discard-changes reach files another session is working on.
+
+To undo an experiment, copy the file aside with `cp`, then restore it with `cp`.
+Do not look for a spelling that passes.
+MESSAGE
+  exit 2
+fi
 
 if [ "$policy" = agent-commits ]; then
   cat >&2 <<'MESSAGE'

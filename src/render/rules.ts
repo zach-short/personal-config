@@ -80,6 +80,9 @@ session's in-flight work. Name the exact files in the \`git add\` and again in t
 \`git commit\` takes the whole index. Use \`git add -N\` first for any file git has never seen,
 because \`--only\` silently drops untracked paths and the commit still typechecks.
 
+Never \`git checkout --\` or \`git stash\` to undo an experiment — both reach files that are not
+mine. Copy the file aside and restore it with \`cp\`.
+
 After a split commit, build HEAD in isolation before I push: gates run against the working tree,
 so a partial commit can leave the branch unbuildable while the tree is green.
 `;

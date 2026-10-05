@@ -184,6 +184,13 @@ const COMMIT_PARAGRAPH = '**Commits are the owner’s.**';
  * when git, matching it against the index with HEAD laid over it (`git ls-files --with-tree`),
  * finds anything but the word itself, so a directory removed by `git rm -r` or `git mv` cannot be
  * named; the message is unchanged, and the same three keys moved, 71 still.
+ *
+ * **One more moved on 2026-10-04, board row 79.** `commit-guard.sh` now also blocks the commands
+ * that throw away uncommitted work (`stash` but `list` and `show`, `checkout --`, `checkout .`
+ * and `-f`, `restore` of the working tree, `reset --hard`, `switch --discard-changes` and `-f`),
+ * with a message of its own. Unconditional template text again: the same three keys, 71 still.
+ * `commits.md` does not move, because only `AGENT_COMMITS` gained a line and every variant here
+ * answers `print-blocks`.
  */
 describe('§3.1 row 1 — code + full + git is the 0.3.0 output, byte for byte bar one skill', () => {
   const FULL = answersFor(CODE_FULL_GIT);

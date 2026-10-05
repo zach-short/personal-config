@@ -325,6 +325,52 @@ word walk's own gaps listed above, which pass under every policy. The `settings.
 not change, so an existing install gets all of this from a re-run: the script and the policy file
 are rewritten, and the merge adds nothing.
 
+## The commit guard also blocks throwing work away
+
+The commit rule has always said never to `git checkout --` or `git stash` to undo an experiment,
+because both reach files another session is working on. Until 2026-10-04 (board row 79) nothing
+enforced it, and the guard passed both, and `git reset --hard` with them. It now blocks the rule's
+two verbs and the other spellings of the same act, under every commit policy:
+
+- `git stash` in every form but `list` and `show`: `push`, `save`, `pop`, `apply`, `drop`,
+  `clear` and a bare `git stash`. Every worktree of a repository shares one stash, so `drop`,
+  `clear` and `pop` in one worktree reach the stash another session made in another. For that
+  reason the guard fires in a linked worktree too, not only in the main checkout.
+- `git checkout -- <path>`, `git checkout <rev> -- <path>`, `git checkout .`, `git checkout :/`
+  and `git checkout -f`.
+- `git restore <path>`, which writes the working tree. `git restore --staged <path>` passes,
+  unless `--worktree` or `-W` is beside it.
+- `git reset --hard`.
+- `git switch --discard-changes` and `git switch -f`.
+
+A long flag is caught in any abbreviation git accepts (`--har`, `--disc`), and `-f` inside a
+short cluster is caught unless a letter before it takes a value, so `git checkout -bf x` makes a
+branch named `f` and passes. As with the commit carve-outs, a word the shell can still rewrite
+blocks (a backslash, `$`, a backtick, a glob character, or a brace pair holding a comma or `..`),
+and so does a command reached through `xargs`. A reflog name such as `HEAD@{1}` or `@{-1}` holds
+no comma and passes. The message is its own, because the remedy is not the commit ritual: copy
+the file aside with `cp`, then restore it with `cp`.
+
+**Let through, on purpose:** `git stash list` and `git stash show`, which only read; `git restore
+--staged` and a bare `git reset`, which unstage and lose no content; and `git clean`, which is
+the delete guard's decision, below, and stays its own.
+
+**Why this grew when the delete guard does not.** The list is not new verbs found by objection.
+It is the two verbs a written rule already forbids, and the other spellings of the same command,
+which is the lesson in the guard's own history: `git -C . commit` passed while `git commit` was
+blocked. The decision is Zach's, of 2026-10-04 (board row 79, option A).
+
+*The strongest argument against it.* The delete guard said no to growing for a reason, and
+`reset --hard`, `restore` and `switch -f` are not on the rule's list, so "bounded by the rule" is
+a line this decision drew and the rule did not. It also makes the commit guard a guard for more
+than commits, and it blocks a session's undo of its own experiment, which is safe when the
+session is alone in the checkout.
+
+**Not caught:** `git checkout <path>` and `git checkout <rev> <path>` without `--`, since the
+guard cannot tell a path from a branch without asking git; `git reset --merge` and `--keep`;
+plumbing such as `git read-tree -u` and `git apply -R`; a git alias of your own for any of the
+above; and an editor or a redirect that writes over a file.
+
 ## What the delete guard catches, and what it does not
 
 If your work is not code, the same hook mechanism guards the step that is irreversible for you.

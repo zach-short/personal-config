@@ -84,6 +84,18 @@ The CLI. The working standard it installs is versioned separately — see
   backtick, a backslash, a brace or a glob now blocks under every policy, which closes
   `git commit${IFS}-am${IFS}x` and `git {commit,-m,x}`. The `settings.json` entry is unchanged,
   so a re-run rewrites the script and adds the file, and the merge adds nothing. `docs/choices/hooks.md` has the detail.
+- **The commit guard blocks the git commands that throw away uncommitted work.** The commit
+  rule has always said never to `git checkout --` or `git stash` to undo an experiment, because
+  both reach files another session is working on, and nothing enforced it. The guard now blocks
+  `git stash` in every form but `list` and `show`, `git checkout -- <path>`, `git checkout .`
+  and `-f`, `git restore` of the working tree, `git reset --hard`, and `git switch
+  --discard-changes` and `-f`, with abbreviated flags, under every commit policy and in a linked
+  worktree too, since every worktree shares one stash. It prints a message of its own: copy the
+  file aside with `cp`, then restore it with `cp`. Still let through: `git clean` (the delete
+  guard's recorded decision), `git restore --staged`, a bare `git reset`, `git stash list` and
+  `git stash show`. Under `agent-commits` the rule file now carries the same line, so a block
+  explains a rule the agent has read. `docs/choices/hooks.md` has the detail. An installed guard
+  changes when `setup` is run again.
 
 ## 0.7.0 — 2026-09-29
 
