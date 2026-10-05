@@ -176,12 +176,17 @@ asked in the hook's own directory; one exported in an earlier command, as in
 --ff-only main`, or an `export GIT_CONFIG_GLOBAL=<file>` before it; and one in another config
 file reached with `HOME=` or `XDG_CONFIG_HOME=` in front of the merge, since only `GIT_*`
 assignments are read. The last four are pinned passing. The word walk itself has gaps that pass
-plain `git commit` as well, and which the hook did not catch before row 77 either: `git
-{commit,-m,x}`, `echo commit -m x | xargs git`, `xargs -n 1 git ...`, `xargs` or `sudo` spelled
-with a path or given an option that takes an argument (`sudo -u me git rebase main`), a `-C`
-argument quoted around a space (`git -C "a b" merge ...`), and `gh${IFS}pr merge 1`. They are
-open, not settled. It is a guard against a session reaching for a commit, not against a
-determined one.
+plain `git commit` as well, and which the hook did not catch before row 77 either:
+`echo commit -m x | xargs git`, `xargs -n 1 git ...`, `xargs` or `sudo` spelled with a path or
+given an option that takes an argument (`sudo -u me git rebase main`), a `-C` argument quoted
+around a space (`git -C "a b" merge ...`), and `gh${IFS}pr merge 1`. The audit of row 78
+(2026-10-04) found two more of the same kind, each of which passes under every commit policy:
+`git -c alias.x=commit x -a -m x`, a commit under an alias the command defines for itself, and
+`env -u FOO git commit -a -m x`, where an `env` option that takes an argument hides `git` from
+the walk. They are open, not settled. Two that were open are caught since row 78: a git
+subcommand word holding a backslash, `$`, a backtick, `{`, `}`, `*`, `?` or `[` blocks, so
+`git {commit,-m,x}` and `git commit${IFS}-am${IFS}x src/a.ts` are refused. It is a guard against
+a session reaching for a commit, not against a determined one.
 
 **Over-blocked:** `gh pr list --search merge`, and anything else with `merge` somewhere after
 `pr`. That is the direction to err in, for the reason in the next paragraph.
@@ -190,6 +195,135 @@ It needs `jq` on your `PATH`. Without it the hook says so and falls back to matc
 payload, which over-blocks — a `grep` for the phrase gets refused. That is the deliberate
 direction to fail in: over-blocking costs one message, and a commit you did not make cannot be
 taken back out of a checkout your other sessions are working in.
+
+## The commit guard follows your commit policy
+
+Since 2026-10-04 (board row 78) the guard reads your answer to the `commit-policy` question, so
+the guard and `~/.claude/rules/commits.md` say the same thing. Before that, a person who let the
+agent commit and took this question's recommendation got a rule telling the agent to commit each
+slice and a guard that refused every commit. The tool contradicted itself on the question it most
+wants to get right.
+
+The answer reaches the guard in a file beside it, `~/.claude/hooks/personal-config/commit-policy`,
+which holds one word: `print-blocks`, `agent-commits` or `no-rule`. It is written whenever the
+guard is.
+
+- **`print-blocks`** (only you commit): the guard behaves as the sections above describe. Every
+  commit is blocked, and the message asks for the two printed blocks.
+- **`agent-commits`** (the agent may commit, never push): one plain commit command is let
+  through, described below. Every other commit is blocked, and so is everything row 77 blocks.
+  The message is different: it tells the agent how to write the one command that passes, never
+  to push, and never to run `git add -A`.
+- **`no-rule`** (no commit rule): the guard blocks every commit, exactly as it does under
+  `print-blocks`, with the same message. The file still says `no-rule`, so your answer is on
+  record, and the guard reads that word as `print-blocks`.
+
+*Why `no-rule` blocks every commit.* That answer writes no commit rule, but the person also took
+the commit guard, and the guard's own rule is that commits are the owner's. Letting commits
+through under `no-rule` would be a commit rule nobody chose. If you want the agent to commit,
+answer `agent-commits`. The first build of row 78 read `no-rule` as `agent-commits`; Zach reversed
+that on 2026-10-04.
+
+*Why the verbs row 77 added stay blocked under `agent-commits`.* A cherry-pick, a revert, a
+merge, a rebase, `am` and `pull` each write a commit that names no file, which is the commit the
+`agent-commits` rule itself forbids.
+
+**A missing file means `print-blocks`,** and so does a file the guard cannot read, an empty one,
+or one holding any other word. That is the guard's behaviour before the file existed, and it is
+the direction to fail in. The guard reads the file by one rule. It drops a trailing carriage
+return from each line, so a file saved with Windows line endings still reads. It skips lines
+starting with `#`, which is where the stamp sits, and blank lines. Exactly one line must be left,
+and commits pass only when that line is exactly `agent-commits`, with nothing around it. Two
+words on two lines, a word split across lines, an extra word or spaces around the word all read
+as `print-blocks`.
+
+**The one commit `agent-commits` lets through.** The guard decides on the whole command as the
+agent wrote it, before it splits anything, and lets it through only when every one of these
+holds:
+
+- It starts with the word `git` and then the word `commit`. Nothing comes before `git`: no
+  `cd x &&`, no `env`, no variable assignment, no `sh -c`. Nothing comes between the two: no
+  `-C <dir>`, no `-c <key>=<value>`, no `--git-dir`.
+- Its words are separated by one space or one tab. Two separators in a row, one at the start or
+  the end, a newline, a carriage return and every other control character block.
+- Outside quotes a word holds only letters, digits and `. _ / @ = + , : -`, and does not start
+  with `=`. So `& | ; ( ) < > \ $ # ~ * ? [ ] { } !`, a backtick and an unpaired quote block
+  wherever they stand outside a quoted message. That rules out chaining, a pipe, a redirect, a
+  comment, any expansion and any glob.
+- A quoted string is one whole word, and it is allowed only as the value of `-m` or
+  `--message`, as the next word or after `--message=`. Single quotes may hold anything but a
+  single quote. Double quotes may not hold `$`, a backtick, a backslash or `!`. Inside quotes the
+  shell reads `; & | ( ) < > #` and spaces as text, so a message may hold them.
+- Every flag is on this list, spelled exactly: `-o` or `--only`, `-q` or `--quiet`, `-v` or
+  `--verbose`, `-s` or `--signoff`, `-n` or `--no-verify`, and `--no-edit`; and, with a value,
+  `-m` or `--message`, `-F` or `--file`, `-C` or `--reuse-message`, `-c` or `--reedit-message`,
+  `-t` or `--template`, `--author`, `--date`, `--trailer` and `--cleanup`. Short flags combine as
+  git combines them (`-qm "fix x"`), a long flag's value may follow `=` or come as the next word,
+  and `--` may stand before the files. git takes any unambiguous abbreviation of a long flag, so
+  `--al` is `--all`; the guard takes none, so `--al` blocks. `-a`, `--all`, `-i`, `--include`,
+  `-p`, `--patch`, `--interactive`, `--amend`, `--allow-empty`, `--pathspec-from-file`,
+  `--fixup`, `--squash`, `-e`, `-u`, `-S` and every other flag block.
+- At least one file is named, and every word that is neither a flag nor a flag's value names
+  one file.
+
+`-C <commit>` and `-c <commit>` stay on the list. They reuse that commit's message and its
+author, and stage only the files named, so they cannot commit more than those files; a commit
+made with them can carry another person's name as author. git's own `-C <dir>` and
+`-c <key>=<value>`, which come before `commit`, are a different pair and always block here.
+
+**What counts as naming a file.** An unquoted word that is not `.` or `..`, has no `..`
+component, does not start with `-` or `:`, does not end in `/` or `/.`, and is not a directory,
+or a symbolic link to one, in the directory the guard runs in. `.` takes every changed file
+below the current directory and `:/` is the whole tree. git resolves `..` by text, so
+`nosuch/../lib` and `src/a.ts/../../lib` are both the whole of `lib/`, though no directory
+exists at either spelling for a test to find. A word is also refused when git would take more
+than the named path for it, counting the index and the last commit (HEAD) as well as the disk.
+`git commit <paths>` matches each word against the index with HEAD laid over it, and a word
+matches every entry below it. So a directory removed with `rm -r`, `git rm -r`, `git mv` or
+`git rm -r --cached` cannot be named: the disk, the index or both no longer show it, HEAD still
+does, and the commit would record the deletion of every file under it. To decide, the guard runs
+`git ls-files --with-tree=<HEAD> -- <word>` in the directory it runs in, which is that same
+overlay read by git's own matching code, and lets the word through only when git prints the word
+itself or nothing. A new repository has no HEAD yet, so its first commit is checked against the
+index alone. The command is read-only: it takes no lock, works while another process holds the
+index lock, and does not write the index. `git commit --dry-run` would answer the same question
+more directly, and was not used because it takes the index lock while it runs, so another
+session's `git add` in the same checkout fails during that time. A word git prints another way,
+such as `./a.ts`, is refused, and so is any word when git cannot answer, as outside a
+repository. A deleted file named by its own path, such as `gone/d.ts`, is still allowed, because
+it matches exactly one entry. A quoted word is never a file here, so `'.'` and `""` cannot stand
+in for one.
+
+*Why the decision reads the whole command.* The first build split the command at `; & | ( )`
+and asked whether one piece was a commit that named its files. The shell reads the whole text,
+not the piece, and two audits found commands where the two readings differ and git stages more
+than the named files: a redirect or a `#` that removes the file word, a `..` path,
+`&>/dev/null` followed by `.` or `:/` or `--amend`, a backslash at the end of a line that joins
+the next line, and the zsh glob group `s(r)c`. Patching each one would leave the next. So the
+allow decision is now made on the entire text, and it accepts one plain shape. Anything a shell
+could join, split, expand, redirect or run fails the shape, falls through to the word walk above,
+and is blocked, because the walk blocks every commit. An unquoted glob fails the shape, so
+neither bash nor zsh can expand a file word into other names.
+
+*The strongest argument against it.* It refuses commands that are safe, so the agent has to
+rewrite them: `cd repo && git commit src/a.ts -m "fix x"`, `git -C repo commit ...`, a commit
+with `2>&1` on the end, a file name with a space or a character outside the list, a message
+holding `$`, and two spaces between words all block. The check of each word holds only at the
+moment the guard runs, in the guard's directory. And the guard reads a file on every Bash call,
+which is a second file to stamp, preview and undo, and it runs git for each commit command it
+might allow: one `git rev-parse` and one `git ls-files` for each named file, and a
+`git symbolic-ref` and a `git show-ref` in a repository with no commit yet. That cost is
+accepted because only a commit command that already has the allowed shape gets this far, every
+other Bash call runs no git at all, and the alternative is a copy of git's path matching inside
+the guard, which two audits showed misses cases git does not.
+
+**Not caught under `agent-commits`:** a directory the shell reaches but the guard does not see,
+because an earlier command ran `cd` or created the directory after the guard looked, since git
+then commits everything below it; a file that holds another session's edits as well as yours,
+since naming it commits both; a `git` alias or shell function of your own named `git`; and the
+word walk's own gaps listed above, which pass under every policy. The `settings.json` entry does
+not change, so an existing install gets all of this from a re-run: the script and the policy file
+are rewritten, and the merge adds nothing.
 
 ## What the delete guard catches, and what it does not
 
@@ -229,7 +363,9 @@ read. Keep anything you cannot lose in git, or in a backup you control.
 ## What it writes and where
 
 `~/.claude/hooks/personal-config/commit-guard.sh`, `delete-guard.sh`, `session-banner.sh` and
-`completion-gate.sh` — whichever of the four this run installs — plus a **merge** into
+`completion-gate.sh` (whichever of the four this run installs) and, beside the commit guard,
+`commit-policy`, the one word the guard reads (see "The commit guard follows your commit
+policy" above). Plus a **merge** into
 `~/.claude/settings.json` giving each one a `PreToolUse`, `SessionStart` or `Stop` entry. Never
 an overwrite: existing hooks are preserved, and duplicate entries are not added. The merge is
 shown as a diff, confirmed on its own, and the previous file is backed up.
@@ -319,3 +455,9 @@ document too.
 
 To keep the gate but stop it running your suite, clear `gateCommand` in that repo's
 `.personal-config.json`: the placeholder scan still runs, and nothing else does.
+
+To make the commit guard block every commit again whatever your commit policy, delete
+`~/.claude/hooks/personal-config/commit-policy`, or make `print-blocks` or `no-rule` the one
+line in it that is neither blank nor a `#` comment. A re-run of `setup` writes your answer back,
+so change the answer too if you want it to stay. `personal-config undo` restores the file, or
+removes it, as it was before the run.

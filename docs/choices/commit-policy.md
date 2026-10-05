@@ -71,6 +71,12 @@ yourself if you want only one.
 
 Choosing a hook as well (see `hooks`) adds `~/.claude/hooks/personal-config/commit-guard.sh`
 and an entry in `~/.claude/settings.json`, so the rule is enforced rather than merely written.
+Beside the guard it writes `commit-policy`, one word holding this answer, so the guard enforces
+the rule you chose. Under **Only me** it blocks every commit. Under **No rule** it also blocks
+every commit: you asked for no written rule, but the guard you took keeps its own, that commits
+are yours. Under **The agent may commit** it lets through one plain command,
+`git commit <files> -m "<message>"`, with the files named and nothing else in the command, and
+still blocks a push, staging everything, and every other commit. `hooks.md` has the detail.
 
 ## How to undo it
 

@@ -181,8 +181,10 @@ function settings(files: { path: string; contents: string }[]): Record<string, u
 describe('every track that installs hooks installs the gate', () => {
   test('passes: the full track keeps both existing hooks and adds Stop', async () => {
     const files = await renderHooks(testContext({ ...DEFAULT_ANSWERS, hooks: 'both' }));
+    // `commit-policy` rides with the guard: the guard reads it from beside itself (board row 78).
     expect(paths(files)).toEqual([
       'commit-guard.sh',
+      'commit-policy',
       'session-banner.sh',
       'completion-gate.sh',
       'settings.json',

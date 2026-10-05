@@ -60,6 +60,30 @@ The CLI. The working standard it installs is versioned separately — see
   from an earlier command or through another `HOME` or `XDG_CONFIG_HOME`.
   `docs/choices/hooks.md` lists both halves. An installed guard changes when `setup` is run
   again.
+- **The commit guard follows the commit policy.** A person who answered that the agent may
+  commit, and took the recommended hook, got a rule telling the agent to commit each slice and a
+  guard that refused every commit. The wizard now writes
+  `~/.claude/hooks/personal-config/commit-policy` beside the guard whenever it writes the guard:
+  one word, the `commit-policy` answer, under a `#` stamp. Under `agent-commits` the guard lets
+  through one command shape, read on the whole command before anything splits it: `git commit`,
+  then words one space or tab apart, made only of letters, digits and `. _ / @ = + , : -`, with a
+  quoted string allowed only as the `-m` or `--message` value, every flag on a short exact list,
+  and at least one named file that is not `.`, `..`, a `..` path, a `:` pathspec or a directory.
+  A word is also refused when git would take more than the named path for it, counting the index
+  and HEAD as well as the disk, so a directory removed with `rm -r`, `git rm -r`, `git mv` or
+  `git rm -r --cached` cannot be named. The guard asks git with the read-only
+  `git ls-files --with-tree=<HEAD> -- <word>`, the overlay `git commit <paths>` matches against,
+  and refuses the word when git prints anything but the word itself or nothing, or cannot say, as
+  outside a repository. Anything else blocks: chaining, a pipe, a redirect, a comment, a newline,
+  any expansion or glob, `cd` or `env` or `git -C` in front, `-a`, `-i`, `-p`, `--amend`, an
+  abbreviated flag, a push, the stage-everything forms of `git add`, and the six verbs above. A
+  message may now hold `; & | ( ) < > #` inside quotes. The guard prints a message of its own
+  that says what is allowed. `no-rule` blocks every commit, as `print-blocks` does. A missing
+  file, an unreadable one, or anything but exactly one line holding exactly `agent-commits`
+  means `print-blocks`, which is the behaviour before. A git subcommand word holding `$`, a
+  backtick, a backslash, a brace or a glob now blocks under every policy, which closes
+  `git commit${IFS}-am${IFS}x` and `git {commit,-m,x}`. The `settings.json` entry is unchanged,
+  so a re-run rewrites the script and adds the file, and the merge adds nothing. `docs/choices/hooks.md` has the detail.
 
 ## 0.7.0 — 2026-09-29
 

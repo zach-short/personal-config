@@ -167,6 +167,23 @@ const COMMIT_PARAGRAPH = '**Commits are the owner’s.**';
  * per variant, 68 before and after, and no other key moved. It moved once more the same day,
  * when the audit of row 77 made the carve-outs refuse brace, glob and `xargs` spellings; the
  * same three keys, 68 still.
+ *
+ * **One file appeared and one moved on 2026-10-04, board row 78.** `hooks/personal-config/
+ * commit-policy` is new in every variant: it is planned whenever the commit guard is, and holds
+ * the `commitPolicy` answer, `print-blocks` here, under a `#` stamp. `commit-guard.sh` moved
+ * again, because it now reads that file and lets a commit that names its files through under
+ * `agent-commits`. One new key and one moved key per variant, 68 → 71, and no other key moved.
+ * The guard moved once more the same day, when the audit of row 78 made it refuse an unquoted
+ * redirect or comment and a `..` path, and read the policy file by a stricter rule; the same
+ * three `commit-guard.sh` keys, 71 still. And once more, still 2026-10-04, for the redesign Zach
+ * chose after the second audit: the allow decision reads the whole raw command, `no-rule` blocks
+ * every commit, and the agent-commits message was redrafted; the same three keys, 71 still. And
+ * once more after the third audit: a path word is refused when the index holds entries below
+ * it, or when git cannot say, and the message names `!` and a backslash inside double quotes;
+ * the same three keys, 71 still. And once more after the fourth audit: a path word is refused
+ * when git, matching it against the index with HEAD laid over it (`git ls-files --with-tree`),
+ * finds anything but the word itself, so a directory removed by `git rm -r` or `git mv` cannot be
+ * named; the message is unchanged, and the same three keys moved, 71 still.
  */
 describe('§3.1 row 1 — code + full + git is the 0.3.0 output, byte for byte bar one skill', () => {
   const FULL = answersFor(CODE_FULL_GIT);
@@ -198,7 +215,7 @@ describe('§3.1 row 1 — code + full + git is the 0.3.0 output, byte for byte b
   }
 
   test('the snapshot is not empty', async () => {
-    expect(Object.keys(await golden()).length).toBe(68);
+    expect(Object.keys(await golden()).length).toBe(71);
   });
 
   for (const [variant, { answers, plan }] of Object.entries(VARIANTS)) {

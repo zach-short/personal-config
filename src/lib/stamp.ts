@@ -39,6 +39,9 @@ const STYLES: Record<string, CommentStyle> = {
   ts: { open: '//', close: '' },
   sh: { open: '#', close: '' },
   yml: { open: '#', close: '' },
+  // A plain data file a shell script reads, such as the commit guard's `commit-policy`. Its own
+  // key rather than `sh`, because `planned()` makes every `sh` file executable.
+  conf: { open: '#', close: '' },
 };
 
 export function stampLine(parts: StampParts, extension = 'md'): string {

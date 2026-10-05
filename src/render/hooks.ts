@@ -31,8 +31,10 @@ export async function renderHooks(ctx: RenderContext): Promise<PlannedFile[]> {
   if (nothing && style === null && !docCheck) return [];
 
   const files: PlannedFile[] = [];
-  if (want.guard)
+  if (want.guard) {
     files.push(await scriptFile(ctx, 'commit-guard.sh', 'hook — blocks git commit/push'));
+    files.push(commitPolicyFile(ctx));
+  }
   if (want.deleteGuard)
     files.push(await scriptFile(ctx, 'delete-guard.sh', 'hook — blocks rm/rmdir/unlink'));
   if (want.banner)
@@ -118,6 +120,37 @@ async function scriptFile(
   // surface a raw ENOENT and a long absolute path through the CLI's error line.
   const source = await template(join('hooks', name));
   return planned(ctx, join(claudeHooksDir(), name), label, source, { extension: 'sh' });
+}
+
+/** The three answers the guard knows. Anything else is written as the safest of them. */
+const COMMIT_POLICIES = ['print-blocks', 'agent-commits', 'no-rule'];
+
+/**
+ * The commit policy, one word, in a file beside the commit guard (board row 78, option A, the owner's
+ * answer of 2026-10-04). The guard reads it on every call, so the guard and `~/.claude/rules/commits.md`
+ * say the same thing: under `agent-commits` a commit that names its files passes.
+ *
+ * A file and not an argument in the `settings.json` command, because the merge never replaces an
+ * entry (`gateCommand` below): a changed command string would sit beside the old one, and every
+ * existing install would run the guard twice. A re-run rewrites this file and the script, and
+ * leaves the settings entry as it was.
+ *
+ * It carries a stamp like every planned file, as a `#` comment on line 1, so a re-run may
+ * overwrite it and `undo` can restore it. The guard skips every line that starts with `#`, and
+ * reads a missing file, an unreadable one or an unknown word as `print-blocks`.
+ */
+function commitPolicyFile(ctx: RenderContext): PlannedFile {
+  const answered = answer(ctx, 'commitPolicy', 'print-blocks');
+  const policy = COMMIT_POLICIES.includes(answered) ? answered : 'print-blocks';
+  const body = [
+    '# Read by commit-guard.sh, beside this file. One word: print-blocks, agent-commits or no-rule.',
+    '# A missing file, or any other word, is read as print-blocks.',
+    policy,
+    '',
+  ].join('\n');
+  return planned(ctx, join(claudeHooksDir(), 'commit-policy'), 'hook — commit policy', body, {
+    extension: 'conf',
+  });
 }
 
 /**
