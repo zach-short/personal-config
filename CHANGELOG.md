@@ -3,7 +3,7 @@
 The CLI. The working standard it installs is versioned separately — see
 [`standard/CHANGELOG.md`](standard/CHANGELOG.md).
 
-## Unreleased
+## 0.8.0 — 2026-10-05
 
 ### Added
 
@@ -123,6 +123,13 @@ The CLI. The working standard it installs is versioned separately — see
   `git stash show`. Under `agent-commits` the rule file now carries the same line, so a block
   explains a rule the agent has read. `docs/choices/hooks.md` has the detail. An installed guard
   changes when `setup` is run again.
+
+### Fixed
+
+- **The long form on the whole method or a lighter setup names the right number of skills.** It
+  said five. It now gives the count for each case: seven for code work in git with a board, six
+  with project folders, five for code work outside git, four for non-code work and two for the
+  lighter setup, each with the reason a skill is left out.
 
 ## 0.7.0 — 2026-09-29
 
