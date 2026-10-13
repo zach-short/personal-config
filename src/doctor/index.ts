@@ -11,10 +11,12 @@ import { commitPlan, resolvePlan } from '../lib/write-plan.ts';
 import { standardVersion } from '../render/standard.ts';
 import { type Rerender, rerender } from './rerender.ts';
 import { absenceEvidence } from './rules/absence-evidence.ts';
+import { alwaysOnWeight } from './rules/always-on-weight.ts';
 import { archiveIndex } from './rules/archive-index.ts';
 import { archivedCitations } from './rules/archived-citations.ts';
 import { boardStatus } from './rules/board-status.ts';
 import { ignoredFiles, ignoreFix, ignoreTarget } from './rules/ignored.ts';
+import { ledgerFoldCeiling } from './rules/ledger-fold-ceiling.ts';
 import { placeholders } from './rules/placeholders.ts';
 import { relativeDates } from './rules/relative-dates.ts';
 import { settledSupersession } from './rules/settled-supersession.ts';
@@ -53,11 +55,16 @@ export async function runDoctorOn(
   expectation: DoctorExpectation,
 ): Promise<DoctorReport> {
   const docs = await collectDocs(root);
+  // Built per root, because its ceiling is an answer and answers are saved per repo.
+  const docRules = [
+    ...DOC_RULES,
+    ledgerFoldCeiling(expectation.config.answers['doctor.ledgerCharCeiling']),
+  ];
 
   const fromDocs = docs
     .filter((doc) => !doc.isTemplate)
     .flatMap((doc) =>
-      DOC_RULES.filter((rule) => rule.appliesTo(doc)).flatMap((rule) => rule.check(doc)),
+      docRules.filter((rule) => rule.appliesTo(doc)).flatMap((rule) => rule.check(doc)),
     );
 
   const fromArchive = (
@@ -78,6 +85,7 @@ export async function runDoctorOn(
   // Not gated on `configured`: R8 guards a decision record, and a repo keeping one has not
   // necessarily been through this wizard. The git read answers null wherever it cannot apply.
   const fromSettled = await settledSupersession(root, docs);
+  const fromWeight = await alwaysOnWeight(root, expectation.config.answers);
 
   return {
     findings: sort([
@@ -87,6 +95,7 @@ export async function runDoctorOn(
       ...fromCitations,
       ...fromIgnore,
       ...fromSettled,
+      ...fromWeight,
     ]),
     checked: docs.length,
   };

@@ -1,11 +1,10 @@
 # {{PROJECT_NAME}}
 
-> **Before writing or editing any code, read the matching code standard in full —
-> {{CONVENTIONS_LIST}}. Not optional, not conditional on task size. If you have not read it
-> this session, read it now.**
+> **Code standard:** {{CONVENTIONS_LIST}}. It answers how code is written here; open it before
+> writing or editing code, and look up the rule you need.
 
-> **Before scoping, planning or building a feature, read `{{STANDARD_PATH}}`.** It is the
-> process standard. Do not ask how the flow works; it is written down.
+> **Process standard:** `{{STANDARD_PATH}}`. It answers how a feature is scoped, planned and
+> built; open the heading for the step you are on.
 
 ## The rules that get broken
 

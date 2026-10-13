@@ -108,7 +108,7 @@ describe('the session banner announces a board row', () => {
       `${VOCABULARY}\n\n${HEADER}\n| 1 | Ship it | \`OPEN\` | D | A | — | — |\n`,
     );
     expect(out).not.toContain('Status vocabulary');
-    expect(out).toContain('| 1 | Ship it |');
+    expect(out).toContain('Next open: 1 · Ship it');
   });
 
   test('passes: a board whose first row is DONE announces the first OPEN one', async () => {
@@ -117,7 +117,7 @@ describe('the session banner announces a board row', () => {
       '| 2 | Open thing | `OPEN` | D | A | — | — |',
     ].join('\n');
     const out = await banner(`${VOCABULARY}\n\n${HEADER}\n${rows}\n`);
-    expect(out).toContain('| 2 | Open thing |');
+    expect(out).toContain('Next open: 2 · Open thing');
     expect(out).not.toContain('Done thing');
   });
 
@@ -125,13 +125,28 @@ describe('the session banner announces a board row', () => {
     const out = await banner(
       `${VOCABULARY}\n\n${HEADER}\n| 1 | Done thing | \`DONE — HANDOFF 2\` | D | A | — | — |\n`,
     );
-    expect(out).toContain('no OPEN rows');
+    expect(out).toContain('Next open: none');
   });
 
   test('passes: a repo with no board file at all prints only the ledger line', async () => {
     const out = await banner(null);
-    expect(out).toContain('Ledger: HANDOFF.md');
-    expect(out).not.toContain('Board:');
+    expect(out).toContain('HANDOFF.md: what is true here');
+    expect(out).not.toContain('PASSOFF.md');
+    expect(out).not.toContain('Next open');
+  });
+
+  test('violates the old behaviour: no line orders a full read', async () => {
+    const out = await banner(
+      `${HEADER}\n| 1 | Ship it | \`OPEN\` | D | A | — | \`a/b.ts\` |\n`,
+    );
+    expect(out.toLowerCase()).not.toContain('in full');
+    expect(out.toLowerCase()).not.toContain('read first');
+    expect(out).not.toContain('a/b.ts');
+  });
+
+  test('passes: the banner prints at most three lines', async () => {
+    const out = await banner(`${HEADER}\n| 1 | Ship it | \`OPEN\` | D | A | — | — |\n`);
+    expect(out.trimEnd().split('\n').length).toBeLessThanOrEqual(3);
   });
 });
 

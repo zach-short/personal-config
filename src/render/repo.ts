@@ -110,8 +110,8 @@ function routerLabel(ctx: RenderContext): string {
 function codeStandardNote(ctx: RenderContext, languages: string[]): string {
   return [
     '',
-    '> **Before writing or editing any code, read the matching code standard in full —',
-    `> ${conventionsList(ctx, languages)}. Not optional, not conditional on task size.**`,
+    `> **Code standard:** ${conventionsList(ctx, languages)}. It answers how code is written`,
+    '> here; open it before writing or editing code, and look up the rule you need.',
     '',
   ].join('\n');
 }
@@ -247,7 +247,7 @@ function workRecordLines(ctx: RenderContext): string {
   if (workRecordShape(ctx) === 'folders') {
     return `- \`docs/incomplete/<slug>/\` — one folder per open effort: \`SCOPE.md\` → \`DESIGN.md\` → \`PLAN.md\` → \`RUNTIME-PASS.md\`.\n- Closed efforts move to \`${ctx.repo?.archiveHome || 'the archive'}\`.`;
   }
-  const ledger = `- \`${ledgerFile(ctx)}\` — what is true: environment, settled decisions, the step log. Read first.`;
+  const ledger = `- \`${ledgerFile(ctx)}\` — what is true: environment, settled decisions, the step log. Search it for the topic at hand.`;
   const board = `- \`${boardFile(ctx)}\` — what is next, one standalone prompt per item.`;
   return hasBoard(ctx) ? `${ledger}\n${board}` : ledger;
 }

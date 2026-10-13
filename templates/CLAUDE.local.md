@@ -1,11 +1,10 @@
 # {{PROJECT_NAME}} — personal router (not repo policy — untracked)
 
-> **Before writing or editing any code, read this repo's own rules in full** — its
-> `CONTRIBUTING.md`, `AGENTS.md`/`CLAUDE.md`, and any linter or style config. Not optional, not
-> conditional on task size.
+> **This repo's own rules:** its `CONTRIBUTING.md`, `AGENTS.md`/`CLAUDE.md`, and any linter or
+> style config. They answer how code is written here; check them before writing or editing code.
 
-> **Before scoping, planning or building a feature, read `{{STANDARD_PATH}}`.** It is the
-> process standard. Do not ask how the flow works; it is written down.
+> **Process standard:** `{{STANDARD_PATH}}`. It answers how a feature is scoped, planned and
+> built; open the heading for the step you are on.
 
 ## Precedence
 

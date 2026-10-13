@@ -174,6 +174,8 @@ personal-config doctor ~/code/app # or any paths
 - a file Part 0 adapted that carries no stamp at all
 - personal files that git can still see
 - a board or ledger with more than 400 lines that `fold` could move
+- a board or ledger over 60,000 characters (about 15k tokens), whether or not a fold would help (`ledger-fold-ceiling`; raise it with the `doctor.ledgerCharCeiling` answer)
+- always-loaded context over 8,000 tokens, counted as characters divided by four: the global `~/.claude/CLAUDE.md`, every `~/.claude/rules/*.md` without a `paths:` scope, the repo's `CLAUDE.md`, the repo's auto-memory `MEMORY.md`, and what the installed session banner prints (`always-on-weight`; raise it with the `doctor.alwaysOnCeiling` answer)
 
 One more check reads git and not the files. It flags a line under a `## Settled` heading that your uncommitted work removes or rewrites, with no supersession stated anywhere in that file's diff. Adding an entry records a decision and is never flagged. Only undoing one is. The check is silent where it cannot see: a clean tree, a directory that is not a repository, and a ledger kept untracked all produce nothing.
 

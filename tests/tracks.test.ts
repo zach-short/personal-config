@@ -207,6 +207,12 @@ const COMMIT_PARAGRAPH = '**Commits are the owner’s.**';
  * named only the first two, and this third is the same phase's own file. One new key and two moved
  * keys per variant, 74 → 77, and no other key moved. Both skill keys moved once more the same
  * day, after the Fable review of both texts; the same six keys, 77 still.
+ *
+ * **Two keys moved per variant on 2026-10-13.** `session-banner.sh` prints three pointer lines
+ * and no "read in full" order, and the router (`CLAUDE.md`, or `CLAUDE.local.md` untracked)
+ * points at its standards by the question each answers instead of ordering a full read. Turn-one
+ * context had been measured at 92k-130k tokens, mostly from those orders being obeyed. Six keys,
+ * 77 still.
  */
 describe('§3.1 row 1 — code + full + git is the 0.3.0 output, byte for byte bar one skill', () => {
   const FULL = answersFor(CODE_FULL_GIT);

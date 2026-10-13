@@ -1,8 +1,7 @@
 # {{PROJECT_NAME}}{{TITLE_SUFFIX}}
 
-> **Before doing anything here, read `{{STANDARD_PATH}}` in full, then `{{LEDGER_FILE}}`.** Not
-> optional, not conditional on the size of the task. If you have not read them this session,
-> read them now.
+> **Process standard:** `{{STANDARD_PATH}}` answers how work is done here; open the heading you
+> need. **Ledger:** `{{LEDGER_FILE}}` answers what is true here; search it for the topic at hand.
 {{CONVENTIONS_NOTE}}
 {{PRECEDENCE}}
 ## What this is
