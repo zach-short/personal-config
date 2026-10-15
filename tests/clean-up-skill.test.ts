@@ -68,12 +68,31 @@ describe('what /clean-up tells each shape', () => {
       'personal-config archive <slug>',
       '--move --dry-run',
       "the commit is the\n   owner's",
-      '`DONE — <step>`',
+      '`DONE - <date>`',
       'Report, never mark.',
       'a `DONE` row, a ledger step',
       '**The archive may be its own repository**',
     ])
       expect(text, phrase).toContain(phrase);
+  });
+
+  /**
+   * Per-item-board Phase 6 (D6, D16): the fold moves a `DONE` item's file with its row, and a 1.x
+   * board, which the same installed skill still meets, keeps every row and step number.
+   */
+  test('a ledger folds item files with their rows, log lines by age, and a 1.x board as before', async () => {
+    const text = (await cleanUp(CODE_FULL_GIT)).replace(/\s+/g, ' ');
+    for (const phrase of [
+      'closed item files and their rows, old log lines, finished design folders',
+      "Each `DONE` item's file is written to the archive, read back, given an index line",
+      'only then removed with its row',
+      'Log lines older than 90 days go to the archive log.',
+      "Run it only once every `DONE` item's close-out is committed",
+      'On a 1.x board, with no `passoff/` folder beside it, every row and every step number stays',
+      'a close-out section, a log line',
+    ])
+      expect(text, phrase).toContain(phrase);
+    expect(await cleanUp(CODE_FULL_NO_GIT)).not.toContain('close-out is committed');
   });
 
   test('project folders are never told to fold a ledger or board they do not keep', async () => {

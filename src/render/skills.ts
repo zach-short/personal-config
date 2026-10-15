@@ -1,6 +1,7 @@
 import { join } from 'node:path';
 import { readText } from '../lib/disk.ts';
 import { claudeSkillsDir, repoRoot } from '../lib/paths.ts';
+import { docStem, itemsDirFor } from '../lib/repo-config.ts';
 import { stampAfterFrontmatter, stampLine } from '../lib/stamp.ts';
 import { fill } from '../lib/template.ts';
 import type { PlannedFile } from '../lib/types.ts';
@@ -111,17 +112,47 @@ type SkillShape = {
   code: boolean;
   git: boolean;
   folders: boolean;
+  /**
+   * Standard 2.0.0's record: an item file's close-out and a log line, where a board is written
+   * beside a ledger (per-item-board D1 to D4). The light track writes no board and keeps its step
+   * log (D3 As built), and project folders keep no ledger, so neither has an item to close.
+   */
+  items: boolean;
 };
 
 function shapeOf(ctx: RenderContext): SkillShape {
   const track = trackOf(ctx);
+  const folders = workRecordShape(ctx) === 'folders';
   return {
     short: isShortTrack(ctx),
     board: hasBoard(ctx),
     code: track.workKind === 'code',
     git: track.usesGit,
-    folders: workRecordShape(ctx) === 'folders',
+    folders,
+    items: hasBoard(ctx) && !folders,
   };
+}
+
+/** The file and folder names a skill cites, honouring an adopted name and an `itemsDir` (D7). */
+type RecordNames = { ledger: string; ledgerStem: string; items: string };
+
+function namesOf(ctx: RenderContext): RecordNames {
+  const ledger = ledgerFile(ctx);
+  return {
+    ledger,
+    ledgerStem: docStem(ledger),
+    // `repo.ts` derives the folder the same way, so the router and every skill name one folder.
+    items: ctx.repo?.scan.itemsDoc ?? itemsDirFor(boardFile(ctx)),
+  };
+}
+
+/**
+ * D12, applied to skill text. A skill is installed once per machine and read in every repo, and a
+ * repo reads as 2.0.0 only once its items folder exists (Phase 2, G53). Until each repo migrates,
+ * the same text has to tell a 1.x board's session where its record goes.
+ */
+function legacyBoard(names: RecordNames): string {
+  return `On a 1.x board, with no \`${names.items}/\` folder beside it`;
 }
 
 function variables(
@@ -129,9 +160,10 @@ function variables(
   name: string,
   shape: SkillShape,
 ): Record<string, string> {
-  if (name === 'close-out') return closeOutVars(shape);
-  if (name === 'handoff') return handoffVars(shape);
-  if (name === 'clean-up') return cleanUpVars(shape);
+  if (name === 'close-out') return closeOutVars(shape, namesOf(ctx));
+  if (name === 'handoff') return handoffVars(shape, namesOf(ctx));
+  if (name === 'passoff') return passoffVars(shape, namesOf(ctx));
+  if (name === 'clean-up') return cleanUpVars(shape, namesOf(ctx));
   if (name === 'delegate') return delegateVars(ctx, shape);
   if (name === 'autopilot') return autopilotVars(ctx);
   if (name === 'audit') return { BOARD_FILE: boardFile(ctx), TIER_TABLE: tierTable(ctx, '') };
@@ -147,7 +179,9 @@ function variables(
  */
 function delegateVars(ctx: RenderContext, shape: SkillShape): Record<string, string> {
   const commits = answer(ctx, 'commitPolicy', 'print-blocks') === 'agent-commits';
-  const vars = shape.folders ? delegateFolderVars() : delegateBoardVars(ctx, commits);
+  const vars = shape.folders
+    ? delegateFolderVars()
+    : delegateBoardVars(ctx, namesOf(ctx), commits);
   return {
     ...vars,
     TIER_TABLE: tierTable(ctx, ''),
@@ -198,6 +232,7 @@ function autopilotVars(ctx: RenderContext): Record<string, string> {
   return {
     LEDGER_FILE: ledgerFile(ctx),
     BOARD_FILE: boardFile(ctx),
+    ITEMS_DIR: namesOf(ctx).items,
     TIER_TABLE: tierTable(ctx, '   '),
     AFTER_UNCOMMITTED: commits
       ? [
@@ -223,18 +258,18 @@ function autopilotVars(ctx: RenderContext): Record<string, string> {
   };
 }
 
-function delegateBoardVars(ctx: RenderContext, commits: boolean): Record<string, string> {
-  const ledger = ledgerFile(ctx);
+function delegateBoardVars(
+  ctx: RenderContext,
+  names: RecordNames,
+  commits: boolean,
+): Record<string, string> {
+  const { ledger, items } = names;
   const board = boardFile(ctx);
-  // Finding 4 of the Deep review: a hook can still block an agent's commit, and the record must
-  // say so, because `/autopilot` builds the next row from this branch only if it holds a commit.
-  const state = commits
-    ? 'committed on its branch and not merged, or "not committed" where a hook blocked it'
-    : '"not yet committed"';
   return {
     GATE_CLEARED: [
       `On the board (\`${board}\`): an \`OPEN\` row with a model and a written prompt, every item`,
-      '  its "Waits on" names `DONE`, and no "scope first". Otherwise stop and run `/scope`.',
+      '  its "Waits on" names `DONE` or gone from the table at a fold, and no "scope first".',
+      '  Otherwise stop and run `/scope`.',
     ].join('\n'),
     TIER_HOLD: ', or, under `/autopilot`, hold the row',
     QUESTIONS_HELD: [
@@ -251,20 +286,49 @@ function delegateBoardVars(ctx: RenderContext, commits: boolean): Record<string,
     RECORD_FILES_OBJECT: `the ledger (\`${ledger}\`) or the board (\`${board}\`)`,
     CLAIM: [
       'Claim it with `personal-config passoff claim <n>` before spawning anything, so a parallel',
-      'session sees the claim.',
+      "session sees the claim. Then find whether the item's file is tracked: it is when",
+      `\`git ls-files --error-unmatch ${items}/<n>-<slug>.md\` succeeds here. Only a tracked file is`,
+      "in a builder's worktree. Say which it is in the builder's brief.",
     ].join('\n'),
-    RECORD: [
-      `Write one step in \`${ledger}\` at the next free number, read from the file now. Name`,
-      "  the builder's and the auditor's models, the worktree, the branch, the commit state",
-      `  (${state}), the relay passes, the verdict, each finding as \`open\`, and a Deep lift`,
-      "  as the person's call. Then mark the row `DONE` against that step, and post the `/close-out`",
-      "  hand-back blocks: in chat, or into the run's state file under `/autopilot`.",
+    ITEM_FILE_RULE: [
+      '',
+      "- Where the brief says the item's file is tracked, append its `## Close-out, <date>` section",
+      '  there: what changed and why, what is now fixed, which questions it answered, and what is',
+      '  left owed. Otherwise put that text in your report. It is the one record you write.',
     ].join('\n'),
+    RECORD: delegateRecord(names, commits),
     HELD: [
       'After that the row is `HELD`: its "Waits on" names the file the open findings are written in,',
-      '  and its section gets a dated note of what is done and what is left.',
+      `  and the item's file gets a dated note of what is done and what is left.`,
     ].join('\n'),
   };
+}
+
+/**
+ * D10: the lead keeps every write to the table, and a builder writes its own close-out only where
+ * the file is in its worktree. The lead's sign-off lines go into that same section in the
+ * builder's worktree, so the whole record lands in the builder's commit and the primary checkout
+ * holds no edit to a file the builder's branch also changes.
+ */
+function delegateRecord(names: RecordNames, commits: boolean): string {
+  const { ledger, ledgerStem, items } = names;
+  // Finding 4 of the Deep review: a hook can still block an agent's commit, and the record must
+  // say so, because `/autopilot` builds the next row from this branch only if it holds a commit.
+  const state = commits
+    ? 'committed on its branch and not merged, or "not committed" where a hook blocked it'
+    : '"not yet committed"';
+  return [
+    "Write the record: the builder's and the auditor's models, the worktree, the branch, the",
+    `  commit state (${state}), the relay passes, the verdict, each finding as \`open\`, and a`,
+    "  Deep lift as the person's call. Where the item's file is tracked, add these to the close-out",
+    "  section the builder wrote, in the builder's worktree. Where it is untracked, write the whole",
+    `  section at the end of \`${items}/<n>-<slug>.md\` here, from the builder's report. Then add`,
+    `  \`- <date> · closed item <n>\` at the end of the log in \`${ledger}\`, mark the row`,
+    "  `DONE - <date>`, and post the `/close-out` hand-back blocks: in chat, or into the run's state",
+    `  file under \`/autopilot\`. ${legacyBoard(names)}, the record is one step in \`${ledger}\``,
+    '  at the next free number, read from the file now, with the same lines, and the row becomes',
+    `  \`DONE - ${ledgerStem} <n>\`.`,
+  ].join('\n');
 }
 
 function delegateFolderVars(): Record<string, string> {
@@ -285,6 +349,7 @@ function delegateFolderVars(): Record<string, string> {
       'Mark the phase header `IN FLIGHT` before spawning anything, so a parallel session sees the',
       'claim.',
     ].join('\n'),
+    ITEM_FILE_RULE: '',
     RECORD: [
       "The phase header becomes `BUILT <date>`, with the builder's and the auditor's models, the",
       '  worktree, the branch, the commit state, the relay passes, the verdict, each finding as',
@@ -305,24 +370,24 @@ function delegateFolderVars(): Record<string, string> {
  * fold, only folders; and without git `archive` refuses outright, because both of its checks —
  * who cites the folder, whether its final state is recorded — are questions for git.
  */
-function cleanUpVars(shape: SkillShape): Record<string, string> {
+function cleanUpVars(shape: SkillShape, names: RecordNames): Record<string, string> {
   return {
     WHAT_MOVES: shape.folders
       ? 'closed project folders'
-      : 'closed board prompts, old ledger step bodies, finished design folders',
-    FINISHED: shape.folders ? finishedFolders() : finishedLedger(),
-    MOVE_STEPS: [shape.folders ? '' : foldMove(), folderMove(shape)]
+      : 'closed item files and their rows, old log lines, finished design folders',
+    FINISHED: shape.folders ? finishedFolders() : finishedItems(names),
+    MOVE_STEPS: [shape.folders ? '' : foldMove(shape, names), folderMove(shape)]
       .filter((step) => step !== '')
       .join('\n'),
     GREP_WHERE: shape.folders
       ? 'across every document in the tree'
-      : 'across the ledger, the board and every document in the tree',
+      : 'across the ledger, the board, the open item files and every document in the tree',
     LIVE_TEXT: shape.folders
       ? 'an open project folder'
-      : 'an open board row, a ledger standing section',
+      : 'an open board row, an open item file, a ledger standing section',
     HISTORICAL_TEXT: shape.folders
       ? "a closed phase's `As built:` paragraph"
-      : 'a `DONE` row, a ledger step',
+      : 'a close-out section, a log line, a `DONE` row, a ledger step',
     COMMIT_CLAUSE: shape.git
       ? [
           ' Then the',
@@ -333,15 +398,17 @@ function cleanUpVars(shape: SkillShape): Record<string, string> {
   };
 }
 
-function finishedLedger(): string {
+function finishedItems(names: RecordNames): string {
   return [
-    '- **A board row** is finished when it says `DONE — <step>` and that step is in the ledger.',
-    '  `SUPERSEDED` and `SETTLED AS NO` are finished too, but their sections stay: each carries a',
-    '  fact written nowhere else.',
-    '- **A ledger step** gives up its body only once it is older than the newest twenty. Its',
-    '  number, title and date stay, because every citation of it depends on that line.',
+    '- **A board row** is finished when it says `DONE - <date>` and its item file holds a close-out',
+    '  section. `SUPERSEDED` and `SETTLED AS NO` are finished too, but their files stay: each',
+    '  carries a fact written nowhere else.',
+    '- **A log line** is finished once it is older than 90 days.',
     '- **A design folder** is finished when every board row that names it is. One open row citing',
-    '  it keeps it in the tree.',
+    '  it keeps it in the tree; a row the fold has taken off the table is finished.',
+    `- **${legacyBoard(names)}**, a row is finished when it says \`DONE - <step>\` and that step`,
+    '  is in the ledger, and a ledger step gives up its body once it is older than the newest',
+    '  twenty. Its number, title and date stay, because every citation of it depends on that line.',
   ].join('\n');
 }
 
@@ -352,10 +419,26 @@ function finishedFolders(): string {
   ].join('\n');
 }
 
-function foldMove(): string {
+/**
+ * D6 and D16: the fold writes each `DONE` item's file to the archive, reads it back, and only then
+ * removes the file and its row. In git it waits for the owner's commit, because a file folded
+ * before that commit takes its close-out out of the history the commit was meant to hold.
+ */
+function foldMove(shape: SkillShape, names: RecordNames): string {
+  const commit = shape.git
+    ? [
+        "   Run it only once every `DONE` item's close-out is committed: a fold takes the file out",
+        '   of the tree.',
+      ]
+    : [];
   return [
-    '1. **The board and the ledger** — `personal-config fold --dry-run`, then `personal-config fold`.',
-    '   Every row and every step number stays; prompts and old bodies go.',
+    '1. **The board and the ledger**: `personal-config fold --dry-run`, then `personal-config fold`.',
+    "   Each `DONE` item's file is written to the archive, read back, given an index line that keeps",
+    '   what its row said, and only then removed with its row. An archive copy with other bytes',
+    '   stops that item. Log lines older than 90 days go to the archive log. `personal-config undo`',
+    `   puts back what it removed. ${legacyBoard(names)}, every row and every step number stays;`,
+    '   prompts and old bodies go.',
+    ...commit,
   ].join('\n');
 }
 
@@ -363,16 +446,16 @@ function folderMove(shape: SkillShape): string {
   const n = shape.folders ? '1' : '2';
   if (!shape.git)
     return [
-      `${n}. **Each finished folder** — \`personal-config archive\` needs git and refuses without it, so`,
+      `${n}. **Each finished folder**: \`personal-config archive\` needs git and refuses without it, so`,
       '   do its steps yourself: grep for what cites the folder, copy it to the archive, **verify',
       '   every file arrived before deleting the original**, and give it one line in the',
       "   archive's `INDEX.md`.",
     ].join('\n');
   return [
-    `${n}. **Each finished folder** — \`personal-config archive <slug>\`. It lists what cites the`,
+    `${n}. **Each finished folder**: \`personal-config archive <slug>\`. It lists what cites the`,
     '   folder and whether the repo has recorded its final state. A path read at runtime blocks',
     '   the move: repoint it first. Uncommitted changes block it too, and **the commit is the',
-    "   owner's** — post the blocks it prints and stop there for that folder. Once it is committed,",
+    "   owner's**: post the blocks it prints and stop there for that folder. Once it is committed,",
     '   `personal-config archive <slug> --move --dry-run`, then again without `--dry-run`.',
   ].join('\n');
 }
@@ -383,13 +466,13 @@ function folderMove(shape: SkillShape): string {
  * the reader can make. None holds on the short track, and the runtime-pass block never held for a
  * ledger target on any track.
  */
-function closeOutVars(shape: SkillShape): Record<string, string> {
+function closeOutVars(shape: SkillShape, names: RecordNames): Record<string, string> {
   const blocks = handBackBlocks(shape);
   return {
     CLOSE_OUT_TRIGGER: trigger(shape),
     WORK_UNIT: workUnit(shape),
     RECORD_WHERE: recordWhere(shape),
-    RECORD_STEPS: [recordStep(shape), foldStep(shape), landedEarly(shape)]
+    RECORD_STEPS: [recordStep(shape, names), foldStep(shape), landedEarly(shape)]
       .filter((step) => step !== '')
       .join('\n'),
     BLOCK_COUNT: blocks.length === 3 ? 'three' : 'two',
@@ -414,8 +497,9 @@ function recordWhere(shape: SkillShape): string {
   return shape.code ? ', in the same commit as the code' : ', in the same commit as the work';
 }
 
-function recordStep(shape: SkillShape): string {
+function recordStep(shape: SkillShape, names: RecordNames): string {
   if (shape.folders) return phaseHeader();
+  if (shape.items) return itemRecord(shape, names);
   const tail = shape.short
     ? [
         '  answered. **Do not edit a step you did not write**; append a correction as a new step.',
@@ -425,10 +509,38 @@ function recordStep(shape: SkillShape): string {
         '  append a correction as a new step.',
       ];
   return [
-    '- **One new step at the next free number** — **read the file to find it**, do not trust a',
+    '- **One new step at the next free number**: **read the file to find it**, do not trust a',
     '  number written elsewhere. Name what changed, why, what is now fixed, and which questions it',
     ...tail,
   ].join('\n');
+}
+
+/**
+ * Standard 2.0.0 (D2, D3, D4, D13): the close-out section is what the step body was, the log line
+ * cites the number because the file moves at the fold, and `DONE` carries the date.
+ */
+function itemRecord(shape: SkillShape, names: RecordNames): string {
+  const when = shape.git
+    ? 'when, which model, on which branch and at which commit'
+    : 'when and which model';
+  const map = shape.short ? '' : ' Add any new file to the code map.';
+  return [
+    `- **A \`## Close-out, <date>\` section at the end of the item's own file**, \`${names.items}/<n>-<slug>.md\`:`,
+    `  ${when}; ${closeOutContents(shape)}; and **Left owed:** what it did not do.${map}`,
+    "  **Do not edit another item's file.**",
+    `- **One line at the end of the log in \`${names.ledger}\`**: \`- <date> · closed item <n>\`. The`,
+    '  number, never the path: the file moves to the archive at the next fold.',
+    '- **The row becomes `DONE - <date>`**, the day the item closed.',
+    `- **${legacyBoard(names)}**, write one new step in \`${names.ledger}\` instead, at the next free`,
+    `  number, read from the file, and the row becomes \`DONE - ${names.ledgerStem} <n>\`.`,
+  ].join('\n');
+}
+
+/** What a close-out names; the short track has a proof line where the full one has gates. */
+function closeOutContents(shape: SkillShape): string {
+  return shape.short
+    ? 'what changed, why, what is now settled, how the proof line was applied (what was checked and what was seen)'
+    : 'what changed, why, what is now fixed, which questions it answered';
 }
 
 /** The project-folder profile's record: no ledger at all, so no step to append (`repo.ts:184`). */
@@ -449,11 +561,12 @@ function phaseHeader(): string {
  */
 function foldStep(shape: SkillShape): string {
   if (shape.folders) return '';
+  if (shape.items) return itemFoldStep(shape);
   const dead = shape.board
     ? "this item's prompt, now its row says `DONE`, and any step body older than the newest twenty"
     : 'any step body older than the newest twenty';
   return [
-    `- **Fold what is now dead** — ${dead}.`,
+    `- **Fold what is now dead**: ${dead}.`,
     '  `personal-config fold` does it: the row keeps its pointer and a step keeps its number,',
     '  title and date as one line, because every citation depends on that line still being there.',
     '  It appends to the archive and reads it back before it cuts, which is the only safe order',
@@ -461,12 +574,34 @@ function foldStep(shape: SkillShape): string {
   ].join('\n');
 }
 
+/**
+ * D6 and D16. The item just closed is folded by a later close-out in git, never by this one: a
+ * fold takes the file out of the tree, so folding it before the owner's commit leaves its
+ * close-out out of the history that commit was meant to hold.
+ */
+function itemFoldStep(shape: SkillShape): string {
+  const timing = shape.git
+    ? [
+        "  Fold an item only once the owner has committed its close-out, so this item's file waits",
+        '  for the next close-out or for `/clean-up`.',
+      ]
+    : [];
+  return [
+    "- **Fold what is dead.** `personal-config fold` moves each `DONE` item's file to the archive,",
+    '  and its row leaves the table with it; the archive index line keeps what the row said. Log',
+    '  lines older than 90 days go to the archive log. It writes the archive and reads it back',
+    '  before it removes anything, which is the only safe order for a document git is not holding',
+    '  a copy of.',
+    ...timing,
+  ].join('\n');
+}
+
 function landedEarly(shape: SkillShape): string {
   if (shape.board)
     return [
       '- **Landed early, or interrupted?** Same ritual, different header: leave the item unmarked, add',
-      '  a status note — what is done, what is left, what it changes about the plan — and write the',
-      '  handoff. The pass-off then targets *the remainder of this item*, not the next one.',
+      `  a dated status note${shape.items ? ' to its file' : ''} (what is done, what is left, what it changes about the plan),`,
+      '  and write the pass-off. It then targets *the remainder of this item*, not the next one.',
     ].join('\n');
   return [
     '- **Landed early, or interrupted?** Same ritual, different header: record what is done, what',
@@ -483,26 +618,26 @@ function handBackBlocks(shape: SkillShape): string[] {
   const blocks = [
     shape.board
       ? [
-          '- **Block A — the pass-off prompt**, in full, as a fenced block. It must stand alone: the next',
+          '- **Block A: the pass-off prompt**, in full, as a fenced block. It must stand alone: the next',
           '  agent will not see this conversation.',
         ].join('\n')
       : [
-          "- **Block A — the next session's prompt**, in full, as a fenced block. It must stand",
+          "- **Block A: the next session's prompt**, in full, as a fenced block. It must stand",
           '  alone: the next agent will not see this conversation.',
         ].join('\n'),
   ];
   if (shape.folders)
     blocks.push(
       [
-        '- **Block B — the runtime entries this piece added.** Three lines each: the goal it checks in',
-        '  product terms, exactly where and how to reach it, and what the right answer is — including',
+        '- **Block B: the runtime entries this piece added.** Three lines each: the goal it checks in',
+        '  product terms, exactly where and how to reach it, and what the right answer is, including',
         '  the query that finds the fixture, not an id that will rot.',
       ].join('\n'),
     );
   const letter = shape.folders ? 'C' : 'B';
   blocks.push(
     [
-      `- **Block ${letter} — the next session's model**, on its own line, last in the message, because it is`,
+      `- **Block ${letter}: the next session's model**, on its own line, last in the message, because it is`,
       '  the first thing the owner acts on.',
     ].join('\n'),
   );
@@ -517,7 +652,7 @@ function proofSentence(shape: SkillShape): string {
       'must never be merged. Say which one you have, per item.',
     ].join('\n');
   return [
-    'Apply the proof line to what was done and write down what you saw — not that it passed.',
+    'Apply the proof line to what was done and write down what you saw. "It passed" is no record.',
     '"Checked against the source" and "looks right" are different claims and must never be merged.',
     'Say which one you have.',
   ].join('\n');
@@ -528,11 +663,11 @@ function proofSentence(shape: SkillShape): string {
  * ledger "before the board", and closed by demanding every gate command be run once before it is
  * written into an `Environment` section the short ledger does not have.
  */
-function handoffVars(shape: SkillShape): Record<string, string> {
+function handoffVars(shape: SkillShape, names: RecordNames): Record<string, string> {
   return {
     LEDGER_AND_BOARD: ledgerAndBoard(shape),
-    READ_BEFORE: readBefore(shape),
-    STEP_NAMES: stepNames(shape),
+    READ_BEFORE: readBefore(shape, names),
+    RECORDING: shape.items ? itemRecording(shape, names) : stepRecording(shape),
     STANDING_SECTIONS: shape.short
       ? 'Orientation, How things are here, Settled, Known facts and quirks'
       : 'Environment, Settled, Code map, Invariants, Known facts',
@@ -549,25 +684,95 @@ function ledgerAndBoard(shape: SkillShape): string {
     ].join('\n');
   return [
     'The ledger is **what is true**: the one record of this work, appended to and never rewritten.',
-    'There is no board here — what is next is the prompt the last session left in the chat.',
+    'There is no board here: what is next is the prompt the last session left in the chat.',
   ].join('\n');
 }
 
-function readBefore(shape: SkillShape): string {
+/** D3: once the step log leaves, the ledger is small enough to read whole, then one item file. */
+function readBefore(shape: SkillShape, names: RecordNames): string {
   const work = shape.code ? 'before any code' : 'before any work';
+  if (shape.items)
+    return `in full, before the board and ${work}; of the files in \`${names.items}/\`, read only your own item's`;
   return shape.board ? `before the board and ${work}` : work;
+}
+
+/** The 1.x record, which the light track keeps because it writes no board (D3 As built). */
+function stepRecording(shape: SkillShape): string {
+  return [
+    '## Appending a step',
+    '',
+    '**Take the next free number by reading the file.** Another session may have taken the one a doc',
+    'predicted. **Do not edit a step you did not write**: append a correction as a new step, so the',
+    'wrong claim stays findable, marked wrong, with the disproof beside it.',
+    '',
+    stepNames(shape),
+    '',
+    '`personal-config handoff step` does that read for you: it reports the next free number, the',
+    "ledger's modification time, and what a step has to name. It cannot *reserve* the number, since",
+    'only writing would, so re-read the file immediately before you append.',
+  ].join('\n');
 }
 
 function stepNames(shape: SkillShape): string {
   if (!shape.short)
     return [
       'A step names: what changed, why, what is now fixed, which questions it answered, and what is',
-      'left owed. It is addressable forever — "HANDOFF 24" is how everything else refers to that work.',
+      'left owed. It is addressable forever: "HANDOFF 24" is how everything else refers to that work.',
     ].join('\n');
   return [
-    'A step names: what changed, why, what is now settled, how the proof line was applied — what',
-    'was checked and what was seen — and what is left owed. It is addressable forever — "step 24"',
+    'A step names: what changed, why, what is now settled, how the proof line was applied (what',
+    'was checked and what was seen), and what is left owed. It is addressable forever: "step 24"',
     'is how everything else refers to that work.',
+  ].join('\n');
+}
+
+/** Standard 2.0.0: the close-out section and the log line replace the step (D2 to D4, D13). */
+function itemRecording(shape: SkillShape, names: RecordNames): string {
+  const { items, ledgerStem } = names;
+  return [
+    '## Recording work',
+    '',
+    `**A closed item's record is the close-out section at the end of its own file**,`,
+    `\`${items}/<n>-<slug>.md\`, written by the session that did the work. It names ${closeOutContents(shape)},`,
+    "and what is left owed. The file is its writer's own: never edit another item's close-out.",
+    '',
+    '**Then one line at the end of `## Log`**: `- <date> · closed item <n>`. Cite the item by its',
+    'number, never its path: the file moves to the archive at the next fold, and the number still',
+    'finds it. Work that is not an item, such as an `/autopilot` run or a fix the owner asked for in',
+    'chat, gets one line that ends in the path of what it wrote.',
+    '',
+    '`personal-config handoff step` prints both scaffolds and writes nothing. Where this ledger once',
+    `had numbered steps, they are in the archive's \`${ledgerStem}-log.md\`, and a`,
+    `\`DONE - ${ledgerStem} <n>\` row still points at one of them.`,
+    '',
+    `**${legacyBoard(names)}**, the record is one step in this ledger at the next free number,`,
+    'read from the file, and a step you did not write is never edited.',
+  ].join('\n');
+}
+
+/**
+ * `/passoff`. Where the prompt goes (D1, D7, D16), and what is true once it has run: the close-out
+ * section on 2.0.0, the ledger step on a 1.x board and in project folders.
+ */
+function passoffVars(shape: SkillShape, names: RecordNames): Record<string, string> {
+  return {
+    PROMPT_HOME: shape.items ? promptHome(names) : '',
+    TRUTH: shape.items ? "The item's close-out section" : 'The ledger step',
+  };
+}
+
+function promptHome(names: RecordNames): string {
+  const { items } = names;
+  return [
+    '',
+    '',
+    `**Where it goes.** One file per item, \`${items}/<n>-<slug>.md\`, and its row in the table, in`,
+    'the same edit. The file opens with `# <n>. <Title>`, then the dated line saying why it exists,',
+    'then the nine parts. `personal-config passoff next` reports the next free number, read from the',
+    'table, the folder and the archive: a number is never reused, even after its row has left the',
+    'table. The slug is the title in lower case, each run of other characters one hyphen, cut at a',
+    'hyphen to at most 48 characters. It is named once and never renamed.',
+    `${legacyBoard(names)}, the prompt is a \`### <n>.\` section below the table.`,
   ].join('\n');
 }
 

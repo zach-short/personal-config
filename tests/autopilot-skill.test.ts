@@ -169,6 +169,26 @@ describe('what /autopilot says', () => {
     expect(text).not.toContain('it is the first `OPEN` row of its lane');
   });
 
+  /**
+   * Per-item-board Phase 6 (D4): a run is not an item, so it writes one log line and no step; a
+   * builder writes neither; a "Waits on" item the fold took off the table still counts as done
+   * (D16). A 1.x board, which the same installed skill still meets, keeps the run's step.
+   */
+  test('the run writes a log line, not a ledger step, on a 2.0.0 board', async () => {
+    const text = (await autopilot()).replace(/\s+/g, ' ');
+    for (const phrase of [
+      'Add one line at the end of the log in `HANDOFF.md` for the run: `- <date> · autopilot run · <the run folder>/RUNDOWN.md`.',
+      "On a 1.x board, with no `passoff/` folder, write the run's own ledger step instead",
+      'Builders take no ledger number and write no log line.',
+      "Record each sign-off as `/delegate`'s step 4 says: the item's close-out, a log line and the board.",
+      'Every item its "Waits on" names is `DONE`, or has left the table at a fold.',
+      "the close-out text where the item's file is untracked",
+      // /delegate lets a builder write its own close-out; the files rule must not stop it there.
+      'Its own item file, where `/delegate` lets it write the close-out, is the one exception.',
+    ])
+      expect(text, phrase).toContain(phrase);
+  });
+
   for (const policy of ['print-blocks', 'agent-commits', 'no-rule'])
     test(`${policy} leaves no token unfilled, with the stamp below the frontmatter`, async () => {
       const text = await autopilot({ commitPolicy: policy });

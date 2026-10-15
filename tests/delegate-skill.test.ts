@@ -154,6 +154,34 @@ describe('what /delegate says', () => {
       expect(text, phrase).toContain(phrase);
   });
 
+  /**
+   * Per-item-board Phase 6 and D10: the lead keeps the table, a builder writes its own close-out
+   * only where the item's file is tracked and so in its worktree, and the lead's sign-off joins
+   * that section there. A 1.x board, which the same installed skill still meets, keeps its step.
+   */
+  test('on a board the record is the close-out, a log line and a dated DONE (D10)', async () => {
+    const text = (find(await render(), 'delegate/SKILL.md') ?? '').replace(/\s+/g, ' ');
+    for (const phrase of [
+      "find whether the item's file is tracked: it is when `git ls-files --error-unmatch passoff/<n>-<slug>.md` succeeds here",
+      "Where the brief says the item's file is tracked, append its `## Close-out, <date>` section there",
+      'Otherwise put that text in your report.',
+      "add these to the close-out section the builder wrote, in the builder's worktree",
+      'Where it is untracked, write the whole section at the end of `passoff/<n>-<slug>.md` here',
+      'add `- <date> · closed item <n>` at the end of the log in `HANDOFF.md`, mark the row `DONE - <date>`',
+      'On a 1.x board, with no `passoff/` folder beside it, the record is one step in `HANDOFF.md`',
+      'the row becomes `DONE - HANDOFF <n>`',
+      "the item's file gets a dated note",
+      'names `DONE` or gone from the table at a fold',
+    ])
+      expect(text, phrase).toContain(phrase);
+  });
+
+  test('on project folders it says nothing of item files or log lines', async () => {
+    const text = find(await render({}, 'folders'), 'delegate/SKILL.md') ?? '';
+    for (const phrase of ['closed item', 'passoff/', 'ls-files', 'Close-out, <date>'])
+      expect(text, phrase).not.toContain(phrase);
+  });
+
   test('on project folders it names no /autopilot, which is not installed there (D22)', async () => {
     const text = find(await render({}, 'folders'), 'delegate/SKILL.md') ?? '';
     expect(text).not.toContain('autopilot');

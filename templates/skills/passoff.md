@@ -18,13 +18,13 @@ Nine parts, in this order. Skip one only when it is genuinely empty, and say so.
    repo's tier ceiling (if it has one). Check the repo's `CLAUDE.md` for its ceiling before
    writing a pass-off for it.
 3. **Orientation.** Who they are picking up, what to read first and in what order, and the
-   session rules restated **inline** — not by reference. A prompt is pasted alone, and a rule
+   session rules restated **inline**, not by reference. A prompt is pasted alone, and a rule
    one file away is a rule that does not arrive.
 4. **Why this exists**, in product terms. This is what lets the next agent make a hundred small
    judgment calls the prompt does not cover.
 5. **What is fixed.** *"Read these before changing anything; do not relitigate them."* The
-   verified facts with citations, the invariants, the house precedent to copy rather than
-   reinvent, the constraint that makes this smaller than it looks. This section is where this
+   verified facts with citations, the invariants, the house precedent to copy in place of a new
+   invention, the constraint that makes this smaller than it looks. This section is where this
    session's reading is **banked** instead of re-paid.
 6. **Do these, in order.** Numbered, each carrying its reason and its constraint. A step that
    says only what to do gets done differently than intended.
@@ -37,8 +37,8 @@ Nine parts, in this order. Skip one only when it is genuinely empty, and say so.
 
 `personal-config passoff next` prints the next `OPEN` item with its prompt and its model line,
 and warns when something already in flight owns one of the same files; `personal-config passoff
-claim <n>` marks the row `IN FLIGHT` and dates it. Neither writes the prompt — that is this
-skill's work.
+claim <n>` marks the row `IN FLIGHT` and dates it. Neither writes the prompt: that is this
+skill's work.{{PROMPT_HOME}}
 
-**A prompt rots the moment it is executed.** The ledger step is the truth; the prompt is the
-ask. Never paste a prompt marked done — a fresh session would build it again.
+**A prompt rots the moment it is executed.** {{TRUTH}} is the truth; the prompt is the
+ask. Never paste a prompt marked done: a fresh session would build it again.

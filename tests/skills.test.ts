@@ -12,7 +12,7 @@ import { describe, expect, test } from 'bun:test';
 import { leftoverTokens } from '../src/lib/template.ts';
 import type { Answers, PlannedFile, RepoPlan, WorkProfile } from '../src/lib/types.ts';
 import { renderSkills } from '../src/render/skills.ts';
-import { DEFAULT_ANSWERS, testContext, testRepoPlan } from './helpers.ts';
+import { DEFAULT_ANSWERS, testContext, testRepoPlan, testScan } from './helpers.ts';
 
 type Shape = {
   workKind: 'code' | 'non-code';
@@ -114,7 +114,6 @@ describe('the shapes whose prose this row does not change', () => {
       'before the board and before any code',
       'Environment, Settled, Code map, Invariants, Known facts',
       'Run every gate command once before writing it into Environment.',
-      '"HANDOFF 24"',
     ])
       expect(text, phrase).toContain(phrase);
   });
@@ -127,10 +126,104 @@ describe('the shapes whose prose this row does not change', () => {
   test('a project-folder target keeps the phase header, the runtime block and three blocks', async () => {
     const text = await both(CODE_FULL_GIT, 'folders');
     expect(text).toContain('Post three blocks in the chat');
-    expect(text).toContain('Block B — the runtime entries this piece added.');
+    expect(text).toContain('Block B: the runtime entries this piece added.');
     expect(text).toContain('The runtime-pass file gets this phase');
     expect(text).toContain('Every phase and every board item');
     expect(text).not.toContain('One new step at the next free number');
+  });
+});
+
+/**
+ * Per-item-board Phase 6. Where a board is written beside a ledger, the record is the item file's
+ * close-out and one log line, and `DONE` carries a date (D2 to D4, D13). The light track writes no
+ * board and keeps its step log (D3 As built). A skill is installed once per machine, so the 2.0.0
+ * text also tells a 1.x board where its step goes (D12).
+ */
+describe('standard 2.0.0: the record is the item file and a log line', () => {
+  const FIRST_PERSON_STEP = '**One new step at the next free number**';
+
+  for (const [name, shape] of [
+    ['code + full + git', CODE_FULL_GIT],
+    ['non-code + full', NON_CODE_FULL],
+  ] as const) {
+    test(`${name}: close-out writes the item's close-out section, a log line and a dated DONE`, async () => {
+      const text = await both(shape);
+      for (const phrase of [
+        "section at the end of the item's own file**, `passoff/<n>-<slug>.md`",
+        '`- <date> · closed item <n>`',
+        '**The row becomes `DONE - <date>`**',
+        '## Recording work',
+        'read only your own item',
+        'On a 1.x board, with no `passoff/` folder beside it',
+      ])
+        expect(text, phrase).toContain(phrase);
+      expect(text).not.toContain(FIRST_PERSON_STEP);
+      expect(text).not.toContain('## Appending a step');
+    });
+  }
+
+  test('a light target keeps its numbered step log, because it writes no board', async () => {
+    for (const shape of [CODE_LIGHT, NON_CODE_LIGHT]) {
+      const text = await both(shape);
+      expect(text).toContain(FIRST_PERSON_STEP);
+      expect(text).toContain('## Appending a step');
+      for (const phrase of ['closed item', 'passoff/', 'Close-out, <date>'])
+        expect(text, phrase).not.toContain(phrase);
+    }
+  });
+
+  test('the close-out names the code map on the full track and the proof line on the short one', async () => {
+    expect(await both(CODE_FULL_GIT)).toContain(
+      'which questions it answered; and **Left owed:**',
+    );
+    const short = await both(NON_CODE_FULL);
+    expect(short).toContain(
+      'how the proof line was applied (what was checked and what was seen)',
+    );
+    expect(short).not.toContain('code map');
+  });
+
+  test('in git the item just closed is folded later, after the owner commits its close-out', async () => {
+    expect(await both(CODE_FULL_GIT)).toContain(
+      'Fold an item only once the owner has committed its close-out',
+    );
+    expect(await both(CODE_FULL_NO_GIT)).not.toContain('committed its close-out');
+  });
+
+  test('/passoff puts the prompt in its own file on a board, and says nothing of one in folders', async () => {
+    const onBoard = skill(await render(CODE_FULL_GIT), 'passoff');
+    expect(onBoard).toContain('**Where it goes.** One file per item, `passoff/<n>-<slug>.md`');
+    expect(onBoard).toContain("The item's close-out section is the truth");
+    const inFolders = skill(await render(CODE_FULL_GIT, 'folders'), 'passoff');
+    expect(inFolders).not.toContain('Where it goes.');
+    expect(inFolders).toContain('The ledger step is the truth');
+  });
+
+  test('an adopted board name and an itemsDir override are the names the skills cite', async () => {
+    const answers: Answers = { ...DEFAULT_ANSWERS, skills: 'all', ...CODE_FULL_GIT };
+    const plan = testRepoPlan({
+      scan: testScan({ ledgerDoc: 'NOTES.md', boardDoc: 'BOARD.md', itemsDoc: 'tasks' }),
+    });
+    const files = await renderSkills(testContext(answers, plan));
+    const text = `${skill(files, 'close-out')}\n${skill(files, 'handoff')}`;
+    expect(text).toContain('`tasks/<n>-<slug>.md`');
+    expect(text).toContain('the log in `NOTES.md`');
+    expect(text).toContain('`DONE - NOTES <n>`');
+    expect(text).toContain("the archive's `NOTES-log.md`");
+    expect(text).not.toContain('passoff/');
+  });
+
+  test('none of the six rewritten skills carries an em dash, on any shape', async () => {
+    const six = ['handoff', 'passoff', 'close-out', 'clean-up', 'delegate', 'autopilot'];
+    const shapes = [CODE_FULL_GIT, CODE_FULL_NO_GIT, CODE_LIGHT, NON_CODE_FULL, NON_CODE_LIGHT];
+    const rendered = await Promise.all(
+      shapes.flatMap((shape) => [render(shape, 'ledger'), render(shape, 'folders')]),
+    );
+    const files = rendered
+      .flat()
+      .filter((file) => six.some((name) => file.path.endsWith(`${name}/SKILL.md`)));
+    expect(files.length).toBeGreaterThan(0);
+    for (const file of files) expect(file.contents, file.path).not.toContain('—');
   });
 });
 

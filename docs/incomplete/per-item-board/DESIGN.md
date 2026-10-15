@@ -269,6 +269,15 @@ read from git (`git check-ignore`), never from `trackMode`, because the two disa
 (G34). Where the folder is untracked, the builder's report carries the close-out text and the lead
 writes it.
 
+*As built, 2026-10-15 (Phase 6):* `/delegate` reads "tracked" per item file, with
+`git ls-files --error-unmatch <itemsDir>/<n>-<slug>.md` in the primary checkout. A file that no
+ignore rule hides but that was never committed is not in a builder's worktree either, and
+`git check-ignore` would call it tracked. Where the file is tracked, the lead adds its sign-off
+lines (models, verdict, findings, commit state) to the close-out section the builder wrote, in the
+builder's worktree, so the whole record lands in the builder's commit and the primary checkout
+holds no edit to a file the builder's branch also changes. `/autopilot`'s rule that a builder
+stops on a file outside "Files it owns" names the builder's own item file as its one exception.
+
 ### D11. One reader for an item, with the file as the unit (forced by D1)
 
 A new module, `src/lib/items.ts`, is the only code that finds an item's text. It holds the name rule
@@ -298,6 +307,13 @@ reports the section as left behind.
 
 **The defense.** Sixteen adapted standards cannot all move on the day the CLI ships (G31's hazard
 in the scope). A CLI that broke every unmigrated repo would make the migration an emergency.
+
+*As built, 2026-10-15 (Phase 6):* the skill texts follow this decision too. A skill is installed
+once per machine and read in every repo (`PLAN.md` G66), so each 2.0.0 record instruction in
+`/handoff`, `/passoff`, `/close-out`, `/clean-up`, `/delegate` and `/autopilot` carries one
+sentence for a board with no items folder beside it: there the record is a ledger step at the next
+free number, and the row reads `DONE - <LEDGER> n`. The light track, which writes no board, keeps
+the 1.x record in its skills: a numbered step and no item file (D3 As built).
 
 ### D13. A log line for a closed item cites the number, not the path (forced by D4 and G35)
 

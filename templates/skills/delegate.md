@@ -46,7 +46,7 @@ once, whatever their lanes say.
 Spawn one Agent with `model` from the tiers above and `isolation: "worktree"`. Its brief is the
 item's own prompt in full, then the relay contract below, then these rules:
 
-- Do not edit {{RECORD_FILES_OBJECT}}. Only this session writes them.
+- Do not edit {{RECORD_FILES_OBJECT}}. Only this session writes them.{{ITEM_FILE_RULE}}
 - {{COMMIT_RULE}}
 - Before the first gate, run the fresh-checkout recipe in the repo's working standard, and bring
   the worktree to the base branch with `git merge --ff-only <base>`. A worktree can start from a

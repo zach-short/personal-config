@@ -54,7 +54,7 @@ A row is runnable when all of these hold:
 - It is `OPEN`, and every row before it in its lane is finished (`DONE`, `SUPERSEDED` or
   `SETTLED AS NO`), because the items in a lane run in order. A `HELD` or `IN FLIGHT` row ahead of
   it holds it back.
-- Every item its "Waits on" names is `DONE`.
+- Every item its "Waits on" names is `DONE`, or has left the table at a fold.
 {{AFTER_UNCOMMITTED}}
 - Its prompt does not say to scope first.
 - Its "Files it owns" overlaps no row marked `IN FLIGHT`, and no other row in the same launch.
@@ -136,8 +136,8 @@ the next free number. `STATE.md` in it has these sections:
   session's context.
 - **Reports**: for each row, what its builder and its auditor reported that the rundown needs:
   the gates seen and their result, any number claimed, the files changed and the untracked files
-  added, the commit state, questions and build-level calls, what was not verified, warnings, and
-  the hand-back blocks. Write it when the report arrives: after a compaction the report is gone,
+  added, the commit state, the close-out text where the item's file is untracked, questions and
+  build-level calls, what was not verified, warnings, and the hand-back blocks. Write it when the report arrives: after a compaction the report is gone,
   and this section is all the rundown has.
 - **Judgment calls**: each with its reversal.
 - **Held**: each held row, and what it waits on.
@@ -168,9 +168,9 @@ On every wake, and whenever a background agent returns:
 2. **Record a reading**: the time from `date`, the usage figure or "not measured", and this session's context
    from `personal-config context --sentinel "<the sentinel>"`.
 3. **Route each returned agent by `/delegate`'s steps**: a builder's report to an auditor, a relay
-   to a fresh builder, a verdict to sign-off, a fix round or a hold. Record each sign-off on the
-   board and in the ledger. Write what the rundown needs into **Reports** in `STATE.md`, the
-   hand-back blocks among it, not into the chat. Route each returned audit agent by `/audit`'s
+   to a fresh builder, a verdict to sign-off, a fix round or a hold. Record each sign-off as
+   `/delegate`'s step 4 says: the item's close-out, a log line and the board. Write what the
+   rundown needs into **Reports** in `STATE.md`, the hand-back blocks among it, not into the chat. Route each returned audit agent by `/audit`'s
    sections 4 to 6, and record its step under **Audit**; its next step launches in step 6, never
    here. When `/audit` has written its rows, read the board again before step 6.
 4. **A question a builder reports for the owner** is answered here, never by asking. Where it only
@@ -240,8 +240,10 @@ file that holds the row's open findings.
    9. **Not verified**: what no one saw running.
    10. **Warnings**, such as a tool that deletes uncommitted worktrees.
    11. **Commit blocks**: {{COMMIT_BLOCKS}}
-3. Write the run's own ledger step at the next free number, read from the file now. It points at
-   the rundown.
+3. Add one line at the end of the log in `{{LEDGER_FILE}}` for the run:
+   `- <date> · autopilot run · <the run folder>/RUNDOWN.md`. A run is not an item, so it gets no
+   item file and no row. On a 1.x board, with no `{{ITEMS_DIR}}/` folder, write the run's own
+   ledger step instead, at the next free number, read from the file now, pointing at the rundown.
 4. Where a push notification tool exists, send one line that names the rundown's path.
 5. Post the rundown's first paragraph and its path in chat.
 
@@ -254,6 +256,7 @@ because a builder never sees this skill.
 - A builder that needs an ignored file it cannot copy, such as an env file, stops and reports.
   Never retry a call that was denied.
 - Do not start, stop or restart services outside this repo.
-- Builders take no ledger number. Every other number a row claims, such as a migration, is
+- Builders take no ledger number and write no log line. Every other number a row claims, such as a migration, is
   reported, and two rows that claim one number go under Collisions in the rundown.
 - A builder that must touch a file its row does not list in "Files it owns" stops and reports.
+  Its own item file, where `/delegate` lets it write the close-out, is the one exception.
