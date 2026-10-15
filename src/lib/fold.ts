@@ -1,5 +1,7 @@
-import { type BoardRow, parseBoard } from './board.ts';
+import { type BoardRow, cellAt, parseBoard } from './board.ts';
+import { type ItemEntry, isItemFor } from './items.ts';
 import { type LedgerStep, ledgerSteps, type StepForm, stepHeading } from './ledger.ts';
+import { staleLogLines } from './log.ts';
 import { headingBlock, proseLines } from './markdown.ts';
 
 /**
@@ -221,6 +223,81 @@ function spliceOf(folded: Folded[]): { cut: Set<number>; stubs: Map<number, stri
 /** A blank that would be the second of a pair, the first having survived the cut above it. */
 function isSeamBlank(text: string, kept: string[]): boolean {
   return text.trim() === '' && (kept.at(-1) ?? 'x').trim() === '';
+}
+
+/**
+ * One `DONE` item whose file is still in the live folder (per-item-board `DESIGN.md` D6, D16):
+ * the file to move, and what its row said, which the archive index line carries once the row
+ * leaves the table.
+ */
+export type ItemMove = {
+  number: string;
+  /** The row's task cell as written. */
+  task: string;
+  /** The date in the status cell (`DONE — 2026-10-15`), or null where the cell carries none. */
+  closed: string | null;
+  /** The live file's name, which is also its name in the archive. */
+  name: string;
+  /** The live file's bytes, as read for this fold. */
+  text: string;
+  /** The row's 1-based line on the board, which the fold cuts. */
+  line: number;
+};
+
+/**
+ * The board half on a migrated board: every `DONE` row with exactly one live file.
+ *
+ * Exactly one, not "the first": with two files for one number, moving one leaves the other
+ * live under a row that is gone, an orphan nothing points at. Two files is `item-files`'s
+ * finding to report; the fold leaves that item alone until it is resolved.
+ */
+export function itemFold(markdown: string, listing: ItemEntry[]): ItemMove[] {
+  const board = parseBoard(markdown);
+  if (board === null) return [];
+  return board.rows.filter(isDone).flatMap((row) => {
+    const files = listing.filter((entry) => isItemFor(entry.name, row.number));
+    const file = files[0];
+    if (files.length !== 1 || file === undefined || row.number.trim() === '') return [];
+    return [
+      {
+        number: row.number.trim(),
+        task: cellAt(row.cells, board.columns.task),
+        closed: row.status.match(/\b(\d{4}-\d{2}-\d{2})\b/)?.[1] ?? null,
+        name: file.name,
+        text: file.text,
+        line: row.line,
+      },
+    ];
+  });
+}
+
+/**
+ * The board with these rows cut (D16). Table rows are consecutive lines with no blank between,
+ * so cutting one leaves no seam to heal, and every other byte stays where it was.
+ */
+export function withoutRows(markdown: string, lines: number[]): string {
+  const cut = new Set(lines);
+  return markdown
+    .split('\n')
+    .filter((_, index) => !cut.has(index + 1))
+    .join('\n');
+}
+
+/**
+ * The ledger half on a migrated ledger (D4): every `## Log` line dated more than `days` before
+ * `date`, each lifted as its own block with nothing left in its place. A log line carries no
+ * number for anything to cite, so unlike a step it needs no stub.
+ */
+export function logFold(markdown: string, days: number, date: string): Fold {
+  const folded = staleLogLines(markdown, date, days).map((line) => ({
+    id: line.date,
+    heading: line.text,
+    text: line.text,
+    start: line.line,
+    end: line.line,
+    stub: null,
+  }));
+  return { folded, trimmed: folded.length === 0 ? markdown : applyFold(markdown, folded) };
 }
 
 /** What the fold is worth, for the report — the one number that answers "is this worth it". */

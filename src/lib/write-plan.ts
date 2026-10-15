@@ -1,3 +1,4 @@
+import { rm } from 'node:fs/promises';
 import { backupFiles, type Manifest } from './backup.ts';
 import { diffSummary } from './diff.ts';
 import { exists, modeOf, readText, setMode, writeText } from './disk.ts';
@@ -24,7 +25,40 @@ export type PlannedChange = {
    * which is how a re-run repairs a hook installed before this existed.
    */
   chmod?: number;
+  /**
+   * Present and true is the whole signal, as for `chmod`: `commitPlan` deletes this file instead
+   * of writing it (per-item-board `DESIGN.md` D14). Only `resolveRemoval` sets it, and only for a
+   * file that is there to delete. `after` is `''`, so the preview's diff is every line removed.
+   */
+  remove?: true;
 };
+
+/**
+ * A planned removal (D14). It goes through the plan for the reason every write does: the preview
+ * names it, `commitPlan` backs it up before anything is deleted, and `undo` copies it back. A
+ * fold's item file is often in an untracked folder, so that backup is the only copy git does not
+ * hold.
+ *
+ * No stamp guard: the guard asks whether this tool may *replace* a file's contents, and a removal
+ * replaces nothing. The caller has already proved the bytes are elsewhere (the fold's read-back).
+ * A path with no file behind it plans nothing, so a re-run after a removal is a no-op.
+ */
+export async function resolveRemoval(path: string, label: string): Promise<PlannedChange> {
+  const file: PlannedFile = { path, contents: '', label, strategy: 'overwrite' };
+  if (!(await exists(path))) {
+    return { file, before: '', after: '', guard: 'none', summary: 'already absent' };
+  }
+  const before = await readText(path);
+  const lines = before === '' ? 0 : before.replace(/\n$/, '').split('\n').length;
+  return {
+    file,
+    before,
+    after: '',
+    guard: 'none',
+    summary: `removed, ${lines} lines`,
+    remove: true,
+  };
+}
 
 export async function resolvePlan(files: PlannedFile[]): Promise<PlannedChange[]> {
   return Promise.all(files.map(resolveOne));
@@ -67,7 +101,7 @@ async function pendingMode(file: PlannedFile): Promise<number | undefined> {
  * line: setting it is a write to the filesystem, and it goes through the same confirm.
  */
 export function willWrite(change: PlannedChange): boolean {
-  return change.before !== change.after || change.chmod !== undefined;
+  return change.before !== change.after || change.chmod !== undefined || change.remove === true;
 }
 
 /**
@@ -167,7 +201,13 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-export type WriteResult = { written: string[]; skipped: string[]; manifest: Manifest | null };
+/** `written` includes every removed path; `removed` names those alone. */
+export type WriteResult = {
+  written: string[];
+  skipped: string[];
+  removed: string[];
+  manifest: Manifest | null;
+};
 
 /** Nothing here runs until the batch has been confirmed; `--dry-run` never reaches it. */
 export async function commitPlan(changes: PlannedChange[]): Promise<WriteResult> {
@@ -175,22 +215,47 @@ export async function commitPlan(changes: PlannedChange[]): Promise<WriteResult>
   // A mode-only change is deliberately not backed up: the bytes are identical, so a copy of them
   // restores nothing, and `restore` copies over a file that already exists — which leaves that
   // file's bits alone anyway. There is nothing here for `undo` to put back.
-  const overwritten = await onDiskNow(real.filter((c) => c.before !== c.after));
+  const overwritten = await onDiskNow(
+    real.filter((c) => c.before !== c.after || c.remove === true),
+  );
+  // Every backup is taken here, before the loop below writes or deletes anything (D14).
   const manifest = overwritten.length > 0 ? await backupFiles(overwritten) : null;
 
-  for (const change of real) {
-    if (change.before !== change.after) {
-      await writeText(change.file.path, change.after, change.chmod);
-    } else if (change.chmod !== undefined) {
-      await setMode(change.file.path, change.chmod);
-    }
-  }
+  for (const change of real) await apply(change, manifest);
 
   return {
     written: real.map((c) => c.file.path),
     skipped: changes.filter((c) => !willWrite(c)).map((c) => c.file.path),
+    removed: real.filter((c) => c.remove === true).map((c) => c.file.path),
     manifest,
   };
+}
+
+async function apply(change: PlannedChange, manifest: Manifest | null): Promise<void> {
+  if (change.remove === true) return removeBackedUp(change.file.path, manifest);
+  if (change.before !== change.after) {
+    await writeText(change.file.path, change.after, change.chmod);
+  } else if (change.chmod !== undefined) {
+    await setMode(change.file.path, change.chmod);
+  }
+}
+
+/**
+ * A delete happens only with its own backup in hand. `onDiskNow` and `backupFiles` each ask the
+ * disk again, so a file that appeared or vanished in between can leave a path out of the
+ * manifest; an overwrite then loses at worst what `undo` could not restore anyway, but a delete
+ * would lose the only copy. So the manifest is checked here and a missing entry throws, before
+ * anything is deleted.
+ *
+ * `rm` with `force`, from `node:fs/promises` directly: a file already gone is the removal done,
+ * and `disk.ts` has no delete because nothing before D14 deleted a file.
+ */
+async function removeBackedUp(path: string, manifest: Manifest | null): Promise<void> {
+  const held = manifest?.entries.some((entry) => entry.original === path) === true;
+  if (!held && (await exists(path))) {
+    throw new Error(`refusing to remove ${path}: it is not in this run's backup`);
+  }
+  await rm(path, { force: true });
 }
 
 /**

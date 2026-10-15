@@ -10,6 +10,7 @@ import {
   DEFAULT_KEEP,
   foldedLines,
   ledgerFold,
+  logFold,
 } from '../src/lib/fold.ts';
 import { ledgerSteps, nextFreeStep } from '../src/lib/ledger.ts';
 import { headingBlock } from '../src/lib/markdown.ts';
@@ -350,4 +351,66 @@ describe('the command, end to end', () => {
     },
     SPAWN_TIMEOUT,
   );
+});
+
+/** A migrated ledger (per-item-board `DESIGN.md` D4): standing sections and a dated `## Log`. */
+const MIGRATED_LEDGER = [
+  '# HANDOFF — example',
+  '',
+  '## Known facts',
+  '',
+  '- The parser keys on the leading number.',
+  '',
+  '## Log',
+  '',
+  '- 2026-06-01 · closed item 3',
+  '- 2026-07-10 · log frozen at step 105 · HANDOFF-log.md in the archive',
+  '- 2026-07-20 · closed item 4',
+  '- 2026-10-14 · closed item 5',
+  '',
+  '## Style rules',
+  '',
+  '- Short sentences.',
+  '',
+].join('\n');
+
+describe('the log fold', () => {
+  test('lifts the lines older than the dial, oldest first, and nothing else', () => {
+    const fold = logFold(MIGRATED_LEDGER, 90, '2026-10-15');
+    expect(fold.folded.map((block) => block.text)).toEqual([
+      '- 2026-06-01 · closed item 3',
+      '- 2026-07-10 · log frozen at step 105 · HANDOFF-log.md in the archive',
+    ]);
+    expect(fold.trimmed).toContain('- 2026-07-20 · closed item 4');
+    expect(fold.trimmed).toContain('- 2026-10-14 · closed item 5');
+    expect(fold.trimmed).not.toContain('closed item 3');
+    expect(fold.trimmed).toContain('## Known facts');
+    expect(fold.trimmed).toContain('## Style rules');
+  });
+
+  test('cuts only the lifted lines: every other byte stays where it was', () => {
+    const fold = logFold(MIGRATED_LEDGER, 90, '2026-10-15');
+    const lifted = new Set(fold.folded.map((block) => block.text));
+    const expected = MIGRATED_LEDGER.split('\n')
+      .filter((line) => !lifted.has(line))
+      .join('\n');
+    expect(fold.trimmed).toBe(expected);
+  });
+
+  test('a log emptied by the fold leaves its heading and one blank, not two', () => {
+    const fold = logFold(MIGRATED_LEDGER, 0, '2027-01-01');
+    expect(fold.folded).toHaveLength(4);
+    expect(fold.trimmed).toContain('## Log\n\n## Style rules');
+  });
+
+  test('a ledger with nothing past the dial folds nothing and is returned as it was', () => {
+    const fold = logFold(MIGRATED_LEDGER, 365, '2026-10-15');
+    expect(fold.folded).toEqual([]);
+    expect(fold.trimmed).toBe(MIGRATED_LEDGER);
+  });
+
+  test('a 1.x ledger has no `## Log`, so the log fold leaves it alone', () => {
+    const ledger = ledgerOf(30);
+    expect(logFold(ledger, 0, '2027-01-01')).toEqual({ folded: [], trimmed: ledger });
+  });
 });
