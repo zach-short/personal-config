@@ -1,5 +1,6 @@
 import { execFile, execFileSync } from 'node:child_process';
-import { join, resolve } from 'node:path';
+import { stat } from 'node:fs/promises';
+import { dirname, join, resolve } from 'node:path';
 import { promisify } from 'node:util';
 import { exists } from './disk.ts';
 
@@ -51,6 +52,27 @@ export function commitsAmong(dir: string, hashes: string[]): Set<string> | null 
 /** A worktree's `.git` is a file rather than a directory, so both spellings count. */
 export async function isGitRepo(dir: string): Promise<boolean> {
   return (await exists(join(dir, '.git', 'HEAD'))) || (await exists(join(dir, '.git')));
+}
+
+/**
+ * Whether git could hold a commit for anything under `dir`: a `.git` at it or at any folder above
+ * it, the same search git makes. Read from the filesystem and never from `git rev-parse`, which
+ * also fails where git is not installed, and a repo read as "no git" would fold `DONE` items
+ * whose code is in no commit yet. A stray `.git` errs the safe way: `DONE` items stay live.
+ */
+export async function insideGit(dir: string): Promise<boolean> {
+  const here = resolve(dir);
+  // Any entry counts, which `exists` would not give: it is true only for a regular file, and
+  // a checkout's `.git` is a directory. Reading it as absent would fold uncommitted work.
+  if (
+    await stat(join(here, '.git')).then(
+      () => true,
+      () => false,
+    )
+  )
+    return true;
+  const up = dirname(here);
+  return up === here ? false : insideGit(up);
 }
 
 /**

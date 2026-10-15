@@ -226,18 +226,20 @@ describe('D4 — unfolded on a frozen ledger reports log lines past the dial', (
   });
 
   test('violates: one finding, at the oldest line, on a frozen ledger', () => {
-    const findings = unfoldedRule({ archived: null, ledgerFrozenAt: 105 }, '2026-10-15').check(
-      ledgerDoc(),
-    );
+    const findings = unfoldedRule(
+      { archived: null, ledgerFrozenAt: 105, git: true },
+      '2026-10-15',
+    ).check(ledgerDoc());
     expect(findings).toHaveLength(1);
     expect(findings[0]?.line).toBe(5);
     expect(findings[0]?.message).toContain('2 log line(s) older than 90 days');
   });
 
   test('passes: a 1.x ledger is never read for log lines (D12)', () => {
-    const findings = unfoldedRule({ archived: null, ledgerFrozenAt: null }, '2026-10-15').check(
-      ledgerDoc(),
-    );
+    const findings = unfoldedRule(
+      { archived: null, ledgerFrozenAt: null, git: true },
+      '2026-10-15',
+    ).check(ledgerDoc());
     expect(findings).toEqual([]);
   });
 });

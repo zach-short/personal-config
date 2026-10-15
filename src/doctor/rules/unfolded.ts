@@ -10,7 +10,7 @@ import {
   UNMIGRATED,
 } from '../../lib/items.ts';
 import { LOG_DAYS, staleLogLines } from '../../lib/log.ts';
-import { isCommitted } from '../../lib/status.ts';
+import { isFoldable } from '../../lib/status.ts';
 import type { Finding } from '../../lib/types.ts';
 import type { Doc } from '../scan.ts';
 
@@ -27,8 +27,10 @@ import type { Doc } from '../scan.ts';
  * A 2.0.0 repo has two more things to fold (per-item-board `DESIGN.md` DIAL-8, D4): a
  * `COMMITTED` item's file still in the live folder, and log lines past the retention dial. A
  * `DONE` item's file is not one: its code is not in a commit yet, and the file is the only way
- * to rebuild the work if it is lost before the owner commits it (§2.3). Built per root,
- * because whether the ledger's log is frozen is read from the repo's config.
+ * to rebuild the work if it is lost before the owner commits it (§2.3), except where no `.git`
+ * sits at or above the root: there `DONE` is final and its file is dead weight too (2.1.1). Built
+ * per root, because whether the ledger's log is frozen is read from the repo's config and
+ * whether git can hold a commit is read from the filesystem.
  */
 export function unfoldedRule(context: ItemContext, on: string = today()) {
   return {
@@ -36,7 +38,7 @@ export function unfoldedRule(context: ItemContext, on: string = today()) {
     standardId: '§2.1',
     appliesTo: (doc: Doc) => doc.kind === 'board' || doc.kind === 'ledger',
     check(doc: Doc): Finding[] {
-      return [...foldFindings(doc), ...itemFindings(doc, context, on)];
+      return [...foldFindings(doc, context.git), ...itemFindings(doc, context, on)];
     },
   };
 }
@@ -44,9 +46,9 @@ export function unfoldedRule(context: ItemContext, on: string = today()) {
 /** How every repo was read before item files, and how a 1.x one still is (D12). */
 export const unfolded = unfoldedRule(UNMIGRATED);
 
-function foldFindings(doc: Doc): Finding[] {
+function foldFindings(doc: Doc, git: boolean): Finding[] {
   const fold =
-    doc.kind === 'board' ? boardFold(doc.text) : ledgerFold(doc.text, DEFAULT_KEEP, '');
+    doc.kind === 'board' ? boardFold(doc.text, git) : ledgerFold(doc.text, DEFAULT_KEEP, '');
   const lines = foldedLines(fold);
   return lines < THRESHOLD ? [] : [finding(doc, firstLine(fold), message(doc, fold, lines))];
 }
@@ -57,7 +59,7 @@ function foldFindings(doc: Doc): Finding[] {
  * (DIAL-8). A log line is the same: it is one line, and ninety days is the dial.
  */
 function itemFindings(doc: Doc, context: ItemContext, on: string): Finding[] {
-  if (doc.kind === 'board') return committedFilesLive(doc);
+  if (doc.kind === 'board') return closedFilesLive(doc, context.git);
   if (context.ledgerFrozenAt === null) return [];
   const stale = staleLogLines(doc.text, on, LOG_DAYS);
   const first = stale[0];
@@ -71,12 +73,12 @@ function itemFindings(doc: Doc, context: ItemContext, on: string): Finding[] {
   ];
 }
 
-function committedFilesLive(doc: Doc): Finding[] {
+function closedFilesLive(doc: Doc, git: boolean): Finding[] {
   const board = parseBoard(doc.text);
   if (!board || doc.itemsDir === undefined || !hasItemsFolder(doc.itemsDir)) return [];
   const live = listItemsSync(doc.itemsDir);
   const done = board.rows.filter(
-    (row) => isCommitted(row.status) && findItem(live, row.number) !== null,
+    (row) => isFoldable(row.status, git) && findItem(live, row.number) !== null,
   );
   const first = done[0];
   if (first === undefined) return [];
@@ -84,7 +86,7 @@ function committedFilesLive(doc: Doc): Finding[] {
     finding(
       doc,
       first.line,
-      `${done.length} \`COMMITTED\` item file(s) still in ${basename(doc.itemsDir)}/ (${done.map((row) => row.number).join(', ')}) — \`personal-config fold board\` moves them to the archive`,
+      `${done.length} ${git ? '`COMMITTED`' : 'closed'} item file(s) still in ${basename(doc.itemsDir)}/ (${done.map((row) => row.number).join(', ')}) — \`personal-config fold board\` moves them to the archive`,
     ),
   ];
 }

@@ -7,6 +7,12 @@ The CLI. The working standard it installs is versioned separately — see
 
 ### Added
 
+- **`DONE` folds where there is no git, and standard 2.1.1.** A folder without git can never
+  write a hash, so its rows stopped at `DONE` and `personal-config fold` never moved them.
+  `fold`, `fold migrate` and `doctor`'s `unfolded` now fold a `DONE` item where no `.git` sits at
+  or above the root, read from the filesystem rather than `git rev-parse`, which also fails where
+  git is not installed. The board a folder target gets says so, and the no-git close-out and
+  clean-up skills fold `DONE` items in place of `COMMITTED` ones.
 - **A board status word, `COMMITTED`, and standard 2.1.0.** `DONE, <record>` now means built and
   recorded but not yet in a commit, and `COMMITTED, <record>, <short hash>` means the owner's
   commit exists. `doctor`'s `board-status` accepts both on a 1.x board (`<record>` a ledger step)

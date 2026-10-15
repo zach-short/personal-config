@@ -4,7 +4,7 @@ import { type LedgerStep, ledgerSteps, type StepForm, stepHeading } from './ledg
 import { staleLogLines } from './log.ts';
 import { headingBlock, proseLines } from './markdown.ts';
 import { docStem } from './repo-config.ts';
-import { isCommitted } from './status.ts';
+import { isFoldable } from './status.ts';
 
 /**
  * What a fold lifts out of a live document, computed as data before anything is planned or
@@ -62,17 +62,18 @@ const EMPTY: Fold = { folded: [], trimmed: '' };
  * and never the section.
  * That asymmetry is §2.1 restated in code: a prompt rots the moment it is executed, and the
  * ledger step is the truth.
+ *
+ * `git` is false only where no `.git` sits at or above the root. There `DONE` is final and folds
+ * too (`isFoldable`). It defaults to true, the guess that never folds uncommitted work.
  */
-export function boardFold(markdown: string): Fold {
+export function boardFold(markdown: string, git = true): Fold {
   const board = parseBoard(markdown);
   if (board === null) return { ...EMPTY, trimmed: markdown };
 
-  const folded = board.rows.filter(foldable).flatMap((row) => itemBlock(markdown, row));
+  const folded = board.rows
+    .filter((row) => isFoldable(row.status, git))
+    .flatMap((row) => itemBlock(markdown, row));
   return { folded, trimmed: applyFold(markdown, folded) };
-}
-
-function foldable(row: BoardRow): boolean {
-  return isCommitted(row.status);
 }
 
 /** A row whose prompt was never written has nothing to fold, and that is not an error. */
@@ -254,28 +255,32 @@ export type ItemMove = {
 /**
  * The board half on a migrated board: every `COMMITTED` row with exactly one live file.
  *
+ * Where `git` is false, every `DONE` row with one live file as well (`isFoldable`).
+ *
  * Exactly one, not "the first": with two files for one number, moving one leaves the other
  * live under a row that is gone, an orphan nothing points at. Two files is `item-files`'s
  * finding to report; the fold leaves that item alone until it is resolved.
  */
-export function itemFold(markdown: string, listing: ItemEntry[]): ItemMove[] {
+export function itemFold(markdown: string, listing: ItemEntry[], git = true): ItemMove[] {
   const board = parseBoard(markdown);
   if (board === null) return [];
-  return board.rows.filter(foldable).flatMap((row) => {
-    const files = listing.filter((entry) => isItemFor(entry.name, row.number));
-    const file = files[0];
-    if (files.length !== 1 || file === undefined || row.number.trim() === '') return [];
-    return [
-      {
-        number: row.number.trim(),
-        task: cellAt(row.cells, board.columns.task),
-        closed: row.status.match(/\b(\d{4}-\d{2}-\d{2})\b/)?.[1] ?? null,
-        name: file.name,
-        text: file.text,
-        line: row.line,
-      },
-    ];
-  });
+  return board.rows
+    .filter((row) => isFoldable(row.status, git))
+    .flatMap((row) => {
+      const files = listing.filter((entry) => isItemFor(entry.name, row.number));
+      const file = files[0];
+      if (files.length !== 1 || file === undefined || row.number.trim() === '') return [];
+      return [
+        {
+          number: row.number.trim(),
+          task: cellAt(row.cells, board.columns.task),
+          closed: row.status.match(/\b(\d{4}-\d{2}-\d{2})\b/)?.[1] ?? null,
+          name: file.name,
+          text: file.text,
+          line: row.line,
+        },
+      ];
+    });
 }
 
 /**
@@ -348,15 +353,17 @@ const ITEM_HEADING = /^#{2,4}\s*(\d+(?:\.\d+)?)[.):]/;
  * The conversion as data. The board loses every section a row names, `COMMITTED` ones to the
  * closed archive and the rest to their own files, `DONE` ones included, since a `DONE` item's
  * code is not in a commit yet (§2.3). The ledger loses its step log section whole, which goes to
- * the archive log, and gains an empty `## Log` with the one line D5 names in its place.
+ * the archive log, and gains an empty `## Log` with the one line D5 names in its place. Where
+ * `git` is false, `DONE` sections go to the closed archive too, because no commit will follow.
  */
 export function migrateFold(
   board: string,
   ledger: string,
   date: string,
   ledgerName: string,
+  git = true,
 ): Migration {
-  const boardPart = migrateBoard(board);
+  const boardPart = migrateBoard(board, git);
   const ledgerPart = migrateLedger(ledger, date, ledgerName);
   return {
     ...boardPart,
@@ -367,7 +374,7 @@ export function migrateFold(
 
 type BoardPart = Pick<Migration, 'closed' | 'items' | 'board' | 'unrowed' | 'problems'>;
 
-function migrateBoard(markdown: string): BoardPart {
+function migrateBoard(markdown: string, git: boolean): BoardPart {
   const parsed = parseBoard(markdown);
   const empty: BoardPart = {
     closed: [],
@@ -398,9 +405,11 @@ function migrateBoard(markdown: string): BoardPart {
   ];
   if (problems.length > 0) return { ...empty, problems };
 
-  const closed = blocks.filter(({ row }) => foldable(row)).map(({ block }) => block);
+  const closed = blocks
+    .filter(({ row }) => isFoldable(row.status, git))
+    .map(({ block }) => block);
   const items = blocks
-    .filter(({ row }) => !foldable(row))
+    .filter(({ row }) => !isFoldable(row.status, git))
     .map(({ row, block }) => itemFileOf(row, block, cellAt(row.cells, parsed.columns.task)));
   const cut = applyFold(
     markdown,

@@ -20,7 +20,7 @@ here, and the adapted copy is built on the answer. If an installer put this file
 left a prompt saying which of Part 0's steps are already done; follow that prompt rather than
 this paragraph.
 
-**Standard version: 2.1.0**
+**Standard version: 2.1.1**
 
 **Adapted: not yet — run Part 0.**
 
@@ -309,7 +309,8 @@ board is the parallelism model:
   rather than editing the prompt into a lie.
 - **A `COMMITTED` item leaves at the fold, its file and its row together** (Part 7). A `DONE`
   item keeps its file until its commit exists, because the file is the only way to rebuild work
-  that is lost before the owner commits it. The file moves
+  that is lost before the owner commits it. In a folder with no git, `DONE` is final and leaves
+  at the fold too. The file moves
   to the archive and is read back; then its row leaves the table, and the archive index line
   carries what the row said. The item number is never reused: the next free number is one more
   than the highest of the board's rows, the live folder's files and the archive folder's files. A session
@@ -445,6 +446,10 @@ before, after or apart from the code. When the answer is not clear, ask the owne
 guess. A commit on a worktree branch that `main` does not hold yet still counts as `COMMITTED`;
 the row names the branch after the hash. A row written as `DONE` before 2.1.0 may already be
 committed: check git before treating it as uncommitted.
+
+A folder with no git has no commit to wait for, so there `DONE` is the last closing word: it is
+final, and a `DONE` item folds as a `COMMITTED` one does. `personal-config fold` reads this from
+the filesystem, and folds a `DONE` item only where no `.git` sits at or above the folder.
 `HELD` always names what it waits on. `SUPERSEDED` always names what replaced it. `SETTLED AS
 NO` always carries the reason, because its whole job is to not be re-proposed.
 
@@ -918,7 +923,7 @@ those two to `{{ARCHIVE_HOME}}` and nothing else.
 
 1. **A `COMMITTED` item, its file and its row.** §2.1 already says its prompt rots the moment
    it is executed and that its close-out is the record. A `DONE` item stays until its commit
-   exists (2.3). The file moves to
+   exists, except in a folder with no git, where `DONE` is final and moves the same way (2.3). The file moves to
    `{{ARCHIVE_HOME}}/passoff/` under the same name, and the archive index gains one line that
    carries what the row said: `- **passoff/<n>-<slug>.md** ✅ - item <n>, <task>, closed <date>.`
    Then the row leaves the table. The number stays spent, because the next free number is read

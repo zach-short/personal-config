@@ -7,7 +7,7 @@ what "done" means here, and the writing habits that keep the record honest. It i
 start of every session, so it is kept short on purpose — a longer document would cost more to
 read than most of the work it governs.
 
-**Standard version: 2.1.0**
+**Standard version: 2.1.1**
 
 **Pre-filled by `personal-config` on {{DATE}}.** Every name below is this project's own, and
 nothing in this file is left for a later session to fill in. Read `{{ROUTER_FILE}}` first — the
@@ -115,7 +115,7 @@ from the ledger: a fact written into the board rots the moment its item is done.
 - An item exists before work on it starts: a row, plus its file. Its number is never reused.
 - At close the file gains a `## Close-out, <date>` section, the ledger one log line, and the row
   `DONE, <date>`, before the commit blocks. Only a `COMMITTED` item's file and row go to the
-  archive. **Never paste a prompt marked `DONE` or `COMMITTED`**: it would be built again.
+  archive; with no git, no commit will follow, so `DONE` is final and goes too. **Never paste a prompt marked `DONE` or `COMMITTED`**: it would be built again.
 
 ## Handing work to the next session
 

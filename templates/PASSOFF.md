@@ -22,4 +22,4 @@ Lanes run in parallel, each in its own worktree; items inside a lane run in orde
 Each item's prompt is `{{ITEMS_DIR}}/<n>-<slug>.md`, named once when the row is added. A
 `COMMITTED` item's file moves to the archive at the next fold, and its row leaves this table with
 it; the archive index line keeps what the row said, and its number is never reused. A `DONE`
-item's file stays until its commit exists. `personal-config fold board` does it.
+item's file stays until its commit exists. `personal-config fold board` does it.{{NO_GIT_FOLD}}

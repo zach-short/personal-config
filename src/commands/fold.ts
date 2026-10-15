@@ -17,6 +17,7 @@ import {
   boardFold as sectionFold,
   withoutRows,
 } from '../lib/fold.ts';
+import { insideGit } from '../lib/git.ts';
 import { hasItemsFolder, isItemFor, listItems } from '../lib/items.ts';
 import { LOG_DAYS } from '../lib/log.ts';
 import { expandHome } from '../lib/paths.ts';
@@ -51,6 +52,7 @@ const USAGE = [
   '`fold migrate` converts a 1.x repo once: the step log and the `COMMITTED` prompts to the',
   "archive, every other item's section to its own file, then the live board and ledger cut.",
   'A `DONE` item is not in a commit yet, so its prompt or file stays until the row says `COMMITTED`.',
+  'Where no `.git` sits at or above this folder, no commit will follow, so `DONE` folds too.',
 ].join('\n');
 
 type Which = 'board' | 'ledger';
@@ -127,7 +129,8 @@ export async function runFold(cli: Cli): Promise<number> {
   if (!(await exists(join(archiveHome, 'INDEX.md')))) return refuse(noIndex(archiveHome));
   if (targets.length === 0) return runMigrate(cli, root, archiveHome);
 
-  const prepared = await prepareAll(root, archiveHome, targets, cli.keep, cli.logDays);
+  const git = await insideGit(root);
+  const prepared = await prepareAll(root, archiveHome, targets, cli.keep, cli.logDays, git);
   const halves = prepared.filter((half) => half.ids.length > 0);
   reportHeld(prepared);
   if (halves.length === 0) return note(nothingToFold(targets, cli.keep, cli.logDays));
@@ -148,12 +151,13 @@ async function prepareAll(
   targets: Which[],
   keep: number,
   logDays: number,
+  git: boolean,
 ): Promise<Half[]> {
   const names = await readDocNames(root);
   const prepared = await Promise.all(
     targets.map((target) =>
       target === 'board'
-        ? prepareBoard(root, archiveHome, names)
+        ? prepareBoard(root, archiveHome, names, git)
         : prepareLedger(root, archiveHome, names.ledger, keep, logDays),
     ),
   );
@@ -165,6 +169,7 @@ async function prepareBoard(
   root: string,
   archiveHome: string,
   names: DocNames,
+  git: boolean,
 ): Promise<Half | null> {
   const livePath = join(root, names.board);
   if (!(await exists(livePath))) return null;
@@ -172,9 +177,17 @@ async function prepareBoard(
   const itemsDir = join(root, names.items);
   // D12: migrated is read from the folder on disk, never from the config's default name.
   if (hasItemsFolder(itemsDir)) {
-    return prepareItems(livePath, text, itemsDir, join(archiveHome, names.items), names.items);
+    const archiveItems = join(archiveHome, names.items);
+    return prepareItems(livePath, text, itemsDir, archiveItems, names.items, git);
   }
-  return prepareAppend(livePath, 'board', sectionFold(text), archiveHome, names.board, 'board');
+  return prepareAppend(
+    livePath,
+    'board',
+    sectionFold(text, git),
+    archiveHome,
+    names.board,
+    'board',
+  );
 }
 
 async function prepareLedger(
@@ -255,8 +268,9 @@ async function prepareItems(
   itemsDir: string,
   archiveItems: string,
   itemsName: string,
+  git: boolean,
 ): Promise<Half | null> {
-  const moves = itemFold(board, await listItems(itemsDir));
+  const moves = itemFold(board, await listItems(itemsDir), git);
   if (moves.length === 0) return null;
 
   const found = await Promise.all(
@@ -438,7 +452,8 @@ function keptLines(half: Half): string[] {
   if (half.which === 'board') {
     return [
       '  the board — every row, including each closed row and its pointer at the ledger step,',
-      "  and every `DONE` item's prompt or file, which waits for its commit (§2.3).",
+      "  and, where git holds this folder, every `DONE` item's prompt or file, which waits for",
+      '  its commit (§2.3).',
       '  `SUPERSEDED` and `SETTLED AS NO` keep their sections: `doctor` reads those for the',
       '  replacement and the reason, and §2.1 asks that a settled no is never re-proposed.',
     ];
@@ -621,7 +636,7 @@ function nothingToFold(targets: Which[], keep: number, logDays: number): string 
   const named = targets.join(' and ');
   return [
     `Nothing to fold in the ${named}.`,
-    `Either there is no such document here, or every \`COMMITTED\` prompt or item file is already`,
+    `Either there is no such document here, or every closed prompt or item file is already`,
     `out, the log is already ${keep} step(s) or shorter, and no log line is older than ${logDays} days.`,
   ].join('\n');
 }
@@ -712,7 +727,7 @@ async function planMigrate(root: string, archiveHome: string): Promise<MigratePl
   const ledger = (await exists(ledgerPath)) ? await readText(ledgerPath) : '';
   if (board === '' && ledger === '') return 'There is no board and no ledger to migrate.';
 
-  const migration = migrateFold(board, ledger, today(), names.ledger);
+  const migration = migrateFold(board, ledger, today(), names.ledger, await insideGit(root));
   const itemsDir = join(root, names.items);
   const problems = [...migration.problems, ...(await clashingItems(itemsDir, migration))];
   if (problems.length > 0) return cannotMigrate(problems);

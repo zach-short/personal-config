@@ -88,7 +88,7 @@ describe('what /clean-up tells each shape', () => {
       "Each `COMMITTED` item's file is written to the archive, read back, given an index line",
       'only then removed with its row',
       'Log lines older than 90 days go to the archive log.',
-      'A `DONE` item stays: its commit does not exist yet.',
+      'A `DONE` item stays: its commit does not exist yet, except in a folder with no `.git`',
       'A row at `DONE` is built but not committed: it is not finished',
       'A `DONE` row whose code commit you can find is really `COMMITTED`',
       "git log --all --format='%h %d %s' -E --grep='row <n>([^0-9]|$)'",
@@ -99,6 +99,19 @@ describe('what /clean-up tells each shape', () => {
       expect(text, phrase).toContain(phrase);
     expect(await cleanUp(CODE_FULL_NO_GIT)).not.toContain('git log --all');
     expect(await cleanUp(CODE_FULL_NO_GIT)).not.toContain('git cat-file');
+  });
+
+  test('without git, `DONE` is final: it is finished and it folds (standard 2.1.1)', async () => {
+    const text = (await cleanUp(CODE_FULL_NO_GIT)).replace(/\s+/g, ' ');
+    for (const phrase of [
+      'A board row** is finished when it says `DONE, <date>` and its item file holds a close-out',
+      "Each `DONE` item's file is written to the archive, read back",
+      'With no git, no commit will follow, so `DONE` is final.',
+      'a row is finished when it says `DONE, <step>` and that step is in the ledger.',
+    ])
+      expect(text, phrase).toContain(phrase);
+    expect(text).not.toContain('A row at `DONE` is built but not committed');
+    expect(text).not.toContain('`COMMITTED, <step>, <hash>`');
   });
 
   test('project folders are never told to fold a ledger or board they do not keep', async () => {
@@ -138,5 +151,31 @@ describe('what /clean-up tells each shape', () => {
   test('the stamp sits below the frontmatter, where the harness can read it', async () => {
     const text = await cleanUp(CODE_FULL_GIT);
     expect(text.startsWith('---\nname: clean-up\n')).toBe(true);
+  });
+});
+
+describe('what /close-out folds, by git (standard 2.1.1)', () => {
+  async function closeOut(shape: Shape): Promise<string> {
+    const files = await render(shape);
+    const text = files.find((f) => f.path.endsWith('close-out/SKILL.md'))?.contents ?? '';
+    return text.replace(/\s+/g, ' ');
+  }
+
+  test('without git, the item just closed folds now, and no row waits for a hash', async () => {
+    const text = await closeOut(CODE_FULL_NO_GIT);
+    expect(text).toContain(
+      "`personal-config fold` moves each `DONE` item's file to the archive",
+    );
+    expect(text).toContain("`DONE` is final: this item's file moves at this fold.");
+    expect(text).not.toContain('COMMITTED, HANDOFF <n>, <hash>');
+  });
+
+  test('with git, it waits for `COMMITTED`, and names the folder case in one clause', async () => {
+    const text = await closeOut(CODE_FULL_GIT);
+    expect(text).toContain(
+      "`personal-config fold` moves each `COMMITTED` item's file to the archive",
+    );
+    expect(text).toContain("so this item's file waits for the next close-out");
+    expect(text).toContain('In a folder with no `.git`, `DONE` is final and folds too.');
   });
 });

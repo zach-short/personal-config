@@ -414,7 +414,7 @@ function cleanUpVars(shape: SkillShape, names: RecordNames): Record<string, stri
       ? 'closed project folders'
       : 'closed item files and their rows, old log lines, finished design folders',
     FINISHED: shape.folders ? finishedFolders() : finishedItems(shape, names),
-    MOVE_STEPS: [shape.folders ? '' : foldMove(names), folderMove(shape)]
+    MOVE_STEPS: [shape.folders ? '' : foldMove(shape, names), folderMove(shape)]
       .filter((step) => step !== '')
       .join('\n'),
     GREP_WHERE: shape.folders
@@ -447,23 +447,35 @@ function finishedItems(shape: SkillShape, names: RecordNames): string {
         '  When the lookup is not clear, report the row and leave it at `DONE`.',
       ]
     : [];
-  const found = shape.git ? ', and `git cat-file -e <hash>` finds the commit' : '';
   return [
-    `- **A board row** is finished when it says \`COMMITTED, <date>, <hash>\`, its item file holds a`,
-    `  close-out section${found}. A row at \`DONE\` is built but not committed: it is not finished,`,
-    '  and its file stays, because the file is the only way to rebuild work that is lost before the',
-    '  owner commits it.',
+    ...finishedRow(shape),
     ...move,
     '  `SUPERSEDED` and `SETTLED AS NO` are finished too, but their files stay: each carries a fact',
     '  written nowhere else.',
     '- **A log line** is finished once it is older than 90 days.',
     '- **A design folder** is finished when every board row that names it is. One open row citing',
     '  it keeps it in the tree; a row the fold has taken off the table is finished.',
-    `- **${legacyBoard(names)}**, a row is finished when it says \`COMMITTED, <step>, <hash>\` and`,
-    '  that step is in the ledger; a `DONE` row keeps its prompt. A ledger step gives up its body',
+    `- **${legacyBoard(names)}**, a row is finished when it says \`${shape.git ? 'COMMITTED, <step>, <hash>' : 'DONE, <step>'}\` and`,
+    `  that step is in the ledger${shape.git ? '; a `DONE` row keeps its prompt' : ''}. A ledger step gives up its body`,
     '  once it is older than the newest twenty. Its number, title and date stay, because every',
     '  citation of it depends on that line.',
   ].join('\n');
+}
+
+/** Standard 2.1.1: without git, `DONE` is the last word a row can reach, so it is finished. */
+function finishedRow(shape: SkillShape): string[] {
+  if (!shape.git)
+    return [
+      '- **A board row** is finished when it says `DONE, <date>` and its item file holds a close-out',
+      '  section. With no git, no commit will follow, so `DONE` is final and its file folds.',
+    ];
+  return [
+    '- **A board row** is finished when it says `COMMITTED, <date>, <hash>`, its item file holds a',
+    '  close-out section, and `git cat-file -e <hash>` finds the commit. A row at `DONE` is built but',
+    '  not committed: it is not finished, and its file stays, because the file is the only way to',
+    '  rebuild work that is lost before the owner commits it. In a folder with no `.git`, `DONE` is',
+    '  final and finished.',
+  ];
 }
 
 function finishedFolders(): string {
@@ -476,16 +488,27 @@ function finishedFolders(): string {
 /**
  * D6 and D16: the fold writes each `COMMITTED` item's file to the archive, reads it back, and only
  * then removes the file and its row. A `DONE` item waits for the owner's commit (standard 2.1.0),
- * because a file folded before that commit is the only copy of the work it describes.
+ * because a file folded before that commit is the only copy of the work it describes. Standard
+ * 2.1.1: without git that commit never comes, so `DONE` folds.
  */
-function foldMove(names: RecordNames): string {
+function foldMove(shape: SkillShape, names: RecordNames): string {
+  const word = shape.git ? 'COMMITTED' : 'DONE';
+  const waits = shape.git
+    ? [
+        '   keeps what its row said, and only then removed with its row. A `DONE` item stays: its',
+        '   commit does not exist yet, except in a folder with no `.git`, where `DONE` is final.',
+      ]
+    : [
+        '   keeps what its row said, and only then removed with its row. With no git, no commit will',
+        '   follow, so `DONE` is final.',
+      ];
   return [
     '1. **The board and the ledger**: `personal-config fold --dry-run`, then `personal-config fold`.',
-    "   Each `COMMITTED` item's file is written to the archive, read back, given an index line that",
-    '   keeps what its row said, and only then removed with its row. A `DONE` item stays: its',
-    '   commit does not exist yet. An archive copy with other bytes stops that item. Log lines older',
-    '   than 90 days go to the archive log. `personal-config undo` puts back what it removed.',
-    `   ${legacyBoard(names)}, every row and every step number stays; the prompts of \`COMMITTED\``,
+    `   Each \`${word}\` item's file is written to the archive, read back, given an index line that`,
+    ...waits,
+    '   An archive copy with other bytes stops that item. Log lines older than 90 days go to the',
+    '   archive log. `personal-config undo` puts back what it removed.',
+    `   ${legacyBoard(names)}, every row and every step number stays; the prompts of \`${word}\``,
     '   items and old bodies go.',
   ].join('\n');
 }
@@ -591,8 +614,8 @@ function itemRecord(shape: SkillShape, names: RecordNames): string {
     '  blocks, so the row is right when the owner commits.',
     ...committed,
     `- **${legacyBoard(names)}**, write one new step in \`${names.ledger}\` instead, at the next free`,
-    `  number, read from the file, and the row becomes \`DONE, ${names.ledgerStem} <n>\`, later`,
-    `  \`COMMITTED, ${names.ledgerStem} <n>, <hash>\`.`,
+    `  number, read from the file, and the row becomes \`DONE, ${names.ledgerStem} <n>\`${shape.git ? ', later' : '.'}`,
+    ...(shape.git ? [`  \`COMMITTED, ${names.ledgerStem} <n>, <hash>\`.`] : []),
   ].join('\n');
 }
 
@@ -622,11 +645,8 @@ function phaseHeader(): string {
 function foldStep(shape: SkillShape): string {
   if (shape.folders) return '';
   if (shape.items) return itemFoldStep(shape);
-  const dead = shape.board
-    ? "the prompts of `COMMITTED` items, never this item's own prompt while it is only `DONE`, and any step body older than the newest twenty"
-    : 'any step body older than the newest twenty';
   return [
-    `- **Fold what is now dead**: ${dead}.`,
+    `- **Fold what is now dead**: ${deadOnBoard(shape)}any step body older than the newest twenty.`,
     '  `personal-config fold` does it: the row keeps its pointer and a step keeps its number,',
     '  title and date as one line, because every citation depends on that line still being there.',
     '  It appends to the archive and reads it back before it cuts, which is the only safe order',
@@ -635,19 +655,35 @@ function foldStep(shape: SkillShape): string {
 }
 
 /**
+ * Standard 2.1.1: with no git, no commit will follow, so `DONE` is final and its prompt is dead
+ * weight at once. With git, the prompt is the only copy of the work until the commit exists.
+ */
+function deadOnBoard(shape: SkillShape): string {
+  if (!shape.board) return '';
+  return shape.git
+    ? "the prompts of `COMMITTED` items, never this item's own prompt while it is only `DONE`, and "
+    : 'the prompts of `DONE` items, this one included, since without git no commit will follow, and ';
+}
+
+/**
  * D6 and D16, and standard 2.1.0. The item just closed is folded by a later close-out, never by
  * this one: it is `DONE` until the owner's commit exists, and until then its file is the only way
- * to rebuild the work.
+ * to rebuild the work. Standard 2.1.1: without git that commit never comes, so it folds now.
  */
 function itemFoldStep(shape: SkillShape): string {
   const timing = shape.git
     ? [
         "  A `DONE` item's file stays until its row says `COMMITTED`, so this item's file waits for",
-        '  the next close-out or for `/clean-up`.',
+        '  the next close-out or for `/clean-up`. In a folder with no `.git`, `DONE` is final and',
+        '  folds too.',
       ]
-    : [];
+    : [
+        "  With no git, no commit will follow, so `DONE` is final: this item's file moves at this",
+        '  fold.',
+      ];
+  const word = shape.git ? 'COMMITTED' : 'DONE';
   return [
-    "- **Fold what is dead.** `personal-config fold` moves each `COMMITTED` item's file to the archive,",
+    `- **Fold what is dead.** \`personal-config fold\` moves each \`${word}\` item's file to the archive,`,
     '  and its row leaves the table with it; the archive index line keeps what the row said. Log',
     '  lines older than 90 days go to the archive log. It writes the archive and reads it back',
     '  before it removes anything, which is the only safe order for a document git is not holding',

@@ -51,3 +51,15 @@ export function committedCell(status: string): CommittedCell | null {
   const [, record = '', hash = '', rest = ''] = match;
   return { record: record.trim(), hash, rest: rest.trim() };
 }
+
+/**
+ * Whether a closed row may leave the live board, the one answer `fold` and `unfolded` must share.
+ *
+ * Where git holds the work, only `COMMITTED`: a `DONE` item's file is the only way to rebuild it
+ * until the owner's commit exists. Where no `.git` sits at or above the root, no commit will ever
+ * exist, so `DONE` is final and that reason is gone (standard 2.1.1). Without this a folder's
+ * rows stop at `DONE` and its board grows without limit, which is the cost §2.1 exists to stop.
+ */
+export function isFoldable(status: string, git: boolean): boolean {
+  return isCommitted(status) || (!git && isDone(status));
+}

@@ -11,6 +11,17 @@ this paragraph claimed that without the marker: Part 0 told the adapting session
 stamp, and an unstamped copy was invisible to that check. A copy adapted before the marker
 existed still carries no stamp and stays invisible until `doctor --fix` writes one back.
 
+## 2.1.1 — 2026-10-15
+
+A patch: 2.1.0 missed one case. Re-adapting is optional for a repo in git and recommended for a
+folder without git, whose 2.1.0 copy never lets a closed item fold.
+
+- **`DONE` is final where there is no git, in §2.1, §2.3 and Part 7.** A folder without git can
+  never write a hash, so under 2.1.0 its rows stopped at `DONE` and its board grew without limit.
+  The reason `DONE` waits, that the item file is the only copy until the commit exists, does not
+  apply where no commit will follow. `personal-config fold` and `doctor` read it from the
+  filesystem: no `.git` at or above the folder means `DONE` folds as `COMMITTED` does.
+
 ## 2.1.0 — 2026-10-15
 
 A minor version: one status word is added and every 2.0.0 row still reads. **Re-adapting is
