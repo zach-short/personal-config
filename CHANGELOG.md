@@ -7,6 +7,18 @@ The CLI. The working standard it installs is versioned separately — see
 
 ### Added
 
+- **A board status word, `COMMITTED`, and standard 2.1.0.** `DONE, <record>` now means built and
+  recorded but not yet in a commit, and `COMMITTED, <record>, <short hash>` means the owner's
+  commit exists. `doctor`'s `board-status` accepts both on a 1.x board (`<record>` a ledger step)
+  and a 2.0.0 one (`<record>` a date), still accepts every older `DONE — HANDOFF n` and
+  `DONE - <date>` row, and asks git whether a `COMMITTED` hash names a commit in the repo (one
+  `git cat-file --batch-check` per board; a directory git cannot read is not checked).
+  `unfolded` reports only `COMMITTED` items, and `personal-config fold` moves only `COMMITTED`
+  items: a `DONE` item keeps its prompt or file, the only copy of work that is not committed.
+  `fold migrate` writes a `DONE` item's section to its own file. The close-out, clean-up,
+  autopilot, delegate and land-worktrees skills write `DONE` before the commit blocks and move a
+  row to `COMMITTED` once git has its commit.
+
 - **`/audit`, an eighth workflow skill, and an "audit first" option in `/autopilot`.** `/audit`
   runs the lanes a repo names in its own `docs/audit-lanes.md`, one lane at a time: a sweep, a
   triage that drops known false positives and anything an earlier audit already found, and a

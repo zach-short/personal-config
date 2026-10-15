@@ -42,14 +42,15 @@ const USAGE = [
   'usage: personal-config fold [board|ledger|migrate] [--keep <n>] [--log-days <n>]',
   '',
   'Moves what §2.1 already calls dead weight out of the live documents and into the archive:',
-  "a `DONE` item's prompt, and every ledger step body but the newest --keep (default 20).",
+  "a `COMMITTED` item's prompt, and every ledger step body but the newest --keep (default 20).",
   'The board keeps every row; the ledger keeps every step number, title and date.',
-  `In a repo with an items folder, a \`DONE\` item's file and its row move to the archive, and`,
+  `In a repo with an items folder, a \`COMMITTED\` item's file and its row move to the archive, and`,
   `ledger log lines older than --log-days (default ${LOG_DAYS}) move to the archive's log.`,
   'With no target it does both.',
   '',
-  '`fold migrate` converts a 1.x repo once: the step log and the `DONE` prompts to the archive,',
-  "every other item's section to its own file, then the live board and ledger cut.",
+  '`fold migrate` converts a 1.x repo once: the step log and the `COMMITTED` prompts to the',
+  "archive, every other item's section to its own file, then the live board and ledger cut.",
+  'A `DONE` item is not in a commit yet, so its prompt or file stays until the row says `COMMITTED`.',
 ].join('\n');
 
 type Which = 'board' | 'ledger';
@@ -110,7 +111,7 @@ type Half = {
  * archived three.
  *
  * A migrated repo (per-item-board `DESIGN.md` D6, D16, D4) keeps that order with whole files: each
- * `DONE` item file is written to the archive and read back, and only then do the index line, the
+ * `COMMITTED` item file is written to the archive and read back, and only then do the index line, the
  * row's removal and the live file's removal go, in one `commitPlan` that backs all of them up
  * first. The log retention is `--log-days` (DIAL-4), 90 days when the flag is absent.
  */
@@ -436,7 +437,8 @@ function keptLines(half: Half): string[] {
   }
   if (half.which === 'board') {
     return [
-      '  the board — every row, including each `DONE` row and its pointer at the ledger step.',
+      '  the board — every row, including each closed row and its pointer at the ledger step,',
+      "  and every `DONE` item's prompt or file, which waits for its commit (§2.3).",
       '  `SUPERSEDED` and `SETTLED AS NO` keep their sections: `doctor` reads those for the',
       '  replacement and the reason, and §2.1 asks that a settled no is never re-proposed.',
     ];
@@ -490,7 +492,7 @@ async function write(cli: Cli, archiveHome: string, all: Half[]): Promise<number
 /**
  * The halves that can fold whole. `edit()` is an overwrite, so a board or an `INDEX.md` whose
  * stamp is marked `adapted` (or missing, on a file that carries ours) makes its trim or its index
- * line a no-op in `commitPlan` — while a removal beside it still lands. That leaves a live `DONE`
+ * line a no-op in `commitPlan` — while a removal beside it still lands. That leaves a live `COMMITTED`
  * row whose file is gone and an archive file no index line names, and exits 0. So an item half
  * with a guarded board or index is held whole, before anything is written (D16).
  */
@@ -619,7 +621,7 @@ function nothingToFold(targets: Which[], keep: number, logDays: number): string 
   const named = targets.join(' and ');
   return [
     `Nothing to fold in the ${named}.`,
-    `Either there is no such document here, or every \`DONE\` prompt or item file is already`,
+    `Either there is no such document here, or every \`COMMITTED\` prompt or item file is already`,
     `out, the log is already ${keep} step(s) or shorter, and no log line is older than ${logDays} days.`,
   ].join('\n');
 }

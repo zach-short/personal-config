@@ -1,4 +1,4 @@
-import { execFile } from 'node:child_process';
+import { execFile, execFileSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
 import { promisify } from 'node:util';
 import { exists } from './disk.ts';
@@ -17,6 +17,32 @@ async function git(cwd: string, args: string[]): Promise<string | null> {
   try {
     const { stdout } = await run('git', args, { cwd, maxBuffer: MAX_OUTPUT });
     return stdout.trim();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Which of these hashes name a commit in the repo at `dir`, or null where that cannot be asked:
+ * not a repository, or no git. Null is "cannot verify", the way a missing ledger is, so a rule
+ * reading it reports nothing rather than a violation nobody can act on.
+ *
+ * Sync because every `doctor` rule's `check` is. One `cat-file --batch-check` for the whole
+ * board, the same lookup `cat-file -e` makes, so a board with two hundred `COMMITTED` rows costs
+ * one process and not two hundred. `^{commit}` peels a tag and refuses a tree or a blob.
+ */
+export function commitsAmong(dir: string, hashes: string[]): Set<string> | null {
+  if (hashes.length === 0) return new Set();
+  try {
+    const out = execFileSync('git', ['cat-file', '--batch-check=%(objecttype)'], {
+      cwd: dir,
+      input: hashes.map((hash) => `${hash}^{commit}\n`).join(''),
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'ignore'],
+      maxBuffer: MAX_OUTPUT,
+    });
+    const types = out.split('\n');
+    return new Set(hashes.filter((_, index) => types[index] === 'commit'));
   } catch {
     return null;
   }

@@ -10,6 +10,7 @@ import {
   UNMIGRATED,
 } from '../../lib/items.ts';
 import { LOG_DAYS, staleLogLines } from '../../lib/log.ts';
+import { isCommitted } from '../../lib/status.ts';
 import type { Finding } from '../../lib/types.ts';
 import type { Doc } from '../scan.ts';
 
@@ -23,8 +24,10 @@ import type { Doc } from '../scan.ts';
  * than half the runway of a Default session before a line of code is read, and past the Deep
  * tier's landing threshold outright. This rule is the thing that notices.
  *
- * A 2.0.0 repo has two more things to fold (per-item-board `DESIGN.md` DIAL-8, D4): a `DONE`
- * item's file still in the live folder, and log lines past the retention dial. Built per root,
+ * A 2.0.0 repo has two more things to fold (per-item-board `DESIGN.md` DIAL-8, D4): a
+ * `COMMITTED` item's file still in the live folder, and log lines past the retention dial. A
+ * `DONE` item's file is not one: its code is not in a commit yet, and the file is the only way
+ * to rebuild the work if it is lost before the owner commits it (§2.3). Built per root,
  * because whether the ledger's log is frozen is read from the repo's config.
  */
 export function unfoldedRule(context: ItemContext, on: string = today()) {
@@ -49,12 +52,12 @@ function foldFindings(doc: Doc): Finding[] {
 }
 
 /**
- * One finding per document, as for the 1.x fold, but with no threshold: a live `DONE` file costs
+ * One finding per document, as for the 1.x fold, but with no threshold: a live `COMMITTED` file costs
  * nothing until a session lists the folder, and it is one move to fix, so the finding is cheap
  * (DIAL-8). A log line is the same: it is one line, and ninety days is the dial.
  */
 function itemFindings(doc: Doc, context: ItemContext, on: string): Finding[] {
-  if (doc.kind === 'board') return doneFilesLive(doc);
+  if (doc.kind === 'board') return committedFilesLive(doc);
   if (context.ledgerFrozenAt === null) return [];
   const stale = staleLogLines(doc.text, on, LOG_DAYS);
   const first = stale[0];
@@ -68,12 +71,12 @@ function itemFindings(doc: Doc, context: ItemContext, on: string): Finding[] {
   ];
 }
 
-function doneFilesLive(doc: Doc): Finding[] {
+function committedFilesLive(doc: Doc): Finding[] {
   const board = parseBoard(doc.text);
   if (!board || doc.itemsDir === undefined || !hasItemsFolder(doc.itemsDir)) return [];
   const live = listItemsSync(doc.itemsDir);
   const done = board.rows.filter(
-    (row) => row.status.startsWith('DONE') && findItem(live, row.number) !== null,
+    (row) => isCommitted(row.status) && findItem(live, row.number) !== null,
   );
   const first = done[0];
   if (first === undefined) return [];
@@ -81,7 +84,7 @@ function doneFilesLive(doc: Doc): Finding[] {
     finding(
       doc,
       first.line,
-      `${done.length} \`DONE\` item file(s) still in ${basename(doc.itemsDir)}/ (${done.map((row) => row.number).join(', ')}) — \`personal-config fold board\` moves them to the archive`,
+      `${done.length} \`COMMITTED\` item file(s) still in ${basename(doc.itemsDir)}/ (${done.map((row) => row.number).join(', ')}) — \`personal-config fold board\` moves them to the archive`,
     ),
   ];
 }

@@ -20,7 +20,7 @@ here, and the adapted copy is built on the answer. If an installer put this file
 left a prompt saying which of Part 0's steps are already done; follow that prompt rather than
 this paragraph.
 
-**Standard version: 2.0.0**
+**Standard version: 2.1.0**
 
 **Adapted: not yet — run Part 0.**
 
@@ -299,14 +299,17 @@ board is the parallelism model:
 - **Every cell is one line**, and every cell but "Files it owns" stays under about 200
   characters. Detail goes in the item file. "Files it owns" is exempt because it is the
   collision check's data: shortened to directories, it misses collisions exact paths catch.
-- **Status** uses the board words in 2.3. A closed row reads `DONE - <date>`, the day it
-  closed. The record is the close-out section of the item file that the row's number names,
-  live in the folder until the fold and in the archive after it. **Do not paste a prompt marked
-  DONE**: a fresh session would build it again.
+- **Status** uses the board words in 2.3. A built row reads `DONE, <date>`, the day it
+  closed; once the owner commits, it reads `COMMITTED, <date>, <short hash>`. The record is the
+  close-out section of the item file that the row's number names, live in the folder until the
+  fold and in the archive after it. **Do not paste a prompt marked `DONE` or `COMMITTED`**: a
+  fresh session would build it again.
 - **A prompt rots the moment it is executed.** The close-out is the truth; the prompt is the
-  ask. Where a DONE prompt turns out to describe the work wrongly, say so in the close-out
+  ask. Where a closed prompt turns out to describe the work wrongly, say so in the close-out
   rather than editing the prompt into a lie.
-- **A `DONE` item leaves at the fold, its file and its row together** (Part 7). The file moves
+- **A `COMMITTED` item leaves at the fold, its file and its row together** (Part 7). A `DONE`
+  item keeps its file until its commit exists, because the file is the only way to rebuild work
+  that is lost before the owner commits it. The file moves
   to the archive and is read back; then its row leaves the table, and the archive index line
   carries what the row said. The item number is never reused: the next free number is one more
   than the highest of the board's rows, the live folder's files and the archive folder's files. A session
@@ -415,14 +418,33 @@ what actually shipped, walk the runtime pass, archive.
 
 Use these words and no others, so a board or a folder can be scanned:
 
-- **Board items (Profile L):** `OPEN` · `IN FLIGHT` · `DONE - <date>` · `HELD` ·
-  `SETTLED AS NO` · `SUPERSEDED`. A row closed before its repo moved to 2.0.0 keeps
-  `DONE - <ledger> <n>`, a step in the frozen log (2.1).
+- **Board items (Profile L):** `OPEN` · `IN FLIGHT` · `DONE, <date>` ·
+  `COMMITTED, <date>, <short hash>` · `HELD` · `SETTLED AS NO` · `SUPERSEDED`. A row closed
+  before its repo moved to 2.0.0 keeps `DONE, <ledger> <n>` or `COMMITTED, <ledger> <n>, <short
+  hash>`, a step in the frozen log (2.1). Rows written before 2.1.0 spell the separator as a
+  dash, `DONE - <date>` or `DONE — <ledger> <n>`; they read the same and are not rewritten.
 - **Project folders and phases (Profile P):** `SCOPING` · `RATIFIED` · `PLANNED` · `IN FLIGHT`
   · `BUILT` · `MERGED` · `HELD` · `SUPERSEDED` · `CLOSED`.
 
 `BUILT` means gates green and any migration applied. `DONE` always points at the record: the
 row's number names the item file, and the date says when it closed.
+
+`DONE` and `COMMITTED` split one fact into two, because the owner commits and the agent cannot
+know a hash before the commit exists. `DONE` means the work is built, its gates are green and its
+record is written, and the code is not yet in a commit. The session that did the work writes
+`DONE` before it posts the commit blocks, never after. `COMMITTED` means the owner's commit
+exists, and the row adds its short hash. Moving a row from `DONE` to `COMMITTED` is a fact read
+from git, not a claim about the work, so any session that finds the commit makes the move.
+
+To find the commit for row `<n>`, first list the commits whose message names the row:
+`git log --all --format='%h %d %s' -E --grep='row <n>([^0-9]|$)'`. When none does, list the
+commits that change its files: `git log --all --format='%h %d %s' -- <files it owns>`. Read each
+candidate (`git show --stat <hash>`) and take the commit that holds the item's code, never a
+board-only commit, a sign-off commit or a fold commit. The record is no guide: it can land
+before, after or apart from the code. When the answer is not clear, ask the owner and do not
+guess. A commit on a worktree branch that `main` does not hold yet still counts as `COMMITTED`;
+the row names the branch after the hash. A row written as `DONE` before 2.1.0 may already be
+committed: check git before treating it as uncommitted.
 `HELD` always names what it waits on. `SUPERSEDED` always names what replaced it. `SETTLED AS
 NO` always carries the reason, because its whole job is to not be re-proposed.
 
@@ -805,11 +827,13 @@ paste one block, go.
 ### 1 — Update the record, in the same commit as the code
 
 - **Profile L:** a `## Close-out, <date>` section at the end of the item's own file: when it
-  was done, which model, on which branch, at which commit; what changed and why; what is now
-  fixed; which questions it answered; and **Left owed:** what it did not do. Then one log line
-  in the ledger, `- <date> · closed item <n>`, and the row becomes `DONE - <date>`. Add new
-  files to the code map and any durable fact to Known facts. The file is the writer's own, so
-  no session edits another's record.
+  was done, which model, on which branch; what changed and why; what is now fixed; which
+  questions it answered; and **Left owed:** what it did not do. Then one log line in the ledger,
+  `- <date> · closed item <n>`, and the row becomes `DONE, <date>` now, before the hand-back
+  blocks, so the row is right when the owner commits. Do not wait for the hash: the next
+  session that finds the commit moves the row to `COMMITTED` (2.3). Add new files to the code
+  map and any durable fact to Known facts. The file is the writer's own, so no session edits
+  another's record.
 - **Profile P:** the phase header becomes `**BUILT <date>, commit <hash>**`, plus any deviation,
   discovery or re-ordering this phase forced on later phases; the design gets its `As built:`
   paragraphs; the runtime-pass file gets this phase's entries.
@@ -892,8 +916,9 @@ become the largest thing a session reads, ahead of any code.
 Two things in them are already dead by this standard's own rules, and folding means moving
 those two to `{{ARCHIVE_HOME}}` and nothing else.
 
-1. **A `DONE` item, its file and its row.** §2.1 already says its prompt rots the moment it is
-   executed and that its close-out is the record. The file moves to
+1. **A `COMMITTED` item, its file and its row.** §2.1 already says its prompt rots the moment
+   it is executed and that its close-out is the record. A `DONE` item stays until its commit
+   exists (2.3). The file moves to
    `{{ARCHIVE_HOME}}/passoff/` under the same name, and the archive index gains one line that
    carries what the row said: `- **passoff/<n>-<slug>.md** ✅ - item <n>, <task>, closed <date>.`
    Then the row leaves the table. The number stays spent, because the next free number is read
@@ -923,11 +948,11 @@ against the ceiling of whatever tier reads these files (Part 5).
 **Moving a 1.x ledger and board to 2.0.0** is forward only, once per repo, in the same order.
 Under 1.x the ledger carried a numbered step log and the board carried every prompt below its
 table, with `DONE` pointing at a step. The whole step log is appended to the archive's ledger
-log under a dated header and read back; every `DONE` item's prompt still on the board is
-appended to the archive's closed-prompts file and read back; every other item's section is
-written to its own file and read back. Only then are the live documents cut: the board to its
-table, and the step log to a `## Log` holding one line, the frozen-log line of §2.1. Rows are not
-rewritten. A row that reads `DONE - <ledger> 24` stays as it is, valid for any step at or below
+log under a dated header and read back; every `COMMITTED` item's prompt still on the board is
+appended to the archive's closed-prompts file and read back; every other item's section,
+`DONE` ones included, is written to its own file and read back. Only then are the live
+documents cut: the board to its table, and the step log to a `## Log` holding one line, the
+frozen-log line of §2.1. Rows are not rewritten. A row that reads `DONE - <ledger> 24` stays as it is, valid for any step at or below
 N, and the step is found in the archive log.
 
 > **Worked example, the repo this standard ships from, under 1.2.0.** Its board carried 62

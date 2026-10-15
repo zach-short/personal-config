@@ -69,7 +69,8 @@ describe('a new repo on the full track gets the 2.0.0 board', () => {
     const board = contents(await render(FULL), '/PASSOFF.md');
     expect(board).not.toContain('### 1.');
     expect(board).toContain('`passoff/<n>-<slug>.md`');
-    expect(board).toContain('`DONE - <date>`');
+    expect(board).toContain('`DONE, <date>`');
+    expect(board).toContain('`COMMITTED, <date>, <short hash>`');
     expect(board).not.toContain('HANDOFF n');
   });
 

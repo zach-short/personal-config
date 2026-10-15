@@ -115,6 +115,15 @@ describe('D16 — a number is never reused', () => {
     });
   });
 
+  /** A `COMMITTED` row whose file is archived is the record itself, as a `DONE` one is (D2). */
+  test('passes: a COMMITTED row whose file is in the archive, with no live file or section', async () => {
+    const board = CLEAN_BOARD.replace(
+      '`DONE` — 2026-10-15',
+      '`COMMITTED, 2026-10-15, a1b2c3d`',
+    );
+    await withRepo(async (repo) => expect(await messages(repo)).toEqual([]), board);
+  });
+
   test('the next free number is the highest of the rows, the live files and the archive', () => {
     const live = [{ name: '30-live.md', text: '' }];
     const archived = [{ name: '41-closed.md', text: '' }];

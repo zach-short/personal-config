@@ -7,7 +7,7 @@ what "done" means here, and the writing habits that keep the record honest. It i
 start of every session, so it is kept short on purpose — a longer document would cost more to
 read than most of the work it governs.
 
-**Standard version: 2.0.0**
+**Standard version: 2.1.0**
 
 **Pre-filled by `personal-config` on {{DATE}}.** Every name below is this project's own, and
 nothing in this file is left for a later session to fill in. Read `{{ROUTER_FILE}}` first — the
@@ -108,14 +108,14 @@ case with hyphens. The file holds a dated line saying why the item exists, its p
 "Handing work to the next session" describes) and, at close, its close-out. Keep the board apart
 from the ledger: a fact written into the board rots the moment its item is done.
 
-- Status words, and no others: `OPEN` · `IN FLIGHT` · `DONE - <date>` · `HELD` ·
-  `SETTLED AS NO` · `SUPERSEDED`. `DONE` names the day the item closed, and its file is the
-  record; `HELD` names what it waits on; `SETTLED AS NO` carries its reason in its file, so it is
-  not proposed again.
+- Status words, and no others: `OPEN` · `IN FLIGHT` · `DONE, <date>` · `COMMITTED, <date>,
+  <hash>` · `HELD` · `SETTLED AS NO` · `SUPERSEDED`. `DONE` is built and recorded, not committed;
+  `COMMITTED` adds the owner's commit, read from git by any session. `HELD` names what it waits
+  on; `SETTLED AS NO` carries its reason in its file, so it is not proposed again.
 - An item exists before work on it starts: a row, plus its file. Its number is never reused.
-- When an item closes, its file gains a `## Close-out, <date>` section, the ledger gains one log
-  line, and its row becomes `DONE - <date>`; later the file moves to the archive and the row leaves the table.
-  **Never paste a prompt marked `DONE`**: a fresh session would do the work again.
+- At close the file gains a `## Close-out, <date>` section, the ledger one log line, and the row
+  `DONE, <date>`, before the commit blocks. Only a `COMMITTED` item's file and row go to the
+  archive. **Never paste a prompt marked `DONE` or `COMMITTED`**: it would be built again.
 
 ## Handing work to the next session
 

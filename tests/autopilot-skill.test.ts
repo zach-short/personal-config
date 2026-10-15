@@ -139,6 +139,15 @@ describe('what /autopilot says', () => {
     expect(text).not.toContain("builds from that row's worktree branch");
   });
 
+  /** Standard 2.1.0: a row behind a `DONE` one asks git before it is held, under either policy. */
+  for (const policy of ['print-blocks', 'agent-commits'])
+    test(`${policy}: a row written as DONE is checked against git before a row is held behind it`, async () => {
+      const text = (await autopilot({ commitPolicy: policy })).replace(/\s+/g, ' ');
+      expect(text).toContain('Before you hold a row behind a `DONE` row, check git');
+      expect(text).toContain("git log --all --format='%h %d %s' -E --grep='row <n>([^0-9]|$)'");
+      expect(text).toContain('move the row to `COMMITTED, <date>, <hash>`');
+    });
+
   test('under agent-commits it builds from the predecessor branch instead (D24)', async () => {
     const text = (await autopilot({ commitPolicy: 'agent-commits' })).replace(/\s+/g, ' ');
     expect(text).toContain("builds from that row's worktree branch");
@@ -181,7 +190,8 @@ describe('what /autopilot says', () => {
       "On a 1.x board, with no `passoff/` folder, write the run's own ledger step instead",
       'Builders take no ledger number and write no log line.',
       "Record each sign-off as `/delegate`'s step 4 says: the item's close-out, a log line and the board.",
-      'Every item its "Waits on" names is `DONE`, or has left the table at a fold.',
+      'Every item its "Waits on" names is `COMMITTED`, or has left the table at a fold.',
+      'A `HELD`, `IN FLIGHT` or `DONE` row ahead of it holds it back.',
       "the close-out text where the item's file is untracked",
       // /delegate lets a builder write its own close-out; the files rule must not stop it there.
       'Its own item file, where `/delegate` lets it write the close-out, is the one exception.',

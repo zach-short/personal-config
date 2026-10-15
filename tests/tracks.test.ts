@@ -232,6 +232,12 @@ const COMMIT_PARAGRAPH = '**Commits are the owner’s.**';
  * item files and log, §2.3's `DONE - <date>`, Part 7's new close-out and folding, and Part 5's
  * budget note. The version line is normalised away, so the hash moved on content. 83 still, and
  * no other key moved.
+ *
+ * **Eight files moved per variant on 2026-10-15, standard 2.1.0 (`COMMITTED`).** The adapted
+ * standard, `PASSOFF.md`, the first item file, and the `/handoff`, `/close-out`, `/clean-up`,
+ * `/delegate` and `/autopilot` skills now say that a row is `DONE, <date>` before the owner's
+ * commit and `COMMITTED, <date>, <hash>` after it, and that only a `COMMITTED` item folds. 83
+ * still, and no other key moved.
  */
 describe('§3.1 row 1 — code + full + git is the 0.3.0 output, byte for byte bar one skill', () => {
   const FULL = answersFor(CODE_FULL_GIT);

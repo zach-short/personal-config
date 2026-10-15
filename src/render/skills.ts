@@ -155,6 +155,23 @@ function legacyBoard(names: RecordNames): string {
   return `On a 1.x board, with no \`${names.items}/\` folder beside it`;
 }
 
+/**
+ * Standard 2.1.0, §2.3: how a session finds the commit that moves a row from `DONE` to
+ * `COMMITTED`. The record is no guide, because it can land before, after or apart from the code,
+ * so the lookup reads the commits themselves. `indent` is the continuation indent of the bullet
+ * the lines sit under.
+ */
+function commitLookup(indent: string): string[] {
+  return [
+    `${indent}To find the commit for row <n>, list the commits whose message names the row,`,
+    `${indent}\`git log --all --format='%h %d %s' -E --grep='row <n>([^0-9]|$)'\`, and when none`,
+    `${indent}does, the commits that change its files, \`git log --all --format='%h %d %s' -- <files>\`.`,
+    `${indent}Read each with \`git show --stat <hash>\` and take the one that holds the item's code,`,
+    `${indent}never a board-only, sign-off or fold commit. A commit on a worktree branch \`main\` does`,
+    `${indent}not hold yet counts; name the branch after the hash. When it is not clear, ask the owner.`,
+  ];
+}
+
 function variables(
   ctx: RenderContext,
   name: string,
@@ -234,18 +251,26 @@ function autopilotVars(ctx: RenderContext): Record<string, string> {
     BOARD_FILE: boardFile(ctx),
     ITEMS_DIR: namesOf(ctx).items,
     TIER_TABLE: tierTable(ctx, '   '),
-    AFTER_UNCOMMITTED: commits
-      ? [
-          '- A row whose predecessor in its lane, or an item its "Waits on" names, was signed off in',
-          "  this run builds from that row's worktree branch, and the rundown's merge order lists the",
-          '  predecessor first. Where a hook blocked that commit, the predecessor is not committed:',
-          '  the row is held, and its "Waits on" names the commit it waits for.',
-        ].join('\n')
-      : [
-          '- No row before it in its lane, and no item its "Waits on" names, was signed off in this',
-          '  run without a commit. Such a row is held, and its "Waits on" names the commit it waits',
-          '  for. Nothing is built on work the owner has not seen.',
-        ].join('\n'),
+    AFTER_UNCOMMITTED: [
+      ...(commits
+        ? [
+            '- A row whose predecessor in its lane, or an item its "Waits on" names, was signed off in',
+            "  this run builds from that row's worktree branch, and the rundown's merge order lists the",
+            '  predecessor first. Where a hook blocked that commit, the predecessor is not committed:',
+            '  the row is held, and its "Waits on" names the commit it waits for.',
+          ]
+        : [
+            '- A `DONE` row is built and recorded, but the owner has not committed it. A row that waits on',
+            '  one, in its lane or in its "Waits on", is held, and',
+            '  its "Waits on" names the commit it waits for. Nothing is built on work the owner has not seen.',
+          ]),
+      '- Before you hold a row behind a `DONE` row, check git: a row written as `DONE` before',
+      "  standard 2.1.0 may already be committed. When the lookup finds the item's code commit,",
+      '  move the row to `COMMITTED, <date>, <hash>` (on a 1.x board, `COMMITTED, <step>, <hash>`)',
+      '  and count it as finished. That move is a fact read from git. When the lookup is not clear,',
+      "  keep the row held and put it in the owner's report.",
+      ...commitLookup('  '),
+    ].join('\n'),
     COMMIT_BLOCKS: commits
       ? [
           'for each worktree, its branch, in the merge order above, and the two',
@@ -268,8 +293,9 @@ function delegateBoardVars(
   return {
     GATE_CLEARED: [
       `On the board (\`${board}\`): an \`OPEN\` row with a model and a written prompt, every item`,
-      '  its "Waits on" names `DONE` or gone from the table at a fold, and no "scope first".',
-      '  Otherwise stop and run `/scope`.',
+      '  its "Waits on" names `COMMITTED` or gone from the table at a fold (a `DONE` item is built',
+      '  but not yet committed, so wait for the owner\'s commit), and no "scope first". Otherwise',
+      '  stop and run `/scope`.',
     ].join('\n'),
     TIER_HOLD: ', or, under `/autopilot`, hold the row',
     QUESTIONS_HELD: [
@@ -317,6 +343,18 @@ function delegateRecord(names: RecordNames, commits: boolean): string {
   const state = commits
     ? 'committed on its branch and not merged, or "not committed" where a hook blocked it'
     : '"not yet committed"';
+  const row = commits
+    ? [
+        "  `COMMITTED, <date>, <hash>` with the builder's commit and its branch, or `DONE, <date>`",
+        '  where a hook blocked that commit,',
+      ]
+    : [
+        '  `DONE, <date>` (never wait for the hash: the row moves to `COMMITTED` once the owner',
+        '  commits),',
+      ];
+  const legacy = commits
+    ? `\`COMMITTED, ${ledgerStem} <n>, <hash>\` or \`DONE, ${ledgerStem} <n>\``
+    : `\`DONE, ${ledgerStem} <n>\``;
   return [
     "Write the record: the builder's and the auditor's models, the worktree, the branch, the",
     `  commit state (${state}), the relay passes, the verdict, each finding as \`open\`, and a`,
@@ -324,10 +362,10 @@ function delegateRecord(names: RecordNames, commits: boolean): string {
     "  section the builder wrote, in the builder's worktree. Where it is untracked, write the whole",
     `  section at the end of \`${items}/<n>-<slug>.md\` here, from the builder's report. Then add`,
     `  \`- <date> · closed item <n>\` at the end of the log in \`${ledger}\`, mark the row`,
-    "  `DONE - <date>`, and post the `/close-out` hand-back blocks: in chat, or into the run's state",
-    `  file under \`/autopilot\`. ${legacyBoard(names)}, the record is one step in \`${ledger}\``,
-    '  at the next free number, read from the file now, with the same lines, and the row becomes',
-    `  \`DONE - ${ledgerStem} <n>\`.`,
+    ...row,
+    "  and post the `/close-out` hand-back blocks: in chat, or into the run's state file under",
+    `  \`/autopilot\`. ${legacyBoard(names)}, the record is one step in \`${ledger}\` at the next`,
+    `  free number, read from the file now, with the same lines, and the row becomes ${legacy}.`,
   ].join('\n');
 }
 
@@ -375,8 +413,8 @@ function cleanUpVars(shape: SkillShape, names: RecordNames): Record<string, stri
     WHAT_MOVES: shape.folders
       ? 'closed project folders'
       : 'closed item files and their rows, old log lines, finished design folders',
-    FINISHED: shape.folders ? finishedFolders() : finishedItems(names),
-    MOVE_STEPS: [shape.folders ? '' : foldMove(shape, names), folderMove(shape)]
+    FINISHED: shape.folders ? finishedFolders() : finishedItems(shape, names),
+    MOVE_STEPS: [shape.folders ? '' : foldMove(names), folderMove(shape)]
       .filter((step) => step !== '')
       .join('\n'),
     GREP_WHERE: shape.folders
@@ -387,7 +425,7 @@ function cleanUpVars(shape: SkillShape, names: RecordNames): Record<string, stri
       : 'an open board row, an open item file, a ledger standing section',
     HISTORICAL_TEXT: shape.folders
       ? "a closed phase's `As built:` paragraph"
-      : 'a close-out section, a log line, a `DONE` row, a ledger step',
+      : 'a close-out section, a log line, a `DONE` or `COMMITTED` row, a ledger step',
     COMMIT_CLAUSE: shape.git
       ? [
           ' Then the',
@@ -398,17 +436,33 @@ function cleanUpVars(shape: SkillShape, names: RecordNames): Record<string, stri
   };
 }
 
-function finishedItems(names: RecordNames): string {
+function finishedItems(shape: SkillShape, names: RecordNames): string {
+  const move = shape.git
+    ? [
+        '  A `DONE` row whose code commit you can find is really `COMMITTED`: move it, with the',
+        '  hash, and then treat it as finished. That move is a fact read from git, not the marking',
+        '  the rule below forbids. A row written as `DONE` before standard 2.1.0 may already be',
+        '  committed.',
+        ...commitLookup('  '),
+        '  When the lookup is not clear, report the row and leave it at `DONE`.',
+      ]
+    : [];
+  const found = shape.git ? ', and `git cat-file -e <hash>` finds the commit' : '';
   return [
-    '- **A board row** is finished when it says `DONE - <date>` and its item file holds a close-out',
-    '  section. `SUPERSEDED` and `SETTLED AS NO` are finished too, but their files stay: each',
-    '  carries a fact written nowhere else.',
+    `- **A board row** is finished when it says \`COMMITTED, <date>, <hash>\`, its item file holds a`,
+    `  close-out section${found}. A row at \`DONE\` is built but not committed: it is not finished,`,
+    '  and its file stays, because the file is the only way to rebuild work that is lost before the',
+    '  owner commits it.',
+    ...move,
+    '  `SUPERSEDED` and `SETTLED AS NO` are finished too, but their files stay: each carries a fact',
+    '  written nowhere else.',
     '- **A log line** is finished once it is older than 90 days.',
     '- **A design folder** is finished when every board row that names it is. One open row citing',
     '  it keeps it in the tree; a row the fold has taken off the table is finished.',
-    `- **${legacyBoard(names)}**, a row is finished when it says \`DONE - <step>\` and that step`,
-    '  is in the ledger, and a ledger step gives up its body once it is older than the newest',
-    '  twenty. Its number, title and date stay, because every citation of it depends on that line.',
+    `- **${legacyBoard(names)}**, a row is finished when it says \`COMMITTED, <step>, <hash>\` and`,
+    '  that step is in the ledger; a `DONE` row keeps its prompt. A ledger step gives up its body',
+    '  once it is older than the newest twenty. Its number, title and date stay, because every',
+    '  citation of it depends on that line.',
   ].join('\n');
 }
 
@@ -420,25 +474,19 @@ function finishedFolders(): string {
 }
 
 /**
- * D6 and D16: the fold writes each `DONE` item's file to the archive, reads it back, and only then
- * removes the file and its row. In git it waits for the owner's commit, because a file folded
- * before that commit takes its close-out out of the history the commit was meant to hold.
+ * D6 and D16: the fold writes each `COMMITTED` item's file to the archive, reads it back, and only
+ * then removes the file and its row. A `DONE` item waits for the owner's commit (standard 2.1.0),
+ * because a file folded before that commit is the only copy of the work it describes.
  */
-function foldMove(shape: SkillShape, names: RecordNames): string {
-  const commit = shape.git
-    ? [
-        "   Run it only once every `DONE` item's close-out is committed: a fold takes the file out",
-        '   of the tree.',
-      ]
-    : [];
+function foldMove(names: RecordNames): string {
   return [
     '1. **The board and the ledger**: `personal-config fold --dry-run`, then `personal-config fold`.',
-    "   Each `DONE` item's file is written to the archive, read back, given an index line that keeps",
-    '   what its row said, and only then removed with its row. An archive copy with other bytes',
-    '   stops that item. Log lines older than 90 days go to the archive log. `personal-config undo`',
-    `   puts back what it removed. ${legacyBoard(names)}, every row and every step number stays;`,
-    '   prompts and old bodies go.',
-    ...commit,
+    "   Each `COMMITTED` item's file is written to the archive, read back, given an index line that",
+    '   keeps what its row said, and only then removed with its row. A `DONE` item stays: its',
+    '   commit does not exist yet. An archive copy with other bytes stops that item. Log lines older',
+    '   than 90 days go to the archive log. `personal-config undo` puts back what it removed.',
+    `   ${legacyBoard(names)}, every row and every step number stays; the prompts of \`COMMITTED\``,
+    '   items and old bodies go.',
   ].join('\n');
 }
 
@@ -517,12 +565,21 @@ function recordStep(shape: SkillShape, names: RecordNames): string {
 
 /**
  * Standard 2.0.0 (D2, D3, D4, D13): the close-out section is what the step body was, the log line
- * cites the number because the file moves at the fold, and `DONE` carries the date.
+ * cites the number because the file moves at the fold, and `DONE` carries the date. Standard
+ * 2.1.0: the owner commits, so the row is `DONE` before the hand-back blocks and becomes
+ * `COMMITTED` with the hash once git has the commit.
  */
 function itemRecord(shape: SkillShape, names: RecordNames): string {
-  const when = shape.git
-    ? 'when, which model, on which branch and at which commit'
-    : 'when and which model';
+  const when = shape.git ? 'when, which model and on which branch' : 'when and which model';
+  const committed = shape.git
+    ? [
+        '  Do not wait for the hash: `DONE` means built, gated and recorded, not yet committed. Once',
+        '  the commit exists, the row becomes `COMMITTED, <date>, <hash>`, written by whichever',
+        "  session finds it in git. When this session's own earlier items are already committed,",
+        '  move their rows now.',
+        ...commitLookup('  '),
+      ]
+    : [];
   const map = shape.short ? '' : ' Add any new file to the code map.';
   return [
     `- **A \`## Close-out, <date>\` section at the end of the item's own file**, \`${names.items}/<n>-<slug>.md\`:`,
@@ -530,9 +587,12 @@ function itemRecord(shape: SkillShape, names: RecordNames): string {
     "  **Do not edit another item's file.**",
     `- **One line at the end of the log in \`${names.ledger}\`**: \`- <date> · closed item <n>\`. The`,
     '  number, never the path: the file moves to the archive at the next fold.',
-    '- **The row becomes `DONE - <date>`**, the day the item closed.',
+    '- **The row becomes `DONE, <date>`**, the day the item closed, now, before the hand-back',
+    '  blocks, so the row is right when the owner commits.',
+    ...committed,
     `- **${legacyBoard(names)}**, write one new step in \`${names.ledger}\` instead, at the next free`,
-    `  number, read from the file, and the row becomes \`DONE - ${names.ledgerStem} <n>\`.`,
+    `  number, read from the file, and the row becomes \`DONE, ${names.ledgerStem} <n>\`, later`,
+    `  \`COMMITTED, ${names.ledgerStem} <n>, <hash>\`.`,
   ].join('\n');
 }
 
@@ -563,7 +623,7 @@ function foldStep(shape: SkillShape): string {
   if (shape.folders) return '';
   if (shape.items) return itemFoldStep(shape);
   const dead = shape.board
-    ? "this item's prompt, now its row says `DONE`, and any step body older than the newest twenty"
+    ? "the prompts of `COMMITTED` items, never this item's own prompt while it is only `DONE`, and any step body older than the newest twenty"
     : 'any step body older than the newest twenty';
   return [
     `- **Fold what is now dead**: ${dead}.`,
@@ -575,19 +635,19 @@ function foldStep(shape: SkillShape): string {
 }
 
 /**
- * D6 and D16. The item just closed is folded by a later close-out in git, never by this one: a
- * fold takes the file out of the tree, so folding it before the owner's commit leaves its
- * close-out out of the history that commit was meant to hold.
+ * D6 and D16, and standard 2.1.0. The item just closed is folded by a later close-out, never by
+ * this one: it is `DONE` until the owner's commit exists, and until then its file is the only way
+ * to rebuild the work.
  */
 function itemFoldStep(shape: SkillShape): string {
   const timing = shape.git
     ? [
-        "  Fold an item only once the owner has committed its close-out, so this item's file waits",
-        '  for the next close-out or for `/clean-up`.',
+        "  A `DONE` item's file stays until its row says `COMMITTED`, so this item's file waits for",
+        '  the next close-out or for `/clean-up`.',
       ]
     : [];
   return [
-    "- **Fold what is dead.** `personal-config fold` moves each `DONE` item's file to the archive,",
+    "- **Fold what is dead.** `personal-config fold` moves each `COMMITTED` item's file to the archive,",
     '  and its row leaves the table with it; the archive index line keeps what the row said. Log',
     '  lines older than 90 days go to the archive log. It writes the archive and reads it back',
     '  before it removes anything, which is the only safe order for a document git is not holding',
@@ -743,7 +803,7 @@ function itemRecording(shape: SkillShape, names: RecordNames): string {
     '',
     '`personal-config handoff step` prints both scaffolds and writes nothing. Where this ledger once',
     `had numbered steps, they are in the archive's \`${ledgerStem}-log.md\`, and a`,
-    `\`DONE - ${ledgerStem} <n>\` row still points at one of them.`,
+    `\`DONE, ${ledgerStem} <n>\` or \`COMMITTED, ${ledgerStem} <n>, <hash>\` row still points at one of them.`,
     '',
     `**${legacyBoard(names)}**, the record is one step in this ledger at the next free number,`,
     'read from the file, and a step you did not write is never edited.',

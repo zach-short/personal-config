@@ -51,10 +51,10 @@ and the rest of this skill names them.
 
 A row is runnable when all of these hold:
 
-- It is `OPEN`, and every row before it in its lane is finished (`DONE`, `SUPERSEDED` or
-  `SETTLED AS NO`), because the items in a lane run in order. A `HELD` or `IN FLIGHT` row ahead of
-  it holds it back.
-- Every item its "Waits on" names is `DONE`, or has left the table at a fold.
+- It is `OPEN`, and every row before it in its lane is finished (`COMMITTED`, `SUPERSEDED` or
+  `SETTLED AS NO`), because the items in a lane run in order. A `HELD`, `IN FLIGHT` or `DONE` row
+  ahead of it holds it back.
+- Every item its "Waits on" names is `COMMITTED`, or has left the table at a fold.
 {{AFTER_UNCOMMITTED}}
 - Its prompt does not say to scope first.
 - Its "Files it owns" overlaps no row marked `IN FLIGHT`, and no other row in the same launch.

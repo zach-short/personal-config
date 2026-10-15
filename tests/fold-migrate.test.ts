@@ -21,11 +21,11 @@ const DATE = '2026-10-15';
 /** Item 5 carries a nested `#### SCOPE`, the case `headingBlock` exists for; 1.5 is decimal. */
 const BOARD = `# Board
 
-Status vocabulary: \`OPEN\` · \`DONE — HANDOFF n\`.
+Status vocabulary: \`OPEN\` · \`DONE, HANDOFF n\` · \`COMMITTED, HANDOFF n, <hash>\`.
 
 | # | Task | Status | Model | Lane | Waits on | Files it owns |
 |---|------|--------|-------|------|----------|---------------|
-| 1 | Write the first thing | \`DONE — HANDOFF 1\` | Opus | A | — | a.ts |
+| 1 | Write the first thing | \`COMMITTED, HANDOFF 1, a1b2c3d\` | Opus | A | — | a.ts |
 | 1.5 | Patch the first thing | \`OPEN\` | Opus | A | item 1 | a.ts |
 | 5 | Build the scoped thing | \`HELD\` | Opus | B | — | b.ts |
 | 6 | Nothing written yet | \`OPEN\` | Opus | B | — | c.ts |
@@ -98,10 +98,23 @@ Keep this.
 describe('migrateFold, the board', () => {
   const migration = migrateFold(BOARD, BOLD_LEDGER, DATE, 'HANDOFF.md');
 
-  test('a `DONE` section goes to the closed archive, whole', () => {
+  test('a `COMMITTED` section goes to the closed archive, whole', () => {
     expect(migration.closed.map((block) => block.id)).toEqual(['1']);
     expect(migration.closed[0]?.text).toContain('The first prompt.');
   });
+
+  /** §2.3: its code is not in a commit yet, so its prompt is kept live as its own file. */
+  test.each(['DONE, HANDOFF 1', 'DONE — HANDOFF 1'])(
+    'a `%s` section becomes its own file, not a closed one',
+    (status) => {
+      const board = BOARD.replace('`COMMITTED, HANDOFF 1, a1b2c3d`', `\`${status}\``);
+      const held = migrateFold(board, BOLD_LEDGER, DATE, 'HANDOFF.md');
+      expect(held.closed).toEqual([]);
+      expect(held.items.find((item) => item.number === '1')?.text).toBe(
+        '# 1. Write the first thing\n\nThe first prompt.\n',
+      );
+    },
+  );
 
   test('each other section becomes its own file, named by D7 and headed `# <n>.`', () => {
     expect(migration.items.map((item) => item.name)).toEqual([

@@ -4,13 +4,14 @@ import { type LedgerStep, ledgerSteps, type StepForm, stepHeading } from './ledg
 import { staleLogLines } from './log.ts';
 import { headingBlock, proseLines } from './markdown.ts';
 import { docStem } from './repo-config.ts';
+import { isCommitted } from './status.ts';
 
 /**
  * What a fold lifts out of a live document, computed as data before anything is planned or
  * written. §2.1 already says the two halves are dead weight; this is the arithmetic of removing
  * them, and it touches no disk so that the part worth testing is testable by calling it.
  *
- * The board and the ledger fold differently on purpose. A `DONE` prompt is *replaced* by its
+ * The board and the ledger fold differently on purpose. A `COMMITTED` prompt is *replaced* by its
  * ledger step and leaves nothing behind, so it goes whole. A ledger step is cited forever —
  * "HANDOFF 24" is how every other document refers to work — so its body goes and a one-line
  * stub stays, which keeps the number taken, the log contiguous and the citation resolvable.
@@ -45,15 +46,20 @@ export type Fold = { folded: Folded[]; trimmed: string };
 const EMPTY: Fold = { folded: [], trimmed: '' };
 
 /**
- * The board half: a `DONE` item's prompt, lifted whole.
+ * The board half: a `COMMITTED` item's prompt, lifted whole.
  *
- * Only `DONE`, and that is not a preference — `doctor`'s own §2.3 rule reads the other two
+ * Not a `DONE` one (§2.3): its code is not in a commit yet, and the prompt is the only way to
+ * rebuild the work if it is lost before the owner commits it. Once git has the commit, the row
+ * says `COMMITTED` and the prompt is dead weight.
+ *
+ * Not the open words either, and that is not a preference — `doctor`'s own §2.3 rule reads the two
  * sections. `supersededProblem` looks in the item's section for what replaced it, and
  * `settledProblem` requires a dated paragraph there carrying the reason, because §2.1's whole
  * point for that status is that it is never re-proposed (`src/doctor/rules/board-status.ts`).
  * Folding either would make this tool's checker fire on the file this tool just wrote.
  *
- * `doneProblem`, next to them, reads the status cell and the ledger and never the section.
+ * `doneProblem` and `committedProblem`, next to them, read the status cell, the ledger and git,
+ * and never the section.
  * That asymmetry is §2.1 restated in code: a prompt rots the moment it is executed, and the
  * ledger step is the truth.
  */
@@ -61,12 +67,12 @@ export function boardFold(markdown: string): Fold {
   const board = parseBoard(markdown);
   if (board === null) return { ...EMPTY, trimmed: markdown };
 
-  const folded = board.rows.filter(isDone).flatMap((row) => itemBlock(markdown, row));
+  const folded = board.rows.filter(foldable).flatMap((row) => itemBlock(markdown, row));
   return { folded, trimmed: applyFold(markdown, folded) };
 }
 
-function isDone(row: BoardRow): boolean {
-  return row.status.startsWith('DONE');
+function foldable(row: BoardRow): boolean {
+  return isCommitted(row.status);
 }
 
 /** A row whose prompt was never written has nothing to fold, and that is not an error. */
@@ -227,7 +233,7 @@ function isSeamBlank(text: string, kept: string[]): boolean {
 }
 
 /**
- * One `DONE` item whose file is still in the live folder (per-item-board `DESIGN.md` D6, D16):
+ * One `COMMITTED` item whose file is still in the live folder (per-item-board `DESIGN.md` D6, D16):
  * the file to move, and what its row said, which the archive index line carries once the row
  * leaves the table.
  */
@@ -235,7 +241,7 @@ export type ItemMove = {
   number: string;
   /** The row's task cell as written. */
   task: string;
-  /** The date in the status cell (`DONE — 2026-10-15`), or null where the cell carries none. */
+  /** The date in the status cell (`COMMITTED, 2026-10-15, a1b2c3d`), or null where it has none. */
   closed: string | null;
   /** The live file's name, which is also its name in the archive. */
   name: string;
@@ -246,7 +252,7 @@ export type ItemMove = {
 };
 
 /**
- * The board half on a migrated board: every `DONE` row with exactly one live file.
+ * The board half on a migrated board: every `COMMITTED` row with exactly one live file.
  *
  * Exactly one, not "the first": with two files for one number, moving one leaves the other
  * live under a row that is gone, an orphan nothing points at. Two files is `item-files`'s
@@ -255,7 +261,7 @@ export type ItemMove = {
 export function itemFold(markdown: string, listing: ItemEntry[]): ItemMove[] {
   const board = parseBoard(markdown);
   if (board === null) return [];
-  return board.rows.filter(isDone).flatMap((row) => {
+  return board.rows.filter(foldable).flatMap((row) => {
     const files = listing.filter((entry) => isItemFor(entry.name, row.number));
     const file = files[0];
     if (files.length !== 1 || file === undefined || row.number.trim() === '') return [];
@@ -325,7 +331,7 @@ export type Migration = {
   frozenAt: number;
   /** The whole step log section, heading included, for `<LEDGER>-log.md`; null when empty. */
   log: Folded | null;
-  /** Every `DONE` item's section still on the board, for `<BOARD>-closed.md`. */
+  /** Every `COMMITTED` item's section still on the board, for `<BOARD>-closed.md`. */
   closed: Folded[];
   items: ItemFile[];
   board: string;
@@ -339,9 +345,10 @@ export type Migration = {
 const ITEM_HEADING = /^#{2,4}\s*(\d+(?:\.\d+)?)[.):]/;
 
 /**
- * The conversion as data. The board loses every section a row names, `DONE` ones to the closed
- * archive and the rest to their own files; the ledger loses its step log section whole, which
- * goes to the archive log, and gains an empty `## Log` with the one line D5 names in its place.
+ * The conversion as data. The board loses every section a row names, `COMMITTED` ones to the
+ * closed archive and the rest to their own files, `DONE` ones included, since a `DONE` item's
+ * code is not in a commit yet (§2.3). The ledger loses its step log section whole, which goes to
+ * the archive log, and gains an empty `## Log` with the one line D5 names in its place.
  */
 export function migrateFold(
   board: string,
@@ -391,9 +398,9 @@ function migrateBoard(markdown: string): BoardPart {
   ];
   if (problems.length > 0) return { ...empty, problems };
 
-  const closed = blocks.filter(({ row }) => isDone(row)).map(({ block }) => block);
+  const closed = blocks.filter(({ row }) => foldable(row)).map(({ block }) => block);
   const items = blocks
-    .filter(({ row }) => !isDone(row))
+    .filter(({ row }) => !foldable(row))
     .map(({ row, block }) => itemFileOf(row, block, cellAt(row.cells, parsed.columns.task)));
   const cut = applyFold(
     markdown,

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { readdir, rename, rm } from 'node:fs/promises';
+import { readdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { runDoctorOn } from '../src/doctor/index.ts';
 import { unfoldedRule } from '../src/doctor/rules/unfolded.ts';
@@ -49,6 +49,13 @@ async function boardFindings(repo: ItemRepo): Promise<string[]> {
     .map((f) => `${f.rule}: ${f.message}`);
 }
 
+/** Rewrites item 7's status cell on the fixture's board. */
+async function setSeven(repo: ItemRepo, status: string): Promise<void> {
+  const path = join(repo.dir, 'PASSOFF.md');
+  const board = await readFile(path, 'utf8');
+  await writeFile(path, board.replace('`DONE` — 2026-10-15', status));
+}
+
 async function withRepo(run_: (repo: ItemRepo) => Promise<void>): Promise<void> {
   const repo = await makeItemRepo();
   try {
@@ -73,15 +80,30 @@ describe('D11 — every reader agrees on every item of the BD-3 fixture', () => 
     });
   });
 
-  test("item 7's file back in the live folder: unfolded sees it, board-status still finds it", async () => {
+  test('item 7 committed and its file back in the live folder: unfolded sees it, board-status still finds it', async () => {
     await withRepo(async (repo) => {
       await rename(
         join(repo.archiveItems, FIXTURE_ARCHIVED_ITEM.name),
         join(repo.itemsDir, FIXTURE_ARCHIVED_ITEM.name),
       );
+      await setSeven(repo, '`COMMITTED, 2026-10-15, a1b2c3d`');
       expect(await boardFindings(repo)).toEqual([
-        expect.stringMatching(/^unfolded: 1 `DONE` item file\(s\) still in passoff\/ \(7\)/),
+        expect.stringMatching(
+          /^unfolded: 1 `COMMITTED` item file\(s\) still in passoff\/ \(7\)/,
+        ),
       ]);
+    });
+  });
+
+  /** §2.3: the file is the only way to rebuild the work until the owner's commit exists. */
+  test('item 7 still DONE and its file back in the live folder: nothing to fold yet', async () => {
+    await withRepo(async (repo) => {
+      await rename(
+        join(repo.archiveItems, FIXTURE_ARCHIVED_ITEM.name),
+        join(repo.itemsDir, FIXTURE_ARCHIVED_ITEM.name),
+      );
+      await setSeven(repo, '`DONE, 2026-10-15`');
+      expect(await boardFindings(repo)).toEqual([]);
     });
   });
 
@@ -89,7 +111,7 @@ describe('D11 — every reader agrees on every item of the BD-3 fixture', () => 
     await withRepo(async (repo) => {
       await rm(join(repo.archiveItems, FIXTURE_ARCHIVED_ITEM.name));
       expect(await boardFindings(repo)).toEqual([
-        expect.stringContaining("board-status: `DONE — 2026-10-15` points at item 7's file"),
+        expect.stringContaining("board-status: `DONE, 2026-10-15` points at item 7's file"),
       ]);
     });
   });
