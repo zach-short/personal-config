@@ -28,7 +28,11 @@ export type BoardRow = {
   status: string;
 };
 
-export type Board = { columns: BoardColumns; rows: BoardRow[] };
+/**
+ * `header` is the header row's cells as written, so a rule that reports a cell can name its
+ * column (`row-cell-ceiling`, per-item-board `DESIGN.md` D9) without a second parse of the table.
+ */
+export type Board = { columns: BoardColumns; header: string[]; rows: BoardRow[] };
 
 /**
  * The board is the *first* table under the board's own header, and only the rows touching it.
@@ -51,7 +55,7 @@ export function parseBoard(markdown: string): Board | null {
     const cells = cellsOf(line.text);
     if (!isSeparator(cells)) rows.push(rowOf(cells, line.text, line.line, columns));
   }
-  return { columns, rows };
+  return { columns, header: cellsOf(header.text), rows };
 }
 
 function rowOf(cells: string[], text: string, line: number, columns: BoardColumns): BoardRow {

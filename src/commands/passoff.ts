@@ -1,4 +1,4 @@
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { confirmWrite } from '../lib/ask.ts';
 import {
   type Board,
@@ -13,6 +13,14 @@ import {
 } from '../lib/board.ts';
 import { today } from '../lib/date.ts';
 import { exists, readText } from '../lib/disk.ts';
+import {
+  hasItemsFolder,
+  type ItemEntry,
+  itemText,
+  listItems,
+  loadItemContext,
+  nextFreeItem,
+} from '../lib/items.ts';
 import { numberedSection } from '../lib/markdown.ts';
 import { readDocNames } from '../lib/repo-config.ts';
 import type { Cli } from '../lib/types.ts';
@@ -28,7 +36,18 @@ const USAGE = [
 /** The one phrase both the writer and the idempotence check look for. */
 const CLAIM_MARK = 'Claimed `IN FLIGHT`';
 
-type Loaded = { path: string; text: string; board: Board };
+/**
+ * The board and, on a 2.0.0 repo, the items folder beside it (per-item-board `DESIGN.md` D1).
+ * `items` is empty on a 1.x repo, and every item is then read from its board section (D12).
+ */
+type Loaded = {
+  root: string;
+  path: string;
+  text: string;
+  board: Board;
+  itemsDir: string;
+  items: ItemEntry[];
+};
 
 export async function runPassoff(cli: Cli): Promise<number> {
   const [sub, argument] = cli.paths;
@@ -37,11 +56,11 @@ export async function runPassoff(cli: Cli): Promise<number> {
   const loaded = await loadBoard(process.cwd());
   if (typeof loaded === 'string') return refuse(loaded);
 
-  return sub === 'next' ? printNext(loaded) : claim(cli, loaded, argument);
+  return sub === 'next' ? await printNext(loaded) : claim(cli, loaded, argument);
 }
 
 async function loadBoard(root: string): Promise<Loaded | string> {
-  const { board: name } = await readDocNames(root);
+  const { board: name, items: itemsName } = await readDocNames(root);
   const path = join(root, name);
   if (!(await exists(path))) {
     return `${short(path)} is not there — this repo keeps no board, or \`personal-config setup\` has not run here.`;
@@ -52,7 +71,8 @@ async function loadBoard(root: string): Promise<Loaded | string> {
   if (!board || board.rows.length === 0) {
     return `${short(path)} has no board table — §2.1 opens it with a \`| # | Task | Status | … |\` header.`;
   }
-  return { path, text, board };
+  const itemsDir = join(root, itemsName);
+  return { root, path, text, board, itemsDir, items: await listItems(itemsDir) };
 }
 
 /**
@@ -60,14 +80,15 @@ async function loadBoard(root: string): Promise<Loaded | string> {
  * ranking of ours: items inside a lane are serial because each changes the shape the next builds
  * on (§2.1), and nothing in the row says which of two lanes matters more.
  */
-function printNext({ path, text, board }: Loaded): number {
+async function printNext(loaded: Loaded): Promise<number> {
+  const { path, board } = loaded;
   const open = board.rows.filter((row) => row.status === 'OPEN');
   const first = open[0];
   if (!first) return nothingOpen(board, path);
 
   say(summary(board, first));
   for (const line of warnings(board, first)) say(line);
-  say(`\n${prompt(text, first)}`);
+  say(`\n${prompt(loaded, first)}`);
   say(`\nTo take it: \`personal-config passoff claim ${first.number}\``);
   if (open.length > 1) {
     say(
@@ -77,7 +98,21 @@ function printNext({ path, text, board }: Loaded): number {
         .join(', ')}.`,
     );
   }
+  if (hasItemsFolder(loaded.itemsDir)) say(await nextFree(loaded));
   return 0;
+}
+
+/**
+ * D16: a closed row leaves the table at the fold, so the board alone no longer knows every
+ * number taken. Printed only on a 2.0.0 repo; a 1.x board's highest row is the answer, as it was.
+ */
+async function nextFree({ root, board, itemsDir, items }: Loaded): Promise<string> {
+  const { archived } = await loadItemContext(root, basename(itemsDir));
+  const rows = board.rows.map((row) => row.number);
+  const next = nextFreeItem(rows, items, archived ?? []);
+  const unread =
+    archived === null ? ' The archive could not be read, so check it before taking it.' : '';
+  return `A new item takes number ${next}: the highest of the board, ${basename(itemsDir)}/ and the archive's.${unread}`;
 }
 
 function nothingOpen(board: Board, path: string): number {
@@ -132,15 +167,25 @@ function collisions(board: Board, row: BoardRow): string[] {
     });
 }
 
-function prompt(text: string, row: BoardRow): string {
-  const section = numberedSection(text, row.number);
-  if (!section) {
+/**
+ * The item's own file when it has one, with its path, so a session knows which one file to open;
+ * otherwise its section below the board (D12). Both come through `itemText`, the one reader.
+ */
+function prompt({ text, items, itemsDir }: Loaded, row: BoardRow): string {
+  const item = itemText(items, text, row.number);
+  if (!item) {
     return `This item has no prompt section below the board. §2.1 asks for one — a row alone is not enough to start from.`;
+  }
+  if (item.from === 'file') {
+    return [
+      `From ${short(join(itemsDir, item.name))}:`,
+      '',
+      item.text.replace(/\n+$/, ''),
+    ].join('\n');
   }
   // The section runs to the next heading, which on a board means it swallows the `---` rule
   // between items. Printing it would read as part of the prompt.
-  const body = section.body.replace(/\s*\n-{3,}\s*$/, '').replace(/\n+$/, '');
-  return [section.heading, body].join('\n');
+  return item.text.replace(/\s*\n-{3,}\s*$/, '').replace(/\n+$/, '');
 }
 
 async function claim(cli: Cli, loaded: Loaded, number: string | undefined): Promise<number> {
@@ -148,19 +193,22 @@ async function claim(cli: Cli, loaded: Loaded, number: string | undefined): Prom
   const row = claimable(loaded.board, number, cli.force);
   if (typeof row === 'string') return refuse(row);
 
-  const { text, edits } = claimed(loaded, row);
-  const [change] = await resolvePlan([
-    edit(loaded.path, `board — item ${number} claimed`, text),
-  ]);
-  if (!change) return refuse('nothing to write.');
-  // The board is the one file every parallel session reads, and nothing locks it. Comparing what
-  // the plan re-read against what was parsed does not close that window — it narrows it to the
-  // milliseconds between the two reads, and turns a silent lost update into a refusal.
-  if (change.before !== loaded.text) {
-    return refuse(`${short(loaded.path)} changed while this was reading it. Run it again.`);
-  }
+  const targets = claimed(loaded, row);
+  const changes = await resolvePlan(
+    targets.map((target) =>
+      edit(target.path, `${target.label} — item ${number} claimed`, target.after),
+    ),
+  );
+  if (changes.length === 0) return refuse('nothing to write.');
+  // The board is the one file every parallel session reads, and nothing locks it or the item
+  // file. Comparing what the plan re-read against what was parsed does not close that window —
+  // it narrows it to the milliseconds between the two reads, and turns a silent lost update into
+  // a refusal. Both files are guarded, because a claim note lost from either is the same bug.
+  const moved = targets.find((target, index) => changes[index]?.before !== target.before);
+  if (moved)
+    return refuse(`${short(moved.path)} changed while this was reading it. Run it again.`);
 
-  say(preview(loaded.path, edits));
+  say(targets.map((target) => preview(target.path, target.edits)).join('\n'));
   if (cli.dryRun) {
     say('\n--dry-run: nothing was written.');
     return 0;
@@ -169,9 +217,9 @@ async function claim(cli: Cli, loaded: Loaded, number: string | undefined): Prom
     say('Nothing was written.');
     return 0;
   }
-  const result = await commitPlan([change]);
+  const result = await commitPlan(changes);
   say(`\nClaimed item ${number}. Wrote ${result.written.length} file(s).`);
-  if (result.manifest) say('`personal-config undo` restores the board as it was.');
+  if (result.manifest) say('`personal-config undo` restores what this changed.');
   return 0;
 }
 
@@ -210,37 +258,77 @@ function preview(path: string, edits: Edit[]): string {
   ].join('\n');
 }
 
+/** One file a claim writes: what was read, what it becomes, and the lines that changed. */
+type Target = { path: string; label: string; before: string; after: string; edits: Edit[] };
+
 /**
  * Two edits, both minimal: the status cell, and a dated line under the item's heading. The date
  * cannot go in the status cell — §2.3 allows the six words "and no others", so `IN FLIGHT
  * 2026-09-15` is a status `doctor` rejects — and it cannot go in the prompt, which is not edited
  * after it is written (§2.1). The heading's own blockquote is where this board already records a
  * status change, which is why a claim goes there too.
+ *
+ * On a 2.0.0 repo the heading is the item file's first line, so the note goes there and the
+ * board gets the status cell alone (per-item-board `DESIGN.md` §4.1, §4.5).
  */
-function claimed({ text, board }: Loaded, row: BoardRow): { text: string; edits: Edit[] } {
+function claimed(loaded: Loaded, row: BoardRow): Target[] {
+  const { path, text, board, items, itemsDir } = loaded;
   const lines = text.split('\n');
   const backticked = cellAt(row.cells, board.columns.status).includes('`');
   const updated = withStatus(row, board.columns, backticked ? '`IN FLIGHT`' : 'IN FLIGHT');
   lines[row.line - 1] = updated;
+  const status: Edit = { line: row.line, before: row.text, after: updated };
 
-  const note = claimNote(lines, row);
+  const item = itemText(items, text, row.number);
+  if (item?.from !== 'file') return [noteInSection(path, text, lines, row, status)];
+  const boardOnly = {
+    path,
+    label: 'board',
+    before: text,
+    after: lines.join('\n'),
+    edits: [status],
+  };
+  return [boardOnly, noteInFile(join(itemsDir, item.name), item.text)];
+}
+
+/** A 1.x board: the status cell and the note both land in the board (D12). */
+function noteInSection(
+  path: string,
+  before: string,
+  lines: string[],
+  row: BoardRow,
+  status: Edit,
+): Target {
+  const section = numberedSection(lines.join('\n'), row.number);
+  const note =
+    section && !section.body.includes(CLAIM_MARK)
+      ? claimNote(lines, section.start)
+      : { lines, edits: [] };
   return {
-    text: note.lines.join('\n'),
-    edits: [{ line: row.line, before: row.text, after: updated }, ...note.edits],
+    path,
+    label: 'board',
+    before,
+    after: note.lines.join('\n'),
+    edits: [status, ...note.edits],
   };
 }
 
-function claimNote(lines: string[], row: BoardRow): { lines: string[]; edits: Edit[] } {
-  const section = numberedSection(lines.join('\n'), row.number);
-  if (!section || section.body.includes(CLAIM_MARK)) return { lines, edits: [] };
+/** A 2.0.0 item: the note goes under the file's `# <n>.` line, which is its line 1. */
+function noteInFile(path: string, before: string): Target {
+  const lines = before.split('\n');
+  const note = before.includes(CLAIM_MARK) ? { lines, edits: [] } : claimNote(lines, 1);
+  return { path, label: 'item file', before, after: note.lines.join('\n'), edits: note.edits };
+}
 
-  // `section.start` is the heading's own 1-based line, so as an index it is already the line
-  // after it: the blank and the note go there, above whatever the section opens with.
-  const at = section.start;
+/**
+ * The note under the heading at 1-based line `heading`. That line number, as an index, is
+ * already the line after it, so the blank and the note go there, above whatever follows.
+ */
+function claimNote(lines: string[], heading: number): { lines: string[]; edits: Edit[] } {
   const note = `> **${CLAIM_MARK} ${today()}.**`;
   return {
-    lines: [...lines.slice(0, at), '', note, ...lines.slice(at)],
-    edits: [{ line: at + 2, before: null, after: note }],
+    lines: [...lines.slice(0, heading), '', note, ...lines.slice(heading)],
+    edits: [{ line: heading + 2, before: null, after: note }],
   };
 }
 

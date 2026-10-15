@@ -1,8 +1,10 @@
-import { readdirSync, readFileSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { readText } from './disk.ts';
 import { numberedSection } from './markdown.ts';
+import { expandHome } from './paths.ts';
+import { readArchiveHome, readLedgerFrozenAt } from './repo-config.ts';
 
 /**
  * The one place that finds a board item's text (per-item-board `DESIGN.md` D11). A 2.0.0 board
@@ -86,6 +88,59 @@ export function itemText(listing: ItemEntry[], board: string, number: string): I
   return { from: 'section', text: `${section.heading}\n${section.body}` };
 }
 
+/**
+ * The text below the item's `# <n>.` line, from either shape. A rule that looks for a word in the
+ * item must not find it in the title: a row titled "Replace the parser" satisfied `SUPERSEDED`
+ * by existing, and the heading repeats that title.
+ */
+export function itemBody(item: ItemText): string {
+  const lines = item.text.split('\n');
+  return /^#{1,4}\s/.test(lines[0] ?? '') ? lines.slice(1).join('\n') : item.text;
+}
+
+/** D7's name: `<n>-<slug>.md`, where `<n>` may carry one decimal part, as `1.5` does. */
+const ITEM_NAME = /^(\d+(?:\.\d+)?)-[a-z0-9]+(?:-[a-z0-9]+)*\.md$/;
+
+export function isItemName(name: string): boolean {
+  return ITEM_NAME.test(name);
+}
+
+/** The `<n>` a name starts with, or null where it starts with no number and a hyphen. */
+export function itemNumberOf(name: string): string | null {
+  return name.match(/^(\d+(?:\.\d+)?)-/)?.[1] ?? null;
+}
+
+/** The number in a file's `# <n>.` first line, or null where the first line is not that. */
+export function headingNumberOf(text: string): string | null {
+  return text.match(/^#\s+(\d+(?:\.\d+)?)[.):]/)?.[1] ?? null;
+}
+
+/**
+ * D16: a number is never reused, and a closed row leaves the table at the fold, so the board
+ * alone no longer knows every number taken. The highest of the rows, the live files and the
+ * archived files, plus one. A decimal item (`1.5`) counts as its whole part.
+ */
+export function nextFreeItem(rows: string[], live: ItemEntry[], archived: ItemEntry[]): number {
+  const taken = [
+    ...rows,
+    ...[...live, ...archived].map((entry) => itemNumberOf(entry.name) ?? ''),
+  ].map((number) => Math.floor(Number.parseFloat(number)));
+  return Math.max(0, ...taken.filter(Number.isFinite)) + 1;
+}
+
+/**
+ * Whether the repo has moved to item files (D12). Read from the folder on disk, not from the
+ * config: `itemsDir` always has a default, and a 1.x repo has no folder (G53). Also the check
+ * for an archive home, since `exists` in `disk.ts` answers for regular files only.
+ */
+export function hasItemsFolder(dir: string): boolean {
+  try {
+    return statSync(dir).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
 /** Sync because every doctor rule's `check` is. An absent folder is a 1.x repo, not an error. */
 export function listItemsSync(dir: string): ItemEntry[] {
   let names: string[];
@@ -109,4 +164,23 @@ export async function listItems(dir: string): Promise<ItemEntry[]> {
   return Promise.all(
     names.map(async (name) => ({ name, text: await readText(join(dir, name)) })),
   );
+}
+
+/**
+ * What a board's rules need beyond the board itself, read once per root because `check` is
+ * handed one doc. `archived` is null where the archive cannot be read (no `archiveHome`, or a
+ * home this machine does not have), and null means "cannot verify", never "the record is
+ * missing" (D2).
+ */
+export type ItemContext = { archived: ItemEntry[] | null; ledgerFrozenAt: number | null };
+
+/** A 1.x repo as every rule read it before item files: no archive to consult, no frozen log. */
+export const UNMIGRATED: ItemContext = { archived: null, ledgerFrozenAt: null };
+
+export async function loadItemContext(root: string, itemsName: string): Promise<ItemContext> {
+  const ledgerFrozenAt = await readLedgerFrozenAt(root);
+  const home = await readArchiveHome(root);
+  if (home === null || !hasItemsFolder(expandHome(home)))
+    return { archived: null, ledgerFrozenAt };
+  return { archived: await listItems(join(expandHome(home), itemsName)), ledgerFrozenAt };
 }

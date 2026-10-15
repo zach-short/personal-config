@@ -1,4 +1,15 @@
+import { basename } from 'node:path';
+import { parseBoard } from '../../lib/board.ts';
+import { today } from '../../lib/date.ts';
 import { boardFold, DEFAULT_KEEP, type Fold, foldedLines, ledgerFold } from '../../lib/fold.ts';
+import {
+  findItem,
+  hasItemsFolder,
+  type ItemContext,
+  listItemsSync,
+  UNMIGRATED,
+} from '../../lib/items.ts';
+import { LOG_DAYS, staleLogLines } from '../../lib/log.ts';
 import type { Finding } from '../../lib/types.ts';
 import type { Doc } from '../scan.ts';
 
@@ -11,18 +22,69 @@ import type { Doc } from '../scan.ts';
  * The cost is not tidiness, it is Part 5. Those two files were ~168k tokens together — more
  * than half the runway of a Default session before a line of code is read, and past the Deep
  * tier's landing threshold outright. This rule is the thing that notices.
+ *
+ * A 2.0.0 repo has two more things to fold (per-item-board `DESIGN.md` DIAL-8, D4): a `DONE`
+ * item's file still in the live folder, and log lines past the retention dial. Built per root,
+ * because whether the ledger's log is frozen is read from the repo's config.
  */
-export const unfolded = {
-  id: 'unfolded',
-  standardId: '§2.1',
-  appliesTo: (doc: Doc) => doc.kind === 'board' || doc.kind === 'ledger',
-  check(doc: Doc): Finding[] {
-    const fold =
-      doc.kind === 'board' ? boardFold(doc.text) : ledgerFold(doc.text, DEFAULT_KEEP, '');
-    const lines = foldedLines(fold);
-    return lines < THRESHOLD ? [] : [finding(doc, fold, lines)];
-  },
-};
+export function unfoldedRule(context: ItemContext, on: string = today()) {
+  return {
+    id: 'unfolded',
+    standardId: '§2.1',
+    appliesTo: (doc: Doc) => doc.kind === 'board' || doc.kind === 'ledger',
+    check(doc: Doc): Finding[] {
+      return [...foldFindings(doc), ...itemFindings(doc, context, on)];
+    },
+  };
+}
+
+/** How every repo was read before item files, and how a 1.x one still is (D12). */
+export const unfolded = unfoldedRule(UNMIGRATED);
+
+function foldFindings(doc: Doc): Finding[] {
+  const fold =
+    doc.kind === 'board' ? boardFold(doc.text) : ledgerFold(doc.text, DEFAULT_KEEP, '');
+  const lines = foldedLines(fold);
+  return lines < THRESHOLD ? [] : [finding(doc, firstLine(fold), message(doc, fold, lines))];
+}
+
+/**
+ * One finding per document, as for the 1.x fold, but with no threshold: a live `DONE` file costs
+ * nothing until a session lists the folder, and it is one move to fix, so the finding is cheap
+ * (DIAL-8). A log line is the same: it is one line, and ninety days is the dial.
+ */
+function itemFindings(doc: Doc, context: ItemContext, on: string): Finding[] {
+  if (doc.kind === 'board') return doneFilesLive(doc);
+  if (context.ledgerFrozenAt === null) return [];
+  const stale = staleLogLines(doc.text, on, LOG_DAYS);
+  const first = stale[0];
+  if (first === undefined) return [];
+  return [
+    finding(
+      doc,
+      first.line,
+      `${stale.length} log line(s) older than ${LOG_DAYS} days — \`personal-config fold ledger\` moves them to the archive's log`,
+    ),
+  ];
+}
+
+function doneFilesLive(doc: Doc): Finding[] {
+  const board = parseBoard(doc.text);
+  if (!board || doc.itemsDir === undefined || !hasItemsFolder(doc.itemsDir)) return [];
+  const live = listItemsSync(doc.itemsDir);
+  const done = board.rows.filter(
+    (row) => row.status.startsWith('DONE') && findItem(live, row.number) !== null,
+  );
+  const first = done[0];
+  if (first === undefined) return [];
+  return [
+    finding(
+      doc,
+      first.line,
+      `${done.length} \`DONE\` item file(s) still in ${basename(doc.itemsDir)}/ (${done.map((row) => row.number).join(', ')}) — \`personal-config fold board\` moves them to the archive`,
+    ),
+  ];
+}
 
 /**
  * One finding per document rather than one per item, and only past a threshold.
@@ -37,13 +99,13 @@ export const unfolded = {
  */
 const THRESHOLD = 400;
 
-function finding(doc: Doc, fold: Fold, lines: number): Finding {
+function finding(doc: Doc, line: number, message: string): Finding {
   return {
     rule: 'unfolded',
     standardId: '§2.1',
     file: doc.path,
-    line: firstLine(fold),
-    message: message(doc, fold, lines),
+    line,
+    message,
     fixable: false,
   };
 }

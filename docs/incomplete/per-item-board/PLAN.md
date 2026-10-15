@@ -29,6 +29,13 @@ Added by Phase 1, re-checked at `fc296fc` on 2026-10-15. G35, G38 and G42 hold a
 | G51 | `archive-index` reports an archive `passoff/` folder that has no index line | "`passoff/` exists but has no line in this index". D6's line `- **passoff/<file>** ...` contains `passoff/` and clears it once one item is folded; an empty folder made ahead of a fold, or a fold that writes the file before its line, trips it. Not in Phase 1's files | `src/doctor/rules/archive-index.ts`; Phase 1 proof, scratch archive |
 | G52 | The ledger's next free step was 108 on 2026-10-15, not 107 | Step 107 recorded the design itself | `bun run src/cli.ts handoff step`, 2026-10-15 |
 
+Added by Phase 2, re-checked at `5eb3590` on 2026-10-15. G38, G42 and G45 hold as written.
+
+| # | Claim | Verified state | Citation |
+|---|---|---|---|
+| G53 | None of the three proof repos has an items folder, and a 1.x board can carry `DONE` with a date and no step | `ls ~/Projects/{ezhomesteading,felto,usdeed}/passoff` finds nothing. ezhomesteading row 148 reads `DONE 2026-10-13: P0 to P6 committed ...`, a finding at `5eb3590`. So D12 holds only if "migrated" is read from the folder on disk, and only the exact cell `DONE - <date>` is the new form | `ls`; `~/Projects/ezhomesteading/PASSOFF.md:171`; baseline `doctor` run |
+| G54 | `parseBoard` keeps column positions but not the header's names | `BoardColumns` holds seven indexes; `row-cell-ceiling` has to name the column of each cell it reports, so `Board` gains the header cells. `src/lib/board.ts` is not in this phase's row | `src/lib/board.ts` `headerColumns` |
+
 ## 1. Decisions taken since ratification
 
 Build-level calls. Each has a one-line reversal so a later deviation can cite it.
@@ -123,7 +130,25 @@ test for `1` against a folder holding `15-…` and `1.5-…` is the guard.
 
 ### Phase 2. Readers and rules onto items
 
-**Status:** `PLANNED`. Waits on Phase 1.
+**Status:** `BUILT 2026-10-15` (board item 88, HANDOFF 109). Deviations:
+
+- D12: a repo is read as 2.0.0 when its items folder exists on disk, never from the config
+  (`itemsDir` always has a default). Only then does `DONE - <date>` pass, `item-files` run, or
+  `passoff next` print the next free number (G53).
+- D16: `item-files` reports an archived number only on a row that is not `DONE`. A `DONE` row
+  whose file is archived is the record `board-status` accepts (D2), as the BD-3 fixture's item 7
+  is; the hazard is a new row taking an old number.
+- D9: `Board` gained `header` in `src/lib/board.ts`, outside this phase's row, so the rule can
+  name a cell's column (G54). The log-line reader is a new `src/lib/log.ts`, so Phase 3's
+  `fold ledger --log-days` reads lines the same way `unfolded` does.
+- Scope item 8: the agreement test and the command tests are a new `tests/item-readers.test.ts`
+  (X1, a new file per area) in place of additions to `cli.test.ts`, `doctor.test.ts` and
+  `board-status-shapes.test.ts`, which are unchanged.
+- Done when: the gate is not green. `doctor .` reports the two `ledger-fold-ceiling` findings
+  Phase 1 left owed and 10 new `row-cell-ceiling` findings on this repo's own board, all "Waits
+  on" cells of `DONE` rows. D5 says those are shortened by hand; that is Zach's call. The D12
+  proof holds: only `row-cell-ceiling` findings differ on ezhomesteading (101), felto (0) and
+  usdeed (19), the counts G41 predicts.
 
 **Scope**
 

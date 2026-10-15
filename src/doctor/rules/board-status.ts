@@ -8,8 +8,18 @@ import {
   parseBoard,
   stripTypography,
 } from '../../lib/board.ts';
+import {
+  findItem,
+  hasItemsFolder,
+  type ItemContext,
+  type ItemEntry,
+  itemBody,
+  itemText,
+  listItemsSync,
+  UNMIGRATED,
+} from '../../lib/items.ts';
 import { ledgerSteps } from '../../lib/ledger.ts';
-import { escaped, numberedSection } from '../../lib/markdown.ts';
+import { escaped } from '../../lib/markdown.ts';
 import type { Finding } from '../../lib/types.ts';
 import type { Doc } from '../scan.ts';
 
@@ -24,62 +34,135 @@ import type { Doc } from '../scan.ts';
  * "nothing", and `SETTLED AS NO` by any paragraph carrying a date. Each check below now asks
  * for the thing itself.
  *
- * The table itself is parsed by `src/lib/board.ts`, which `passoff` reads through as well.
+ * The table itself is parsed by `src/lib/board.ts`, which `passoff` reads through as well, and
+ * an item's text is found by `src/lib/items.ts`, which `passoff` and `unfolded` read through
+ * (per-item-board `DESIGN.md` D11).
+ *
+ * Built per root, like `ledger-fold-ceiling`, because a 2.0.0 board's `DONE — <date>` is checked
+ * against the archive and its `DONE — <LEDGER> n` against the frozen log, and both are read from
+ * the repo's config rather than from the one doc a rule is handed.
  */
-export const boardStatus = {
-  id: 'board-status',
-  standardId: '§2.3',
-  appliesTo: (doc: Doc) => doc.kind === 'board',
-  check(doc: Doc): Finding[] {
-    const board = parseBoard(doc.text);
-    if (!board) return [];
-    const steps = ledgerNumbers(doc);
-    return board.rows.flatMap((row) => checkRow(doc, board, row, steps));
-  },
+export function boardStatusRule(context: ItemContext) {
+  return {
+    id: 'board-status',
+    standardId: '§2.3',
+    appliesTo: (doc: Doc) => doc.kind === 'board',
+    check(doc: Doc): Finding[] {
+      const board = parseBoard(doc.text);
+      if (!board) return [];
+      const view = boardView(doc, context);
+      return board.rows.flatMap((row) => checkRow(view, board, row));
+    },
+  };
+}
+
+/** How every rule read a board before item files, and still reads a 1.x one (D12). */
+export const boardStatus = boardStatusRule(UNMIGRATED);
+
+/** Everything a row's check reads beyond the row, gathered once per board. */
+type BoardView = {
+  doc: Doc;
+  /** The live items folder exists, which is what makes a repo a 2.0.0 one (D12, G53). */
+  migrated: boolean;
+  live: ItemEntry[];
+  archived: ItemEntry[] | null;
+  frozenAt: number | null;
+  steps: Set<number> | null;
 };
+
+function boardView(doc: Doc, context: ItemContext): BoardView {
+  const migrated = doc.itemsDir !== undefined && hasItemsFolder(doc.itemsDir);
+  return {
+    doc,
+    migrated,
+    live: migrated && doc.itemsDir !== undefined ? listItemsSync(doc.itemsDir) : [],
+    archived: context.archived,
+    frozenAt: context.ledgerFrozenAt,
+    // D5: a frozen log is in the archive, so there is nothing beside the board to read.
+    steps: context.ledgerFrozenAt === null ? ledgerNumbers(doc) : null,
+  };
+}
 
 /** §2.3 — "these words and no others". Only `DONE` carries a tail, and it must. */
 const STANDALONE = new Set(['OPEN', 'IN FLIGHT', 'HELD', 'SETTLED AS NO', 'SUPERSEDED']);
 
-function checkRow(doc: Doc, board: Board, row: BoardRow, steps: Set<number> | null): Finding[] {
-  const problem = rowProblem(doc, board, row, steps);
-  return problem === null ? [] : [finding(doc, row.line, problem)];
+function checkRow(view: BoardView, board: Board, row: BoardRow): Finding[] {
+  const problem = rowProblem(view, board, row);
+  return problem === null ? [] : [finding(view.doc, row.line, problem)];
 }
 
-function rowProblem(
-  doc: Doc,
-  board: Board,
-  row: BoardRow,
-  steps: Set<number> | null,
-): string | null {
+function rowProblem(view: BoardView, board: Board, row: BoardRow): string | null {
   const status = row.status;
-  if (status.startsWith('DONE')) return doneProblem(doc, status, steps);
-  if (!STANDALONE.has(status)) return unknownMessage(status);
+  if (status.startsWith('DONE')) return doneProblem(view, row);
+  if (!STANDALONE.has(status)) return unknownMessage(status, view.migrated);
   if (status === 'HELD') return heldProblem(board, row);
-  if (status === 'SUPERSEDED') return supersededProblem(doc, board, row);
-  if (status === 'SETTLED AS NO') return settledProblem(doc, row);
+  if (status === 'SUPERSEDED') return supersededProblem(view, board, row);
+  if (status === 'SETTLED AS NO') return settledProblem(view, row);
   return null;
 }
 
-function unknownMessage(status: string): string {
+function unknownMessage(status: string, migrated: boolean): string {
   const seen =
     status === '' ? 'this row carries no status' : `\`${status}\` is not a status word`;
-  return `${seen} — §2.3 allows OPEN, IN FLIGHT, DONE — <ledger step>, HELD, SETTLED AS NO, SUPERSEDED, and no others`;
+  const done = migrated ? 'DONE — <date>' : 'DONE — <ledger step>';
+  return `${seen} — §2.3 allows OPEN, IN FLIGHT, ${done}, HELD, SETTLED AS NO, SUPERSEDED, and no others`;
 }
 
 /**
  * `DONE` points at the record, and a citation that names a step the ledger does not have points
  * at nothing while reading exactly like one that does. The shape is checked first, then the
  * number against the log itself.
+ *
+ * A 2.0.0 board has a second shape, `DONE — <date>`, whose record is the item's own file (D2).
+ * It is accepted only where the items folder exists, so a 1.x board reads exactly as it did
+ * (D12): ezhomesteading carries `DONE 2026-10-13: …`, a finding before and after (G53).
  */
-function doneProblem(doc: Doc, status: string, steps: Set<number> | null): string | null {
-  const cited = citedStep(status, doc.ledgerStem);
-  if (cited === null) {
-    return `\`DONE\` must point at the ledger step — write \`DONE — ${doc.ledgerStem} <n>\``;
+function doneProblem(view: BoardView, row: BoardRow): string | null {
+  const stem = view.doc.ledgerStem;
+  const cited = citedStep(row.status, stem);
+  if (cited !== null) return stepProblem(view, cited);
+  const date = closedOn(row.status);
+  if (date !== null && view.migrated) return dateProblem(view, row, date);
+  return view.migrated
+    ? `\`DONE\` must point at the record — write \`DONE — <date>\`, the day the item closed`
+    : `\`DONE\` must point at the ledger step — write \`DONE — ${stem} <n>\``;
+}
+
+function stepProblem(view: BoardView, cited: Citation): string | null {
+  const { doc, frozenAt, steps } = view;
+  if (!cited.ours) return null;
+  // D5: every step up to the freeze is in the archive's log now, so it is taken as read.
+  if (frozenAt !== null) {
+    return cited.step <= frozenAt
+      ? null
+      : `\`DONE — ${doc.ledgerStem} ${cited.step}\` cites a step after the log froze at ${frozenAt} — a closed item now reads \`DONE — <date>\``;
   }
-  if (!cited.ours || steps === null || steps.size === 0 || steps.has(cited.step)) return null;
+  if (steps === null || steps.size === 0 || steps.has(cited.step)) return null;
   const highest = Math.max(...steps);
   return `\`DONE — ${doc.ledgerStem} ${cited.step}\` cites a step the ledger does not have — its log ends at ${highest}`;
+}
+
+/** The whole cell, so `DONE 2026-10-13: P0 to P6 committed` is not mistaken for the new shape. */
+function closedOn(status: string): string | null {
+  return status.match(/^DONE\s*[—-]\s*(\d{4}-\d{2}-\d{2})$/)?.[1] ?? null;
+}
+
+/**
+ * D2: the date is a real one, and the item file the row's number names exists, live or in the
+ * archive. An archive this machine cannot read is "cannot verify", so the row passes on a live
+ * file or on nothing at all, the way a missing ledger leaves a step citation alone.
+ */
+function dateProblem(view: BoardView, row: BoardRow, date: string): string | null {
+  if (!isIsoDate(date))
+    return `\`DONE — ${date}\` is not a date — write the day the item closed`;
+  if (findItem(view.live, row.number) !== null) return null;
+  if (view.archived === null || findItem(view.archived, row.number) !== null) return null;
+  return `\`DONE — ${date}\` points at item ${row.number}'s file, and there is none, live or in the archive`;
+}
+
+function isIsoDate(date: string): boolean {
+  const parsed = new Date(`${date}T00:00:00Z`);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().startsWith(date);
 }
 
 /** A cited step, and whether it is a step of *this* repo's ledger — the only one checkable here. */
@@ -117,11 +200,11 @@ function heldProblem(board: Board, row: BoardRow): string | null {
  * `SUPERSEDED` would otherwise satisfy its own test — and the item's section below the board is
  * included, because that is where a board with no column for a reason writes one.
  */
-function supersededProblem(doc: Doc, board: Board, row: BoardRow): string | null {
+function supersededProblem(view: BoardView, board: Board, row: BoardRow): string | null {
   const elsewhere = row.cells.filter(
     (_, index) => index !== board.columns.status && index !== board.columns.task,
   );
-  const named = [...elsewhere, sectionBody(doc, row.number)].join(' ');
+  const named = [...elsewhere, itemProse(view, row.number)].join(' ');
   return /supersed|replac/i.test(named) ? null : '`SUPERSEDED` must name what replaced it';
 }
 
@@ -133,10 +216,10 @@ function supersededProblem(doc: Doc, board: Board, row: BoardRow): string | null
  * characters satisfied: it could not fail, and a check that cannot fail reads as evidence when
  * it is none.
  */
-function settledProblem(doc: Doc, row: BoardRow): string | null {
+function settledProblem(view: BoardView, row: BoardRow): string | null {
   // No `#` column means no way to find the item's section. Say nothing rather than guess.
   if (row.number.trim() === '') return null;
-  const body = sectionBody(doc, row.number);
+  const body = itemProse(view, row.number);
   if (!/\d{4}-\d{2}-\d{2}/.test(body)) {
     return '`SETTLED AS NO` must carry its reason in a dated paragraph below the board, so it is not re-proposed';
   }
@@ -164,10 +247,14 @@ function explains(body: string): boolean {
   return prose.split(' ').filter((word) => word.length > 2).length >= REASON_WORDS;
 }
 
-/** The item's own section below the board — where a reason too long for a cell is written. */
-function sectionBody(doc: Doc, item: string): string {
+/**
+ * The item's own text below its heading: its file on a 2.0.0 board, its section below a 1.x one
+ * (D12). That is where a reason too long for a cell is written.
+ */
+function itemProse(view: BoardView, item: string): string {
   if (item.trim() === '') return '';
-  return numberedSection(doc.text, item)?.body ?? '';
+  const found = itemText(view.live, view.doc.text, item);
+  return found === null ? '' : itemBody(found);
 }
 
 /**

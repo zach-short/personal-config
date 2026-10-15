@@ -11,7 +11,7 @@ import {
   nextFreeStep,
   stepHeading,
 } from '../lib/ledger.ts';
-import { readDocNames } from '../lib/repo-config.ts';
+import { docStem, readDocNames, readLedgerFrozenAt } from '../lib/repo-config.ts';
 import type { Cli } from '../lib/types.ts';
 import { say, short } from '../lib/ui.ts';
 
@@ -32,6 +32,11 @@ export async function runHandoff(cli: Cli): Promise<number> {
   const root = process.cwd();
   const { ledger } = await readDocNames(root);
   const path = join(root, ledger);
+  const frozenAt = await readLedgerFrozenAt(root);
+  if (frozenAt !== null) {
+    say(await frozen(root, ledger, frozenAt));
+    return 0;
+  }
   if (!(await exists(path))) return refuse(noLedger(path));
 
   const steps = ledgerSteps(await readText(path));
@@ -100,6 +105,33 @@ async function scaffold(root: string, next: number, steps: LedgerStep[]): Promis
     previous
       ? `The step before it is ${previous.number}, at line ${previous.line}.`
       : 'This would be the first step.',
+  ].join('\n');
+}
+
+/**
+ * A migrated repo has no step log to number (per-item-board `DESIGN.md` D3, D5): what a step
+ * recorded goes in the item file's close-out, and work that is not an item gets one log line.
+ * It exits 0 and prints both shapes rather than refusing (BD-4), because sessions run this by
+ * habit and a refusal reads as a broken tool. It still writes nothing.
+ */
+async function frozen(root: string, ledger: string, frozenAt: number): Promise<string> {
+  const branch = (await currentBranch(root)) ?? '<branch>';
+  const date = today();
+  return [
+    `${ledger}'s step log froze at step ${frozenAt}; those steps are in the archive's ${docStem(ledger)}-log.md.`,
+    'There is no next step number. Record the work in two places instead:',
+    '',
+    "The item file's close-out, at its end:",
+    '',
+    `## Close-out, ${date}`,
+    '',
+    `Done ${date}, <model>, on \`${branch}\`, commit \`<hash>\`.`,
+    '<What changed and why.> <What is now fixed.> <Which questions it answered.>',
+    '<New files, added to the code map.> **Left owed:** <what this did not do>.',
+    '',
+    `One line at the end of ${ledger}'s \`## Log\`, citing the item by number only:`,
+    '',
+    `- ${date} · closed item <n>`,
   ].join('\n');
 }
 

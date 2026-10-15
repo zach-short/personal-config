@@ -4,6 +4,7 @@ import { loadConfig } from '../lib/config.ts';
 import { today } from '../lib/date.ts';
 import { exists, readText } from '../lib/disk.ts';
 import { isGitRepo } from '../lib/git.ts';
+import { loadItemContext } from '../lib/items.ts';
 import { expandHome } from '../lib/paths.ts';
 import { readDocNames } from '../lib/repo-config.ts';
 import type { Cli, Config, Finding, PlannedFile } from '../lib/types.ts';
@@ -15,15 +16,17 @@ import { absenceEvidence } from './rules/absence-evidence.ts';
 import { alwaysOnWeight } from './rules/always-on-weight.ts';
 import { archiveIndex } from './rules/archive-index.ts';
 import { archivedCitations } from './rules/archived-citations.ts';
-import { boardStatus } from './rules/board-status.ts';
+import { boardStatusRule } from './rules/board-status.ts';
 import { ignoredFiles, ignoreFix, ignoreTarget } from './rules/ignored.ts';
+import { itemFiles } from './rules/item-files.ts';
 import { ledgerFoldCeiling } from './rules/ledger-fold-ceiling.ts';
 import { placeholders } from './rules/placeholders.ts';
 import { relativeDates } from './rules/relative-dates.ts';
+import { rowCellCeiling } from './rules/row-cell-ceiling.ts';
 import { settledSupersession } from './rules/settled-supersession.ts';
 import { stampDrift } from './rules/stamp-drift.ts';
 import { stepNumbers } from './rules/step-numbers.ts';
-import { unfolded } from './rules/unfolded.ts';
+import { unfoldedRule } from './rules/unfolded.ts';
 import { adaptationFix, unstampedAdaptation } from './rules/unstamped-adaptation.ts';
 import { collectDocs, type Doc } from './scan.ts';
 
@@ -32,8 +35,6 @@ const DOC_RULES = [
   absenceEvidence,
   placeholders,
   stepNumbers,
-  boardStatus,
-  unfolded,
   unstampedAdaptation,
 ];
 
@@ -56,10 +57,18 @@ export async function runDoctorOn(
   expectation: DoctorExpectation,
 ): Promise<DoctorReport> {
   const docs = await collectDocs(root);
-  // Built per root, because its ceiling is an answer and answers are saved per repo.
+  const itemsName = basename((await readDocNames(root)).items);
+  const items = await loadItemContext(root, itemsName);
+  // Built per root: a ceiling is an answer and answers are saved per repo, and the board rules
+  // read the repo's archive and frozen log (per-item-board `DESIGN.md` D2, D5).
+  const answers = expectation.config.answers;
   const docRules = [
     ...DOC_RULES,
-    ledgerFoldCeiling(expectation.config.answers['doctor.ledgerCharCeiling']),
+    boardStatusRule(items),
+    unfoldedRule(items),
+    itemFiles(items),
+    ledgerFoldCeiling(answers['doctor.ledgerCharCeiling']),
+    rowCellCeiling(answers['doctor.rowCellCeiling']),
   ];
 
   const fromDocs = docs
@@ -77,7 +86,6 @@ export async function runDoctorOn(
   // a `PART0-PROMPT.md` sitting in, say, a docs folder is not a personal file at all.
   const configured = await exists(join(root, '.personal-config.json'));
   const fromStamps = await stampFindings(root, docs, expectation, configured);
-  const itemsName = basename((await readDocNames(root)).items);
   const fromCitations = archivedCitations(docs, await archivedInfo(docs, itemsName));
   // Ignore coverage is a question for git, and a plain folder (setup-tracks `DESIGN.md` D5) has
   // none to ask: `check-ignore` there resolves whatever repository *encloses* the folder, if any,
