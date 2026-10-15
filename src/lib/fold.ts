@@ -1,8 +1,9 @@
 import { type BoardRow, cellAt, parseBoard } from './board.ts';
-import { type ItemEntry, isItemFor } from './items.ts';
+import { type ItemEntry, isItemFor, itemFileName } from './items.ts';
 import { type LedgerStep, ledgerSteps, type StepForm, stepHeading } from './ledger.ts';
 import { staleLogLines } from './log.ts';
 import { headingBlock, proseLines } from './markdown.ts';
+import { docStem } from './repo-config.ts';
 
 /**
  * What a fold lifts out of a live document, computed as data before anything is planned or
@@ -303,4 +304,223 @@ export function logFold(markdown: string, days: number, date: string): Fold {
 /** What the fold is worth, for the report — the one number that answers "is this worth it". */
 export function foldedLines(fold: Fold): number {
   return fold.folded.reduce((total, block) => total + (block.end - block.start + 1), 0);
+}
+
+/** One open item's section, as the file it becomes (D5 step 3, D7). */
+export type ItemFile = {
+  number: string;
+  /** `<n>-<slug>.md`, the slug from the row's task cell. */
+  name: string;
+  /** `# <n>. <Title>`, then the section's body as it stood, without the board's separator. */
+  text: string;
+};
+
+/**
+ * `fold migrate`'s four outputs (per-item-board `DESIGN.md` D5), computed touching no disk.
+ * `problems` is non-empty where the conversion would lose or misplace text, and then nothing
+ * else here may be written.
+ */
+export type Migration = {
+  /** The highest step in the log, which `ledgerFrozenAt` records; 0 for a log with none. */
+  frozenAt: number;
+  /** The whole step log section, heading included, for `<LEDGER>-log.md`; null when empty. */
+  log: Folded | null;
+  /** Every `DONE` item's section still on the board, for `<BOARD>-closed.md`. */
+  closed: Folded[];
+  items: ItemFile[];
+  board: string;
+  ledger: string;
+  /** Numbered sections with no row, left on the board where they are. */
+  unrowed: string[];
+  problems: string[];
+};
+
+/** A numbered item heading, as `headingBlock` opens one. */
+const ITEM_HEADING = /^#{2,4}\s*(\d+(?:\.\d+)?)[.):]/;
+
+/**
+ * The conversion as data. The board loses every section a row names, `DONE` ones to the closed
+ * archive and the rest to their own files; the ledger loses its step log section whole, which
+ * goes to the archive log, and gains an empty `## Log` with the one line D5 names in its place.
+ */
+export function migrateFold(
+  board: string,
+  ledger: string,
+  date: string,
+  ledgerName: string,
+): Migration {
+  const boardPart = migrateBoard(board);
+  const ledgerPart = migrateLedger(ledger, date, ledgerName);
+  return {
+    ...boardPart,
+    ...ledgerPart,
+    problems: [...boardPart.problems, ...ledgerPart.problems],
+  };
+}
+
+type BoardPart = Pick<Migration, 'closed' | 'items' | 'board' | 'unrowed' | 'problems'>;
+
+function migrateBoard(markdown: string): BoardPart {
+  const parsed = parseBoard(markdown);
+  const empty: BoardPart = {
+    closed: [],
+    items: [],
+    board: markdown,
+    unrowed: [],
+    problems: [],
+  };
+  if (parsed === null) return empty;
+
+  const numbers = sectionNumbers(markdown);
+  const twice = [...new Set(numbers.filter((n, i) => numbers.indexOf(n) !== i))];
+  const rowNumbers = parsed.rows.map((row) => row.number.trim()).filter((n) => n !== '');
+  const unrowed = [...new Set(numbers.filter((n) => !rowNumbers.includes(n)))];
+  const rowTwice = [...new Set(rowNumbers.filter((n, i) => rowNumbers.indexOf(n) !== i))];
+
+  // `headingBlock` opens on `### 5.1.` for item 5, so a block counts only where its heading
+  // names the row's own number: a row whose section is not there gets no file, never 5.1's.
+  const blocks = parsed.rows.flatMap((row) =>
+    itemBlock(markdown, row)
+      .filter((block) => block.heading.match(ITEM_HEADING)?.[1] === row.number.trim())
+      .map((block) => ({ row, block })),
+  );
+  const problems = [
+    ...twice.map((n) => `the board has two sections for item ${n}`),
+    ...rowTwice.map((n) => `the board has two rows for item ${n}`),
+    ...overlaps(blocks.map(({ block }) => block)),
+  ];
+  if (problems.length > 0) return { ...empty, problems };
+
+  const closed = blocks.filter(({ row }) => isDone(row)).map(({ block }) => block);
+  const items = blocks
+    .filter(({ row }) => !isDone(row))
+    .map(({ row, block }) => itemFileOf(row, block, cellAt(row.cells, parsed.columns.task)));
+  const cut = applyFold(
+    markdown,
+    blocks.map(({ block }) => block),
+  );
+  return { closed, items, board: withoutTrailingRules(cut), unrowed, problems: [] };
+}
+
+/** Every numbered item heading's number, in file order, repeats included. */
+function sectionNumbers(markdown: string): string[] {
+  return markdown.split('\n').flatMap((text) => {
+    const number = text.match(ITEM_HEADING)?.[1];
+    return number === undefined ? [] : [number];
+  });
+}
+
+/** One item's block inside another's would land in two files, so it stops the migration. */
+function overlaps(blocks: Folded[]): string[] {
+  return blocks.flatMap((a) =>
+    blocks
+      .filter((b) => a !== b && b.start > a.start && b.start <= a.end)
+      .map((b) => `item ${b.id}'s section sits inside item ${a.id}'s`),
+  );
+}
+
+/**
+ * D7: the name from the row's task cell, the first line `# <n>. <Title>` from the section's own
+ * heading. The body keeps every byte but the trailing blank lines and the `---` the board puts
+ * between items, which is the board's layout and not the item's text.
+ */
+function itemFileOf(row: BoardRow, block: Folded, task: string): ItemFile {
+  const number = row.number.trim();
+  const title = block.heading.replace(/^#{2,4}\s*/, '');
+  const body = block.text.split('\n').slice(1).join('\n');
+  return {
+    number,
+    name: itemFileName(number, task === '' ? title : task),
+    text: `# ${title}\n${withoutTrailingRules(body)}`,
+  };
+}
+
+/** Trailing blank lines and `---` separators off, and one newline to end the file. */
+function withoutTrailingRules(text: string): string {
+  const lines = text.split('\n');
+  while (lines.length > 0 && /^\s*(?:-{3,}\s*)?$/.test(lines.at(-1) ?? '')) lines.pop();
+  return `${lines.join('\n')}\n`;
+}
+
+type LedgerPart = Pick<Migration, 'frozenAt' | 'log' | 'ledger' | 'problems'>;
+
+/**
+ * The step log's section runs from the `##` heading above its first step to the next heading of
+ * level two or above after its last, so a standing section after the log, Style rules included,
+ * stays where it is. A level-two heading between two steps means the log is split, and no cut
+ * can keep both halves' neighbours, so that is a problem and not a guess.
+ */
+function migrateLedger(markdown: string, date: string, ledgerName: string): LedgerPart {
+  const steps = ledgerSteps(markdown);
+  const lines = markdown.split('\n');
+  const frozenAt = steps.reduce((high, step) => Math.max(high, step.number), 0);
+  const logLine = `- ${date} · log frozen at step ${frozenAt} · ${docStem(ledgerName)}-log.md in the archive`;
+  const fresh = ['## Log', '', logLine, ''];
+
+  if (/^##\s+Log\s*$/m.test(markdown)) {
+    return {
+      frozenAt,
+      log: null,
+      ledger: markdown,
+      problems: ['the ledger already has a `## Log`'],
+    };
+  }
+  if (steps.length === 0)
+    return { frozenAt, log: null, ledger: withLogSection(lines, fresh), problems: [] };
+
+  const tops = proseLines(markdown)
+    .filter(({ text }) => /^#{1,2}\s/.test(text))
+    .map(({ text, line }) => ({ text, line, level: (text.match(/^#+/)?.[0] ?? '').length }));
+  const first = Math.min(...steps.map((step) => step.line));
+  const last = Math.max(...steps.map((step) => step.line));
+  const opener = tops.filter((h) => h.line < first).at(-1);
+  const start = opener !== undefined && opener.level === 2 ? opener.line : first;
+  const split = tops.filter((h) => h.line > first && h.line < last);
+  if (split.length > 0) {
+    return {
+      frozenAt,
+      log: null,
+      ledger: markdown,
+      problems: split.map((h) => `the step log is split by \`${h.text}\` at line ${h.line}`),
+    };
+  }
+  // Any heading after the last step ends the log, as `blockStops` has it for the 1.x fold: a
+  // `### ` standing section below the log is the ledger's, not the log's.
+  const next = proseLines(markdown).find(
+    ({ text, line }) => line > last && /^#{1,6}\s/.test(text),
+  );
+  const end = (next?.line ?? lines.length + 1) - 1;
+  // Only blank lines come off the end: a `---` inside the log is the log's own text.
+  const text = lines
+    .slice(start - 1, end)
+    .join('\n')
+    .replace(/\s+$/, '');
+  const log: Folded = {
+    id: `1-${frozenAt}`,
+    heading: lines[start - 1] ?? '',
+    text,
+    start,
+    end,
+    stub: null,
+  };
+  const after = lines.slice(end);
+  const ledger = [
+    ...lines.slice(0, start - 1),
+    ...(after.length === 0 ? fresh.slice(0, 3) : fresh),
+    ...after,
+  ];
+  return { frozenAt, log, ledger: endWithNewline(ledger.join('\n')), problems: [] };
+}
+
+/** A ledger with no steps gains its `## Log` before Style rules, or at the end. */
+function withLogSection(lines: string[], fresh: string[]): string {
+  const style = lines.findIndex((text) => /^##\s+Style rules/.test(text));
+  if (style !== -1)
+    return [...lines.slice(0, style), ...fresh, ...lines.slice(style)].join('\n');
+  const body = withoutTrailingRules(lines.join('\n'));
+  return `${body}\n${fresh.slice(0, 3).join('\n')}\n`;
+}
+
+function endWithNewline(text: string): string {
+  return text.endsWith('\n') ? text : `${text}\n`;
 }

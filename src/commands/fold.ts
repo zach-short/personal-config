@@ -12,10 +12,12 @@ import {
   itemFold,
   ledgerFold,
   logFold,
+  type Migration,
+  migrateFold,
   boardFold as sectionFold,
   withoutRows,
 } from '../lib/fold.ts';
-import { hasItemsFolder, listItems } from '../lib/items.ts';
+import { hasItemsFolder, isItemFor, listItems } from '../lib/items.ts';
 import { LOG_DAYS } from '../lib/log.ts';
 import { expandHome } from '../lib/paths.ts';
 import {
@@ -37,7 +39,7 @@ import {
 import { edit } from '../render/context.ts';
 
 const USAGE = [
-  'usage: personal-config fold [board|ledger] [--keep <n>] [--log-days <n>]',
+  'usage: personal-config fold [board|ledger|migrate] [--keep <n>] [--log-days <n>]',
   '',
   'Moves what §2.1 already calls dead weight out of the live documents and into the archive:',
   "a `DONE` item's prompt, and every ledger step body but the newest --keep (default 20).",
@@ -45,6 +47,9 @@ const USAGE = [
   `In a repo with an items folder, a \`DONE\` item's file and its row move to the archive, and`,
   `ledger log lines older than --log-days (default ${LOG_DAYS}) move to the archive's log.`,
   'With no target it does both.',
+  '',
+  '`fold migrate` converts a 1.x repo once: the step log and the `DONE` prompts to the archive,',
+  "every other item's section to its own file, then the live board and ledger cut.",
 ].join('\n');
 
 type Which = 'board' | 'ledger';
@@ -110,7 +115,7 @@ type Half = {
  * first. The log retention is `--log-days` (DIAL-4), 90 days when the flag is absent.
  */
 export async function runFold(cli: Cli): Promise<number> {
-  const targets = which(cli.paths[0]);
+  const targets = cli.paths[0] === 'migrate' ? [] : which(cli.paths[0]);
   if (targets === null) return refuse(USAGE);
 
   const root = process.cwd();
@@ -119,6 +124,7 @@ export async function runFold(cli: Cli): Promise<number> {
 
   const archiveHome = expandHome(home);
   if (!(await exists(join(archiveHome, 'INDEX.md')))) return refuse(noIndex(archiveHome));
+  if (targets.length === 0) return runMigrate(cli, root, archiveHome);
 
   const prepared = await prepareAll(root, archiveHome, targets, cli.keep, cli.logDays);
   const halves = prepared.filter((half) => half.ids.length > 0);
@@ -652,4 +658,207 @@ function note(message: string): number {
 function refuse(message: string): number {
   say(message);
   return 1;
+}
+
+/**
+ * `fold migrate` (per-item-board `DESIGN.md` D5, BD-1): the one-time conversion of a 1.x repo.
+ *
+ * Three commits behind one confirm, in the fold's safety order. The archive appends go first and
+ * are read back; then the item files, read back byte for byte; only then the cut board, the cut
+ * ledger and the two config keys, in one `commitPlan` so one backup holds all three and `undo`
+ * restores them together. Nothing live is cut until every byte it held is somewhere else.
+ */
+async function runMigrate(cli: Cli, root: string, archiveHome: string): Promise<number> {
+  const plan = await planMigrate(root, archiveHome);
+  if (typeof plan === 'string') return refuse(plan);
+  const { migration, itemsDir, halves, archive, items, live } = plan;
+
+  reportMigration(migration, itemsDir);
+  say(`\n${preview([...archive, ...items, ...live])}`);
+  if (cli.dryRun) return note('\n--dry-run: nothing was archived, written or cut.');
+  const asked = 'Archive, write the item files, then cut the live documents?';
+  if (!(await confirmWrite(asked, cli.force))) return note('Nothing was migrated.');
+
+  await commitPlan(archive);
+  const missing = await missingFromArchive(halves);
+  if (missing.length > 0) return refuse(notArrived(missing));
+  await commitPlan(items);
+  const unwritten = await missingItems(itemsDir, migration);
+  if (unwritten.length > 0) return refuse(itemsNotArrived(unwritten));
+
+  say('\nArchived and wrote every item file, and read each one back.');
+  const index = await resolvePlan(await indexEdits(archiveHome, halves));
+  return finishMigrate(await commitPlan([...index, ...live]), migration, itemsDir);
+}
+
+type MigratePlan = {
+  migration: Migration;
+  itemsDir: string;
+  halves: Half[];
+  archive: PlannedChange[];
+  items: PlannedChange[];
+  live: PlannedChange[];
+};
+
+/** Everything `migrate` would write, resolved, or the reason it writes nothing. */
+async function planMigrate(root: string, archiveHome: string): Promise<MigratePlan | string> {
+  if ((await readLedgerFrozenAt(root)) !== null) return alreadyMigrated(root);
+  const names = await readDocNames(root);
+  const boardPath = join(root, names.board);
+  const ledgerPath = join(root, names.ledger);
+  const board = (await exists(boardPath)) ? await readText(boardPath) : '';
+  const ledger = (await exists(ledgerPath)) ? await readText(ledgerPath) : '';
+  if (board === '' && ledger === '') return 'There is no board and no ledger to migrate.';
+
+  const migration = migrateFold(board, ledger, today(), names.ledger);
+  const itemsDir = join(root, names.items);
+  const problems = [...migration.problems, ...(await clashingItems(itemsDir, migration))];
+  if (problems.length > 0) return cannotMigrate(problems);
+
+  const halves = await migrateHalves(migration, archiveHome, names, boardPath, ledgerPath);
+  const live = await resolvePlan([
+    ...(board === '' ? [] : [edit(boardPath, 'board — cut to its table', migration.board)]),
+    ...(ledger === '' ? [] : [edit(ledgerPath, 'ledger — step log frozen', migration.ledger)]),
+    await configEdit(root, names.items, migration.frozenAt),
+  ]);
+  const guarded = live.filter((change) => change.guard !== 'none');
+  if (guarded.length > 0) return migrateGuarded(guarded);
+  return {
+    migration,
+    itemsDir,
+    halves,
+    archive: await resolvePlan(halves.flatMap(archiveFiles)),
+    items: await resolvePlan(
+      migration.items.map((item) =>
+        edit(join(itemsDir, item.name), `item ${item.number}`, item.text),
+      ),
+    ),
+    live,
+  };
+}
+
+/** The two appends, shaped as halves so the fold's own write and read-back carry them. */
+async function migrateHalves(
+  migration: Migration,
+  archiveHome: string,
+  names: DocNames,
+  boardPath: string,
+  ledgerPath: string,
+): Promise<Half[]> {
+  const closed: Fold = { folded: migration.closed, trimmed: migration.board };
+  const log: Fold = {
+    folded: migration.log === null ? [] : [migration.log],
+    trimmed: migration.ledger,
+  };
+  const halves = await Promise.all([
+    prepareAppend(boardPath, 'board', closed, archiveHome, names.board, 'board'),
+    prepareAppend(ledgerPath, 'ledger', log, archiveHome, names.ledger, 'ledger'),
+  ]);
+  return halves.filter((half): half is Half => half !== null);
+}
+
+/**
+ * An item file already on disk with other bytes is a second copy no tool can judge, the same
+ * call as an archive clash in the board fold. The same bytes are left alone, so a run after a
+ * half-finished one does not stop on its own output.
+ */
+async function clashingItems(itemsDir: string, migration: Migration): Promise<string[]> {
+  const live = await listItems(itemsDir);
+  return migration.items.flatMap((item) => {
+    const there = live.find((entry) => isItemFor(entry.name, item.number));
+    if (there === undefined || (there.name === item.name && there.text === item.text))
+      return [];
+    return [`item ${item.number} already has a file, ${there.name}, with other text`];
+  });
+}
+
+async function missingItems(itemsDir: string, migration: Migration): Promise<string[]> {
+  const gone: string[] = [];
+  for (const item of migration.items) {
+    const there = await rawBytes(join(itemsDir, item.name));
+    if (there === null || !there.equals(Buffer.from(item.text, 'utf8'))) gone.push(item.name);
+  }
+  return gone;
+}
+
+/**
+ * D5 step 4 and §4.4: `itemsDir` where the file has none, and `ledgerFrozenAt`. Every other key
+ * keeps its place and value; the file is rewritten in the two-space shape `setup` writes.
+ */
+async function configEdit(root: string, items: string, frozenAt: number): Promise<PlannedFile> {
+  const path = join(root, '.personal-config.json');
+  const before = (await exists(path)) ? await readText(path) : '{}';
+  const parsed = JSON.parse(before) as Record<string, unknown>;
+  const next = { ...parsed, itemsDir: parsed.itemsDir ?? items, ledgerFrozenAt: frozenAt };
+  return edit(
+    path,
+    'config — itemsDir and ledgerFrozenAt',
+    `${JSON.stringify(next, null, 2)}\n`,
+  );
+}
+
+function reportMigration(migration: Migration, itemsDir: string): void {
+  say('fold migrate:');
+  say(
+    migration.log === null
+      ? '  step log: none found; the ledger gains an empty `## Log`'
+      : `  step log: frozen at step ${migration.frozenAt}, the whole section to the archive log`,
+  );
+  say(`  closed prompts: ${migration.closed.map((block) => block.id).join(', ') || 'none'}`);
+  say(
+    `  item files in ${short(itemsDir)}/: ${migration.items.map((i) => i.number).join(', ') || 'none'}`,
+  );
+  if (migration.unrowed.length > 0) {
+    say(`  left on the board, no row names them: sections ${migration.unrowed.join(', ')}`);
+  }
+}
+
+function finishMigrate(result: WriteResult, migration: Migration, itemsDir: string): number {
+  say(
+    `\nWrote ${result.written.length} file(s). The repo is migrated: \`ledgerFrozenAt\` is ${migration.frozenAt}.`,
+  );
+  if (result.manifest) {
+    say(
+      '`personal-config undo` restores the board, the ledger and the config. It does not delete',
+    );
+    say(
+      `the item files in ${short(itemsDir)}/ or the archive's entries: remove that folder by hand`,
+    );
+    say('after an undo, or every reader takes the repo for a migrated one.');
+  }
+  say(
+    '\nRun `personal-config doctor .` next. Expect `row-cell-ceiling` findings: D5 leaves long',
+  );
+  say('cells for a person to shorten.');
+  return 0;
+}
+
+/** The live documents are the repo's own once stamped `adapted`, and a migration rewrites both. */
+function migrateGuarded(guarded: PlannedChange[]): string {
+  return [
+    'Nothing was migrated:',
+    ...guarded.map((change) => `  ${short(change.file.path)}: ${guardReason(change)}`),
+    'A migration cuts the board and the ledger, and this tool will not rewrite that file. Take',
+    'the marker off, run this, and put the marker back.',
+  ].join('\n');
+}
+
+function alreadyMigrated(root: string): string {
+  return `${short(root)} is already migrated: .personal-config.json has \`ledgerFrozenAt\`. Migration runs once (D5).`;
+}
+
+function cannotMigrate(problems: string[]): string {
+  return [
+    'Nothing was migrated, because the conversion would lose or misplace text:',
+    ...problems.map((problem) => `  ${problem}`),
+    'Fix the board or the ledger by hand, then run this again.',
+  ].join('\n');
+}
+
+function itemsNotArrived(names: string[]): string {
+  return [
+    `\n${names.length} item file(s) did not read back: ${names.slice(0, 5).join(', ')}.`,
+    'The archive holds this run’s entries, and nothing live was cut. Delete the partial item',
+    'files by hand before you run this again.',
+  ].join('\n');
 }

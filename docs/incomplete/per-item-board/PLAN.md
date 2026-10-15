@@ -44,6 +44,14 @@ Added by Phase 3, re-checked at `189642d` on 2026-10-15. G37, G38 and G50 hold a
 | G56 | `--log-days` cannot reach `fold` inside Phase 3's files | `parseArgs` rejects an unknown flag in `checkUsage`, and the value needs a field on `Cli`. The flag needs `src/lib/args.ts`, `src/lib/types.ts` and the help line in `src/cli.ts`. The lead allowed those three files for this phase on 2026-10-15, and the flag is wired there | `src/lib/args.ts` `OPTIONS`; `src/lib/types.ts` `Cli` |
 | G57 | `restore` already brings back a removed file | `copyTo` creates parent folders, so a removed item file, and its folder if it was emptied, comes back without a change to `backup.ts`. `undo` still deletes nothing this tool created, so the archive's copy stays after an undo | `src/lib/disk.ts` `copyTo`; `src/lib/backup.ts` `restore` |
 
+Added by Phase 4, re-checked at `fe0187a` on 2026-10-15. G44 and G53 hold as written.
+
+| # | Claim | Verified state | Citation |
+|---|---|---|---|
+| G58 | ezhomesteading's ledger is stamped `adapted` | Line 1 ends ` · adapted`, so `fold migrate` refuses it until the marker is off | `~/Projects/ezhomesteading/HANDOFF.md:1` |
+| G59 | ezhomesteading files items under range headings | Eleven `### 26–30.`-style headings and five level-2 prose sections sit among the item sections. `ITEM_HEADING` does not match a range, so they stay on the board, and their 44 rows have no file and no section | `grep -n '^#' PASSOFF.md` on a copy |
+| G60 | This repo's ledger has 113 steps; the next free number was 114 | Step 114 recorded Phase 4 | `bun run src/cli.ts handoff step`, 2026-10-15 |
+
 ## 1. Decisions taken since ratification
 
 Build-level calls. Each has a one-line reversal so a later deviation can cite it.
@@ -236,7 +244,7 @@ read-back must run between the archive write and the removal, not after both.
 
 ### Phase 4. `fold migrate`
 
-**Status:** `PLANNED`. Waits on Phase 3.
+**Status:** `BUILT 2026-10-15` (board item 90, HANDOFF 114). As built: the log section ends at the first heading of any level after the last step, as `blockStops` has it (D5 holds). A block counts for a row only where its heading names that row's own number, because `headingBlock` opens on `### 5.1.` for item 5. A numbered section no row names stays on the board and is reported. The board's `---` separators between items are dropped. A board, ledger or config marked `adapted` refuses the migration whole (G58).
 
 **Scope**
 
