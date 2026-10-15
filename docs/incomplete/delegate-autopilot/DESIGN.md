@@ -668,6 +668,15 @@ text, because that skill does not ship until Phase 2 (BD-17). The tier table has
 Tier and Model, with `tierTable`'s `<unset>` rule and Light-row condition and without its "Use
 for" column (BD-19). Everything else follows this outline in order, with the step numbers kept.
 
+**As built, 2026-10-15 (board row 85, HANDOFF 111).** The supervised run departed from this outline
+in three places, all recorded as findings for board row 95, none patched here. Step 3's "reproduces
+the builder's change in its own worktree" did not happen through git: the harness's worktree
+isolation refuses `git -C` on another worktree, so both auditors compared files with `diff` and
+`cmp` and copied or applied them. Step 2's `git merge --ff-only` preflight was blocked by the commit
+guard twice, when the worktree path was a shell variable (`git -C $W merge --ff-only main`); the
+literal-path form passed. And step 2's brief sends the builder to the ledger and the standard, which
+a worktree does not hold when the owner's git ignore keeps them untracked.
+
 ### 4.2 `/autopilot`
 
 **Frontmatter.** `name: autopilot`, D16's description, `disable-model-invocation: true`.

@@ -72,3 +72,56 @@ gates. Entry 3 is board row 85's to walk, with Zach present.
      30-minute mark, and the run ends once nothing is in flight. `RUNDOWN.md` holds D13's ten
      sections in order, written from `STATE.md`, and the run's ledger step points at it. The main
      checkout's `git status --short` shows only the ledger, the board and the run folder.
+
+   **Walked by Zach 2026-10-15, 08:15 to 08:20 EDT (board row 85, HANDOFF 111).** Seen running in a
+   live session. The scratch repository was `~/Scratch/autopilot-pass/ap-scratch`, first commit
+   `554533f` by Zach. Setup ran with a throwaway `HOME`, so Zach's own `~/.claude` was not
+   rewritten; the shipped `/delegate` and `/autopilot` were already installed there (stamp line
+   only differed) and his hand-written `/delegate` was already out of `~/.claude/skills/`. The
+   checks below were read from the scratch repo and from the run's transcript
+   (`~/.claude/projects/-Users-zachshort-Scratch-autopilot-pass-ap-scratch/0c0562d6-*.jsonl` and its
+   four subagent files).
+
+   - *First call holds at most four questions, none after.* **Seen.** One `AskUserQuestion` with
+     four questions (stop limit, agents at once, unattended readiness, model mapping). Zach typed
+     "30 minutes" and "light is haiku 5.5". No later question.
+   - *`STATE.md` before any builder, every time absolute and zoned.* **Seen.** Written at 08:17:15,
+     builders launched at 08:17:22 and 08:17:27. Times read `2026-10-15 08:17 EDT`. Two reports
+     read `~08:2x EDT`, which is not absolute.
+   - *Each row `IN FLIGHT` before its builder.* **Seen.** Both board edits at 08:17:09 to 08:17:10.
+     The claim was a hand edit: `personal-config passoff claim` resolved to the dev wrapper
+     `scripts/personal-config`, which does not forward `passoff` (row 97).
+   - *Each builder in its own worktree on its row's family.* **Seen.** Row 1 `model: sonnet`, row 2
+     `model: opus`, both `isolation: worktree`.
+   - *Each row gets an auditor in a second worktree that reports gates with output.* **Seen, with a
+     gap.** Two Opus auditors in their own worktrees, `bun test` 4 pass each. Neither could run
+     `git -C <builder worktree>`: the harness's worktree isolation refuses it. They reproduced the
+     change with `diff`, `cmp`, `cp` and `git apply` instead (row 95).
+   - *No agent edits the board or the ledger but the session.* **Seen.** No subagent `Edit` or
+     `Write` outside its own worktree and the session scratchpad. The row 2 builder read the main
+     checkout's `HANDOFF.md` with `cat`.
+   - *No agent commits under `print-blocks`.* **Seen.** All four worktree branches sit at `554533f`.
+     The commit guard also blocked two `git -C $W merge --ff-only main` preflights, where `$W` was a
+     shell variable; the literal-path form passed with "Already up to date" (row 95).
+   - *Each signed-off row gets a ledger step naming its worktree and "not yet committed", and reads
+     `DONE` against it.* **Seen.** Steps 1 and 2; rows 1 and 2 `DONE — HANDOFF 1` and `2`.
+   - *`STATE.md` gains one reading per wake and a Reports entry per row.* **Partly.** No wake
+     fired: the 600 s wake was stopped at 08:20:16 once both rows were signed off, so one reading
+     is right. Reports has the two builders and the row 1 auditor; the row 2 auditor's report is
+     missing, and both Rows lines still read `worktree: pending report` (row 95).
+   - *Launches stop by the 30-minute mark; the run ends once nothing is in flight.* **Seen.** Both
+     rows launched at 08:17. The run ended at 08:20, five minutes in, because the board was done.
+     That is the skill's stop rule, not a short run.
+   - *`RUNDOWN.md` holds D13's ten sections in order, from `STATE.md`; the run's step points at it.*
+     **Seen.** Ten sections in D13's order; ledger step 3 names the file.
+   - *The main checkout's `git status --short` shows only the ledger, the board and the run folder.*
+     **Seen.** `?? docs/incomplete/` only; the ledger and board are ignored by Zach's global git
+     ignore, and `.claude/worktrees/` is ignored too.
+
+   Not checked: the run under a 30-minute budget that actually binds (two rows finish in five
+   minutes), a wake firing, a fix round, a held row, a compaction.
+
+   Also found: builders in a worktree have no `HANDOFF.md`, `PASSOFF.md` or
+   `docs/AGENT-PRACTICES.md`, because Zach's global git ignore keeps all three out of git and a new
+   worktree holds only tracked files (rows 95 and 98). A clean-`HOME` render of the `zach` profile
+   writes `Light | <unset>` though the profile names Haiku 4.5 (row 96).

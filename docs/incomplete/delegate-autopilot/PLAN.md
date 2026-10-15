@@ -336,7 +336,8 @@ the figure as it stands at build time. The golden, as in Phase 1. G49.
 
 ### Phase 3. The supervised runtime pass
 
-**Status.** Not started. Board row 85. Waits on row 84.
+**Status.** `BUILT 2026-10-15`, walked by Zach in a live session (HANDOFF 111). Board row 85. Its
+findings are board rows 95 to 98.
 
 **Scope.**
 
