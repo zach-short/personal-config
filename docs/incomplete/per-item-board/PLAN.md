@@ -36,6 +36,14 @@ Added by Phase 2, re-checked at `5eb3590` on 2026-10-15. G38, G42 and G45 hold a
 | G53 | None of the three proof repos has an items folder, and a 1.x board can carry `DONE` with a date and no step | `ls ~/Projects/{ezhomesteading,felto,usdeed}/passoff` finds nothing. ezhomesteading row 148 reads `DONE 2026-10-13: P0 to P6 committed ...`, a finding at `5eb3590`. So D12 holds only if "migrated" is read from the folder on disk, and only the exact cell `DONE - <date>` is the new form | `ls`; `~/Projects/ezhomesteading/PASSOFF.md:171`; baseline `doctor` run |
 | G54 | `parseBoard` keeps column positions but not the header's names | `BoardColumns` holds seven indexes; `row-cell-ceiling` has to name the column of each cell it reports, so `Board` gains the header cells. `src/lib/board.ts` is not in this phase's row | `src/lib/board.ts` `headerColumns` |
 
+Added by Phase 3, re-checked at `189642d` on 2026-10-15. G37, G38 and G50 hold as written.
+
+| # | Claim | Verified state | Citation |
+|---|---|---|---|
+| G55 | G51 is wrong: D6's item line does not clear `archive-index` | The rule reads a folder as cited only on `- **<name>/**`, the name followed at once by `/**`. `- **passoff/83-x.md**` does not match it, so the first item fold turned the archive's doctor red. The fold writes a `- **passoff/** ...` folder line once, beside the item lines | `src/doctor/rules/archive-index.ts` `citedFolders`; regex run 2026-10-15 |
+| G56 | `--log-days` cannot reach `fold` inside Phase 3's files | `parseArgs` rejects an unknown flag in `checkUsage`, and the value needs a field on `Cli`. The flag needs `src/lib/args.ts`, `src/lib/types.ts` and the help line in `src/cli.ts`. The lead allowed those three files for this phase on 2026-10-15, and the flag is wired there | `src/lib/args.ts` `OPTIONS`; `src/lib/types.ts` `Cli` |
+| G57 | `restore` already brings back a removed file | `copyTo` creates parent folders, so a removed item file, and its folder if it was emptied, comes back without a change to `backup.ts`. `undo` still deletes nothing this tool created, so the archive's copy stays after an undo | `src/lib/disk.ts` `copyTo`; `src/lib/backup.ts` `restore` |
+
 ## 1. Decisions taken since ratification
 
 Build-level calls. Each has a one-line reversal so a later deviation can cite it.
@@ -194,7 +202,7 @@ is a second filesystem read per board, which is fine, but a missing `archiveHome
 
 ### Phase 3. Removal and the two new folds
 
-**Status:** `PLANNED`. Waits on Phase 2.
+**Status:** `BUILT 2026-10-15` (board item 89, HANDOFF 112). As built: the read-back compares raw bytes, so a file that is not valid UTF-8 never folds and is held (D6 holds; no byte-write path through `write-plan`). A board or `INDEX.md` whose stamp is guarded holds the whole item half (D16 holds). A first fold also writes a `- **passoff/** ...` folder line (G55). `--log-days` needed `src/lib/args.ts`, `src/lib/types.ts` and `src/cli.ts` (G56).
 
 **Scope**
 

@@ -10,7 +10,7 @@ import {
 import { diffSummary } from '../src/lib/diff.ts';
 import { readJson } from '../src/lib/disk.ts';
 import type { PlannedFile } from '../src/lib/types.ts';
-import { commitPlan, resolvePlan } from '../src/lib/write-plan.ts';
+import { commitPlan, resolvePlan, resolveRemoval, willWrite } from '../src/lib/write-plan.ts';
 import { cleanup, tempDir } from './helpers.ts';
 
 function file(
@@ -233,5 +233,86 @@ describe('diff summary', () => {
     expect(diffSummary('', 'a\nb\n')).toContain('new file');
     expect(diffSummary('a\n', 'a\n')).toBe('unchanged');
     expect(diffSummary('a\nb\n', 'a\nc\n')).toBe('+1 −1');
+  });
+});
+
+/**
+ * A planned removal (per-item-board `DESIGN.md` D14). The fold deletes item files from a folder
+ * that is often untracked, so the backup `commitPlan` takes is the only copy git does not hold.
+ */
+describe('a planned removal', () => {
+  test('is planned as removed, and plans nothing for a path with no file', async () => {
+    const dir = await tempDir();
+    try {
+      const target = join(dir, 'item.md');
+      await Bun.write(target, 'one\ntwo\n');
+
+      const change = await resolveRemoval(target, 'item — folded');
+      expect(change.remove).toBe(true);
+      expect(change.after).toBe('');
+      expect(change.summary).toBe('removed, 2 lines');
+      expect(willWrite(change)).toBe(true);
+
+      const absent = await resolveRemoval(join(dir, 'gone.md'), 'item — folded');
+      expect(absent.remove).toBeUndefined();
+      expect(willWrite(absent)).toBe(false);
+    } finally {
+      await cleanup(dir);
+    }
+  });
+
+  test('is backed up before the delete, and restore puts it back byte for byte', async () => {
+    const dir = await tempDir();
+    try {
+      const target = join(dir, 'passoff', '7-close-it.md');
+      const bytes = '# 7. Close it\n\nNo trailing newline after this';
+      await Bun.write(target, bytes);
+
+      const result = await commitPlan([await resolveRemoval(target, 'item — folded')]);
+      expect(await Bun.file(target).exists()).toBe(false);
+      expect(result.removed).toEqual([target]);
+      expect(result.manifest?.entries.map((e) => e.original)).toEqual([target]);
+
+      const backup = await latestBackup();
+      expect(backup?.manifest.entries.map((e) => e.original)).toEqual([target]);
+      await restore(
+        backup ?? { dir, manifest: { timestamp: '', entries: [] }, restoredAt: null },
+      );
+      expect(await Bun.file(target).text()).toBe(bytes);
+    } finally {
+      await cleanup(dir);
+    }
+  });
+
+  test('removes an empty file too, and still backs it up', async () => {
+    const dir = await tempDir();
+    try {
+      const target = join(dir, 'empty.md');
+      await Bun.write(target, '');
+
+      const change = await resolveRemoval(target, 'item — folded');
+      expect(willWrite(change)).toBe(true);
+      const result = await commitPlan([change]);
+      expect(await Bun.file(target).exists()).toBe(false);
+      expect(result.manifest?.entries.map((e) => e.original)).toEqual([target]);
+    } finally {
+      await cleanup(dir);
+    }
+  });
+
+  test('shares one backup with the edits planned beside it', async () => {
+    const dir = await tempDir();
+    try {
+      const board = join(dir, 'PASSOFF.md');
+      const item = join(dir, 'passoff', '1-a.md');
+      await Bun.write(board, 'board before\n');
+      await Bun.write(item, 'item before\n');
+
+      const edits = await resolvePlan([file(board, 'board after\n')]);
+      const { manifest } = await commitPlan([...edits, await resolveRemoval(item, 'item')]);
+      expect(manifest?.entries.map((e) => e.original).sort()).toEqual([board, item].sort());
+    } finally {
+      await cleanup(dir);
+    }
   });
 });

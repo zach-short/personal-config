@@ -1,5 +1,6 @@
 import { parseArgs } from 'node:util';
 import { DEFAULT_KEEP } from './fold.ts';
+import { LOG_DAYS } from './log.ts';
 import type { Cli } from './types.ts';
 
 const COMMANDS = [
@@ -33,6 +34,7 @@ const OPTIONS = {
   move: { type: 'boolean', default: false },
   write: { type: 'boolean', default: false },
   keep: { type: 'string' },
+  'log-days': { type: 'string' },
   'projects-dir': { type: 'string' },
   from: { type: 'string' },
   sentinel: { type: 'string' },
@@ -58,6 +60,7 @@ export function parseCli(argv: string[]): Cli {
     move: values.move === true,
     write: values.write === true,
     keep: keepValue(values.keep) ?? DEFAULT_KEEP,
+    logDays: keepValue(values['log-days']) ?? LOG_DAYS,
     projectsDir: values['projects-dir'] ?? null,
     from: values.from ?? null,
     sentinel: values.sentinel ?? null,
@@ -84,20 +87,23 @@ export function checkUsage(argv: string[]): string | null {
   }
 
   const [first] = positionals;
-  if (first === undefined || isCommand(first)) return keepProblem(argv);
+  if (first === undefined || isCommand(first)) {
+    return keepProblem(argv, 'keep', 'steps') ?? keepProblem(argv, 'log-days', 'days');
+  }
   return commandProblem(first);
 }
 
 /**
  * `--keep` is parsed as a string because `parseArgs` has no integer type, so the one thing it
  * cannot catch is the one mistake worth catching: `--keep all` would otherwise fall through to
- * the default and quietly fold fifty steps the person meant to keep.
+ * the default and quietly fold fifty steps the person meant to keep. `--log-days` has the same
+ * hazard in the same command: `--log-days ninety` falling back to 90 would look like it worked.
  */
-function keepProblem(argv: string[]): string | null {
-  const raw = parseArgs({ args: argv, allowPositionals: true, options: OPTIONS }).values.keep;
+function keepProblem(argv: string[], flag: 'keep' | 'log-days', unit: string): string | null {
+  const raw = parseArgs({ args: argv, allowPositionals: true, options: OPTIONS }).values[flag];
   if (raw === undefined || keepValue(raw) !== null) return null;
   return [
-    `personal-config: --keep needs a whole number of steps, not '${raw}'`,
+    `personal-config: --${flag} needs a whole number of ${unit}, not '${raw}'`,
     '',
     'Run `personal-config --help` to see the options it takes.',
   ].join('\n');

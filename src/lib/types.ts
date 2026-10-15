@@ -195,6 +195,8 @@ export type Cli = {
   write: boolean;
   /** `fold` only: how many of the newest ledger steps keep their bodies. */
   keep: number;
+  /** `fold` only: log lines older than this many days leave a migrated ledger (DIAL-4). */
+  logDays: number;
   projectsDir: string | null;
   /** `setup` only: a profile to start from — a local path, an https URL, or a short id. */
   from: string | null;

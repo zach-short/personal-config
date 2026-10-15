@@ -42,6 +42,7 @@ Options
   --move               archive only: perform the move, not just the plan
   --write              upgrade only: also save it as UPGRADE-PROMPT.md at the repo root
   --keep <n>           fold only: ledger steps left whole, newest first  (default: 20)
+  --log-days <n>       fold only: log lines older than this leave the ledger  (default: 90)
   --sentinel <phrase>  context only: a phrase unique to this conversation  (required)
   --help, --version
 
