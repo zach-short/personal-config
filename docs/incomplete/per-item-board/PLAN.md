@@ -21,6 +21,14 @@ Checked at `61a3b6e`, the same day as the design, so G1 to G42 stand. New facts:
 | G48 | Board item 85 (`OPEN`) may add rows that change `templates/skills/autopilot.md` | Phase 6 owns that file | `PASSOFF.md` row 85 |
 | G49 | A phase's fixed reading is about 9k tokens before the code | `CLAUDE.md` 3,468, `docs/conventions-ts.md` 7,681, `DESIGN.md` 26,199 characters, plus this file's phase section | `wc -c`, 2026-10-15 |
 
+Added by Phase 1, re-checked at `fc296fc` on 2026-10-15. G35, G38 and G42 hold as written.
+
+| # | Claim | Verified state | Citation |
+|---|---|---|---|
+| G50 | `archived-citations` sees an archive only when the archive sits inside the doctor root | Each root is checked alone: `runDoctorOn` collects one root's docs, and every doc under an archive index's directory is excluded. An archive home outside the repo (this repo's case) gives the rule nothing to report, before or after D15. G36's hazard is real for an in-tree archive home and for a root that encloses several repos' archives (`doctor ~/Projects/archive` style) | `src/doctor/index.ts` `runDoctorOn`, `archivedInfo`; Phase 1 proof |
+| G51 | `archive-index` reports an archive `passoff/` folder that has no index line | "`passoff/` exists but has no line in this index". D6's line `- **passoff/<file>** ...` contains `passoff/` and clears it once one item is folded; an empty folder made ahead of a fold, or a fold that writes the file before its line, trips it. Not in Phase 1's files | `src/doctor/rules/archive-index.ts`; Phase 1 proof, scratch archive |
+| G52 | The ledger's next free step was 108 on 2026-10-15, not 107 | Step 107 recorded the design itself | `bun run src/cli.ts handoff step`, 2026-10-15 |
+
 ## 1. Decisions taken since ratification
 
 Build-level calls. Each has a one-line reversal so a later deviation can cite it.
@@ -70,7 +78,17 @@ worktree's diffstat is empty when it returns.
 
 ### Phase 1. The item reader and doc kinds
 
-**Status:** `PLANNED`.
+**Status:** `BUILT 2026-10-15` (board item 87, HANDOFF 108). Deviations:
+
+- Scope item 3: `Doc.itemsDir` is optional. Every doc `collectDocs` builds carries it; about a
+  dozen test files build a `Doc` by hand, and a required field would have touched each one
+  outside this phase's files. A Phase 2 rule reading it treats absent as "no items folder".
+- D7: a title with no letters or digits gets the slug `item`, so its file keeps the
+  `<n>-<slug>.md` shape (written under D7 as an As built note).
+- Done when: the planned proof cannot fail (G50), so a second scratch tree was added, with the
+  archive copy inside the root beside copies of this repo's ledger, board and `CLAUDE.md`. That
+  tree gave 17 `archived-citations` findings before the change, 16 naming `passoff`, and 1 after,
+  the same `worktree-drafts-2026-10-04` citation as before.
 
 **Scope**
 

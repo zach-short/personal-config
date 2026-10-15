@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { join } from 'node:path';
 import { runDoctorOn } from '../src/doctor/index.ts';
-import { kindOf } from '../src/doctor/scan.ts';
+import { collectDocs, kindOf } from '../src/doctor/scan.ts';
 import { cleanup, tempDir, testConfig } from './helpers.ts';
 
 const EXPECTATION = { standardVersion: '1.0.0', config: testConfig() };
@@ -38,7 +38,50 @@ describe('§2.2 — Profile P documents are classified', () => {
   });
 });
 
+describe('per-item-board D1 — an item file is its own kind', () => {
+  test('a file directly inside the items folder is an item, whatever it is called', () => {
+    expect(kindOf('repo/passoff/1-first.md', undefined, 'repo/passoff')).toBe('item');
+    expect(kindOf('repo/passoff/notes.md', undefined, 'repo/passoff')).toBe('item');
+  });
+
+  test('a file in a folder nested under it is not', () => {
+    expect(kindOf('repo/passoff/old/1-first.md', undefined, 'repo/passoff')).toBe('other');
+  });
+
+  test('without an items folder to compare against, the same path is not an item', () => {
+    expect(kindOf('repo/passoff/1-first.md')).toBe('other');
+  });
+
+  test('doctor walks an adopted board’s folder as items, and only that folder', async () => {
+    const dir = await tempDir();
+    try {
+      await Bun.write(join(dir, '.personal-config.json'), '{"boardFile":"NEXT.md"}\n');
+      await Bun.write(join(dir, 'next/1-first.md'), '# 1. First\n');
+      await Bun.write(join(dir, 'passoff/1-first.md'), '# 1. First\n');
+      const docs = await collectDocs(dir);
+      const kinds = Object.fromEntries(docs.map((d) => [d.path.slice(dir.length + 1), d.kind]));
+      expect(kinds['next/1-first.md']).toBe('item');
+      expect(kinds['passoff/1-first.md']).toBe('other');
+      expect(docs.every((d) => d.itemsDir === join(dir, 'next'))).toBe(true);
+    } finally {
+      await cleanup(dir);
+    }
+  });
+});
+
 describe('§2.2 — the prose rules now reach them', () => {
+  test('violates: a relative date in an item file', async () => {
+    const found = await findingsFor({ 'passoff/1-first.md': '# 1. First\n\nOpened today.\n' });
+    expect(found).toContain('relative-dates');
+  });
+
+  test('passes: the same item file written to the rules', async () => {
+    const found = await findingsFor({
+      'passoff/1-first.md': '# 1. First\n\nOpened 2026-10-15.\n',
+    });
+    expect(found).toEqual([]);
+  });
+
   test('violates: a relative date in a scope doc', async () => {
     const found = await findingsFor({
       'docs/incomplete/widget/SCOPE.md': '# Scope\n\nVerified today.\n',

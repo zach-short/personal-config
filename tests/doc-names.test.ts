@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { join } from 'node:path';
 import { runDoctorOn } from '../src/doctor/index.ts';
 import { scanRepo } from '../src/lib/discover.ts';
-import { DEFAULT_DOC_NAMES, readDocNames } from '../src/lib/repo-config.ts';
+import { DEFAULT_DOC_NAMES, readDocNames, readLedgerFrozenAt } from '../src/lib/repo-config.ts';
 import { boardFile, ledgerFile } from '../src/render/context.ts';
 import {
   cleanup,
@@ -48,7 +48,7 @@ describe('§0.2 — reading the adopted names', () => {
 
   test('a recorded name outranks the default', async () => {
     const names = await inRepo({ '.personal-config.json': ADOPTED }, readDocNames);
-    expect(names).toEqual({ ledger: 'NOTES.md', board: 'NEXT.md' });
+    expect(names).toEqual({ ledger: 'NOTES.md', board: 'NEXT.md', items: 'next' });
   });
 
   test('Profile P writes empty names, which mean "no such file", not "no default"', async () => {
@@ -60,6 +60,52 @@ describe('§0.2 — reading the adopted names', () => {
   test('a corrupt config falls back rather than throwing', async () => {
     const names = await inRepo({ '.personal-config.json': '{ not json\n' }, readDocNames);
     expect(names).toEqual(DEFAULT_DOC_NAMES);
+  });
+});
+
+describe('per-item-board D7 — the items folder name', () => {
+  test('the default is the default board stem, lowercased', () => {
+    expect(DEFAULT_DOC_NAMES.items).toBe('passoff');
+  });
+
+  test('an adopted board names its own folder: `NEXT.md` gives `next`', async () => {
+    const names = await inRepo({ '.personal-config.json': ADOPTED }, readDocNames);
+    expect(names.items).toBe('next');
+  });
+
+  test('`itemsDir` outranks the derived name', async () => {
+    const config = `${JSON.stringify({ boardFile: 'NEXT.md', itemsDir: 'tasks' })}\n`;
+    const names = await inRepo({ '.personal-config.json': config }, readDocNames);
+    expect(names.items).toBe('tasks');
+  });
+
+  test('an empty `itemsDir` means nothing was set, as an empty file name does', async () => {
+    const config = `${JSON.stringify({ itemsDir: '' })}\n`;
+    const names = await inRepo({ '.personal-config.json': config }, readDocNames);
+    expect(names.items).toBe('passoff');
+  });
+});
+
+describe('per-item-board D5 — the frozen ledger step', () => {
+  const frozenAt = (config: unknown) =>
+    inRepo({ '.personal-config.json': `${JSON.stringify(config)}\n` }, readLedgerFrozenAt);
+
+  test('a migrated repo reads its whole number', async () => {
+    expect(await frozenAt({ ledgerFrozenAt: 106 })).toBe(106);
+  });
+
+  test('an unmigrated repo, with no key, is null', async () => {
+    expect(await frozenAt({ ledgerFile: 'HANDOFF.md' })).toBeNull();
+  });
+
+  test('a key that is not a whole number reads as unmigrated, never as a pass', async () => {
+    expect(await frozenAt({ ledgerFrozenAt: '106' })).toBeNull();
+    expect(await frozenAt({ ledgerFrozenAt: 10.5 })).toBeNull();
+    expect(await frozenAt({ ledgerFrozenAt: -1 })).toBeNull();
+  });
+
+  test('a repo with no config at all is null', async () => {
+    expect(await inRepo({ 'README.md': '# x\n' }, readLedgerFrozenAt)).toBeNull();
   });
 });
 

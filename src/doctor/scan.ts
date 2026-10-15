@@ -1,5 +1,5 @@
 import { readdir } from 'node:fs/promises';
-import { basename, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { readText } from '../lib/disk.ts';
 import { type Line, eachLine as linesOf, proseLines as proseOf } from '../lib/markdown.ts';
 import { DEFAULT_DOC_NAMES, type DocNames, docStem, readDocNames } from '../lib/repo-config.ts';
@@ -14,6 +14,8 @@ export type DocKind =
   | 'project'
   /** §8.2 — the docs index, which is the one map of a docs tree. */
   | 'docs-index'
+  /** Per-item-board D1 — one board item's file, directly inside the root's items folder. */
+  | 'item'
   | 'other';
 
 export type Doc = {
@@ -25,6 +27,11 @@ export type Doc = {
   isTemplate: boolean;
   /** How this repo cites its ledger — `HANDOFF` unless §0.2 adopted another name. */
   ledgerStem: string;
+  /**
+   * The root's items folder (D7), so a rule handed the board can find the files beside it.
+   * Absent on a doc that was not walked from a root, which has no folder to point at.
+   */
+  itemsDir?: string;
 };
 
 /**
@@ -77,8 +84,18 @@ const DOCS_INDEX = /(^|\/)docs\/README\.md$/i;
 /**
  * The adopted names win over the table, so a repo whose ledger is `NOTES.md` gets the ledger
  * rules; the table still runs, so a repo keeping both files is not made to choose.
+ *
+ * An item is decided by folder before any name, because the folder is what makes it one: a
+ * file in `passoff/` with a name outside the `<n>-<slug>.md` shape is still an item, and
+ * `item-files` is what reports the name. Only a file *directly* inside counts, so a nested
+ * folder there is not swept in.
  */
-export function kindOf(path: string, names: DocNames = DEFAULT_DOC_NAMES): DocKind {
+export function kindOf(
+  path: string,
+  names: DocNames = DEFAULT_DOC_NAMES,
+  itemsDir?: string,
+): DocKind {
+  if (itemsDir !== undefined && dirname(path) === itemsDir) return 'item';
   const name = basename(path);
   if (name === names.ledger) return 'ledger';
   if (name === names.board) return 'board';
@@ -111,16 +128,19 @@ const SKIP_DIRS = new Set([
 export async function collectDocs(root: string, depth = 4): Promise<Doc[]> {
   const [paths, names] = await Promise.all([walk(root, depth), readDocNames(root)]);
   const ledgerStem = docStem(names.ledger);
+  // Joined the way `walk` joins, so `dirname(path)` compares equal however the root was typed.
+  const itemsDir = join(root, names.items);
   return Promise.all(
     paths.map(async (path) => {
       const text = await readText(path);
       return {
         path,
-        kind: kindOf(path, names),
+        kind: kindOf(path, names, itemsDir),
         text,
         lines: text.split('\n'),
         isTemplate: isTemplateSource(path),
         ledgerStem,
+        itemsDir,
       };
     }),
   );

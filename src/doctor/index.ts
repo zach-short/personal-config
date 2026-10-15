@@ -1,10 +1,11 @@
 import { readdir } from 'node:fs/promises';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { loadConfig } from '../lib/config.ts';
 import { today } from '../lib/date.ts';
 import { exists, readText } from '../lib/disk.ts';
 import { isGitRepo } from '../lib/git.ts';
 import { expandHome } from '../lib/paths.ts';
+import { readDocNames } from '../lib/repo-config.ts';
 import type { Cli, Config, Finding, PlannedFile } from '../lib/types.ts';
 import { version } from '../lib/version.ts';
 import { commitPlan, resolvePlan } from '../lib/write-plan.ts';
@@ -76,7 +77,8 @@ export async function runDoctorOn(
   // a `PART0-PROMPT.md` sitting in, say, a docs folder is not a personal file at all.
   const configured = await exists(join(root, '.personal-config.json'));
   const fromStamps = await stampFindings(root, docs, expectation, configured);
-  const fromCitations = archivedCitations(docs, await archivedInfo(docs));
+  const itemsName = basename((await readDocNames(root)).items);
+  const fromCitations = archivedCitations(docs, await archivedInfo(docs, itemsName));
   // Ignore coverage is a question for git, and a plain folder (setup-tracks `DESIGN.md` D5) has
   // none to ask: `check-ignore` there resolves whatever repository *encloses* the folder, if any,
   // and would report a personal file as unignored by a `.gitignore` that is not this target's.
@@ -131,15 +133,23 @@ async function stampFindings(
  * — plus the directories themselves, so a doc can be excluded by identity (its path sits under
  * one) rather than by a `/archive/` substring, which answers differently depending on whether
  * the root was typed relatively or absolutely.
+ *
+ * The archive's items folder is skipped (per-item-board `DESIGN.md` D15). It mirrors the live
+ * one rather than holding a moved effort: closed item files land there and are found by number,
+ * never by a cited path (D13), so there is nothing in it for this rule to check — and counting
+ * it would make every live mention of the word `passoff` a finding.
  */
-async function archivedInfo(docs: Doc[]): Promise<{ names: string[]; dirs: string[] }> {
+async function archivedInfo(
+  docs: Doc[],
+  itemsName: string,
+): Promise<{ names: string[]; dirs: string[] }> {
   const dirs = docs
     .filter((d) => d.kind === 'archive-index')
     .map((doc) => doc.path.slice(0, doc.path.lastIndexOf('/')));
   const names = await Promise.all(
     dirs.map(async (dir) => {
       const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
-      return entries.filter((e) => e.isDirectory()).map((e) => e.name);
+      return entries.filter((e) => e.isDirectory() && e.name !== itemsName).map((e) => e.name);
     }),
   );
   return { names: names.flat(), dirs };

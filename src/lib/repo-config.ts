@@ -2,11 +2,18 @@ import { join } from 'node:path';
 import { exists, readJson } from './disk.ts';
 import type { TrackMode, WorkProfile } from './types.ts';
 
-/** The ledger and board filenames for one repo. */
-export type DocNames = { ledger: string; board: string };
+/**
+ * The ledger and board filenames for one repo, and the folder that holds one file per board
+ * item (per-item-board `DESIGN.md` D7), relative to the repo root.
+ */
+export type DocNames = { ledger: string; board: string; items: string };
 
 /** What this tool writes when a repo has adopted nothing of its own. */
-export const DEFAULT_DOC_NAMES: DocNames = { ledger: 'HANDOFF.md', board: 'PASSOFF.md' };
+export const DEFAULT_DOC_NAMES: DocNames = {
+  ledger: 'HANDOFF.md',
+  board: 'PASSOFF.md',
+  items: itemsDirFor('PASSOFF.md'),
+};
 
 /**
  * `.personal-config.json` is where an adopted name survives. Standard §0.2 says a repo already
@@ -18,10 +25,33 @@ export async function readDocNames(repoDir: string): Promise<DocNames> {
   const parsed = await readRepoJson(repoDir);
   if (parsed === null) return DEFAULT_DOC_NAMES;
 
+  const board = stringAt(parsed, 'boardFile') ?? DEFAULT_DOC_NAMES.board;
   return {
     ledger: stringAt(parsed, 'ledgerFile') ?? DEFAULT_DOC_NAMES.ledger,
-    board: stringAt(parsed, 'boardFile') ?? DEFAULT_DOC_NAMES.board,
+    board,
+    items: stringAt(parsed, 'itemsDir') ?? itemsDirFor(board),
   };
+}
+
+/**
+ * D7: the board's stem, lowercased, so a reader who knows `PASSOFF.md` knows `passoff/` and an
+ * adopted `NEXT.md` gets `next/`. `itemsDir` in the config overrides it.
+ */
+export function itemsDirFor(boardFile: string): string {
+  return docStem(boardFile).toLowerCase();
+}
+
+/**
+ * The highest step of a ledger whose step log `fold migrate` moved to the archive (D5), or
+ * null for a repo that has not migrated. `board-status` accepts `DONE - <LEDGER> n` for any
+ * `n` at or below it without reading the ledger, because the log that held `n` is gone from it.
+ * Anything but a whole number reads as unmigrated: a half-written key must not pass citations.
+ */
+export async function readLedgerFrozenAt(repoDir: string): Promise<number | null> {
+  const parsed = await readRepoJson(repoDir);
+  if (!isRecord(parsed)) return null;
+  const value = parsed.ledgerFrozenAt;
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0 ? value : null;
 }
 
 /**

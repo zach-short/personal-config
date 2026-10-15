@@ -223,6 +223,11 @@ reader keys on the leading `<n>-` only, so `1-…` never matches `15-…` or `1.
 
 The file's first line is `# <n>. <Title>`, so the number is in the file as well as its name.
 
+*As built, 2026-10-15 (Phase 1):* a title with no letters or digits, such as `???`, gets the slug
+`item`, because an empty slug would give `<n>-.md` or `<n>.md`, and every reader keys on the
+`<n>-` of a name in the shape. A single word longer than 48 characters has no hyphen to cut at and
+is cut at 48.
+
 **The defense.** The same word as the board file, so a reader who knows one knows the other.
 
 ### D8. Standard 2.0.0 (Q8)
