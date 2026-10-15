@@ -7,7 +7,7 @@ what "done" means here, and the writing habits that keep the record honest. It i
 start of every session, so it is kept short on purpose — a longer document would cost more to
 read than most of the work it governs.
 
-**Standard version: 1.2.0**
+**Standard version: 2.0.0**
 
 **Pre-filled by `personal-config` on {{DATE}}.** Every name below is this project's own, and
 nothing in this file is left for a later session to fill in. Read `{{ROUTER_FILE}}` first — the
@@ -88,31 +88,34 @@ is not in git, it is also the only history there is. Sections, in this order:
   the one that won** — unrecorded, it returns in three weeks as a new objection. Nothing under it
   is re-asked (R8).
 - **Known facts and quirks.** What was learned the hard way, with sources.
-- **The step log.** Numbered and append-only: `**N. Title.** Done <date>.` then what changed, why,
-  what is now settled, and how the proof line was applied. A step is addressable forever — "step
-  24" is how everything else refers to that work. **Take the next free number by reading the
-  file**, never from a number written elsewhere; **never edit a step you did not write** — append
-  a correction as a new step.
+- **Log.** One line per event, unnumbered, oldest first, each ending in a pointer. Closing an
+  item writes `- <date> · closed item <n>`, citing the item by its number only; other work writes
+  a line ending in a path. What the work changed and how the proof line was applied goes in the
+  item's own file (below). With no board, and so no item files, the log is numbered instead:
+  `**N. Title.** Done <date>.` and the record. **Take the next free number by reading the file**,
+  and **never edit a step you did not write**.
 
-Standing sections are edited in place when they go stale. The log is only ever added to — but
-once it runs past twenty or so steps, the older ones **keep their number, title and date and
-lose the rest** to a companion file beside the ledger. The ledger is read in full at the start
-of every session, so its length is what every session pays. Two things make it safe: copy the
-text out, check it arrived, and only then cut; and **never drop a number**. "Step 24" is how
-everything refers to that work, and a number that stops resolving takes every reference with it.
+Standing sections are edited in place when they go stale. The ledger is read in full every
+session, so its length is what every session pays: old log lines (or old step bodies, keeping
+number, title and date) move to a companion file. Copy the text out, check it arrived, then cut.
 
 ## What is next — `{{BOARD_FILE}}`
 
-The board is **what is next**: one row per item, and below the table one standalone prompt per
-item, written as "Handing work to the next session" describes. Keep it apart from the ledger — a
-fact written into the board rots the moment its item is done.
+The board is **what is next**: one row per item, every cell one line, and nothing below the
+table. Each item is its own file in a folder beside the board (the board's name, lowercased);
+each file is `<n>-<slug>.md`, where `<n>` is the row's number and the slug is the title in lower
+case with hyphens. The file holds a dated line saying why the item exists, its prompt (written as
+"Handing work to the next session" describes) and, at close, its close-out. Keep the board apart
+from the ledger: a fact written into the board rots the moment its item is done.
 
-- Status words, and no others: `OPEN` · `IN FLIGHT` · `DONE — <ledger step>` · `HELD` ·
-  `SETTLED AS NO` · `SUPERSEDED`. `DONE` points at the step that is the real record; `HELD` names
-  what it waits on; `SETTLED AS NO` carries its reason, so it is not proposed again.
-- An item exists before work on it starts: a row, plus a dated line saying why it exists.
-- When an item closes, its row becomes `DONE — <step>`. **Never paste a prompt marked `DONE`** —
-  a fresh session would do the work again.
+- Status words, and no others: `OPEN` · `IN FLIGHT` · `DONE - <date>` · `HELD` ·
+  `SETTLED AS NO` · `SUPERSEDED`. `DONE` names the day the item closed, and its file is the
+  record; `HELD` names what it waits on; `SETTLED AS NO` carries its reason in its file, so it is
+  not proposed again.
+- An item exists before work on it starts: a row, plus its file. Its number is never reused.
+- When an item closes, its file gains a `## Close-out, <date>` section, the ledger gains one log
+  line, and its row becomes `DONE - <date>`; later the file moves to the archive and the row leaves the table.
+  **Never paste a prompt marked `DONE`**: a fresh session would do the work again.
 
 ## Handing work to the next session
 
@@ -152,7 +155,9 @@ the ledger step says how it was applied and what was seen.
 The model for work here is `{{MODEL}}`; if an item names a different one, run it there. A
 session's context is finite and no gauge reports it from inside: the first sign of running out is
 the conversation being summarised behind you, after which the session works from a summary of its
-own reasoning and re-reads what it already read.
+own reasoning and re-reads what it already read. On a 1M window the harness may never summarise at
+all, so do not wait for that sign: landing early, as below, is a budget you keep, not a limit the
+harness enforces.
 
 So **land early**. When the conversation has grown long — many files read, a long back-and-forth
 — stop taking on new work: finish the change in hand, apply the proof line to what exists, write

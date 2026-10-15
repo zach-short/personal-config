@@ -220,6 +220,18 @@ const COMMIT_PARAGRAPH = '**Commits are the owner’s.**';
  * `itemsDir` and `ledgerFrozenAt`, the banner prints the item's path (§4.6), and the Part 0
  * prompt moved because it lists the files the plan writes. Untracked, the exclude file moved for
  * `/passoff/`. 80 → 83, and no other key moved.
+ *
+ * **Six skills moved per variant on 2026-10-15, board row 92 (per-item-board Phase 6).**
+ * `/handoff`, `/passoff`, `/close-out`, `/clean-up`, `/delegate` and `/autopilot` record a closed
+ * item as its file's close-out section and one log line, and `DONE` carries a date. The same
+ * bytes in all three variants, because the skills read no variant's answer that differs. 83 still,
+ * and no other key moved.
+ *
+ * **One file moved per variant on 2026-10-15, board row 93 (standard 2.0.0).** The adapted
+ * standard (`docs/AGENT-PRACTICES.md`, or `AGENT-PRACTICES.local.md` untracked) carries §2.1's
+ * item files and log, §2.3's `DONE - <date>`, Part 7's new close-out and folding, and Part 5's
+ * budget note. The version line is normalised away, so the hash moved on content. 83 still, and
+ * no other key moved.
  */
 describe('§3.1 row 1 — code + full + git is the 0.3.0 output, byte for byte bar one skill', () => {
   const FULL = answersFor(CODE_FULL_GIT);

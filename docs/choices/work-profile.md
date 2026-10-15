@@ -14,13 +14,17 @@ all of them, so "project" is the word that is true of each.
 **A stream of mostly independent items — a ledger and a board.** *Recommended.*
 
 `HANDOFF.md` is what is **true**: environment, settled decisions, a code map, invariants, and a
-numbered append-only step log. `PASSOFF.md` is what is **next**: a table of items with status,
-model, lane and "files it owns", plus one standalone prompt per item below it.
+log of one dated line per event. `PASSOFF.md` is what is **next**: a table of items with status,
+model, lane and "files it owns". Each item's standalone prompt is its own file in `passoff/`
+beside the board, and at close that file gains the item's close-out, which is the record of the
+work. A closed item's file and row move to the archive at the next fold.
 
-*The defense.* Most solo work looks like this — fix a flaky test, add an endpoint, bump a
-dependency. Two files, no ceremony, and the step log gives every piece of work a permanent
-address ("HANDOFF 24") that everything else can cite. The board's "files it owns" column is what
-lets several sessions run at once without eating each other's work.
+*The defense.* Most solo work looks like this: fix a flaky test, add an endpoint, bump a
+dependency. Two files and a folder, no ceremony, and the item number gives every piece of work a
+permanent address ("item 24") that everything else can cite. A session reads the ledger, the
+table and its own item file, not every prompt. The board's "files it owns" column is what lets
+several sessions run at once without eating each other's work, and two sessions on two items
+write two files.
 
 *The strongest argument against it.* It has nowhere to put a decision that needs ratifying
 before code. A big effort with real design questions gets crammed into a board row and the
@@ -49,9 +53,11 @@ a ledger whatever you answer here: the folder-per-effort shape is machinery thei
 standard does not describe, and a `docs/incomplete/README.md` citing a part of a document that
 does not exist is worse than not offering the choice. Asking would be asking to be ignored.
 
-Ledger: `HANDOFF.md` and `PASSOFF.md` at the project's root — the board is the second half of
-the shape, and a lighter setup, which is never asked this question, gets the ledger without it
-(D9). Folders: `docs/incomplete/README.md` scaffolding the stages.
+Ledger: `HANDOFF.md` and `PASSOFF.md` at the project's root, and `passoff/1-first-task.md`
+beside the board as the first item file. The board is the second half of the shape, and a
+lighter setup, which is never asked this question, gets the ledger without it (D9); with no board
+there is no item file to hold a record, so that ledger keeps a numbered step log. Folders:
+`docs/incomplete/README.md` scaffolding the stages.
 
 ## How to undo it
 

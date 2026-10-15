@@ -1,4 +1,4 @@
-<!-- personal-config v0.5.0 · 2026-09-23 · config 11fe5083 · standard v1.2.0 · adapted -->
+<!-- personal-config v0.8.0 · 2026-10-15 · config 11fe5083 · standard v2.0.0 · adapted -->
 # archive-leaflet — index
 
 Docs pulled out of the `leaflet` repo when they closed. One folder per topic, flat, no nesting.
@@ -20,6 +20,9 @@ Legend: ✅ closed/shipped · 🟡 built, not runtime-verified · ⚪ planned/op
   called without authentication and what limits each one has. Closed 2026-09-08, last commit
   `e4d0f31`, verified 2026-09-08. Its one live consequence — that the redirect path is
   deliberately unlimited — is board item 4, `SETTLED AS NO`, with the reason.
+
+- **passoff/** ✅ - closed board item files, one per item, moved here by `personal-config fold`. Opened 2026-09-08.
+- **passoff/6-ci-and-the-web-test-glob.md** ✅ - item 6, CI, and the web test glob, closed 2026-09-08.
 
 ## Standing rules that outlived their doc
 

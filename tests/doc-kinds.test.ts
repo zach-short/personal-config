@@ -67,6 +67,20 @@ describe('per-item-board D1 — an item file is its own kind', () => {
       await cleanup(dir);
     }
   });
+
+  test('a board below the root reads the folder beside it, not the root’s', async () => {
+    const dir = await tempDir();
+    try {
+      await Bun.write(join(dir, 'PASSOFF.md'), '# board\n');
+      await Bun.write(join(dir, 'examples/PASSOFF.md'), '# board\n');
+      const docs = await collectDocs(dir);
+      const itemsDirOf = (rel: string) => docs.find((d) => d.path === join(dir, rel))?.itemsDir;
+      expect(itemsDirOf('PASSOFF.md')).toBe(join(dir, 'passoff'));
+      expect(itemsDirOf('examples/PASSOFF.md')).toBe(join(dir, 'examples', 'passoff'));
+    } finally {
+      await cleanup(dir);
+    }
+  });
 });
 
 describe('§2.2 — the prose rules now reach them', () => {

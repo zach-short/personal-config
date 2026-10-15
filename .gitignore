@@ -17,6 +17,8 @@ tests/fixtures/
 # them invisible — which is exactly what happened on 2026-09-15. These re-include them.
 !examples/HANDOFF.md
 !examples/PASSOFF.md
+!examples/passoff/
+!examples/archive/passoff/
 !templates/HANDOFF.md
 !templates/PASSOFF.md
 !templates/CLAUDE.local.md
@@ -25,3 +27,4 @@ tests/fixtures/
 
 # The published bundle — built by `bun run build`, never committed.
 dist/
+/PART0-PROMPT.md

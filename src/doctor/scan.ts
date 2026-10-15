@@ -133,14 +133,17 @@ export async function collectDocs(root: string, depth = 4): Promise<Doc[]> {
   return Promise.all(
     paths.map(async (path) => {
       const text = await readText(path);
+      const kind = kindOf(path, names, itemsDir);
       return {
         path,
-        kind: kindOf(path, names, itemsDir),
+        kind,
         text,
         lines: text.split('\n'),
         isTemplate: isTemplateSource(path),
         ledgerStem,
-        itemsDir,
+        // A board's items sit beside it (D1), so a board below the root, such as
+        // `examples/PASSOFF.md` walked from `.`, reads its own folder, not the root's.
+        itemsDir: kind === 'board' ? join(dirname(path), names.items) : itemsDir,
       };
     }),
   );

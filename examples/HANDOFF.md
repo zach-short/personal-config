@@ -1,8 +1,8 @@
-<!-- personal-config v0.5.0 · 2026-09-23 · config 11fe5083 · standard v1.2.0 · adapted -->
-# HANDOFF — leaflet (the ledger)
+<!-- personal-config v0.8.0 · 2026-10-15 · config 11fe5083 · standard v2.0.0 · adapted -->
+# HANDOFF: leaflet (the ledger)
 
-**What is true.** Read first, every session. Append-only in the step log; standing sections are
-edited in place when they go stale. Started 2026-08-30.
+**What is true.** Read in full, every session. Standing sections are edited in place; the log is
+one line per event and is folded after 90 days. Started 2026-08-30.
 
 > **This is an example.** `leaflet` is a fictional repo — a small Go + TypeScript link-shortener
 > — written to show what a filled ledger looks like after a few weeks. Copy the shape, not the
@@ -14,8 +14,9 @@ leaflet turns long URLs into short ones and counts the clicks. A Go API over Pos
 Next.js dashboard, deployed by pushing to `main`. One person decides everything here, and **they
 are interactive** — when a decision is theirs, ask in chat, in the same turn, batched.
 
-Read in this order: this file → `PASSOFF.md` (what is next) → `docs/AGENT-PRACTICES.md` (the
-working standard) → `CLAUDE.md` (the router every session gets).
+Read in this order: this file, then `PASSOFF.md` (what is next), then your item's own file in
+`passoff/`, then `docs/AGENT-PRACTICES.md` (the working standard), then `CLAUDE.md` (the router
+every session gets).
 
 ## Environment
 
@@ -33,7 +34,7 @@ Every command below was run before it was written down.
 | Migrations | `migrations/`, highest name `0019_click_index.sql` | `ls migrations` 2026-09-12 |
 
 **Gates that lie.** `bun run --cwd web test` prints `ok` and exits 0 when no test files match
-its glob — it did exactly that from 2026-09-02 until the glob was fixed in HANDOFF 4. Check the
+its glob. It did exactly that from 2026-09-02 until item 6 fixed the glob. Check the
 test count, not the exit code.
 
 **What an agent cannot verify here.** Whether a redirect actually redirects in a browser —
@@ -83,36 +84,19 @@ on a write to the counter — the counter is the least important thing on that p
   `internal/middleware/ratelimit.go:18` since `a3f19c2` (2026-08-22). Corrected 2026-09-08; the
   wrong line is left in place marked wrong, per the standard's R5.
 
-## Step log
+## Log
 
-Numbered, append-only. **Take the next free number by reading this file.** Do not edit a step
-you did not write; append a correction as a new step.
+One line per event, unnumbered, oldest first, each ending in a pointer. Closing an item writes
+`- <date> · closed item <n>`, citing the item by its number only: its file is found by the
+number, live or in the archive. Work that is not an item writes one line ending in a path. What
+the work changed goes in the item file's close-out, not here. Lines older than 90 days are folded
+to the archive (`personal-config fold ledger`).
 
-Old steps are folded out to the archive and keep their number, title and date as one line
-(`personal-config fold ledger`). A step is addressable forever — "step 4" is how everything
-refers to that work — so the line stays even when the body goes. Standing sections above are
-never folded; they are edited in place.
-
-**1. Opened the ledger and the board.** Done 2026-08-30, on `main`. Ran every gate once and
-recorded the real output above. Settled the short-code decision with the owner.
-**Left owed:** no CI yet; the dashboard has no tests.
-
-**2. Short-code generation, with collision retry.** Done 2026-09-01, on `main`.
-`internal/shortcode/` plus 22 tests. Five-attempt cap chosen because a sixth collision at
-current volume implies a bug, not bad luck. **Left owed:** nothing.
-
-**3. Redirects and the click outbox.** Done 2026-09-05, on `main`. One read on the hot path;
-counting moved to a sweep. Answered "do we count before or after the redirect" — after, and
-asynchronously. **Left owed:** the sweep has no backpressure if it falls behind.
-
-**4. CI, and the test glob that lied.** Done 2026-09-08, on `main`. Added
-`.github/workflows/ci.yml`. Found the web test command exiting 0 having run nothing since
-2026-09-02; fixed the glob, which turned up two genuinely failing tests. **Left owed:** the
-dashboard still has no tests of its own — only the shared lib does.
-
-**5. Corrected the rate-limiting claim.** Done 2026-09-12, Mechanical tier, on `main`. A doc
-said rate limiting did not exist; a grep found it live since 2026-08-22. Recorded the disproof
-beside the wrong claim rather than deleting it. **Left owed:** nothing.
+- 2026-08-30 · opened the ledger and the board, ran every gate once · `HANDOFF.md`
+- 2026-09-01 · short-code generation, with a five-attempt collision retry · `internal/shortcode/`
+- 2026-09-05 · redirects and the click outbox; counting moved to a sweep · `internal/redirect/`
+- 2026-09-08 · closed item 6
+- 2026-09-12 · corrected the rate-limiting claim beside the wrong line · `docs/README.md`
 
 ## Style rules
 

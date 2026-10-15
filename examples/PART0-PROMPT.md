@@ -1,4 +1,4 @@
-<!-- personal-config v0.5.0 · 2026-09-23 · config 11fe5083 · standard v1.2.0 -->
+<!-- personal-config v0.8.0 · 2026-10-15 · config 11fe5083 · standard v2.0.0 -->
 # Adapt the working standard to leaflet
 
 **Model: your default tier.** Run this once, in a fresh session, in `~/code/leaflet`. Do no
@@ -82,6 +82,7 @@ What discovery already found, to be verified rather than trusted:
 CLAUDE.md                      the router every session reads
 HANDOFF.md                     the ledger — what is true
 PASSOFF.md                     the board — what is next
+passoff/1-first-task.md        the first item file, beside the board
 docs/AGENT-PRACTICES.md        the standard, Appendix A filled, Part 0 still to run
 docs/conventions-go.md         the Go code standard, seeded
 docs/conventions-typescript.md the TypeScript code standard, seeded

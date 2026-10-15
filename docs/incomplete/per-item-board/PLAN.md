@@ -62,6 +62,31 @@ Added by Phase 5, re-checked at `41b23ee` on 2026-10-15. G34, G43 and G53 hold a
 | G64 | This machine's prose hook rejects every em dash in a markdown file, templates included; the code accepts a hyphen in both places a template writes one | `DONE - <date>` and `-` for an empty cell parse as their em-dash forms | `~/.claude/hooks/no-em-dash.sh`; `src/doctor/rules/board-status.ts` `doneDate`; `src/lib/board.ts` `isNone` |
 | G65 | The golden test failed before this phase, on the `/autopilot` key only | 3 failures at `41b23ee` in a full `bun test`. A recompute in a clean `HOME` gives the committed hash, and after this phase three full runs pass. The cause was not found; it looks like order-dependent state in the shared test `HOME` | `tests/tracks.test.ts`; baseline run 2026-10-15 |
 
+Added by Phase 6, re-checked at `8152a42` on 2026-10-15. G48, G63 and G64 hold as written; G48's
+item 85 is `DONE - HANDOFF 111`, and its findings became rows 95 to 98, of which row 95 changes
+`templates/skills/{delegate,autopilot}.md` and waits on this phase.
+
+| # | Claim | Verified state | Citation |
+|---|---|---|---|
+| G66 | A skill is installed once per machine, and every repo reads the same text | `renderSkill` plans `~/.claude/skills/<name>/SKILL.md`. The last `setup` run wins, and until each of the other repos migrates (§4) a 2.0.0 skill is read beside a 1.x board | `src/render/skills.ts` `renderSkill`; `src/lib/paths.ts` `claudeSkillsDir` |
+| G67 | The prose hook checks the whole file after an edit, so a template it rejects cannot be edited in part | It runs on Write and Edit and reads the file's full text: an em dash, a contraction or a banned word anywhere in it is reported. `handoff.md`, `passoff.md`, `close-out.md` and `clean-up.md` held 27 em dashes and two contractions in trigger phrases (`what's`) | `~/.claude/hooks/no-em-dash.sh` `run_checks`; `grep -c` 2026-10-15 |
+| G68 | `/audit` writes each row's prompt with no named place, and reads the next free number from the board alone | "a table line ... and a standalone prompt that cites the report"; "Read the next free row number from the board file". On a 2.0.0 board the prompt belongs in an item file, and D16 takes the number from the board, the folder and the archive. Not in this phase's files | `templates/skills/audit.md` section 5, step 2 |
+| G69 | `/autopilot`'s standing order stops a builder on any file outside "Files it owns" | An item file is never listed there, so D10's builder close-out would stop every tracked build | `templates/skills/autopilot.md` section 9 |
+
+Added by Phase 7, re-checked at `8152a42` on 2026-10-15, with Phase 6 signed off and not
+committed in the same checkout. G43 holds (`/PART0-PROMPT.md` is still the one uncommitted line in
+`.gitignore`). G47 is resolved: item 82 is `DONE - HANDOFF 110` and handed its standard edit to
+this phase (`docs/incomplete/context-ceilings/SCOPE.md` §7). G64 holds.
+
+| # | Claim | Verified state | Citation |
+|---|---|---|---|
+| G70 | G67 holds for Write only | On Edit the hook reads `.tool_input.new_string`, so an edit is checked on its new text alone. The standard keeps its em dashes outside the edited sections; the new text carries none | `~/.claude/hooks/no-em-dash.sh` `post` |
+| G71 | Sentences outside this phase's sections still describe the 1.x shape | Long standard: the "five words" paragraph (`:9`), §0.2's Profile L bullet (`:107-108`), R12's "line in the ledger step" (`:235`), Part 3's template step "Record it" (`:480`), Part 12's ledger row (`:1107`). Short standard: "What done means here", "Sizing a session" and "Closing a piece of work" each say "ledger step". GATE 1's Q8 permission names sections, so these are held for the owner | `grep -n 'step' standard/*.md`, 2026-10-15 |
+| G72 | Item 82's `{{DATE_MEASURED}}` row is in Appendix A, not Appendix B | `:1141` is the placeholder table, Appendix A. The edit lands there as item 82's text says; Appendix A is added to this phase's sections for that row only | `standard/AGENT-PRACTICES.boilerplate.md:1129-1141` |
+| G73 | The short standard's "The ledger" section is rendered for the light track too | `renderShortStandard` cuts only "What is next" for a track that writes no board, and the light track keeps a numbered step log (D3 As built). The section has to describe both. It has no `{{ITEMS_DIR}}` token, and adding one is `src/render/short-standard.ts`, outside this row | `src/render/short-standard.ts` `pipeline`, `placeholders` |
+| G74 | `item-files` needs a file for every non-`DONE` row of a migrated board | The example board has five non-`DONE` rows, so the example folder holds five files, not one | `src/doctor/rules/item-files.ts`; `examples/PASSOFF.md` |
+| G75 | This machine's global ignore names files, not `passoff/` | `git check-ignore -v examples/passoff/1-x.md` exits 1. The re-include is for an adopter whose global ignore does name the folder, as `/HANDOFF.md` once hid `examples/HANDOFF.md` | `~/.config/git/ignore`; `.gitignore` |
+
 ## 1. Decisions taken since ratification
 
 Build-level calls. Each has a one-line reversal so a later deviation can cite it.
@@ -337,9 +362,30 @@ no ignore line for one.
 
 ### Phase 6. The six skill texts
 
-**Status:** `PLANNED`. Waits on Phase 5. Check board item 85's state first (G48). Phase 5 left the
-light track on a numbered step log (D3 As built), so a skill text that says "write the close-out
-in the item file" must keep the step for a repo with no board.
+**Status:** `BUILT 2026-10-15` (board item 92, HANDOFF 116). Deviations:
+
+- D12: every 2.0.0 record instruction carries one 1.x sentence, "On a 1.x board, with no
+  `<itemsDir>/` folder beside it", that names the step and `DONE - <LEDGER> n`, because the skills
+  are installed once per machine (G66). Written under D12 as an As built note.
+- D10: "tracked" is read with `git ls-files --error-unmatch <item file>`, not `git check-ignore`,
+  because a file that is not ignored but was never committed is not in a builder's worktree
+  either. The lead's sign-off lines join the builder's close-out section in the builder's
+  worktree. Written under D10 as an As built note.
+- D6 and D16: in git, `/close-out` and `/clean-up` fold an item only after the owner has committed
+  its close-out, because a fold takes the file out of the tree. The item just closed folds at the
+  next close-out or at `/clean-up`, and `unfolded` reports it until then.
+- G67: the four templates the hook checks were rewritten with no em dash and no contraction, and
+  every string `skills.ts` renders into the six skills lost its em dashes too. Two trigger phrases
+  changed: `what's the state` is now `what is the state`, and `archive what's done` is now
+  `archive what is done`. The light track's prose moved with it (wording only).
+- G69: the standing order in `/autopilot` section 9 names the builder's own item file as its one
+  exception. Found by reading `/delegate` and `/autopilot` together, as "Watch for" asked.
+- Scope item 2: `tests/tracks.test.ts` (its change-log comment) and `tests/golden/full-track.json`
+  changed too: the six skill keys moved in all three variants, 83 keys still, no other key moved.
+- G68 is left owed to board item 99.
+
+Phase 5 left the light track on a numbered step log (D3 As built), so a skill text that says
+"write the close-out in the item file" keeps the step for a repo with no board.
 
 **Scope**
 
@@ -365,8 +411,24 @@ reads well alone can break an agreement between the two texts; read both togethe
 
 ### Phase 7. Standard 2.0.0 and the examples
 
-**Status:** `PLANNED`. Waits on Phase 6. Item 82 waits on this phase for its
-standard edit (GATE 2 question 4, A).
+**Status:** `BUILT 2026-10-15` (board item 93, HANDOFF 117). Item 82's standard edit landed here
+(GATE 2 question 4, A). Deviations:
+
+- Scope item 1: Part 9's router template names neither the ledger nor the board, so it needed no
+  edit. Appendix A's `{{DATE_MEASURED}}` row changed too, for item 82 (G72).
+- Scope item 2: the short form's "The ledger" also describes the numbered step log, because the
+  light track renders it and keeps one (G73, D3 As built). Item 82's sentence for "Sizing a
+  session" was reworded, because the short form has no Part 5.
+- Scope item 3: the changelog heading keeps its em dash, because `src/lib/changelog.ts` `ENTRY`
+  parses only that form and `upgrade` would drop the entry otherwise.
+- Scope item 4: five item files, not one (G74), and item 6 folded into the example archive with
+  its index lines. Every example file's stamp reads `standard v2.0.0`.
+- Outside the row: `src/doctor/scan.ts` gives a board the items folder beside it (D1), and
+  `tests/doc-kinds.test.ts` proves it. Without it `doctor .` read `examples/PASSOFF.md` against the
+  root's folder. `tests/golden/full-track.json` and `tests/tracks.test.ts` moved for the adapted
+  standard, one key per variant.
+- Held for the owner: the sentences of G71, and the two the review added (short form line 17,
+  the long form's Part 5 rule on compaction).
 
 **Scope**
 

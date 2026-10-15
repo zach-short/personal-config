@@ -20,7 +20,7 @@ here, and the adapted copy is built on the answer. If an installer put this file
 left a prompt saying which of Part 0's steps are already done; follow that prompt rather than
 this paragraph.
 
-**Standard version: 1.2.0**
+**Standard version: 2.0.0**
 
 **Adapted: not yet — run Part 0.**
 
@@ -242,12 +242,15 @@ lands.
 
 ## 2.1 Profile L — ledger + board
 
-Two files at the repo root, by these names unless the repo already has them under others.
+Two files at the repo root, by these names unless the repo already has them under others, and
+one folder of item files beside the board.
 
 ### `HANDOFF.md` — what is true
 
-Read first by every session. Append-only in its log; its standing sections are edited in place
-when they go stale. Sections, in this order:
+Read first by every session, and read in full: it holds what is true now and a thin log, so it
+stays small. The read order is the ledger, then the board's table, then the session's own item
+file. Standing sections are edited in place when they go stale; the log is only ever added to.
+Sections, in this order:
 
 - **Orientation.** One paragraph: what this project is, who the owner is, what they know, and
   that they are interactive — ask when a decision is theirs. Then the read-first list.
@@ -264,18 +267,27 @@ when they go stale. Sections, in this order:
 - **Code map.** Where things live, one line each, updated by the session that adds a file.
 - **Invariants.** "How X works — do not break these." The rules that compile fine when broken.
 - **Known API facts and quirks.** Platform behaviour learned the hard way, with citations.
-- **The step log.** Numbered, append-only: `**N. Title.** Done <date>. <what changed, why,
-  what is now fixed, which decisions it answered>`. Steps are addressable forever — "HANDOFF
-  24" is how everything else refers to work. Two rules: **take the next free number by reading
-  the file, not by trusting one written elsewhere** (another session may have taken it), and
-  **do not edit a step you did not write** — append a correction as a new step. Old steps lose
-  their bodies to the archive and keep their number, title and date as one line (Part 7);
-  because a step is addressable forever, that line is what keeps the citation resolving.
+- **Log.** One line per event, unnumbered, oldest first, each ending in a pointer. Closing an
+  item writes `- <date> · closed item <n>`, citing the item by its number only: the number is
+  the item's permanent address, and its file is found by it, live or in the archive. Work that
+  is not an item (an unattended run, a scope session that built nothing, a fix the owner asked
+  for in chat) writes one line ending in a path. What the work changed, why, and which
+  decisions it answered goes in the item file's close-out, not here. Lines older than 90 days
+  fold to the archive (Part 7). A ledger migrated from 1.x starts its log with
+  `- <date> · log frozen at step N · <ledger>-log.md in the archive`: its numbered step log is
+  in the archive, and every citation of a step at or below N resolves there. The repo keeps N in
+  its configuration too, so that line may fold like any other.
 - **Style rules.** Short; the language-level conventions live wherever Part 8.1 puts them.
 
 ### `PASSOFF.md` — what is next
 
-A board plus one standalone prompt per item (Part 3). The board is the parallelism model:
+A board, and one file per item in a folder beside it. The board holds the status vocabulary,
+the lane note and the table, and nothing below the table. The folder is named like the board
+file, lowercased (`PASSOFF.md` gives `passoff/`; this file writes `passoff/` for that folder
+whatever it is called). Each item is one file, `passoff/<n>-<slug>.md`,
+holding the dated paragraph saying why the item exists, its standalone prompt (Part 3), any
+claim note, and at close its close-out section. A session reads the table and its own file. The
+board is the parallelism model:
 
 | # | Task | Status | Model | Lane | Waits on | Files it owns |
 |---|------|--------|-------|------|----------|---------------|
@@ -284,21 +296,31 @@ A board plus one standalone prompt per item (Part 3). The board is the paralleli
   worktree. Items in one lane are serial because each changes the shape the next builds on.
 - **"Files it owns"** is the collision check. Two items that name the same file do not run at
   the same time, whatever their lanes say. Check it against every open item before starting one.
-- **Status** uses the board words in 2.3, and `DONE` points at the ledger step that is the
-  real record: `DONE — HANDOFF 24`. **Do not paste a prompt marked DONE** — a fresh session
-  would build it again.
-- **A prompt rots the moment it is executed.** The ledger step is the truth; the prompt is the
-  ask. Where a DONE prompt turns out to describe the work wrongly, say so on the board rather
-  than editing the prompt into a lie.
-- **A `DONE` item's prompt leaves the board; its row never does.** The row is the permanent
-  part — the collision check, the pointer at the ledger step, and the item number, which
-  nothing may ever reuse. The prompt under it is the part that grows without bound, and it is
-  dead by the rule directly above. Fold it out at close-out (Part 7). **`SUPERSEDED` and
-  `SETTLED AS NO` keep their sections**: the first names what replaced the item, the second
-  carries the reason it is not to be re-proposed, and neither fact is written anywhere else.
-- **An item exists before work on it starts:** a row, plus a dated paragraph under the board
-  saying why it exists and what it came out of. An item settled as *no* stays on the board with
-  its reason, so it is not re-proposed.
+- **Every cell is one line**, and every cell but "Files it owns" stays under about 200
+  characters. Detail goes in the item file. "Files it owns" is exempt because it is the
+  collision check's data: shortened to directories, it misses collisions exact paths catch.
+- **Status** uses the board words in 2.3. A closed row reads `DONE - <date>`, the day it
+  closed. The record is the close-out section of the item file that the row's number names,
+  live in the folder until the fold and in the archive after it. **Do not paste a prompt marked
+  DONE**: a fresh session would build it again.
+- **A prompt rots the moment it is executed.** The close-out is the truth; the prompt is the
+  ask. Where a DONE prompt turns out to describe the work wrongly, say so in the close-out
+  rather than editing the prompt into a lie.
+- **A `DONE` item leaves at the fold, its file and its row together** (Part 7). The file moves
+  to the archive and is read back; then its row leaves the table, and the archive index line
+  carries what the row said. The item number is never reused: the next free number is one more
+  than the highest of the board's rows, the live folder's files and the archive folder's files. A session
+  never deletes a row by hand. **`SUPERSEDED` and `SETTLED AS NO` items keep their files** in
+  the live folder: the first names what replaced the item, the second carries the reason it is
+  not to be re-proposed, and neither fact is written anywhere else.
+- **An item exists before work on it starts:** a row, plus its file. The file is named once,
+  when the row is added: `<n>-<slug>.md`, where `<n>` is the row's `#` cell as written and the
+  slug is the title lowercased, each run of characters outside `a-z` and `0-9` made one hyphen,
+  outer hyphens dropped, and cut at a hyphen to 48 characters; a title with no letters or digits
+  gives `item`. A later edit to the title renames nothing. The file's first line is
+  `# <n>. <Title>`, then a dated paragraph saying why the item exists and what it came out of.
+  An item settled as *no* stays on the board with its reason in its file, so it is not
+  re-proposed.
 
 ## 2.2 Profile P — project folders
 
@@ -393,12 +415,14 @@ what actually shipped, walk the runtime pass, archive.
 
 Use these words and no others, so a board or a folder can be scanned:
 
-- **Board items (Profile L):** `OPEN` · `IN FLIGHT` · `DONE — <ledger step>` · `HELD` ·
-  `SETTLED AS NO` · `SUPERSEDED`.
+- **Board items (Profile L):** `OPEN` · `IN FLIGHT` · `DONE - <date>` · `HELD` ·
+  `SETTLED AS NO` · `SUPERSEDED`. A row closed before its repo moved to 2.0.0 keeps
+  `DONE - <ledger> <n>`, a step in the frozen log (2.1).
 - **Project folders and phases (Profile P):** `SCOPING` · `RATIFIED` · `PLANNED` · `IN FLIGHT`
   · `BUILT` · `MERGED` · `HELD` · `SUPERSEDED` · `CLOSED`.
 
-`BUILT` means gates green and any migration applied. `DONE` always points at the record.
+`BUILT` means gates green and any migration applied. `DONE` always points at the record: the
+row's number names the item file, and the date says when it closed.
 `HELD` always names what it waits on. `SUPERSEDED` always names what replaced it. `SETTLED AS
 NO` always carries the reason, because its whole job is to not be re-proposed.
 
@@ -547,12 +571,14 @@ conceptual tidiness** — the same work is a different number of phases dependin
 | **Default** | ~400k | ~300k |
 | **Deep** | ~250k | ~150k |
 
-*A ceiling is the context size at which a tier's sessions were observed to start compacting.
-These were measured 2026-08-16 in repo A on the Claude models of that date — Sonnet as
-Mechanical, Opus as Default, Fable as Deep. They are targets, not hard stops. They are a
-property of the model and the harness, not of the repo, so an adopter inherits them as they
-stand and re-measures only when a tier's model changes: watch where sessions compact, then
-update the figure and the date. Measured: `{{DATE_MEASURED}}`.* The consequence worth
+*A ceiling is the budget the standard sets for one phase on a tier: how much context a session
+should spend before it lands, chosen for cost and for how much of the phase a review can still
+cover. It is not the point where the harness compacts. On 2026-10-15 a sweep of 2845 transcripts
+on 1M-window models found no automatic compaction at any size, with sessions on every tier
+running past 500k, so that point is not a limit a phase can plan around. The figures date from
+2026-08-16. They are targets, not hard stops. They are a property of the model and the harness,
+not of the repo, so an adopter inherits them and revises them only when a tier's model changes
+or when phases sized to the figure stop being reviewable. Set: `{{DATE_MEASURED}}`.* The consequence worth
 planning around: **assigning the Deep tier also shrinks the phase.** It gets roughly half an
 ordinary phase's room and must be cut accordingly — another reason to prefer one narrow Deep
 review over a whole Deep phase.
@@ -778,9 +804,12 @@ paste one block, go.
 
 ### 1 — Update the record, in the same commit as the code
 
-- **Profile L:** one new ledger step at the next free number (read it, do not trust one written
-  elsewhere), naming what changed, why, what is now fixed, and which questions it answered.
-  Add new files to the code map. Do not edit a step you did not write.
+- **Profile L:** a `## Close-out, <date>` section at the end of the item's own file: when it
+  was done, which model, on which branch, at which commit; what changed and why; what is now
+  fixed; which questions it answered; and **Left owed:** what it did not do. Then one log line
+  in the ledger, `- <date> · closed item <n>`, and the row becomes `DONE - <date>`. Add new
+  files to the code map and any durable fact to Known facts. The file is the writer's own, so
+  no session edits another's record.
 - **Profile P:** the phase header becomes `**BUILT <date>, commit <hash>**`, plus any deviation,
   discovery or re-ordering this phase forced on later phases; the design gets its `As built:`
   paragraphs; the runtime-pass file gets this phase's entries.
@@ -856,21 +885,23 @@ When every phase is checked off:
 
 ## Folding (Profile L)
 
-A ledger and a board only ever grow, and the ledger is read in full at the start of every
-session. That makes their size a Part 5 problem rather than a tidiness one: left alone for a
-few months they become the largest thing a session reads, ahead of any code.
+A ledger and a board only ever grow, and both are read at the start of every session. That
+makes their size a Part 5 problem rather than a tidiness one: left alone for a few months they
+become the largest thing a session reads, ahead of any code.
 
 Two things in them are already dead by this standard's own rules, and folding means moving
 those two to `{{ARCHIVE_HOME}}` and nothing else.
 
-1. **A `DONE` item's prompt.** §2.1 already says it rots the moment it is executed and that
-   the ledger step is the record. The row stays, with its pointer; so do the sections under
-   `SUPERSEDED` and `SETTLED AS NO`.
-2. **A ledger step's body**, for every step but the most recent twenty or so. **The number,
-   the title and the date stay, as one line.** That is not politeness. Steps are addressable
-   forever, so a fold that dropped the number would break every `DONE — <step>` on the board
-   and every citation in every other document, and would hand the next session a number the
-   log had already spent.
+1. **A `DONE` item, its file and its row.** §2.1 already says its prompt rots the moment it is
+   executed and that its close-out is the record. The file moves to
+   `{{ARCHIVE_HOME}}/passoff/` under the same name, and the archive index gains one line that
+   carries what the row said: `- **passoff/<n>-<slug>.md** ✅ - item <n>, <task>, closed <date>.`
+   Then the row leaves the table. The number stays spent, because the next free number is read
+   from the board and both folders. `SUPERSEDED` and `SETTLED AS NO` items stay, with their
+   files.
+2. **Log lines older than 90 days**, appended to the archive's ledger log
+   (`{{ARCHIVE_HOME}}/<ledger>-log.md`) and cut from the ledger. A log line cites an item by
+   its number, so a folded line still resolves.
 
 Standing sections — Environment, Settled, the code map, the invariants — are never folded.
 They are edited in place when they go stale, which is what makes them the part that carries
@@ -881,15 +912,31 @@ append to the archive, read it back, and only then cut.** A ledger and a board a
 untracked — they are personal process rather than part of the repo — so git is holding no copy
 of what is about to be deleted.
 
+For an item file the read-back is byte for byte, and it runs between the archive write and the
+removal of the live file. A copy already in the archive with the same bytes is not written
+again; one with different bytes stops the fold for that item, because no tool can judge which
+copy is the real one.
+
 What says it is time is not a feeling but arithmetic: what a fold would remove, measured
 against the ceiling of whatever tier reads these files (Part 5).
 
-> **Worked example — the repo this standard ships from.** Its board carried 62 rows in 65
-> lines and 3,794 lines of prompts beneath them, every row already closed; its ledger carried
-> 77 steps in 5,168 lines. The two were ~168k tokens together — more than half a Default
+**Moving a 1.x ledger and board to 2.0.0** is forward only, once per repo, in the same order.
+Under 1.x the ledger carried a numbered step log and the board carried every prompt below its
+table, with `DONE` pointing at a step. The whole step log is appended to the archive's ledger
+log under a dated header and read back; every `DONE` item's prompt still on the board is
+appended to the archive's closed-prompts file and read back; every other item's section is
+written to its own file and read back. Only then are the live documents cut: the board to its
+table, and the step log to a `## Log` holding one line, the frozen-log line of §2.1. Rows are not
+rewritten. A row that reads `DONE - <ledger> 24` stays as it is, valid for any step at or below
+N, and the step is found in the archive log.
+
+> **Worked example, the repo this standard ships from, under 1.2.0.** Its board carried 62
+> rows in 65 lines and 3,794 lines of prompts beneath them, every row already closed; its ledger
+> carried 77 steps in 5,168 lines. The two were ~168k tokens together: more than half a Default
 > session's runway before a line of code was read, and past the Deep tier's landing threshold
-> outright. Folding both took them to ~49k and changed no row and no step number
-> (measured 2026-09-23).
+> outright. The 1.2.0 fold, which kept every row and every step number, took them to ~49k
+> (measured 2026-09-23). It left most of both files in place, which is why 2.0.0 moves the rows
+> and the step log too.
 
 **This standard applies forward from the date it is adopted.** Work archived before then is a
 historical record, not a conversion target: reshaping it to match a standard written after it
@@ -1138,7 +1185,7 @@ Three things that exist only in a team:
 | `{{MODEL_DEEP}}` | The deep-reasoning tier | Ask at GATE 0; it changes with releases |
 | `{{MODEL_DEFAULT}}` | The default tier | Ask at GATE 0 |
 | `{{MODEL_FAST}}` | The mechanical tier | Ask at GATE 0 |
-| `{{DATE_MEASURED}}` | The date of the measurement Part 5's table carries | `2026-08-16` if you inherit it; the date you re-measured if a tier's model changed |
+| `{{DATE_MEASURED}}` | The date Part 5's budgets were set | `2026-08-16` if you inherit them; the date you revised them if a tier's model changed |
 | `{{WORKTREE_SETUP}}` | Fresh-checkout recipe | `.gitignore` + what the toolchain generates + install |
 | `{{BUILD_CMD}}` | Build, for the HEAD-isolation check | From the gates you verified in 0.1 |
 
@@ -1151,7 +1198,8 @@ and written straight into `CLAUDE.md`.
 CLAUDE.md                     router + hazards, every session reads it
 docs/AGENT-PRACTICES.md       this file, adapted, placeholders filled, Part 0 deleted
 docs/conventions-<lang>.md    per-language standard (8.1) — may already exist
-HANDOFF.md  PASSOFF.md        Profile L
+HANDOFF.md  PASSOFF.md        Profile L: the ledger, and the board's table
+passoff/<n>-<slug>.md         Profile L: one file per item on the board (2.1)
 docs/incomplete/<slug>/       Profile P: SCOPE → DESIGN → PLAN → RUNTIME-PASS
 docs/README.md                the index (8.2) once there is more than one doc
 ```

@@ -11,6 +11,45 @@ this paragraph claimed that without the marker: Part 0 told the adapting session
 stamp, and an unstamped copy was invisible to that check. A copy adapted before the marker
 existed still carries no stamp and stays invisible until `doctor --fix` writes one back.
 
+## 2.0.0 — 2026-10-15
+
+A major version, because the board and the ledger change shape and a 1.x reading of a 2.0.0
+board misreads it. **Re-adapting is required**: a 1.2.0 copy says `DONE` points at a ledger step
+and that a step log is permanent, and both stop being true the day a repo migrates. Migrate the
+repo's ledger and board first, then re-adapt the standard against them.
+
+- **One file per board item, in §2.1.** The board keeps the status vocabulary, the lane note and
+  the table, and nothing below it. Each item's prompt, claim note and close-out live in
+  `passoff/<n>-<slug>.md`, a folder named like the board file. A session reads the table and its
+  own file, and two sessions on two items write two files.
+- **`DONE - <date>`, in §2.1 and §2.3.** The record is the close-out section of the item file the
+  row's number names. Every cell is one line, and every cell but "Files it owns" stays under
+  about 200 characters.
+- **The ledger holds what is true, in §2.1.** The numbered step log leaves. In its place is
+  `## Log`, one unnumbered line per event, each ending in a pointer; closing an item writes
+  `closed item <n>`. The ledger is small enough to read in full.
+- **Folding, in Part 7.** A `DONE` item's file moves to the archive's `passoff/` folder, is read
+  back byte for byte, and only then leaves the live folder; its row leaves the table in the same
+  fold, and the archive index line carries what the row said. This supersedes 1.2.0's rule that
+  a `DONE` row never leaves the board. A number is still never reused, and a session still never
+  deletes a row by hand. Log lines older than 90 days fold to the archive's ledger log.
+- **Migration, in Part 7.** Forward only: the whole step log goes to the archive and the ledger
+  keeps `log frozen at step N`; a row that reads `DONE - <ledger> n` for any n at or below N stays
+  valid. The archive is not reshaped.
+- **Part 7's close-out** writes the item file's close-out section and one log line, not a step.
+- **The short form** follows the same shape in "The ledger" and "What is next". A setup that writes
+  no board, such as a light one, keeps the numbered step log in its ledger, because it has no item
+  file to hold the record.
+- Part 5: a ceiling is now a per-tier budget, not an observed compaction point; figures
+  unchanged. Measured 2026-10-15 from this machine's transcripts (board item 82, the context-ceilings
+  effort). Appendix A's `{{DATE_MEASURED}}` row now names the date the budgets were set, and
+  Appendix B lists the item files.
+
+Why it exists: the ledger and the board are read at the start of every session, and folding
+under 1.2.0 still left most of them in place. In the largest board this standard is used with,
+`DONE` rows were 52,000 of 76,000 table characters after a cell limit, and 98.5% of its ledger
+was step log (measured 2026-10-15, in the per-item-board effort's design).
+
 ## 1.2.0 — 2026-09-23
 
 One rule added, in the two places it applies. Nothing existing changed in substance.

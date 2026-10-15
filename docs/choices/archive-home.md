@@ -43,6 +43,12 @@ interpolates this answer into `<archive home>/<slug>/`, so it has to be a path â
 `none` would render `none/<slug>/`. Leave it empty and no index is written; the standard's
 archive rules are still there to follow when you want them.
 
+On a ledger and a board, `personal-config fold` uses the same home. A closed item's file moves to
+`<archive home>/passoff/` under its own name, with one index line carrying what its row said;
+ledger log lines older than 90 days go to `<archive home>/HANDOFF-log.md`. The names follow your
+board and ledger files. With no archive home, or one with no `INDEX.md`, the fold refuses and moves
+nothing.
+
 ## `doctor` checks it both ways
 
 A folder in the archive with no index line is invisible, and an index line pointing at a folder
