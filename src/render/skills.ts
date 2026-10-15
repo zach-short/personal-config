@@ -185,6 +185,10 @@ function delegateVars(ctx: RenderContext, shape: SkillShape): Record<string, str
   return {
     ...vars,
     TIER_TABLE: tierTable(ctx, ''),
+    WORKTREE_STEP: worktreeStep(6, 'run', [
+      'Remove each worktree that is finished: every builder, auditor and relayed pass that came',
+      'back with a worktree path and a branch. A',
+    ]),
     COMMIT_RULE: commits
       ? [
           'Commit on your own worktree branch, naming the exact files in both the `git add` and',
@@ -478,6 +482,7 @@ function closeOutVars(shape: SkillShape, names: RecordNames): Record<string, str
     BLOCK_COUNT: blocks.length === 3 ? 'three' : 'two',
     HAND_BACK_BLOCKS: blocks.join('\n'),
     PROOF_SENTENCE: proofSentence(shape),
+    WORKTREE_STEP: shape.git ? `\n\n${closeOutWorktreeStep()}` : '',
   };
 }
 
@@ -656,6 +661,72 @@ function proofSentence(shape: SkillShape): string {
     '"Checked against the source" and "looks right" are different claims and must never be merged.',
     'Say which one you have.',
   ].join('\n');
+}
+
+/**
+ * Its report sits above step 2's blocks because the model line is the first thing the owner acts
+ * on, so it has to stay last in the message.
+ */
+function closeOutWorktreeStep(): string {
+  return [
+    worktreeStep(4, 'session', [
+      'Remove each worktree that is finished: each one its subagents came back with, and each one',
+      'it added itself with `git worktree add`. A',
+    ]),
+    '',
+    'Do this before you post the blocks in step 2, and put its report above them, so the model',
+    'line stays last in the message. Never remove the worktree this session runs in.',
+  ].join('\n');
+}
+
+/**
+ * A subagent's worktree outlives it and nothing else removes it: one scan found 36 under one
+ * projects folder, about 55 GB, most of them left by `/delegate` runs (owner, 2026-10-15). The
+ * removal is limited to worktrees the run made because a worktree just added for new work is
+ * clean and its branch is merged too, so "merged and clean" alone would take a peer's fresh one.
+ */
+function worktreeStep(n: number, maker: 'run' | 'session', which: string[]): string {
+  return [
+    `## ${n}. Remove the worktrees this ${maker} made`,
+    '',
+    ...which,
+    "subagent's worktree outlives it, and nothing else removes it. Run each check from the primary",
+    'checkout, with `git -C`; never `cd` into a worktree, because one you stand in cannot be removed.',
+    '',
+    ...worktreeCommands(),
+    '',
+    ...worktreeLimits(maker),
+  ].join('\n');
+}
+
+function worktreeCommands(): string[] {
+  return [
+    '```bash',
+    'git merge-base --is-ancestor <branch> <base>',
+    'git -C <worktree> status --porcelain',
+    '```',
+    '',
+    'Remove it only when the first exits 0 (the base holds every commit on the branch) and the',
+    'second prints nothing (no change and no untracked file):',
+    '',
+    '```bash',
+    'git worktree remove <worktree>',
+    'git branch -d <branch>',
+    '```',
+  ];
+}
+
+function worktreeLimits(maker: 'run' | 'session'): string[] {
+  return [
+    'Never add `--force` and never use `-D`: git refuses to remove a dirty worktree or to delete an',
+    `unmerged branch, and that refusal is the check. Never remove a worktree this ${maker} did not`,
+    'make, because a worktree just added for new work is clean and its branch is merged too.',
+    'This step merges nothing, so it never merges into a branch the repo marks as protected, or into',
+    'any other. Keep every other worktree, and report each one in one line with its reason: a commit',
+    "the base does not hold, or uncommitted files. A change that waits for the owner's commit is the",
+    'usual reason. That worktree stays until its work is committed and merged, then goes by the same',
+    'checks. Ignored files such as `node_modules` and `.env` go with a worktree when it is removed.',
+  ];
 }
 
 /**

@@ -232,6 +232,11 @@ const COMMIT_PARAGRAPH = '**Commits are the owner’s.**';
  * item files and log, §2.3's `DONE - <date>`, Part 7's new close-out and folding, and Part 5's
  * budget note. The version line is normalised away, so the hash moved on content. 83 still, and
  * no other key moved.
+ *
+ * **Two skills moved per variant on 2026-10-15.** `/delegate` and `/close-out` end with a step
+ * that removes the worktrees the run or session made, where the base holds the branch and the
+ * tree is clean: subagent worktrees had filled the disk. The same bytes in all three variants.
+ * 83 still, and no other key moved.
  */
 describe('§3.1 row 1 — code + full + git is the 0.3.0 output, byte for byte bar one skill', () => {
   const FULL = answersFor(CODE_FULL_GIT);

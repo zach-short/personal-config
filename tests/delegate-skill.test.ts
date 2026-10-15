@@ -131,6 +131,18 @@ describe('what /delegate says', () => {
     expect(text).not.toContain('- Do not commit.');
   });
 
+  test('its last step removes only the merged, clean worktrees the run made', async () => {
+    for (const profile of ['ledger', 'folders'] as const) {
+      const text = find(await render({}, profile), 'delegate/SKILL.md') ?? '';
+      const step = text.slice(text.indexOf('## 6. Remove the worktrees this run made'));
+      expect(step, profile).toContain('git worktree remove <worktree>\ngit branch -d <branch>');
+      expect(step.replace(/\s+/g, ' '), profile).toContain(
+        'Never remove a worktree this run did not make',
+      );
+      expect(step.indexOf('## Why this session stays small'), profile).toBeGreaterThan(0);
+    }
+  });
+
   test('on a board it says what changes under /autopilot, which renders beside it', async () => {
     const text = find(await render(), 'delegate/SKILL.md') ?? '';
     for (const phrase of [

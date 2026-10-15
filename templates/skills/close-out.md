@@ -21,4 +21,4 @@ the moment the session ends.
 
 ## 3. State plainly what was and was not verified
 
-{{PROOF_SENTENCE}}
+{{PROOF_SENTENCE}}{{WORKTREE_STEP}}

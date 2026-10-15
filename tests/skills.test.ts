@@ -248,3 +248,25 @@ describe('every shape renders a complete document', () => {
     expect(text).toMatch(/\n---\n\n<!-- personal-config /);
   });
 });
+
+/**
+ * Subagent worktrees outlived their runs and filled the disk (owner, 2026-10-15). `/close-out`
+ * removes the ones its session made, by git's own non-forced checks, and only where git is used.
+ */
+describe('close-out removes the worktrees its session made', () => {
+  test('passes: a git target gets the step, with no forced removal and no merge', async () => {
+    const text = skill(await render(CODE_FULL_GIT), 'close-out');
+    expect(text).toContain('## 4. Remove the worktrees this session made');
+    expect(text).toContain('git merge-base --is-ancestor <branch> <base>');
+    expect(text).toContain('git worktree remove <worktree>\ngit branch -d <branch>');
+    expect(text.replace(/\s+/g, ' ')).toContain('This step merges nothing');
+    expect(text).toContain('Never remove a worktree this session did not\nmake');
+    for (const phrase of ['git worktree remove --force', 'git branch -D'])
+      expect(text, phrase).not.toContain(phrase);
+  });
+
+  test('violates: a target without git gets no worktree step', async () => {
+    const text = skill(await render(CODE_FULL_NO_GIT), 'close-out');
+    expect(text).not.toContain('worktree');
+  });
+});

@@ -18,7 +18,9 @@ its name or when the description matches what you asked for.
 - **`/delegate`**: build one item that has cleared its gate, a board row or a planned phase,
   with a builder subagent and a separate auditor subagent, each in its own git worktree on the
   model the item names, then record it and post the hand-back blocks. You stay in one session
-  and paste nothing.
+  and paste nothing. Its last step removes each worktree the run made whose branch the base
+  already holds and whose tree is clean; `/close-out` does the same for the worktrees its
+  session made.
 - **`/autopilot`**: run the whole board with nobody at the keyboard. One round of questions sets
   the budget, then every runnable row goes through `/delegate`, several at once, until the board
   is done or a cap is reached, and a rundown is written at the end. It runs only when you type it.
@@ -87,7 +89,11 @@ anyway, because without a terminal the commands do not stop to ask.
 step. A builder and an auditor can agree on a wrong change, and a subagent's report is all the
 session sees of its work, so a mistake neither one reports reaches your ledger as signed off.
 It also adds an exception to the model-routing rule (see `model-routing.md`), and every item it
-builds costs at least two agents where one session would have done.
+builds costs at least two agents where one session would have done. Its worktree step removes
+worktrees with git's own checks, never forced, so a dirty tree or an unmerged branch stays. What
+a removal does take is the ignored files in that worktree, such as `node_modules` and `.env`,
+because git never held them. A builder's change that waits for your commit keeps its worktree,
+so the step frees disk only once that work is committed and merged.
 
 `/autopilot` is that risk run all night. "All of them" now puts an overnight loop in the skills
 list of a person who chose "all" for `/close-out`. The loop rests on the harness's `/loop` skill
