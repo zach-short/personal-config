@@ -65,7 +65,14 @@ function asIdentity(value: unknown, from: string): NonNullable<ConfigLayer['iden
   return { githubLogin: login };
 }
 
-const TIERS = ['deep', 'default', 'fast'] as const;
+// Every key of `ModelTiers`. A tier missing here is dropped from every layer without a word:
+// Light was, from its addition until board item 96, so a profile's Light model rendered `<unset>`.
+const TIERS = [
+  'deep',
+  'default',
+  'fast',
+  'light',
+] as const satisfies readonly (keyof ModelTiers)[];
 
 function asModels(value: unknown, from: string): Partial<ModelTiers> {
   if (!isRecord(value)) throw new Error(problem(from, 'models', 'an object'));
