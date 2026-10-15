@@ -52,6 +52,16 @@ Added by Phase 4, re-checked at `fe0187a` on 2026-10-15. G44 and G53 hold as wri
 | G59 | ezhomesteading files items under range headings | Eleven `### 26–30.`-style headings and five level-2 prose sections sit among the item sections. `ITEM_HEADING` does not match a range, so they stay on the board, and their 44 rows have no file and no section | `grep -n '^#' PASSOFF.md` on a copy |
 | G60 | This repo's ledger has 113 steps; the next free number was 114 | Step 114 recorded Phase 4 | `bun run src/cli.ts handoff step`, 2026-10-15 |
 
+Added by Phase 5, re-checked at `41b23ee` on 2026-10-15. G34, G43 and G53 hold as written.
+
+| # | Claim | Verified state | Citation |
+|---|---|---|---|
+| G61 | `setup` rewrites `.personal-config.json` whole | The config is planned with `overwrite` and no stamp, so the stamp guard passes it. A re-run after `fold migrate` dropped `ledgerFrozenAt` and any `itemsDir` override, and every `DONE - HANDOFF n` row then pointed at a ledger with no steps. Phase 8 step 2 is exactly that re-run | `src/render/repo.ts` `renderRepoConfig`; `src/lib/write-plan.ts` `stampGuard` |
+| G62 | The ledger side reads as migrated only from `ledgerFrozenAt` | Without the key, a fresh ledger with `## Log` gets "the next free number is 1" from `handoff step`, and `fold ledger` and `unfolded` never touch its log. The board side reads from the folder (G53), so the two halves can disagree | `src/commands/handoff.ts` `runHandoff`; `src/doctor/rules/unfolded.ts` |
+| G63 | A stamp is line 1 of every stamped markdown file | `withStamp` prepends it, and `headingNumberOf` reads the first line only, so a stamped item file fails `item-files` (D7) | `src/lib/stamp.ts` `withStamp`; `src/lib/items.ts` `headingNumberOf` |
+| G64 | This machine's prose hook rejects every em dash in a markdown file, templates included; the code accepts a hyphen in both places a template writes one | `DONE - <date>` and `-` for an empty cell parse as their em-dash forms | `~/.claude/hooks/no-em-dash.sh`; `src/doctor/rules/board-status.ts` `doneDate`; `src/lib/board.ts` `isNone` |
+| G65 | The golden test failed before this phase, on the `/autopilot` key only | 3 failures at `41b23ee` in a full `bun test`. A recompute in a clean `HOME` gives the committed hash, and after this phase three full runs pass. The cause was not found; it looks like order-dependent state in the shared test `HOME` | `tests/tracks.test.ts`; baseline run 2026-10-15 |
+
 ## 1. Decisions taken since ratification
 
 Build-level calls. Each has a one-line reversal so a later deviation can cite it.
@@ -276,7 +286,31 @@ log. `blockStops` exists because a last step once swallowed `## Style rules`.
 
 ### Phase 5. Templates, render and the banner
 
-**Status:** `PLANNED`. Waits on Phase 4.
+**Status:** `BUILT 2026-10-15` (board item 91, HANDOFF 115). Deviations:
+
+- Scope item 2 and D12: the first item file is written only where the repo has no board and no
+  items folder on disk. A 1.x repo that re-runs `setup` gains no folder, so it stays 1.x. The
+  scan reads the folder and `ledgerFrozenAt` (G61), which needed `src/lib/discover.ts`,
+  `src/lib/types.ts` and `tests/helpers.ts`, outside this row.
+- §4.4: `setup` writes `ledgerFrozenAt`, which §4.4 gives to `fold migrate` only. It writes 0 for
+  a ledger it creates in the 2.0.0 shape (G62), and carries a migrated repo's own number over
+  (G61). A 1.x ledger gets no key. Written under D5 as an As built note.
+- D3: the light track keeps its numbered step log, in a new `templates/HANDOFF.light.md` that is
+  the 1.x `HANDOFF.short.md` byte for byte. It writes no board and so no item files, and D3 moves
+  a step's record into an item file. `HANDOFF.short.md` is the 2.0.0 ledger for non-code + full.
+  Written under D3 as an As built note.
+- §4.2: the board's closing sentence follows D16 (the row leaves with its file), not §4.2's "its
+  row stays here".
+- D7: the item file carries no stamp (G63), as `fold migrate`'s files do not; the stamp test in
+  `tests/render.test.ts` names it as its one exception. It still goes through `planned()`.
+- G64: the templates write `DONE - <date>` and `-` with a hyphen; the four rewritten files carry no
+  em dash. `templates/CLAUDE.local.md` (outside this row) names the folder too, since it is the
+  untracked router.
+- Scope item 4: the new tests are `tests/item-render.test.ts` and `tests/banner-item-path.test.ts`
+  (X1); `hooks.test.ts` and `folder-render.test.ts` are unchanged. `tracks.test.ts` and
+  `render.test.ts` changed for the golden file, the stamp exception and the non-code read order.
+- Known effect, not fixed: a second `setup` run rewrites `PART0-PROMPT.md`, because its list of
+  written files no longer holds the item file. The prompt is pasted once and is never tracked.
 
 **Scope**
 
@@ -303,7 +337,9 @@ no ignore line for one.
 
 ### Phase 6. The six skill texts
 
-**Status:** `PLANNED`. Waits on Phase 5. Check board item 85's state first (G48).
+**Status:** `PLANNED`. Waits on Phase 5. Check board item 85's state first (G48). Phase 5 left the
+light track on a numbered step log (D3 As built), so a skill text that says "write the close-out
+in the item file" must keep the step for a repo with no board.
 
 **Scope**
 

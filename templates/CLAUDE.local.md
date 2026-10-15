@@ -18,10 +18,11 @@ set — never edit its own rule files to suit a personal preference.**
 
 ## Where my work is written down
 
-- `{{LEDGER_FILE}}` — what is true here: environment, settled decisions, the step log.
-- `{{BOARD_FILE}}` — what is next, one standalone prompt per item.
+- `{{LEDGER_FILE}}` — what is true here: environment, settled decisions, a one-line log.
+- `{{BOARD_FILE}}` — what is next, one row per item; each item's prompt is its own file in
+  `{{ITEMS_DIR}}/`.
 
-Both are untracked, because this repo is not mine.
+All three are untracked, because this repo is not mine.
 
 ## Stack
 

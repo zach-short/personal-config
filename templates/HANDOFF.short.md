@@ -1,15 +1,15 @@
-# HANDOFF — {{PROJECT_NAME}} (the ledger)
+# HANDOFF: {{PROJECT_NAME}} (the ledger)
 
-**What is true.** Read first, every session. The step log is append-only; the standing sections
-above it are edited in place when they go stale. Started {{DATE}}.
+**What is true.** Read in full, every session. Standing sections are edited in place; the log is
+one line per event and is folded after 90 days. Started {{DATE}}.
 
 ## Orientation
 
 <!-- One paragraph: what this work is, who decides things, what they already know, and that they
-     are interactive — ask when a decision is theirs. -->
+     are interactive: ask when a decision is theirs. -->
 
-Read in this order: this file → {{READ_NEXT}}`{{STANDARD_PATH}}` (the working standard) →
-`{{ROUTER_FILE}}`.
+Read in this order: this file, then `{{BOARD_FILE}}` (what is next), then your item's own file
+in `{{ITEMS_DIR}}/`, then `{{STANDARD_PATH}}` (the working standard), then `{{ROUTER_FILE}}`.
 
 ## How things are here
 
@@ -23,7 +23,7 @@ Read in this order: this file → {{READ_NEXT}}`{{STANDARD_PATH}}` (the working 
 | Tools in use | | |
 
 **What an agent cannot check from here.** <!-- a bank statement, a person's approval, a printed
-copy — and what the session does instead, usually: end by saying exactly what to check and what
+copy, and what the session does instead, usually: end by saying exactly what to check and what
 should be true, then wait. -->
 
 ## Settled
@@ -32,20 +32,18 @@ should be true, then wait. -->
      here. A change to one of these is a dated supersession naming what it replaces, never a
      quiet reversal. -->
 
-### {{DATE}} — <topic>
+### {{DATE}}: <topic>
 
 ## Known facts and quirks
 
-<!-- Things learned the hard way, with their source — including anything that disproves what a
+<!-- Things learned the hard way, with their source, including anything that disproves what a
      document claims. Name the file and line it corrects, and leave the wrong claim findable and
      marked wrong rather than deleting it. -->
 
-## Step log
+## Log
 
-Numbered, append-only. **Take the next free number by reading this file**, not from a number
-written anywhere else — another session may have taken it. **Do not edit a step you did not
-write**; append a correction as a new step.
-
-**1. <!-- Title. -->** Done {{DATE}}. <!-- What changed, why, what is now settled, and how the
-proof line was applied — what was checked, and what was seen. --> **Left owed:** <!-- what the
-next session inherits. -->
+One line per event, unnumbered, oldest first, each ending in a pointer. Closing an item writes
+`- <date> · closed item <n>`, citing the item by its number only: its file is found by the
+number, live or in the archive. Work that is not an item writes one line ending in a path. What
+the work changed, and how the proof line was applied, goes in the item file's close-out, not
+here. Lines older than 90 days are folded to the archive (`personal-config fold ledger`).

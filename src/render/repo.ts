@@ -1,6 +1,7 @@
 import { isAbsolute, join, relative, sep } from 'node:path';
 import { hashedAnswers } from '../lib/config.ts';
 import { expandHome } from '../lib/paths.ts';
+import { itemsDirFor } from '../lib/repo-config.ts';
 import { filledTemplate } from '../lib/template.ts';
 import type { PlannedFile } from '../lib/types.ts';
 import {
@@ -55,6 +56,7 @@ async function renderFullRouter(ctx: RenderContext, languages: string[]): Promis
     STANDARD_PATH: standardPath(ctx),
     LEDGER_FILE: ledgerFile(ctx),
     BOARD_FILE: boardFile(ctx),
+    ITEMS_DIR: itemsDir(ctx),
     STACK_LINE: stackLine(ctx),
     COMMIT_LINE: commitLine(ctx),
     CONVENTIONS_LIST: conventionsList(ctx, languages),
@@ -247,9 +249,46 @@ function workRecordLines(ctx: RenderContext): string {
   if (workRecordShape(ctx) === 'folders') {
     return `- \`docs/incomplete/<slug>/\` — one folder per open effort: \`SCOPE.md\` → \`DESIGN.md\` → \`PLAN.md\` → \`RUNTIME-PASS.md\`.\n- Closed efforts move to \`${ctx.repo?.archiveHome || 'the archive'}\`.`;
   }
-  const ledger = `- \`${ledgerFile(ctx)}\` — what is true: environment, settled decisions, the step log. Search it for the topic at hand.`;
-  const board = `- \`${boardFile(ctx)}\` — what is next, one standalone prompt per item.`;
-  return hasBoard(ctx) ? `${ledger}\n${board}` : ledger;
+  if (!hasBoard(ctx)) {
+    return `- \`${ledgerFile(ctx)}\` — what is true: environment, settled decisions, the step log. Search it for the topic at hand.`;
+  }
+  return [
+    `- \`${ledgerFile(ctx)}\` — what is true: environment, settled decisions, a one-line log. Search it for the topic at hand.`,
+    `- \`${boardFile(ctx)}\` — what is next, one row per item; each item's prompt is its own file in \`${itemsDir(ctx)}/\`.`,
+  ].join('\n');
+}
+
+/**
+ * The items folder (per-item-board \`DESIGN.md\` D7): the one this repo already keeps, else the
+ * board's stem lowercased. Read from the scan rather than the answers, because an adopted board
+ * name or an \`itemsDir\` override is a fact about the repo, not something a person is asked.
+ */
+function itemsDir(ctx: RenderContext): string {
+  return ctx.repo?.scan.itemsDoc ?? itemsDirFor(boardFile(ctx));
+}
+
+/**
+ * Whether this run starts the board, and so its first item file. Only where neither a board nor
+ * an items folder exists yet: a folder on disk is what makes a repo 2.0.0 (D12), so a 1.x repo
+ * that re-runs \`setup\` must not gain one, and a migrated repo already has its own.
+ */
+function startsBoard(ctx: RenderContext): boolean {
+  const scan = ctx.repo?.scan;
+  return hasBoard(ctx) && !scan?.boardDoc && !scan?.itemsDoc;
+}
+
+/**
+ * The step log a 2.0.0 ledger no longer has (D3, D5). A migrated repo keeps the number it froze
+ * at, because a re-run of \`setup\` rewrites this config whole and dropping it would send every
+ * \`DONE — <LEDGER> n\` row back to a ledger that no longer holds step \`n\`. A ledger this run
+ * creates from the 2.0.0 template has no steps, so it is frozen at 0: without the key,
+ * \`handoff step\` would offer step 1 and \`fold ledger\` would never fold the log. Anything else
+ * is a 1.x ledger, which carries no key (D12).
+ */
+function ledgerFrozenAt(ctx: RenderContext): number | undefined {
+  const scan = ctx.repo?.scan;
+  if (scan?.ledgerFrozenAt != null) return scan.ledgerFrozenAt;
+  return hasBoard(ctx) && !scan?.ledgerDoc ? 0 : undefined;
 }
 
 async function renderWorkRecord(ctx: RenderContext): Promise<PlannedFile[]> {
@@ -264,6 +303,7 @@ async function renderLedgerAndBoard(ctx: RenderContext): Promise<PlannedFile[]> 
     DATE: ctx.date,
     LEDGER_FILE: ledgerFile(ctx),
     BOARD_FILE: boardFile(ctx),
+    ITEMS_DIR: itemsDir(ctx),
     ROUTER_FILE: routerFile(ctx),
     STANDARD_PATH: standardPath(ctx),
     MODEL_DEFAULT: ctx.config.models.default || 'Default',
@@ -288,14 +328,37 @@ async function renderLedgerAndBoard(ctx: RenderContext): Promise<PlannedFile[]> 
       'the board — what is next',
       await filledTemplate('PASSOFF.md', vars),
     ),
+    ...(startsBoard(ctx) ? [await renderFirstItem(ctx, vars)] : []),
   ];
 }
 
 /**
- * The short track's ledger. Same shape as the full one — orientation, standing sections, an
- * append-only step log the same `doctor` rules read — but its facts table asks what proves work
- * sound here rather than for build, test, lint and typecheck commands, and it names no code
- * standard, because on this track there may be none.
+ * The board's row 1 as its own file (per-item-board \`DESIGN.md\` §4.1). Unstamped, as every item
+ * file is: \`item-files\` reads the number from the first line, \`# 1.\`, and a stamp is a line
+ * one. It still goes through \`planned\`, so it gets the preview, the backup and \`undo\`.
+ */
+async function renderFirstItem(
+  ctx: RenderContext,
+  vars: Record<string, string>,
+): Promise<PlannedFile> {
+  return planned(
+    ctx,
+    join(ctx.repo?.scan.path ?? '', itemsDir(ctx), '1-first-task.md'),
+    'the first item — its prompt',
+    await filledTemplate('item.md', vars),
+    { stamp: false },
+  );
+}
+
+/**
+ * The short track's ledger. Same shape as the full one — orientation, standing sections, the
+ * record the same `doctor` rules read — but its facts table asks what proves work sound here
+ * rather than for build, test, lint and typecheck commands, and it names no code standard,
+ * because on this track there may be none.
+ *
+ * With a board it is the 2.0.0 ledger: a one-line log, the work itself in item files (D3). The
+ * light track writes no board and so no item files, and D3 moves a step's record into an item
+ * file, so a light ledger keeps its numbered step log: there is nowhere else for the record.
  */
 async function renderShortLedger(ctx: RenderContext): Promise<PlannedFile> {
   const repoPath = ctx.repo?.scan.path ?? '';
@@ -304,6 +367,8 @@ async function renderShortLedger(ctx: RenderContext): Promise<PlannedFile> {
     DATE: ctx.date,
     ROUTER_FILE: routerFile(ctx),
     STANDARD_PATH: standardPath(ctx),
+    BOARD_FILE: boardFile(ctx),
+    ITEMS_DIR: itemsDir(ctx),
     READ_NEXT: hasBoard(ctx) ? `\`${boardFile(ctx)}\` (what is next) → ` : '',
     PROOF_LINE:
       proofLine(ctx) || '*(not yet written — the first session writes it with the owner)*',
@@ -313,7 +378,7 @@ async function renderShortLedger(ctx: RenderContext): Promise<PlannedFile> {
     ctx,
     join(repoPath, ledgerFile(ctx)),
     'the ledger — what is true',
-    tidy(await filledTemplate('HANDOFF.short.md', vars)),
+    tidy(await filledTemplate(hasBoard(ctx) ? 'HANDOFF.short.md' : 'HANDOFF.light.md', vars)),
   );
 }
 
@@ -372,6 +437,8 @@ function renderRepoConfig(ctx: RenderContext): PlannedFile {
       trackMode: ctx.repo?.trackMode,
       ledgerFile: shape === 'folders' ? '' : ledgerFile(ctx),
       boardFile: shape === 'folders' || !hasBoard(ctx) ? '' : boardFile(ctx),
+      itemsDir: shape === 'folders' || !hasBoard(ctx) ? '' : itemsDir(ctx),
+      ledgerFrozenAt: shape === 'folders' ? undefined : ledgerFrozenAt(ctx),
       standardPath: standardPath(ctx),
       archiveHome: ctx.repo?.archiveHome ?? '',
       // The completion-gate hook's command, and the one key here nothing asks for. It is
@@ -417,7 +484,8 @@ function renderIgnore(ctx: RenderContext): PlannedFile | null {
   const personal = ['.personal-config.json', ...(isShortTrack(ctx) ? [] : ['PART0-PROMPT.md'])];
   const untracked = [
     ledgerFile(ctx),
-    ...(hasBoard(ctx) ? [boardFile(ctx)] : []),
+    // The items folder with a trailing slash, so the line matches the folder and not a file.
+    ...(hasBoard(ctx) ? [boardFile(ctx), `${itemsDir(ctx)}/`] : []),
     'CLAUDE.local.md',
     'AGENT-PRACTICES.local.md',
   ];

@@ -3,8 +3,9 @@ import { basename, join } from 'node:path';
 import { detectConventionsDocs } from './conventions-docs.ts';
 import { exists as isFile } from './disk.ts';
 import { isGitRepo, ownerFromRemote, remoteUrl, worktreeCount } from './git.ts';
+import { hasItemsFolder } from './items.ts';
 import { expandHome } from './paths.ts';
-import { type DocNames, readDocNames } from './repo-config.ts';
+import { type DocNames, readDocNames, readLedgerFrozenAt } from './repo-config.ts';
 import type { RepoScan, TargetKind, WorkProfile } from './types.ts';
 
 /** Marker file → language. First match per language wins; a repo can report several. */
@@ -121,6 +122,7 @@ export async function scanRepo(path: string, kind: TargetKind = 'git'): Promise<
     conventionsDocs,
     worktrees,
     owner,
+    ledgerFrozenAt,
   ] = await Promise.all([
     detectLanguages(path),
     detectPackageManager(path),
@@ -130,6 +132,7 @@ export async function scanRepo(path: string, kind: TargetKind = 'git'): Promise<
     detectConventionsDocs(path),
     git ? worktreeCount(path) : 0,
     git ? remoteUrl(path).then(ownerFromRemote) : null,
+    readLedgerFrozenAt(path),
   ]);
 
   const adopted = adoptedDocs(names, existingDocs);
@@ -143,6 +146,8 @@ export async function scanRepo(path: string, kind: TargetKind = 'git'): Promise<
     migrations,
     existingDocs,
     ...adopted,
+    itemsDoc: hasItemsFolder(join(path, names.items)) ? names.items : null,
+    ledgerFrozenAt,
     conventionsDocs,
     worktrees,
     remoteOwner: owner,

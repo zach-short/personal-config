@@ -129,6 +129,11 @@ address for the same work.
 
 **What it costs, accepted.** The ledger stops being one timeline. D4 gives a thin one back.
 
+*As built, 2026-10-15 (Phase 5):* this holds where a board is written. The light track writes no
+board and so no item files, and a step's record has nowhere else to go, so its ledger keeps the
+numbered step log (`templates/HANDOFF.light.md`, the 1.x short ledger unchanged) and its config
+carries no `ledgerFrozenAt`. Every rule reads it as a 1.x ledger (D12).
+
 ### D4. Work that is not an item gets a dated one-line log (Q4, A)
 
 A `## Log` section in the ledger, where the step log was. One line per event, unnumbered, oldest
@@ -182,6 +187,13 @@ with holes, and rewrites 484k and 378k bytes of append-only archive in this repo
 
 **What it costs, accepted.** Two shapes live in the archive for ever, and one table carries both
 `DONE - HANDOFF 24` and `DONE - 2026-10-15`.
+
+*As built, 2026-10-15 (Phase 5):* `setup` writes `ledgerFrozenAt` too, which §4.4 gave to
+`fold migrate` alone. A ledger `setup` creates in the 2.0.0 shape gets `0`, because the ledger
+half reads as migrated from that key only: without it, `handoff step` offers step 1 and the log
+never folds. A re-run carries a migrated repo's own number over, because `setup` rewrites the
+config whole, and dropping the key sends every `DONE - HANDOFF n` row back to a ledger with no
+steps. A 1.x ledger gets no key.
 
 ### D6. A closed item's file goes to `<archiveHome>/passoff/` (Q6, A)
 

@@ -44,7 +44,11 @@ describe('renderers', () => {
     const dir = await tempDir();
     try {
       const files = await planInto(dir);
-      const markdown = files.filter((f) => f.path.endsWith('.md'));
+      // The one exception is an item file (per-item-board `DESIGN.md` D7): its first line is
+      // `# <n>.`, which `item-files` reads, and a stamp would take that line.
+      const markdown = files.filter(
+        (f) => f.path.endsWith('.md') && !f.path.endsWith('/passoff/1-first-task.md'),
+      );
       expect(markdown.length).toBeGreaterThan(0);
       for (const file of markdown) {
         expect(readStamp(file.contents)).not.toBeNull();

@@ -213,6 +213,13 @@ const COMMIT_PARAGRAPH = '**Commits are the owner’s.**';
  * points at its standards by the question each answers instead of ordering a full read. Turn-one
  * context had been measured at 92k-130k tokens, mostly from those orders being obeyed. Six keys,
  * 77 still.
+ *
+ * **One file appeared and six moved per variant on 2026-10-15, board row 91 (per-item-board
+ * Phase 5).** `passoff/1-first-task.md` is new: the board's row 1 is its own file (§4.1). The
+ * board, the ledger and the router moved to the 2.0.0 shapes (§4.2, §4.3), the config gained
+ * `itemsDir` and `ledgerFrozenAt`, the banner prints the item's path (§4.6), and the Part 0
+ * prompt moved because it lists the files the plan writes. Untracked, the exclude file moved for
+ * `/passoff/`. 80 → 83, and no other key moved.
  */
 describe('§3.1 row 1 — code + full + git is the 0.3.0 output, byte for byte bar one skill', () => {
   const FULL = answersFor(CODE_FULL_GIT);
@@ -244,7 +251,7 @@ describe('§3.1 row 1 — code + full + git is the 0.3.0 output, byte for byte b
   }
 
   test('the snapshot is not empty', async () => {
-    expect(Object.keys(await golden()).length).toBe(77);
+    expect(Object.keys(await golden()).length).toBe(83);
   });
 
   for (const [variant, { answers, plan }] of Object.entries(VARIANTS)) {
@@ -455,7 +462,8 @@ describe('§3.1 row 4 — non-code, whatever the weight and whatever git says', 
     expect(standard).toContain('## If this work is in git');
     // The commit policy the person answered lands here, since it has no global rule to land in.
     expect(standard).toContain(COMMIT_PARAGRAPH);
-    expect(text(files, 'HANDOFF.md')).toContain('`PASSOFF.md` (what is next) →');
+    expect(text(files, 'HANDOFF.md')).toContain('`PASSOFF.md` (what is next), then your item');
+    expect(paths).toContain('/tmp/example/passoff/1-first-task.md');
   });
 
   test('non-code + light on a folder: the smallest setup there is', async () => {

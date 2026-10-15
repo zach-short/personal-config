@@ -12,6 +12,22 @@ ledger="$(sed -n 's/.*"ledgerFile"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "
 board="$(sed -n 's/.*"boardFile"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$config")"
 standard="$(sed -n 's/.*"standardPath"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$config")"
 
+# The open item's own file, as " · <path>", so a session opens the one prompt it needs. Empty on a
+# board that keeps its prompts below the table, which has no items folder. The folder is
+# `itemsDir`, else the board's stem lowercased. The glob keys on "<n>-", so 1 never finds 15-.
+item_path() {
+  local dir file
+  [ -n "$2" ] || return 0
+  dir="$(sed -n 's/.*"itemsDir"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$config")"
+  [ -n "$dir" ] || dir="$(printf '%s' "${1%.*}" | tr '[:upper:]' '[:lower:]')"
+  for file in "$dir/$2"-*.md; do
+    if [ -f "$file" ]; then
+      printf ' · %s' "$file"
+      return 0
+    fi
+  done
+}
+
 pointers=""
 [ -n "$ledger" ] && [ -f "$ledger" ] && pointers="$ledger: what is true here (search it)"
 if [ -n "$board" ] && [ -f "$board" ]; then
@@ -29,7 +45,7 @@ if [ -n "$board" ] && [ -f "$board" ]; then
     # is the board's job to hold and not the banner's to repeat on every session start.
     num="$(printf '%s' "$row" | awk -F'|' '{gsub(/^ +| +$/, "", $2); print $2}')"
     title="$(printf '%s' "$row" | awk -F'|' '{gsub(/^ +| +$/, "", $3); print $3}')"
-    echo "Next open: ${num:+$num · }$title"
+    echo "Next open: ${num:+$num · }$title$(item_path "$board" "$num")"
   else
     echo "Next open: none"
   fi

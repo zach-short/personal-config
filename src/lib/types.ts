@@ -108,6 +108,14 @@ export type RepoScan = {
   ledgerDoc: string | null;
   boardDoc: string | null;
   /**
+   * The items folder this repo already keeps, one file per board item (per-item-board
+   * `DESIGN.md` D1, D7), or null where there is none. A folder on disk is what makes a repo
+   * 2.0.0 (D12), so `setup` reads it to keep a 1.x repo 1.x and a migrated one migrated.
+   */
+  itemsDoc: string | null;
+  /** `ledgerFrozenAt` from the repo's config, which a re-run of `setup` must carry over (D5). */
+  ledgerFrozenAt: number | null;
+  /**
    * The code standard this repo already keeps per language, as a repo-relative path, under
    * whatever name — `{ typescript: 'docs/conventions-ts.md' }` (standard §0.2). A language absent
    * here gets the default name.
