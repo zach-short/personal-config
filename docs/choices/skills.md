@@ -2,7 +2,7 @@
 
 ## What this is
 
-Up to seven skills under `~/.claude/skills/`, each a short document the agent loads when you type
+Up to eight skills under `~/.claude/skills/`, each a short document the agent loads when you type
 its name or when the description matches what you asked for.
 
 - **`/close-out`** — the end-of-work ritual: update the record, then post the three hand-back
@@ -22,6 +22,10 @@ its name or when the description matches what you asked for.
 - **`/autopilot`**: run the whole board with nobody at the keyboard. One round of questions sets
   the budget, then every runnable row goes through `/delegate`, several at once, until the board
   is done or a cap is reached, and a rundown is written at the end. It runs only when you type it.
+- **`/audit`**: audit the repo in the lanes a file in the repo names (`docs/audit-lanes.md`),
+  verify each finding with a second agent, drop what an earlier audit already found, and write a
+  dated report and board rows. It builds nothing. `/autopilot` offers it as "audit first" in its
+  opening round, so one command audits and then builds; you can also type `/audit` alone.
 
 How many you get depends on the setup. The lighter setup gets `/close-out` and `/handoff` only.
 Non-code work on the full setup gets four: `/clean-up` drives commands that need an archive
@@ -29,7 +33,8 @@ home, and only the full code setup is asked for one. `/delegate` is written only
 the full setup in git, with a board or with project folders: each subagent needs a worktree of
 its own, which needs git, and the auditor re-runs the gates the full standard names, which the
 lighter setup and non-code work do not have. `/autopilot` is written beside it only where there
-is a board, because it reads the board at every step, and project folders keep none.
+is a board, because it reads the board at every step, and project folders keep none. `/audit`
+is written exactly where `/autopilot` is, because `/autopilot` loads it and it writes board rows.
 
 ## The defense
 
@@ -57,6 +62,15 @@ the rundown says what ran, what was held, what the budget was and what nobody sa
 skill file sets `disable-model-invocation: true`, so the agent cannot start it on its own; its
 description is not even in the agent's context until you type it.
 
+`/audit` is for the spare budget before a usage window resets. One opening round covers the
+audit and the build, and the run stops at the reset time your lane file names, or at a later time
+you give, read from the clock and never estimated. Every finding is checked by a second agent
+that tries to disprove it, and a finding an earlier audit already holds is dropped and named, so
+the board does not gain a second row for a finding it already has. A security fix row is written
+as Deep, so the run never builds it: you lift it yourself. The skill names no repo and no tool.
+Each repo writes its own commands, paths, dedupe sources and reset time in `docs/audit-lanes.md`,
+and a repo without that file is never offered the audit.
+
 ## The strongest argument against it
 
 Several more skills in a list you already scroll past, and their descriptions compete with
@@ -82,6 +96,14 @@ no error: the run stops early, or never stops scheduling. The rundown's readings
 are the only sign of a missed wake. And where your harness has no usage tool, the budget is an end
 time or a row count, not a share of your plan.
 
+`/audit` cannot carry the guard `/autopilot` has. The harness blocks a model's Skill call to a
+skill that sets `disable-model-invocation: true`, and `/autopilot` loads `/audit` that way. So its
+description is in the agent's context, and only its first line, which refuses a run nobody typed,
+stops the agent from starting an audit on its own. An audit started by mistake spends budget on
+agents and writes rows, though it builds nothing. Its lanes are also only as good as the lane
+file: a dead-code tool that cannot see route files reports them unused, and the verify step is
+the only thing between that report and a delete row.
+
 ## What it writes and where
 
 `~/.claude/skills/<name>/SKILL.md`, one directory each. Existing skills of other names are not
@@ -100,8 +122,14 @@ that question's long form.
 `RUNDOWN.md`, written at the end, and it writes one ledger step per row it signs off and one for
 the run. The builders' work stays in their worktrees; landing it is yours.
 
+`/audit` also writes nothing at setup beyond its skill file. When it runs, it makes
+`docs/incomplete/audit-<date>/`, holding the raw tool output under `raw/<lane>/` and a
+`REPORT.md`, and it adds rows to the board at the next free numbers. It reads
+`docs/audit-lanes.md`, which you write; this tool never writes it.
+
 ## How to undo it
 
 Delete the skill directories, or run `personal-config undo` to restore anything overwritten. A
 run's folder under `docs/incomplete/` is an ordinary folder: archive it with `personal-config
-archive` or delete it.
+archive` or delete it. An audit's rows are ordinary board rows: mark one `SETTLED AS NO` to drop
+it. To stop being offered the audit in one repo, delete or rename its `docs/audit-lanes.md`.

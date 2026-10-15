@@ -3,6 +3,28 @@
 The CLI. The working standard it installs is versioned separately — see
 [`standard/CHANGELOG.md`](standard/CHANGELOG.md).
 
+## Unreleased
+
+### Added
+
+- **`/audit`, an eighth workflow skill, and an "audit first" option in `/autopilot`.** `/audit`
+  runs the lanes a repo names in its own `docs/audit-lanes.md`, one lane at a time: a sweep, a
+  triage that drops known false positives and anything an earlier audit already found, and a
+  second agent that tries to disprove each finding. A security finding that survives gets one
+  Deep review. It writes `docs/incomplete/audit-<date>/REPORT.md` and board rows with a tier,
+  "Files it owns" and "Waits on"; a security fix row is Deep, so no run builds it unless you lift
+  it. The lanes run on tiers, and the template names no repo, no tool and no model family.
+  `/autopilot` asks one more call of four questions where the lane file exists (audit first, the
+  lanes and their order, the scope, and the stop time, which defaults to the lane file's reset
+  time), runs the audit before the board, re-reads the board after the audit writes its rows,
+  and checks its caps before each lane and each verify pass, reading the clock from `date`. Its
+  `STATE.md` gains an **Audit** section and its rundown an **Audit** section, second. A run that
+  crosses the weekly reset counts the points spent before it plus the reading after it. `/audit`
+  is written exactly where `/autopilot` is. It does not set `disable-model-invocation`, because
+  the harness blocks a model's Skill call to a skill that sets it and `/autopilot` loads it that
+  way; its first line refuses a run that nobody typed. The `all` option of the skills question
+  now names it.
+
 ## 0.8.0 — 2026-10-05
 
 ### Added

@@ -50,8 +50,9 @@ function skillNames(files: PlannedFile[]): string[] {
 }
 
 describe('who gets /delegate', () => {
-  test('passes: code + full + git with every skill gets it beside the other six', async () => {
+  test('passes: code + full + git with every skill gets it beside the other seven', async () => {
     expect(skillNames(await render())).toEqual([
+      'audit',
       'autopilot',
       'clean-up',
       'close-out',

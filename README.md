@@ -70,7 +70,7 @@ The wizard asks only what a person knows. It does not guess what the repo knows:
 | `model-routing.md` | `~/.claude/rules/` | The model tier table and what a session does when a task names another model. Whole method only, and not written if you choose no rule. |
 | `docs-lookup.md` | `~/.claude/rules/` | Prefer your docs tool over memory for library APIs. Code work only, and not written if you answer "none". |
 | `language-style.md` | `~/.claude/rules/` | Your agent replies to you in chat in ASD-STE100 Simplified Technical English, with no irony, sarcasm or litotes. Every track, and not written if you answer "However it likes". |
-| `<name>/SKILL.md` | `~/.claude/skills/` | The skills `/close-out`, `/scope`, `/passoff`, `/handoff`, `/clean-up`, `/delegate` and `/autopilot`. The lighter setup installs `/close-out` and `/handoff`. `/clean-up` is written for code work with the whole method only, `/delegate` for code work with the whole method in git, and `/autopilot` beside it where there is a board. `/autopilot` runs only when you type it. A skill of the same name that this tool did not write is left alone. |
+| `<name>/SKILL.md` | `~/.claude/skills/` | The skills `/close-out`, `/scope`, `/passoff`, `/handoff`, `/clean-up`, `/delegate`, `/autopilot` and `/audit`. The lighter setup installs `/close-out` and `/handoff`. `/clean-up` is written for code work with the whole method only, `/delegate` for code work with the whole method in git, and `/autopilot` and `/audit` beside it where there is a board. `/autopilot` runs only when you type it, and `/audit` only when you type it or `/autopilot` loads it. A skill of the same name that this tool did not write is left alone. |
 | `write-doc/SKILL.md`, `style.md`, `check.sh` | `~/.claude/skills/` | The `/write-doc` skill, for other work only, and only when the workflow skills are installed. It asks you for every claim only you can make before it drafts, reviews the draft against `style.md`, and runs `check.sh` on the saved file for em dashes, contractions and stock AI phrases. Not written if you answer "No". If you also answer "Every document it saves", a `PostToolUse` entry merged into `~/.claude/settings.json` runs the same check on every prose file the agent saves. |
 | `commit-guard.sh`, `delete-guard.sh`, `session-banner.sh`, `completion-gate.sh`, and `commit-policy` beside the commit guard | `~/.claude/hooks/personal-config/` | Optional hooks, merged into `~/.claude/settings.json`. See below. |
 | `config.json` | `~/.config/personal-config/` | Your saved answers for all repos, so the next run opens with them. |
@@ -337,7 +337,7 @@ personal-config undo    # restore whatever the last run overwrote
 Then delete what you no longer want:
 
 - `~/.claude/rules/commits.md`, `model-routing.md`, `docs-lookup.md` and `language-style.md`
-- the skill directories under `~/.claude/skills/` (`close-out`, `scope`, `passoff`, `handoff`, `clean-up`, `delegate`, `autopilot` and `write-doc`)
+- the skill directories under `~/.claude/skills/` (`close-out`, `scope`, `passoff`, `handoff`, `clean-up`, `delegate`, `autopilot`, `audit` and `write-doc`)
 - `~/.claude/hooks/personal-config/`, and the `hooks` entries and `outputStyle` it added to `~/.claude/settings.json`. Remove the `PostToolUse` entry that runs `write-doc/check.sh hook` before you delete the `write-doc` folder, or every save reports a hook error.
 - the generated files in each repo, and the `availableModels` list in any repo's `.claude/settings.local.json`
 

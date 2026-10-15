@@ -97,6 +97,7 @@ describe('what /autopilot says', () => {
     const text = await autopilot();
     const sections = [
       '**In one paragraph**',
+      '**Audit**: "not run", or the report',
       '**Rows**: for each row',
       '**Defects found and not fixed.**',
       '**Collisions and merge order**',
@@ -175,4 +176,47 @@ describe('what /autopilot says', () => {
       expect(text).toContain('---\n\n<!-- personal-config v');
       expect(leftoverTokens(text)).toEqual([]);
     });
+});
+
+/** The audit-first option (audit-skill DESIGN 4.2, 4.4, 4.5, 2026-10-15). */
+describe('the audit-first option', () => {
+  test('the audit call comes before the first call, only where the lane file exists', async () => {
+    const text = await autopilot();
+    const auditCall = text.indexOf(
+      '**Audit call, before the first call, only where the lane file exists.',
+    );
+    expect(auditCall).toBeGreaterThan(0);
+    expect(auditCall).toBeLessThan(text.indexOf('**First call, always. Four questions.**'));
+    expect(text.replace(/\s+/g, ' ')).toContain(
+      "This answer is the run's end time, whatever question 1 says.",
+    );
+  });
+
+  test('the state file has an Audit section, and rows launch only after the audit writes its rows', async () => {
+    const text = (await autopilot()).replace(/\s+/g, ' ');
+    expect(text).toContain('- **Audit**: "not run", or the audit folder');
+    expect(text).toContain('The rows launch only after `/audit` has written its rows');
+    expect(text).toContain(
+      'When `/audit` has written its rows, read the board again before step 6.',
+    );
+  });
+
+  test('the stop rules read the clock, check between lanes, and count the spend across a reset', async () => {
+    const text = (await autopilot()).replace(/\s+/g, ' ');
+    for (const phrase of [
+      'Read the time from `date` for every check against the end time. Never estimate it.',
+      '2. **Record a reading**: the time from `date`',
+      'check the caps before each step of a lane starts',
+      "A cap reached there launches no row: the audit's started steps finish, `/audit` writes its report and its rows, and the run ends when nothing is in flight.",
+      'apply to audit agents as they do to builders.',
+      'its next step launches in step 6, never here.',
+      "Check the end time against `date` and the caps against this wake's reading here, before any launch",
+      'While the audit runs, launch its next step instead, and no row.',
+      'its stop is the end time: offer no other end time here.',
+      "A stopped audit step is written in the report as not finished, and `/audit`'s section 5 runs before the run ends.",
+      'A weekly reading lower than the one before marks the reset.',
+      'minus the start reading, plus the latest reading after the reset. Never count a drop as negative spend.',
+    ])
+      expect(text, phrase).toContain(phrase);
+  });
 });

@@ -13,7 +13,8 @@ Runs every runnable row on the board (`{{BOARD_FILE}}`) through `/delegate`, sev
 with nobody at the keyboard: one round of questions at the start, then builds, reviews and records
 until the board is done or a cap is reached, then a rundown. Every row still gets its model, its
 own worktree and an auditor. Only this session writes the board and the ledger
-(`{{LEDGER_FILE}}`).
+(`{{LEDGER_FILE}}`). Where the repo has a lane file, the person can choose to run `/audit` first:
+its rows join the board, and the run builds the ones it can.
 
 ## The defaults
 
@@ -42,6 +43,9 @@ and the rest of this skill names them.
    round.
 3. **Load `/delegate` once, with the Skill tool.** Its steps run every row. Do not load it again
    for each row; load it again only when a compaction has taken it out of your context.
+4. **Look for the lane file**, `docs/audit-lanes.md`. Where it exists, load `/audit` once, with the
+   Skill tool, and read the lane file: the audit call offers its lanes and `/audit`'s defaults.
+   Where it does not exist, ask no audit call, and run the board only.
 
 ## 2. Which rows can run
 
@@ -70,13 +74,25 @@ At most four questions in each `AskUserQuestion` call. The questions, their opti
 defaults are fixed below. The words are yours, inside the person's chat-style rule where they
 chose one. Put the default first in each question and mark it recommended.
 
+**Audit call, before the first call, only where the lane file exists. Four questions.** The
+defaults are `/audit`'s.
+
+1. **Audit first?** Yes: run `/audit`'s lanes, then the board; or no, the board only.
+2. **Lanes and order.** The lanes the lane file names, in its order; the person may drop lanes or
+   type another order.
+3. **Scope.** The full repo, or the changes since the last audit report's commit.
+4. **Stop.** Stop launching at `/audit`'s default stop; or a later time the person types. This
+   answer is the run's end time, whatever question 1 says. Write it as an absolute time with its
+   zone, worked out from `date`.
+
 **First call, always. Four questions.**
 
 1. **Budget.** Where a usage tool exists: stop launching at the default end time or at the
    default share of the weekly window, whichever comes first, and freeze launches at the default
    share of the five-hour window; or a shorter run; or a number of rows the person types. Where no
    usage tool exists, say that the budget will not be measured, and require an end time or a
-   number of rows.
+   number of rows. Where the audit call ran, its stop is the end time: offer no other end time
+   here.
 2. **Agents in flight.** The default; fewer; or one at a time.
 3. **Unattended.** Say what the run needs: a permission mode that does not stop on a prompt, and
    the app or the terminal left open on a machine that stays awake. Where no timer exists, say that
@@ -109,6 +125,8 @@ the next free number. `STATE.md` in it has these sections:
 - **Run**: the start time, the folder, a sentinel phrase for `personal-config context`, and the
   timer and usage tool found.
 - **Caps**: each cap, as answered.
+- **Audit**: "not run", or the audit folder, and one line for each lane: the step, the agent ids,
+  and whether the step is done or in progress.
 - **Standing orders**: the lifted rows, the load-bearing rows, the rows left out, and the answers
   to the row questions.
 - **Rows**: one line for each row: number, tier, status, agent ids, worktree path, branch, relay
@@ -129,9 +147,15 @@ relative date word, because `doctor` scans this folder.
 
 ## 5. Launch
 
-Claim each runnable row, then run `/delegate`'s step 2 for each, up to the agents-in-flight cap,
-with the Agent calls in one message. Write `STATE.md`. Then start `/loop` with no interval and
-this prompt: "Read `<the run folder>/STATE.md` first. If `/autopilot` or `/delegate` is no
+Where the person chose audit first, launch no row yet: start `/audit`'s first lane (its section
+4) instead. The rows launch only after `/audit` has written its rows (its section 5), from a fresh
+read of the board.
+
+Otherwise, claim each runnable row, then run `/delegate`'s step 2 for each, up to the
+agents-in-flight cap, with the Agent calls in one message.
+
+Write `STATE.md`. Then start `/loop` with no interval and this prompt: "Read `<the run
+folder>/STATE.md` first. If `/autopilot`, `/delegate` or, while the audit runs, `/audit` is no
 longer in your context, load it again with the Skill tool. Then follow `/autopilot`'s wake
 procedure."
 
@@ -141,12 +165,14 @@ On every wake, and whenever a background agent returns:
 
 1. **Read `STATE.md` first.** It is the record of the run, not your memory of it. After an
    automatic compaction, it is all you have.
-2. **Record a reading**: the time, the usage figure or "not measured", and this session's context
+2. **Record a reading**: the time from `date`, the usage figure or "not measured", and this session's context
    from `personal-config context --sentinel "<the sentinel>"`.
 3. **Route each returned agent by `/delegate`'s steps**: a builder's report to an auditor, a relay
    to a fresh builder, a verdict to sign-off, a fix round or a hold. Record each sign-off on the
    board and in the ledger. Write what the rundown needs into **Reports** in `STATE.md`, the
-   hand-back blocks among it, not into the chat.
+   hand-back blocks among it, not into the chat. Route each returned audit agent by `/audit`'s
+   sections 4 to 6, and record its step under **Audit**; its next step launches in step 6, never
+   here. When `/audit` has written its rows, read the board again before step 6.
 4. **A question a builder reports for the owner** is answered here, never by asking. Where it only
    implements a decision the row or the design already made, take it, and log it under
    **Judgment calls** with a one-line reversal. Anything else holds the row, with the question
@@ -154,7 +180,9 @@ On every wake, and whenever a background agent returns:
 5. **Where the five-hour window has reached its default share**, freeze launches and hold on the
    holding wake. After its reset, resume the stopped agents with `SendMessage`.
 6. **Launch.** Unless a cap is reached or launches are frozen, read the board fresh and launch the
-   next runnable rows, up to the agents-in-flight cap.
+   next runnable rows, up to the agents-in-flight cap. Check the end time against `date` and the
+   caps against this wake's reading here, before any launch: the last check may be a wake old.
+   While the audit runs, launch its next step instead, and no row.
 7. **Check the stop rules** (section 7). If the run ends, go to section 8.
 8. **Schedule the next wake** with `ScheduleWakeup`: the wake while agents run, or the wake while
    holding.
@@ -162,6 +190,7 @@ On every wake, and whenever a background agent returns:
 
 ## 7. Stop rules
 
+- Read the time from `date` for every check against the end time. Never estimate it.
 - The first cap reached (usage where a usage tool exists, the end time, or the number of rows)
   stops new launches.
 - After a cap, in-flight work finishes and its reviews run. A blocking verdict then holds the row:
@@ -172,7 +201,16 @@ On every wake, and whenever a background agent returns:
   stopped, which wait on the holding wake.
 - Where no usage tool exists and a limit stops the agents, hold on the holding wake, then resume
   them with `SendMessage`. Where no timer exists either, end the run there: nothing will wake this
-  session. The stopped agents' rows go under **Held**.
+  session. The stopped agents' rows go under **Held**. A stopped audit step is written in the
+  report as not finished, and `/audit`'s section 5 runs before the run ends.
+- **While the audit runs**, check the caps before each step of a lane starts, as `/audit`'s
+  section 6 says. A cap reached there launches no row: the audit's started steps
+  finish, `/audit` writes its report and its rows, and the run ends when nothing is in flight.
+  The freeze, and the hold and resume above, apply to audit agents as they do to builders.
+- **A run that crosses the weekly window's reset** counts its spend across it. A weekly reading
+  lower than the one before marks the reset. The spend is then the last reading before the reset
+  minus the start reading, plus the latest reading after the reset. Never count a drop as negative
+  spend.
 - **This session's own context never stops the run**, unless the person set a cap for it. Record
   it on every wake. The working standard's context ceilings were measured on sessions that read
   files: the Default ceiling is about 400k, measured 2026-08-16. On 2026-10-03 an orchestrator
@@ -189,17 +227,19 @@ file that holds the row's open findings.
 2. Write `RUNDOWN.md` in the run folder from `STATE.md`, with these sections in this order. Each is present, and
    says "none" where it is empty.
    1. **In one paragraph**: what ran, what is done, what is held, and why the run ended.
-   2. **Rows**: for each row, the model, the worktree path and branch, the gates seen, the review
+   2. **Audit**: "not run", or the report's path, each lane's last step, the findings verified,
+      the findings dropped as duplicates, the rows written, and the lanes not run.
+   3. **Rows**: for each row, the model, the worktree path and branch, the gates seen, the review
       verdicts, the fix rounds and the status.
-   3. **Defects found and not fixed.**
-   4. **Collisions and merge order**, including any number two rows both claimed.
-   5. **Judgment calls**, each with its reversal.
-   6. **Decisions waiting for the owner**, copy variants among them.
-   7. **Budget**: the usage readings or "not measured", agents by model, hours, and this session's
+   4. **Defects found and not fixed.**
+   5. **Collisions and merge order**, including any number two rows both claimed.
+   6. **Judgment calls**, each with its reversal.
+   7. **Decisions waiting for the owner**, copy variants among them.
+   8. **Budget**: the usage readings or "not measured", agents by model, hours, and this session's
       peak context.
-   8. **Not verified**: what no one saw running.
-   9. **Warnings**, such as a tool that deletes uncommitted worktrees.
-   10. **Commit blocks**: {{COMMIT_BLOCKS}}
+   9. **Not verified**: what no one saw running.
+   10. **Warnings**, such as a tool that deletes uncommitted worktrees.
+   11. **Commit blocks**: {{COMMIT_BLOCKS}}
 3. Write the run's own ledger step at the next free number, read from the file now. It points at
    the rundown.
 4. Where a push notification tool exists, send one line that names the rundown's path.

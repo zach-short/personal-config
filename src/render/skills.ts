@@ -26,6 +26,14 @@ const SKILLS = ['close-out', 'scope', 'passoff', 'handoff', 'clean-up'] as const
 const LIGHT_SKILLS = ['close-out', 'handoff'] as const;
 
 /**
+ * `/audit` is written exactly where `/autopilot` is, because `/autopilot` loads it with the Skill
+ * tool for its "audit first" option, and it writes board rows, which project folders keep none of
+ * (audit-skill DESIGN 4.1). It carries no `disable-model-invocation`: the harness blocks a model's
+ * Skill call to a skill that sets it, so `/autopilot` could not load it (owner, 2026-10-15).
+ */
+const AUTOPILOT_SKILLS = ['autopilot', 'audit'] as const;
+
+/**
  * One directory per skill under `~/.claude/skills/<name>/SKILL.md`, matching the layout the
  * harness already loads. The frontmatter is what decides when a skill triggers, so it names
  * the phrasings a user actually types rather than describing the skill to itself.
@@ -74,7 +82,7 @@ function offeredSkills(ctx: RenderContext): readonly string[] {
   if (!trackOf(ctx).usesGit) return SKILLS;
   return workRecordShape(ctx) === 'folders'
     ? [...SKILLS, 'delegate']
-    : [...SKILLS, 'delegate', 'autopilot'];
+    : [...SKILLS, 'delegate', ...AUTOPILOT_SKILLS];
 }
 
 async function renderSkill(ctx: RenderContext, name: string): Promise<PlannedFile> {
@@ -126,6 +134,7 @@ function variables(
   if (name === 'clean-up') return cleanUpVars(shape);
   if (name === 'delegate') return delegateVars(ctx, shape);
   if (name === 'autopilot') return autopilotVars(ctx);
+  if (name === 'audit') return { BOARD_FILE: boardFile(ctx), TIER_TABLE: tierTable(ctx, '') };
   return {};
 }
 
