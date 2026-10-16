@@ -187,6 +187,71 @@ describe('what /delegate says', () => {
     expect(text).not.toContain('- Do not commit.');
   });
 
+  /**
+   * Autonomous-autopilot Phase 1 (D1, design 4.1): under `agent-pushes` a signed-off row lands in
+   * step 6, the builder merging and gating in its own worktree and the lead fast-forwarding and
+   * pushing from the primary checkout. Each sentence is absent under the other two policies.
+   */
+  const LANDS = [
+    "The merge into the base and the push are the land step's (step 6), which this session sends you after the audit.",
+    '## 6. Land it',
+    "After step 4 signs an item off, land it: the base takes the builder's branch, gated on the tree that lands, and the push follows.",
+    "1. Where the item's file is tracked, append these sign-off lines to its close-out section",
+    "2. From your worktree's own directory, run `git merge --no-edit <base>` as one plain command",
+    '3. On a conflict in a file your item\'s "Files it owns" lists, resolve it',
+    "4. Run the fresh-checkout recipe's install line again, then every gate below",
+    '5. Report: the merge result with `git rev-parse HEAD`',
+    "from the primary checkout, `git worktree add <a fresh path> <the builder's branch>`",
+    'Never `--force`, and never a rebase: the auditor reproduced the commits that land.',
+    'A refused push lands the row, stops every later push in this session',
+    'Under this policy a row is `DONE` when its commits are on the base.',
+    '## 7. Remove the worktrees this run made',
+    'The merge happened in the land step; this step only removes.',
+    "so step 7 keeps the auditor's worktree until the builder's branch is merged",
+    'commit state (landed on <base> at <hash>, or held at the land step)',
+    'is tracked, these lines go into the land message (step 6), and the builder commits them.',
+    "The log line, `DONE - <date>` and the hand-back blocks wait for step 6's fast-forward",
+  ];
+
+  /** Design 4.1: the lead's two commands are a fenced block, not the design's indented lines. */
+  const FENCE = "```bash\ngit merge --ff-only <the builder's branch>\ngit push\n```";
+
+  const delegateUnder = async (policy: string, profile: WorkProfile = 'ledger') =>
+    find(await render({ commitPolicy: policy }, profile), 'delegate/SKILL.md') ?? '';
+
+  test('passes: under agent-pushes on a board, step 6 lands the row and step 7 removes', async () => {
+    const raw = await delegateUnder('agent-pushes');
+    const text = raw.replace(/\s+/g, ' ');
+    for (const phrase of LANDS) expect(text, phrase).toContain(phrase);
+    expect(raw).toContain(FENCE);
+    expect(text).not.toContain('Never push and never merge.');
+    expect(text).not.toContain('This step merges nothing');
+    expect(raw.indexOf('## 6. Land it')).toBeLessThan(
+      raw.indexOf('## 7. Remove the worktrees'),
+    );
+    expect(raw).toContain("item's loop is independent.\n\n## 6. Land it\n");
+    expect(raw).toContain('base now holds.\n\n## 7. Remove the worktrees this run made\n');
+  });
+
+  test('violates: under agent-commits and print-blocks none of the land step renders', async () => {
+    for (const policy of ['agent-commits', 'print-blocks']) {
+      const raw = await delegateUnder(policy);
+      const text = raw.replace(/\s+/g, ' ');
+      for (const phrase of LANDS) expect(text, `${policy}: ${phrase}`).not.toContain(phrase);
+      expect(raw, policy).not.toContain(FENCE);
+      expect(raw, policy).toContain(
+        "item's loop is independent.\n\n## 6. Remove the worktrees",
+      );
+    }
+  });
+
+  /** Judgment call: the land step's record is a log line and a `DONE` row, which folders lack. */
+  test('passes: on project folders agent-pushes renders as agent-commits', async () => {
+    expect(await delegateUnder('agent-pushes', 'folders')).toBe(
+      await delegateUnder('agent-commits', 'folders'),
+    );
+  });
+
   test('its last step removes only the merged, clean worktrees the run made', async () => {
     for (const profile of ['ledger', 'folders'] as const) {
       const text = find(await render({}, profile), 'delegate/SKILL.md') ?? '';

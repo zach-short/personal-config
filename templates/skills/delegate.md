@@ -131,6 +131,7 @@ Only items in different lanes whose {{OWNS_PLURAL}} do not overlap, checked acro
 once, not in pairs as you go. Their step 2 Agent calls go out in one message. From there each
 item's loop is independent.
 
+{{LAND_STEP}}
 {{WORKTREE_STEP}}
 
 ## Why this session stays small

@@ -264,6 +264,46 @@ describe('close-out removes the worktrees its session made', () => {
       expect(text, phrase).not.toContain(phrase);
   });
 
+  /** Autonomous-autopilot Phase 1 (design 4.1, 4.3): the land step put the close-out on the base. */
+  const LANDED = [
+    'The merge happened in the land step; this step only removes.',
+    "Fold an item only once its close-out is on the base, so this item's file waits for the next close-out or for `/clean-up`.",
+  ];
+  const OWNERS = [
+    'This step merges nothing',
+    "A change that waits for the owner's commit is the usual reason.",
+    'Fold an item only once the owner has committed its close-out',
+  ];
+  const closeOut = async (commitPolicy: string, workProfile: WorkProfile = 'ledger') => {
+    const answers: Answers = {
+      ...DEFAULT_ANSWERS,
+      skills: 'all',
+      ...CODE_FULL_GIT,
+      commitPolicy,
+    };
+    const files = await everySkill(testContext(answers, testRepoPlan({ workProfile })));
+    return skill(files, 'close-out').replace(/\s+/g, ' ');
+  };
+
+  test('passes: under agent-pushes the merge was the land step, and the owner commits nothing', async () => {
+    const text = await closeOut('agent-pushes');
+    for (const phrase of LANDED) expect(text, phrase).toContain(phrase);
+    for (const phrase of OWNERS) expect(text, phrase).not.toContain(phrase);
+  });
+
+  test("violates: under agent-commits the owner's sentences stay and none of these renders", async () => {
+    const text = await closeOut('agent-commits');
+    for (const phrase of LANDED) expect(text, phrase).not.toContain(phrase);
+    for (const phrase of OWNERS) expect(text, phrase).toContain(phrase);
+  });
+
+  /** Judgment call: project folders get no land step, so their close-out keeps the old sentence. */
+  test('passes: on project folders agent-pushes renders the close-out as agent-commits', async () => {
+    expect(await closeOut('agent-pushes', 'folders')).toBe(
+      await closeOut('agent-commits', 'folders'),
+    );
+  });
+
   test('violates: a target without git gets no worktree step', async () => {
     const text = skill(await render(CODE_FULL_NO_GIT), 'close-out');
     expect(text).not.toContain('worktree');

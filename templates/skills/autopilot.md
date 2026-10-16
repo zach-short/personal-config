@@ -178,7 +178,7 @@ On every wake, and whenever a background agent returns:
    or a hold. Record each sign-off as `/delegate`'s step 4 says: the item's close-out, a log line
    and the board. Route each returned audit agent by `/audit`'s
    sections 4 to 6, and record its step under **Audit**; its next step launches in step 6, never
-   here. When `/audit` has written its rows, read the board again before step 6.
+   here. When `/audit` has written its rows, read the board again before step 6.{{LAND_ROUTE}}
 4. **A question a builder reports for the owner** is answered here, never by asking. Where it only
    implements a decision the row or the design already made, take it, and log it under
    **Judgment calls** with a one-line reversal. Anything else holds the row, with the question

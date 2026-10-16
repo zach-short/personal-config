@@ -152,18 +152,38 @@ describe('agent-pushes installs no commit guard', () => {
   });
 });
 
-describe('the skills read agent-pushes as at least agent-commits', () => {
-  for (const skill of ['delegate', 'autopilot'])
-    test(`passes: /${skill} renders as it does under agent-commits`, async () => {
-      const read = async (policy: string) =>
-        (await render({ commitPolicy: policy })).find((f) =>
-          f.path.endsWith(join(skill, 'SKILL.md')),
-        )?.contents ?? '';
-      const commits = await read('agent-commits');
-      expect(commits).not.toBe('');
-      expect(await read('agent-pushes')).toBe(commits);
-      expect(await read('print-blocks')).not.toBe(commits);
+/**
+ * Autonomous-autopilot Phase 1 (design 4.5, G44): `agent-pushes` lands a row, so its skills differ
+ * from `agent-commits` by the land step, and G40's two sentences render only under the latter.
+ */
+describe('the skills land a row under agent-pushes, and only there', () => {
+  const G40 = ['Never push and never merge.', 'No branch is pushed or merged.'];
+  const LANDS: Record<string, string> = { delegate: '## 6. Land it', autopilot: '**Landed**' };
+
+  const read = async (skill: string, policy: string) =>
+    (await render({ commitPolicy: policy })).find((f) =>
+      f.path.endsWith(join(skill, 'SKILL.md')),
+    )?.contents ?? '';
+
+  for (const [skill, lands] of Object.entries(LANDS)) {
+    test(`passes: /${skill} under agent-pushes lands, with neither G40 sentence`, async () => {
+      const text = (await read(skill, 'agent-pushes')).replace(/\s+/g, ' ');
+      expect(text).toContain(lands);
+      for (const sentence of G40) expect(text, sentence).not.toContain(sentence);
     });
+
+    test(`violates: /${skill} under agent-commits has no land step, and keeps its G40 sentence`, async () => {
+      const text = (await read(skill, 'agent-commits')).replace(/\s+/g, ' ');
+      expect(text).not.toContain(lands);
+      expect(G40.some((sentence) => text.includes(sentence))).toBe(true);
+    });
+  }
+
+  test('passes: /delegate under agent-commits renders the same bytes twice', async () => {
+    const first = await read('delegate', 'agent-commits');
+    expect(first).not.toBe('');
+    expect(await read('delegate', 'agent-commits')).toBe(first);
+  });
 });
 
 /**
