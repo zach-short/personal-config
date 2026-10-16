@@ -4,7 +4,7 @@ import { claudeSkillsDir, repoRoot } from '../lib/paths.ts';
 import { docStem, itemsDirFor } from '../lib/repo-config.ts';
 import { stampAfterFrontmatter, stampLine } from '../lib/stamp.ts';
 import { fill } from '../lib/template.ts';
-import type { PlannedFile } from '../lib/types.ts';
+import type { GlobalFile, PlannedFile } from '../lib/types.ts';
 import {
   answer,
   boardFile,
@@ -33,6 +33,24 @@ const LIGHT_SKILLS = ['close-out', 'handoff'] as const;
  * Skill call to a skill that sets it, so `/autopilot` could not load it (owner, 2026-10-15).
  */
 const AUTOPILOT_SKILLS = ['autopilot', 'audit'] as const;
+
+/**
+ * Every skill any track can install, which is the set a later run may find on disk and no longer
+ * render (setup-global-leftovers BD-2). Built from the lists above so a new skill joins it where
+ * it is offered.
+ */
+export function skillFiles(): GlobalFile[] {
+  const names = new Set<string>([...SKILLS, ...LIGHT_SKILLS, 'delegate', ...AUTOPILOT_SKILLS]);
+  return [...names].map((name) => ({ path: skillPath(name), label: skillLabel(name) }));
+}
+
+function skillPath(name: string): string {
+  return join(claudeSkillsDir(), name, 'SKILL.md');
+}
+
+function skillLabel(name: string): string {
+  return `skill — /${name}`;
+}
 
 /**
  * One directory per skill under `~/.claude/skills/<name>/SKILL.md`, matching the layout the
@@ -90,9 +108,7 @@ async function renderSkill(ctx: RenderContext, name: string): Promise<PlannedFil
   const source = await readText(join(repoRoot(), 'templates', 'skills', `${name}.md`));
   const filled = fill(source, variables(ctx, name, shapeOf(ctx)));
   const body = stampAfterFrontmatter(filled, stampLine(ctx.stamp));
-  return planned(ctx, join(claudeSkillsDir(), name, 'SKILL.md'), `skill — /${name}`, body, {
-    stamp: false,
-  });
+  return planned(ctx, skillPath(name), skillLabel(name), body, { stamp: false });
 }
 
 /**

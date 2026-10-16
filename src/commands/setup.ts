@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { dirname } from 'node:path';
 import * as p from '@clack/prompts';
 import {
   cancelMessage,
@@ -10,9 +11,10 @@ import {
 import { configHash, loadConfig, savedUserConfig } from '../lib/config.ts';
 import { today } from '../lib/date.ts';
 import { scanProjectsDir } from '../lib/discover.ts';
+import { removeIfEmpty } from '../lib/disk.ts';
 import { githubLogin, ownsRepo } from '../lib/git.ts';
 import { type HiddenFile, hiddenByIgnore, hiddenNote } from '../lib/hidden-tracked.ts';
-import { configFile, expandHome } from '../lib/paths.ts';
+import { claudeSkillsDir, configFile, expandHome } from '../lib/paths.ts';
 import {
   clearCheckpoint,
   describeCheckpoint,
@@ -21,12 +23,27 @@ import {
   readCheckpoint,
   retiresCheckpoint,
 } from '../lib/resume.ts';
-import type { Answers, Cli, Config, RepoPlan, RepoScan, TrackMode } from '../lib/types.ts';
+import type {
+  Answers,
+  Cli,
+  Config,
+  PlannedFile,
+  RepoPlan,
+  RepoScan,
+  TrackMode,
+} from '../lib/types.ts';
 import { previewTree, renderDiff, say, short, targetList } from '../lib/ui.ts';
 import { version } from '../lib/version.ts';
-import { commitPlan, type PlannedChange, resolvePlan, willWrite } from '../lib/write-plan.ts';
+import {
+  commitPlan,
+  type PlannedChange,
+  resolveLeftover,
+  resolvePlan,
+  willWrite,
+} from '../lib/write-plan.ts';
 import { askPhase } from '../phases/run.ts';
 import { type RenderContext, targetAnswers } from '../render/context.ts';
+import { globalCandidates } from '../render/global-files.ts';
 import { declinedHookHelp } from '../render/hooks.ts';
 import { renderAll } from '../render/index.ts';
 import { standardVersion } from '../render/standard.ts';
@@ -264,8 +281,24 @@ export async function planEverything(
   const merged: Config = { ...config, answers, models: modelsFrom(answers, config) };
   const targets: (RepoPlan | null)[] = repos.length > 0 ? repos : [null];
   const contexts = await Promise.all(targets.map((repo) => contextFor(merged, answers, repo)));
-  const planned = (await Promise.all(contexts.map(renderAll))).flat();
-  return resolvePlan(dedupe(planned));
+  const files = dedupe((await Promise.all(contexts.map(renderAll))).flat());
+  return [...(await resolvePlan(files)), ...(await leftovers(files))];
+}
+
+/**
+ * A removal for each global file this tool wrote that no target's context rendered
+ * (setup-global-leftovers D1, BD-1). Read after `dedupe`, so a path any target renders is kept:
+ * two targets on two tracks keep both tracks' files. `init` drops every one of these with the
+ * rest of the global plan (`insideOnly`), and `doctor`'s rerender never calls this.
+ */
+async function leftovers(files: PlannedFile[]): Promise<PlannedChange[]> {
+  const rendered = new Set(files.map((file) => file.path));
+  const found = await Promise.all(
+    globalCandidates()
+      .filter((candidate) => !rendered.has(candidate.path))
+      .map((c) => resolveLeftover(c.path, `${c.label} (no longer installed)`)),
+  );
+  return found.filter((change): change is PlannedChange => change !== null);
 }
 
 /**
@@ -378,8 +411,11 @@ export async function finish(
 
   say('\nThis run would write:\n');
   say(previewTree(changes));
+  const removals = real.filter((c) => c.remove === true).length;
   const current = changes.length - real.length - guarded.length;
-  say(`\n${real.length} file(s) to write, ${current} already current.`);
+  say(
+    `\n${real.length - removals} file(s) to write, ${removals} to remove, ${current} already current.`,
+  );
   if (guarded.length > 0) say(leftAlone(guarded));
   const hiddenWarning = hiddenNote(hidden);
   if (hiddenWarning) say(hiddenWarning);
@@ -407,7 +443,11 @@ export async function finish(
   }
 
   const result = await commitPlan(changes);
-  say(`\nWrote ${result.written.length} file(s).`);
+  say(`\nWrote ${result.written.length - result.removed.length} file(s).`);
+  if (result.removed.length > 0) {
+    await removeEmptySkillFolders(result.removed);
+    say(`Removed ${result.removed.length} file(s) this run no longer installs.`);
+  }
   if (result.manifest) {
     say(
       `Backed up ${result.manifest.entries.length} overwritten file(s) — \`personal-config undo\` restores them.`,
@@ -415,6 +455,19 @@ export async function finish(
   }
   await copyPart0(changes);
   return 'written';
+}
+
+/**
+ * A skill folder emptied by this run's removals goes with them (setup-global-leftovers BD-5), so
+ * `~/.claude/skills/` lists no skill that is not there. Only a folder directly under it: `fold`'s
+ * removals keep their folders, and so does every other path here. `undo` makes the folder again
+ * when it copies a file back.
+ */
+async function removeEmptySkillFolders(removed: string[]): Promise<void> {
+  const folders = new Set(removed.map((path) => dirname(path)));
+  for (const folder of folders) {
+    if (dirname(folder) === claudeSkillsDir()) await removeIfEmpty(folder);
+  }
 }
 
 /**

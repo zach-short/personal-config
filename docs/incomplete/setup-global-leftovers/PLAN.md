@@ -69,7 +69,28 @@ under the session scratchpad. `code.json` and `nc.json` are `profiles/starter.js
 
 ### Phase 1. Plan and carry out the removals
 
-**Status.** `PLANNED`. Board item 101.
+**Status.** `BUILT` 2026-10-16, Opus 5.5, on `0fe4c26` with the changes uncommitted. Board item
+101.
+
+*As built.* Each renderer names its own files: `skillFiles()` in `skills.ts`, `writeDocFiles()`
+in `write-doc.ts` and `trackRuleFiles()` in `rules.ts`, each a `GlobalFile` (`src/lib/types.ts`)
+with the label its write uses. `globalCandidates()` joins them. `planEverything` appends
+`leftovers(files)` after `dedupe`, `finish` prints `N file(s) to write, M to remove, K already
+current.` on every run (with `0 to remove` where there is none), and `Wrote N file(s).` no longer
+counts the removals. The empty folder check is `removeIfEmpty` in `src/lib/disk.ts`. The two-target
+case of step 6 is in-process: tracks are the person's answers, so two targets differ by
+`workProfile` (`folders` renders no `/autopilot` or `/audit`, `ledger` does).
+
+*Proof, 2026-10-16.* The pass-off's runs in a temp home under the session scratchpad
+(`code.json` and `nc.json` as in §0): after the non-code run `audit`, `autopilot`, `clean-up`,
+`delegate` and `commits.md` were gone and the summary read `16 file(s) to write, 5 to remove`.
+After `personal-config undo`, `diff -r` against the copy taken after the code run reported only
+three paths, each one the non-code run created new: `skills/write-doc/`,
+`hooks/personal-config/delete-guard.sh` and `.config/personal-config/backups/`. `undo` keeps a
+file it did not overwrite, by design (`src/commands/undo.ts`). With those three excluded,
+`diff -r` exited 0, so every file of the code run came back byte for byte. The proof's "equal
+tree" holds only in that form. Gates: typecheck clean, lint clean with no warnings, `bun test`
+1802 pass in 99 files, `doctor . examples` 17 findings, the same 17 as at `13b88b9`.
 
 **Scope.**
 

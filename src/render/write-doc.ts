@@ -3,7 +3,7 @@ import { readText } from '../lib/disk.ts';
 import { claudeSkillsDir, repoRoot } from '../lib/paths.ts';
 import { stampAfterFrontmatter, stampLine } from '../lib/stamp.ts';
 import { fill } from '../lib/template.ts';
-import type { PlannedFile } from '../lib/types.ts';
+import type { GlobalFile, PlannedFile } from '../lib/types.ts';
 import { answer, planned, type RenderContext, trackOf } from './context.ts';
 
 /**
@@ -15,7 +15,7 @@ import { answer, planned, type RenderContext, trackOf } from './context.ts';
 export async function renderWriteDoc(ctx: RenderContext): Promise<PlannedFile[]> {
   if (!wantsWriteDoc(ctx)) return [];
 
-  const dir = join(claudeSkillsDir(), 'write-doc');
+  const dir = writeDocDir();
   const source = (name: string) => readText(join(repoRoot(), 'templates', 'write-doc', name));
   const [skill, style, check] = await Promise.all([
     source('SKILL.md'),
@@ -28,15 +28,35 @@ export async function renderWriteDoc(ctx: RenderContext): Promise<PlannedFile[]>
     planned(
       ctx,
       join(dir, 'SKILL.md'),
-      'skill — /write-doc',
+      SKILL_LABEL,
       stampAfterFrontmatter(filled, stampLine(ctx.stamp)),
       { stamp: false },
     ),
-    planned(ctx, join(dir, 'style.md'), 'skill — /write-doc style', style),
+    planned(ctx, join(dir, 'style.md'), STYLE_LABEL, style),
     // `sh` is what makes it executable (`planned()`), and the skill runs it by bare path.
     planned(ctx, join(dir, 'check.sh'), 'skill — /write-doc check script', check, {
       extension: 'sh',
     }),
+  ];
+}
+
+const SKILL_LABEL = 'skill — /write-doc';
+const STYLE_LABEL = 'skill — /write-doc style';
+
+function writeDocDir(): string {
+  return join(claudeSkillsDir(), 'write-doc');
+}
+
+/**
+ * The `/write-doc` files a later run may stop rendering and so remove (setup-global-leftovers
+ * DIAL-1). `check.sh` stays out (BD-3): under `writeDocCheck: every` a `settings.json` entry runs
+ * it, `merge-json` cannot remove that entry, and a removed script under a kept entry fails on
+ * every save. Board item 109 owns the script with its entry.
+ */
+export function writeDocFiles(): GlobalFile[] {
+  return [
+    { path: join(writeDocDir(), 'SKILL.md'), label: SKILL_LABEL },
+    { path: join(writeDocDir(), 'style.md'), label: STYLE_LABEL },
   ];
 }
 
@@ -75,7 +95,7 @@ export function wantsWriteDocHook(ctx: RenderContext): boolean {
 
 /** One path for the script the skill's last step runs and the hook entry runs. */
 export function writeDocCheckScript(): string {
-  return join(claudeSkillsDir(), 'write-doc', 'check.sh');
+  return join(writeDocDir(), 'check.sh');
 }
 
 /**

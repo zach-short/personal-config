@@ -1,4 +1,13 @@
-import { chmod, copyFile, mkdir, readFile, stat, writeFile } from 'node:fs/promises';
+import {
+  chmod,
+  copyFile,
+  mkdir,
+  readdir,
+  readFile,
+  rmdir,
+  stat,
+  writeFile,
+} from 'node:fs/promises';
 import { dirname } from 'node:path';
 
 /**
@@ -65,4 +74,16 @@ export async function setMode(path: string, mode: number): Promise<void> {
 export async function copyTo(from: string, to: string): Promise<void> {
   await mkdir(dirname(to), { recursive: true });
   await copyFile(from, to);
+}
+
+/**
+ * Removes a directory only when nothing is in it, and says whether it did. A path that is not a
+ * directory, or not there, is left as it is. `rmdir` refuses a non-empty directory on its own, so
+ * a file written between the read and the call is kept, not deleted with it.
+ */
+export async function removeIfEmpty(dir: string): Promise<boolean> {
+  const entries = await readdir(dir).catch(() => null);
+  if (entries === null || entries.length > 0) return false;
+  await rmdir(dir);
+  return true;
 }

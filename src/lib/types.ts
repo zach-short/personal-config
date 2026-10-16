@@ -241,6 +241,9 @@ export type PlannedFile = {
   mode?: number;
 };
 
+/** A global file a renderer can write, named the way that renderer labels it in the preview. */
+export type GlobalFile = { path: string; label: string };
+
 export type Finding = {
   rule: string;
   /** The standard's rule ID where one exists — `R1`, `§0.2` — else null. */

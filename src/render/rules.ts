@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import { claudeRulesDir } from '../lib/paths.ts';
-import type { PlannedFile } from '../lib/types.ts';
+import type { GlobalFile, PlannedFile } from '../lib/types.ts';
 import { answer, planned, type RenderContext, trackOf } from './context.ts';
 import { rendersAutopilot, rendersDelegate } from './skills.ts';
 
@@ -30,7 +30,27 @@ export function renderGlobalRules(ctx: RenderContext): PlannedFile[] {
   ].filter((f): f is PlannedFile => f !== null);
 }
 
-function rulePath(name: string): string {
+/** Each rule's file name and its label in the preview, one spelling for a write and a removal. */
+const RULES = {
+  commits: 'global rule — commit policy',
+  'model-routing': 'global rule — model routing',
+  'docs-lookup': 'global rule — docs lookup',
+  'language-style': 'global rule — chat style',
+} as const;
+
+type RuleName = keyof typeof RULES;
+
+/**
+ * The rules a later run may stop rendering and so remove (setup-global-leftovers DIAL-1). Every
+ * track renders `language-style.md`, and only a `chatStyle` other than `ste` cuts it, so it stays
+ * out (BD-7).
+ */
+export function trackRuleFiles(): GlobalFile[] {
+  const names: RuleName[] = ['commits', 'docs-lookup', 'model-routing'];
+  return names.map((name) => ({ path: rulePath(name), label: RULES[name] }));
+}
+
+function rulePath(name: RuleName): string {
   return join(claudeRulesDir(), `${name}.md`);
 }
 
@@ -48,7 +68,7 @@ function commitRule(ctx: RenderContext): PlannedFile | null {
   return planned(
     ctx,
     rulePath('commits'),
-    'global rule — commit policy',
+    RULES.commits,
     `# Commits\n\n${body}\n${attribution}`,
   );
 }
@@ -123,7 +143,7 @@ function modelRoutingRule(ctx: RenderContext): PlannedFile | null {
   return planned(
     ctx,
     rulePath('model-routing'),
-    'global rule — model routing',
+    RULES['model-routing'],
     `# Run the model the task asks for\n\n**Before starting any task that names a model, check your own model against it.** Tasks are\nassigned a model on purpose — a board's Model column, a pass-off prompt's \`**Model: X**\` line, a\nskill or a doc that names one. The assignment is a deliberate choice, not a preference, so\nrunning the wrong model on it silently is the failure it exists to prevent.\n\nDo this check **first** — before reading the codebase, before planning, before writing anything.\nIf they match, say so in one line and carry on.\n\n${action}\n## The tiers\n\n**The discriminator is: can the failure be silent?** Not how big or scary the work feels —\nsizing by fear over-assigns the expensive tier.\n\n${table}\n`,
   );
 }
@@ -183,7 +203,7 @@ session's tier for read-and-report work**; pass the model explicitly, every time
  */
 function languageRule(ctx: RenderContext): PlannedFile | null {
   if (answer(ctx, 'chatStyle', 'ste') !== 'ste') return null;
-  return planned(ctx, rulePath('language-style'), 'global rule — chat style', LANGUAGE_STYLE);
+  return planned(ctx, rulePath('language-style'), RULES['language-style'], LANGUAGE_STYLE);
 }
 
 const LANGUAGE_STYLE = `# Talk in ASD-STE100 Simplified Technical English
@@ -211,7 +231,7 @@ function docsRule(ctx: RenderContext): PlannedFile | null {
   return planned(
     ctx,
     rulePath('docs-lookup'),
-    'global rule — docs lookup',
+    RULES['docs-lookup'],
     `# Prefer live docs over memory for library APIs\n\nUse ${tool} to fetch current documentation whenever the question is about a library, framework,\nSDK, API, CLI tool, or cloud service — even well-known ones. This includes API syntax,\nconfiguration, version migration, library-specific debugging, and setup instructions. Use it\neven when you think you know the answer: training data may not reflect recent changes. Prefer\nit over web search for library docs.\n\nDo not use it for: refactoring, writing scripts from scratch, debugging business logic, code\nreview, or general programming concepts.\n\n## Steps\n\n1. Resolve the library to an exact identifier the tool understands, unless one was given.\n2. Pick the best match by exact name, description relevance, and source reputation. If the\n   results look wrong, try alternate names or a rephrased query. Use version-specific results\n   when a version is named.\n3. Query with the full question, not single words, scoped to one concept per call. A question\n   spanning several concepts gets one call each — combined queries dilute ranking and return\n   shallow results for each topic.\n4. Answer from the fetched docs.\n\n**If the tool is not present in this session, say so** and fall back to the installed package's\nown README under \`node_modules/\` or its equivalent. Do not answer from memory silently.\n`,
   );
 }

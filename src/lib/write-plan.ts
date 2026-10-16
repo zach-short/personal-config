@@ -60,6 +60,22 @@ export async function resolveRemoval(path: string, label: string): Promise<Plann
   };
 }
 
+/**
+ * A global file a `setup` run no longer renders, planned for removal only where this tool wrote
+ * it (setup-global-leftovers BD-4). The test is the stamp guard's: a stamp not marked `adapted`.
+ * A file with no stamp is the person's, and one marked `adapted` was taken back on purpose, so
+ * either returns null and is not named in the preview at all, as an absent file is.
+ */
+export async function resolveLeftover(
+  path: string,
+  label: string,
+): Promise<PlannedChange | null> {
+  if (!(await exists(path))) return null;
+  const stamp = readStamp(await readText(path));
+  if (stamp === null || stamp.adapted) return null;
+  return resolveRemoval(path, label);
+}
+
 export async function resolvePlan(files: PlannedFile[]): Promise<PlannedChange[]> {
   return Promise.all(files.map(resolveOne));
 }
