@@ -107,7 +107,7 @@ describe('what the backup chain must not lose', () => {
     }
   });
 
-  test('a file created while the confirm sat open is backed up, not silently overwritten', async () => {
+  test('a file created while the confirm sat open is refused, not silently overwritten', async () => {
     const dir = await tempDir();
     try {
       const target = join(dir, 'raced.md');
@@ -117,12 +117,10 @@ describe('what the backup chain must not lose', () => {
       // open — the norm in this repo, not a contrived race.
       await Bun.write(target, 'somebody else was here\n');
 
-      const result = await commitPlan(changes);
-      expect(await Bun.file(target).text()).toBe('ours\n');
-
-      const entry = result.manifest?.entries.find((e) => e.original === target);
-      expect(entry).toBeDefined();
-      expect(await Bun.file(entry?.stored ?? '').text()).toBe('somebody else was here\n');
+      // This once overwrote it and kept a backup, which `undo` could restore only if someone
+      // noticed. Since item 105's audit the batch is refused instead, and their file stays.
+      await expect(commitPlan(changes)).rejects.toThrow('changed on disk');
+      expect(await Bun.file(target).text()).toBe('somebody else was here\n');
     } finally {
       await cleanup(dir);
     }

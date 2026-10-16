@@ -75,6 +75,8 @@ type Check = {
    */
   bytes: Buffer | null;
   live: string | null;
+  /** A log line, which is found only as a whole line of the archive (F1). */
+  line: boolean;
 };
 
 /** A line `INDEX.md` gains when nothing in it yet names `key` in bold. */
@@ -227,6 +229,7 @@ async function prepareAppend(
       text: bodyOf(block),
       bytes: null,
       live: null,
+      line: kind === 'log',
     })),
     removals: [],
     index: [{ key: name, line: `- **${name}** ✅ — ${indexWhat(kind)}. Opened ${today()}.` }],
@@ -292,6 +295,7 @@ async function prepareItems(
       text: move.text,
       bytes: raw,
       live: join(itemsDir, move.name),
+      line: false,
     })),
     removals: go.map((move) => join(itemsDir, move.name)),
     index: [folderEntry(itemsName), ...go.map((move) => itemEntry(itemsName, move))],
@@ -343,13 +347,24 @@ async function appended(
   fold: Fold,
 ): Promise<string> {
   const existing = (await exists(path)) ? await readText(path) : preamble(kind, source);
-  const fresh = fold.folded.filter((block) => !existing.includes(bodyOf(block)));
+  const fresh = fold.folded.filter((block) => !holds(existing, bodyOf(block), kind === 'log'));
   if (fresh.length === 0) return existing;
 
   const noun = { board: 'prompt', ledger: 'step', log: 'log line' }[kind];
   const header = `## Folded ${today()} from \`${source}\` — ${fold.count ?? fresh.length} ${noun}(s)`;
   const joiner = kind === 'log' ? '\n' : '\n\n';
   return `${existing.replace(/\n+$/, '')}\n\n${header}\n\n${fresh.map(bodyOf).join(joiner)}\n`;
+}
+
+/**
+ * Whether the archive already holds this text. A log line is matched as a whole line (F1): as a
+ * substring, `- 2026-10-15 · closed item 8` is "already there" inside an archived
+ * `- 2026-10-15 · closed item 83`, so it was cut from the ledger, never appended, and the fold
+ * exited 0. Prompts and step bodies stay substring matches: each is a block of lines that opens
+ * on its own numbered heading, and the fix was scoped to the log.
+ */
+function holds(archive: string, text: string, line: boolean): boolean {
+  return line ? archive.split('\n').includes(text) : archive.includes(text);
 }
 
 /**
@@ -548,7 +563,7 @@ async function missingFromArchive(halves: Half[]): Promise<string[]> {
 async function arrived(check: Check): Promise<boolean> {
   if (check.bytes !== null) return sameBytes(check.bytes, check.archive, check.live);
   const there = await readText(check.archive).catch(() => null);
-  return there?.includes(check.text) === true;
+  return there !== null && holds(there, check.text, check.line);
 }
 
 /** The archive copy and the live file, each exactly these bytes, read raw and never decoded. */
@@ -745,7 +760,9 @@ async function migrateHalves(
   boardPath: string,
   ledgerPath: string,
 ): Promise<Half[]> {
-  const closed: Fold = { folded: migration.closed, trimmed: migration.board };
+  // In board order, so the archive reads the way the board did.
+  const folded = [...migration.closed, ...migration.shared].sort((a, b) => a.start - b.start);
+  const closed: Fold = { folded, trimmed: migration.board };
   const log: Fold = {
     folded: migration.log === null ? [] : [migration.log],
     trimmed: migration.ledger,
@@ -809,8 +826,18 @@ function reportMigration(migration: Migration, itemsDir: string): void {
   say(
     `  item files in ${short(itemsDir)}/: ${migration.items.map((i) => i.number).join(', ') || 'none'}`,
   );
+  if (migration.shared.length > 0) {
+    const ids = migration.shared.map((block) => block.id).join(', ');
+    say(
+      `  range sections, whole to the closed archive and into their open rows' files: ${ids}`,
+    );
+  }
   if (migration.unrowed.length > 0) {
     say(`  left on the board, no row names them: sections ${migration.unrowed.join(', ')}`);
+  }
+  if (migration.prose.length > 0) {
+    say('  left on the board, untouched, as prose below the table:');
+    for (const heading of migration.prose) say(`    ${heading}`);
   }
 }
 

@@ -212,6 +212,8 @@ export type WriteResult = {
 /** Nothing here runs until the batch has been confirmed; `--dry-run` never reaches it. */
 export async function commitPlan(changes: PlannedChange[]): Promise<WriteResult> {
   const real = changes.filter(willWrite);
+  const moved = await movedSince(real);
+  if (moved.length > 0) throw new Error(movedNote(moved));
   // A mode-only change is deliberately not backed up: the bytes are identical, so a copy of them
   // restores nothing, and `restore` copies over a file that already exists — which leaves that
   // file's bits alone anyway. There is nothing here for `undo` to put back.
@@ -256,6 +258,31 @@ async function removeBackedUp(path: string, manifest: Manifest | null): Promise<
     throw new Error(`refusing to remove ${path}: it is not in this run's backup`);
   }
   await rm(path, { force: true });
+}
+
+/**
+ * The paths whose bytes are no longer the ones the plan was resolved from. Each `after` is the
+ * file as it was read with this run's edit applied, so writing it over a file another session
+ * changed in between replaces that session's edit, and the run still reports success. Item 105's
+ * audit found it on a ledger an autopilot run was appending to while the migration's confirm sat
+ * open. Every file is read again here, before any backup or write, and one that moved, appeared
+ * or vanished stops the whole batch, so nothing in it is half written.
+ */
+async function movedSince(real: PlannedChange[]): Promise<string[]> {
+  const checked = await Promise.all(
+    real.map(async (c) => {
+      const now = (await exists(c.file.path)) ? await readText(c.file.path) : '';
+      return now === c.before ? null : c.file.path;
+    }),
+  );
+  return checked.filter((path): path is string => path !== null);
+}
+
+function movedNote(paths: string[]): string {
+  return [
+    `${paths.length} file(s) changed on disk after this run read them: ${paths.join(', ')}.`,
+    'Nothing in this batch was written. Run it again, so it plans from what is there now.',
+  ].join('\n');
 }
 
 /**
