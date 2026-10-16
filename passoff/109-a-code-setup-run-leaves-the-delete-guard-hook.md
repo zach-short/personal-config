@@ -73,3 +73,81 @@ Gates: `bun run typecheck && bun run lint && bun test && bun run doctor . exampl
 checkout. A scope item changes no `src/`. Tell Zach the file path of the scope and the questions, then
 print the two copyable blocks: `git add <exact files>` and `git commit <the same files> -m "<short,
 lowercase>"`. Add no attribution trailer.
+
+## Close-out, 2026-10-16
+
+Closed 2026-10-16 on Opus 5.5, on `main`. Scope `9fdf169`, GATE 1 answers with design and plan
+`3dde96a`, GATE 2 answers `7facda4`, Phase 1 `6ad97ef`, Phase 2 `b1d4ef7`. The Phase 2 commit was
+made as `d188795` and then amended into `b1d4ef7`, which kept its eight files and replaced its
+message with "item 112: tier ladder in passoff, shape-based tiers in audit". Read `b1d4ef7` as item
+109 Phase 2. Record in `docs/incomplete/setup-hook-leftovers/` (`DESIGN.md` D1 to D4, `PLAN.md` §0
+F1 to F11, BD-1 to BD-12, both phases `BUILT`).
+
+**What changed.** `planEverything` in `src/commands/setup.ts` collects the `hooks` object of every
+context's planned `settings.json` before `dedupe`, and their union is what the run wants (BD-1). Each
+of the five entries in the new `hookEntries()` catalog in `src/render/hooks.ts` that is on disk and
+not in that union is pruned, on the same `PlannedFile` as the merge, through the new
+`PlannedFile.prune` field (`src/lib/types.ts`) and a `pruneJson` step in `applyStrategy`'s
+`merge-json` branch (`src/lib/write-plan.ts`). Matching is canonical deep-equal under the same event
+key, and a container the prune empties goes with it (BD-4, BD-5). Under "No hooks" the run adds a
+`settings.json` file with contents `{}` and the prune list. A script (`commit-guard.sh` with
+`commit-policy`, `delete-guard.sh`, `session-banner.sh`, `completion-gate.sh`, `write-doc/check.sh`)
+is removed only where no context rendered it, it is stamped and not `adapted`, and no command in
+the resolved `settings.json` runs it (BD-6). An emptied `~/.claude/hooks/personal-config/` folder
+is removed after the batch (BD-8). The preview label reads `hook entries merged in, <n> removed`
+(BD-9). `src/render/write-doc.ts` exports `check.sh` for the script list, and
+`src/render/global-files.ts` no longer says hook scripts are never removed. Phase 2 corrected
+`docs/choices/{hooks,work-kind,write-doc,uses-git,config-weight}.md`, rebuilt `catalog.json`, and
+added a `CHANGELOG.md` entry under Unreleased.
+
+**Why.** `merge-json` added entries and never removed one, so a developer who tried the non-code
+track once kept `rm` blocked in every code session, with nothing that pointed back at `setup` (G7).
+The reverse held for the commit guard, and "No hooks" left every entry (H4).
+
+**What is now fixed.** A later run removes each entry this tool wrote and no longer wants, with its
+script, in the preview and undoable. An entry the person edited stays, and so does any script an
+entry still runs, so no removed script sits under a kept entry. F5 holds too: `writeDocCheck: every`
+then `skill` prunes the entry and keeps `check.sh`.
+
+**Questions answered.** GATE 1, 2026-10-16: Q1 O1, with O4's long-form corrections; Q2 yes, an
+exact JSON match counts as this tool's entry; Q3 all five entries, and "No hooks" prunes; Q4 no, a
+printed line is not enough. GATE 2, 2026-10-16: Q1 two phases, Opus 5.5 then Sonnet 5.5; Q2 yes, a
+script goes wherever no entry runs it; Q3 the plain label; Q4 delete the emptied hooks folder.
+
+**Code map.**
+
+- `src/render/hooks.ts`: `hookEntries()`, `hookScriptFiles()`; `settingsMerge` builds from the
+  catalog.
+- `src/lib/types.ts`: `PlannedFile.prune`.
+- `src/lib/write-plan.ts`: `pruneJson`, called from `applyStrategy`'s `merge-json` branch.
+- `src/commands/setup.ts`: the union, `hookLeftovers`, the script removals and the folder removal.
+- `src/render/write-doc.ts`, `src/render/global-files.ts`: the `check.sh` export and a corrected
+  comment.
+- `tests/hook-leftovers.test.ts` (new, 18 cases), `tests/hooks.test.ts` (BD-2's pin),
+  `tests/global-leftovers.test.ts`.
+
+**Verified.** By running, on `b1d4ef7` in the main checkout on 2026-10-16: typecheck clean; lint
+clean, "Checked 199 files", no warnings in the output; `bun test` 1841 pass, 0 fail, 103 files;
+`tests/hook-leftovers.test.ts` alone 18 pass. `doctor . examples` gave 13 findings, 7 advisory,
+by its own count, none in a file this item touched. The lines are `stamp-drift` from the standard
+2.1.0 cut, `row-cell-ceiling` on older `PASSOFF.md` rows, and `unfolded` for items 94, 101 and 105
+to 109. One
+proof run with the real bin in a temp home: a non-code run (`hooks: both`, `writeDoc: yes`,
+`writeDocCheck: every`), then a code run. The code run's preview showed `settings.json` "hook
+entries merged in, 2 removed" and `delete-guard.sh`, `SKILL.md`, `style.md` and `check.sh` removed;
+after it, `settings.json` held only the commit guard, the banner and the completion gate,
+`delete-guard.sh` was gone and `write-doc/` was gone. `personal-config undo` then gave back both
+entries and all four files. Only read, not run here: the reverse path, "No hooks", F5's pair, and the
+ceiling's `settings.local.json` bytes, which Phase 1's builder reports it ran before the commit.
+Not seen: a Claude Code session after the prune, and CI's Linux job, which needs a push (BD-8 lists
+a folder).
+
+**Left owed:**
+
+- CI's Linux job on these commits. Nothing is pushed: `origin/main` is at `52a3838`.
+- `b1d4ef7`'s message names item 112, which is not on the board. Rewording it is Zach's call.
+- The seams in `PLAN.md` §4: a declined-run line naming what would be removed, a marker key per
+  entry, a `doctor` rule that reads `settings.json`, and the output-style key a `check-first` run
+  leaves.
+- `docs/incomplete/setup-hook-leftovers/` waits for `/clean-up` to archive it.
+- Nothing is released: the change reaches npm only through a "Cut 0.x.y" item.
