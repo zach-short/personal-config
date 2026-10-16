@@ -13,12 +13,13 @@ export type PlannedChange = {
   after: string;
   summary: string;
   /**
-   * Why nothing is written, where the stamp guard refused it; `none` everywhere else. Two
-   * refusals, named apart because the way out of each differs: a file with no stamp is generated
-   * fresh only if deleted, and a file marked `adapted` is the repo's own until its owner removes
-   * the word.
+   * Why nothing is written, where a guard refused it; `none` everywhere else. Named apart
+   * because the way out of each differs: a file with no stamp is generated fresh only if
+   * deleted, and a file marked `adapted` is the repo's own until its owner removes the word.
+   * `kept` is a seed that is now a record (`replace: 'never'`), and `edited` is a file that no
+   * longer matches what this tool renders at its stamp (`replace: 'if-unedited'`).
    */
-  guard: 'none' | 'no-stamp' | 'adapted';
+  guard: 'none' | 'no-stamp' | 'adapted' | 'kept' | 'edited';
   /**
    * Permission bits to set once the bytes are down, absent where the file already carries them.
    * Present is the whole signal: a change with identical contents and a `chmod` is still work,
@@ -76,13 +77,26 @@ export async function resolveLeftover(
   return resolveRemoval(path, label);
 }
 
-export async function resolvePlan(files: PlannedFile[]): Promise<PlannedChange[]> {
-  return Promise.all(files.map(resolveOne));
+/**
+ * What this tool renders at a path as of the stamp already on disk there, from the answers the
+ * repo held before this run, or null where no render lands at that path. It is `doctor`'s
+ * re-render (`src/doctor/rerender.ts`), so the record guard and the drift rule agree by sharing
+ * one answer. A caller with nothing to compare against passes none, and every `if-unedited` file
+ * that differs from its new render is then refused: the safe reading of "cannot tell".
+ */
+export type PriorRender = (path: string, before: string) => string | null;
+
+export async function resolvePlan(
+  files: PlannedFile[],
+  prior: PriorRender = () => null,
+): Promise<PlannedChange[]> {
+  return Promise.all(files.map((file) => resolveOne(file, prior)));
 }
 
-async function resolveOne(file: PlannedFile): Promise<PlannedChange> {
+async function resolveOne(file: PlannedFile, prior: PriorRender): Promise<PlannedChange> {
   const before = (await exists(file.path)) ? await readText(file.path) : '';
-  const guard = stampGuard(file, before);
+  const stamped = stampGuard(file, before);
+  const guard = stamped === 'none' ? recordGuard(file, before, prior) : stamped;
   const rendered = guard === 'none' ? applyStrategy(file, before) : before;
   // What is on disk wins a date-only difference, rather than the render winning it. The bytes
   // are the same either way; the stamp date is the one field they disagree about, and the
@@ -155,6 +169,50 @@ function stampGuard(file: PlannedFile, before: string): PlannedChange['guard'] {
   const stamp = readStamp(before);
   if (stamp === null) return 'no-stamp';
   return stamp.adapted ? 'adapted' : 'none';
+}
+
+/**
+ * The record guard, asked only of a file the stamp guard admitted (record-overwrite,
+ * 2026-10-16). The stamp guard asks whether this tool wrote a file; this asks whether the file
+ * is still what it wrote. A stamp is written once and survives every later edit, because
+ * `handoff`, `passoff` and `archive` change their files through `edit()`, which adds none. So a
+ * ledger with 2,598 lines of steps still carried its first stamp, and `init` replaced it with a
+ * 67-line template on 2026-10-16, in five repos at once. The backup and `undo` were there; the
+ * preview showing `−2598` was there; neither stopped a `--yes` run across 27 folders.
+ *
+ * `never` keeps any file with bytes in it, so a seed is written once. `if-unedited` replaces only
+ * a file that matches `prior`, the render at its own stamp, or that still holds the mark only an
+ * unadapted copy has. Exported for `doctor`, whose drift finding must say what a re-run will do.
+ */
+export function recordGuard(
+  file: PlannedFile,
+  before: string,
+  prior: PriorRender,
+): PlannedChange['guard'] {
+  if (before.length === 0 || file.replace === undefined) return 'none';
+  // Current but for its date: a refusal here would name a write that changes nothing.
+  if (sameButForStampDate(before, file.contents)) return 'none';
+  if (file.replace === 'never') return 'kept';
+  return unedited(file, before, prior) ? 'none' : 'edited';
+}
+
+/**
+ * The comparison with `prior` is exact: it renders at the file's own stamp date, so the stamp
+ * line and every dated line in the body agree.
+ */
+function unedited(file: PlannedFile, before: string, prior: PriorRender): boolean {
+  if (file.unadaptedMark !== undefined && holdsLine(before, file.unadaptedMark)) return true;
+  return prior(file.path, before) === before;
+}
+
+/**
+ * A whole line, not a substring. The standard's Appendix A names `{{WORKTREE_SETUP}}` inline in
+ * its table and keeps it there after Part 0 (its "Placeholders" paragraph says an adapted copy
+ * has `{{` hits only in that table), so a substring test would call every adapted standard
+ * unadapted and replace it: the bug this work exists to close.
+ */
+function holdsLine(text: string, line: string): boolean {
+  return text.split('\n').some((candidate) => candidate.trim() === line);
 }
 
 function applyStrategy(file: PlannedFile, before: string): string {

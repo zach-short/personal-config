@@ -22,17 +22,33 @@ export function planned(
   path: string,
   label: string,
   contents: string,
-  options: { extension?: string; strategy?: PlannedFile['strategy']; stamp?: boolean } = {},
+  options: PlanOptions = {},
 ): PlannedFile {
-  const { extension = 'md', strategy = 'overwrite', stamp = true } = options;
+  const {
+    extension = 'md',
+    strategy = 'overwrite',
+    stamp = true,
+    replace,
+    unadaptedMark,
+  } = options;
   return {
     path,
     label,
     strategy,
     mode: modeFor(extension),
     contents: stamp ? withStamp(contents, ctx.stamp, extension) : contents,
+    ...(replace === undefined ? {} : { replace }),
+    ...(unadaptedMark === undefined ? {} : { unadaptedMark }),
   };
 }
+
+export type PlanOptions = {
+  extension?: string;
+  strategy?: PlannedFile['strategy'];
+  stamp?: boolean;
+  replace?: PlannedFile['replace'];
+  unadaptedMark?: string;
+};
 
 /**
  * Executability is derived from the extension rather than asked for at the call site, because

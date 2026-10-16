@@ -34,8 +34,20 @@ export async function renderStandard(ctx: RenderContext): Promise<PlannedFile | 
   const mode = answer(ctx, 'mode', 'solo');
   const body = pipeline(await boilerplate(), ctx, mode);
 
-  return planned(ctx, join(root, standardPath(ctx)), 'the working standard, adapted', body);
+  return planned(ctx, join(root, standardPath(ctx)), 'the working standard, adapted', body, {
+    replace: 'if-unedited',
+    unadaptedMark: PART0_TOKEN,
+  });
 }
+
+/**
+ * The token Part 0 replaces with the repo's worktree setup, on a line of its own inside the
+ * fresh-checkout fence. A copy that still has that line was never adapted, so it takes a newer
+ * standard whatever version wrote it; a copy without it is the repo's own until it matches a
+ * render again (record-overwrite Q2). Matched as a whole line: Appendix A keeps the token
+ * inline after adaptation.
+ */
+const PART0_TOKEN = '{{WORKTREE_SETUP}}';
 
 function pipeline(text: string, ctx: RenderContext, mode: string): string {
   const withPolicy = replacePartEleven(text, ctx);

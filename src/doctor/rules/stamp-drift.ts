@@ -14,6 +14,13 @@ export type StampExpectation = {
    */
   rendered: string | null;
   /**
+   * Whether a re-run leaves this file alone though it differs from `rendered`: its `replace` rule
+   * refuses a file that no longer matches what this tool wrote (record-overwrite). Absent is
+   * false, the behaviour of every file before that rule. The finding then says so, because "re-run
+   * it" would name a run that changes nothing.
+   */
+  keptOnRerun?: boolean;
+  /**
    * Whether a `.personal-config.json` sits beside the docs. A plain stamp is judged only then:
    * without a config there is nothing to render it against, and a stamped file in, say, a docs
    * folder of examples is not a personal file at all. An adapted stamp needs no config to be
@@ -47,17 +54,20 @@ export function stampDrift(doc: Doc, expected: StampExpectation): Finding[] {
   if (stamp.adapted) return adaptedLag(doc, stamp, expected.standardVersion);
   if (!expected.configured) return [];
   return [
-    ...renderDrift(doc, expected.rendered),
+    ...renderDrift(doc, expected.rendered, expected.keptOnRerun === true),
     ...standardLag(doc, stamp, expected.standardVersion),
   ];
 }
 
-function renderDrift(doc: Doc, rendered: string | null): Finding[] {
+function renderDrift(doc: Doc, rendered: string | null, kept: boolean): Finding[] {
   if (rendered === null || rendered === doc.text) return [];
+  const diff = diffSummary(doc.text, rendered);
   return [
     finding(
       doc,
-      `\`setup\` would now write this file differently (${diffSummary(doc.text, rendered)}) — re-run it; or, if Part 0 rewrote this file, add \` · adapted\` to its stamp to keep it`,
+      kept
+        ? `this file differs from what \`setup\` wrote (${diff}), so a re-run leaves it alone — add \` · adapted\` to its stamp to keep it, or move it aside and re-run \`setup\` to take a fresh one`
+        : `\`setup\` would now write this file differently (${diff}) — re-run it; or, if Part 0 rewrote this file, add \` · adapted\` to its stamp to keep it`,
     ),
   ];
 }

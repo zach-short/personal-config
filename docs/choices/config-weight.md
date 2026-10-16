@@ -81,3 +81,5 @@ files before writing, and `personal-config undo` restores anything an accepted r
 Going from lighter to the whole method replaces the short standard and router with the long ones
 and adds the board, the other skills your answers allow (two to six more) and the routing rule. Going the other way replaces the
 standard and the router and removes the extra skills and `model-routing.md` from `~/.claude`, and leaves the board in your repos on disk; delete it if you no longer want it. `personal-config undo` restores every removed file and `settings.json` entry byte for byte.
+
+A re-run never replaces a ledger or a board that already exists, because each is your record after the first run. It replaces the router and the standard only while each is still what this tool wrote. One that you or a Part 0 session edited is left alone and named in the preview; move it aside and run again to take the new version. So a switch keeps the ledger in the shape it has; `fold migrate` is what changes a ledger's shape.

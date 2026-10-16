@@ -13,6 +13,7 @@ import {
   isShortTrack,
   ledgerFile,
   offLimits,
+  type PlanOptions,
   planned,
   projectName,
   proofLine,
@@ -42,6 +43,19 @@ export async function renderRepoFiles(
   return files.filter((f): f is PlannedFile => f !== null);
 }
 
+/**
+ * A seed that becomes the person's record once written (record-overwrite, 2026-10-16). `handoff`,
+ * `passoff` and `archive` grow these in place and `fold migrate` changes their shape, so no later
+ * `setup` has anything to add by rewriting one.
+ */
+const AS_RECORD: PlanOptions = { replace: 'never' };
+
+/**
+ * The router still takes a later answer, the commit line above all, but Part 0 fills it in. So
+ * it is replaced only while it is what this tool rendered (record-overwrite Q1).
+ */
+const AS_ROUTER: PlanOptions = { replace: 'if-unedited' };
+
 /** D6's "shorter router" goes wherever the short standard goes; the two are read together. */
 async function renderRouter(ctx: RenderContext, languages: string[]): Promise<PlannedFile> {
   return isShortTrack(ctx)
@@ -66,7 +80,7 @@ async function renderFullRouter(ctx: RenderContext, languages: string[]): Promis
     WORK_RECORD: workRecordLines(ctx),
   };
   const body = await filledTemplate(untracked ? 'CLAUDE.local.md' : 'CLAUDE.md', vars);
-  return planned(ctx, join(repoPath, routerFile(ctx)), routerLabel(ctx), body);
+  return planned(ctx, join(repoPath, routerFile(ctx)), routerLabel(ctx), body, AS_ROUTER);
 }
 
 /**
@@ -99,7 +113,7 @@ async function renderShortRouter(
     OFF_LIMITS_LINE: offLimitsLine(ctx),
   };
   const body = tidy(await filledTemplate('CLAUDE.short.md', vars));
-  return planned(ctx, join(repoPath, routerFile(ctx)), routerLabel(ctx), body);
+  return planned(ctx, join(repoPath, routerFile(ctx)), routerLabel(ctx), body, AS_ROUTER);
 }
 
 /** A folder is neither tracked nor untracked (DIAL-11), so its label claims neither. */
@@ -318,6 +332,7 @@ async function renderLedgerAndBoard(ctx: RenderContext): Promise<PlannedFile[]> 
         join(repoPath, ledgerFile(ctx)),
         'the ledger — what is true',
         await filledTemplate('HANDOFF.md', vars),
+        AS_RECORD,
       );
   if (!hasBoard(ctx)) return [ledger];
 
@@ -328,6 +343,7 @@ async function renderLedgerAndBoard(ctx: RenderContext): Promise<PlannedFile[]> 
       join(repoPath, boardFile(ctx)),
       'the board — what is next',
       await filledTemplate('PASSOFF.md', vars),
+      AS_RECORD,
     ),
     ...(startsBoard(ctx) ? [await renderFirstItem(ctx, vars)] : []),
   ];
@@ -380,6 +396,7 @@ async function renderShortLedger(ctx: RenderContext): Promise<PlannedFile> {
     join(repoPath, ledgerFile(ctx)),
     'the ledger — what is true',
     tidy(await filledTemplate(hasBoard(ctx) ? 'HANDOFF.short.md' : 'HANDOFF.light.md', vars)),
+    AS_RECORD,
   );
 }
 
@@ -412,7 +429,13 @@ async function renderArchiveIndex(ctx: RenderContext): Promise<PlannedFile | nul
   // before that still carries it, and expanding it would seed `./none/INDEX.md`.
   if (!home || home.toLowerCase() === 'none') return null;
   const body = await filledTemplate('archive-INDEX.md', { PROJECT_NAME: projectName(ctx) });
-  return planned(ctx, join(expandHome(home), 'INDEX.md'), 'archive index seed', body);
+  return planned(
+    ctx,
+    join(expandHome(home), 'INDEX.md'),
+    'archive index seed',
+    body,
+    AS_RECORD,
+  );
 }
 
 /**

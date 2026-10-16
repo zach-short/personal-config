@@ -256,6 +256,25 @@ export type PlannedFile = {
    * reads. `contents` keeps holding additions only, so that help never prints a removal as an add.
    */
   prune?: Prune[];
+  /**
+   * How far a re-run may go with a stamped file already on disk (record-overwrite, 2026-10-16).
+   * Absent is the stamp guard alone: a stamped file is replaced. `never` is a seed that becomes a
+   * person's record once written, such as the ledger, the board and the archive index, which
+   * later commands grow in place and never re-stamp. `if-unedited` replaces the file only where
+   * its bytes are what this tool renders at its own stamp, for the router, the standard and the
+   * conventions docs: files a later answer must still reach, and that a session may rewrite.
+   *
+   * A field and not a fifth strategy, for the reason `prune` gives: the file is still an
+   * overwrite where it is written, and every reader of `strategy` would need a new branch.
+   */
+  replace?: 'never' | 'if-unedited';
+  /**
+   * A line only an unadapted copy holds, so a file that still has it as a whole line is replaced
+   * whatever else differs. The standard's `{{WORKTREE_SETUP}}`, alone in its fence: Part 0 fills
+   * it, so a standard that still has that line was never adapted, and an older version of it
+   * still takes the new one.
+   */
+  unadaptedMark?: string;
 };
 
 /** One item a `merge-json` write removes, and the path to the array that holds it. */

@@ -138,10 +138,22 @@ export function previewTree(changes: PlannedChange[]): string {
 
 /** The bracket. A refusal outranks any diff: there is no change to summarize behind it. */
 function markOf(change: PlannedChange): string {
-  if (change.guard === 'no-stamp') return 'no stamp — left alone';
+  const refusal = refusalMark(change);
+  if (refusal !== null) return refusal;
   if (change.before.length === 0) return 'new';
   if (change.before === change.after) return modeMark(change);
   return change.summary;
+}
+
+/**
+ * The guards that leave a file alone, each in the words of its way out. `adapted` has none: its
+ * file is its owner's on purpose, and the preview has always shown it as unchanged.
+ */
+function refusalMark(change: PlannedChange): string | null {
+  if (change.guard === 'no-stamp') return 'no stamp — left alone';
+  if (change.guard === 'kept') return 'kept — your record, written once';
+  if (change.guard === 'edited') return 'edited since written — left alone';
+  return null;
 }
 
 /**
@@ -164,7 +176,8 @@ function leafOf(path: string): string {
 
 /** The per-file expansion behind the single batch confirm. */
 export function renderDiff(change: PlannedChange, maxLines = 40): string {
-  if (change.guard === 'no-stamp') return `${short(change.file.path)}: no stamp — left alone`;
+  const refusal = refusalMark(change);
+  if (refusal !== null) return `${short(change.file.path)}: ${refusal}`;
   if (change.before === change.after)
     return `${short(change.file.path)}: ${unchangedNote(change)}`;
   const lines = diffLines(change.before, change.after);

@@ -82,3 +82,5 @@ writes anything, and `personal-config undo` restores whatever an accepted run ov
 to "Code" replaces the short standard, router and ledger with the long forms and adds the code
 standard and the two code-specific rules; switching to "Other work" replaces them the other way and
 removes the global skills and `commits.md` that only the code track installs, and leaves the code standard in your repos on disk for you to delete. `personal-config undo` restores every removed file and every removed `settings.json` entry byte for byte.
+
+A re-run never replaces a ledger or a board that already exists, because each is your record after the first run. It replaces the router, the standard and the code standard only while each is still what this tool wrote. One that you or a Part 0 session edited is left alone and named in the preview; move it aside and run again to take the new version. The ledger keeps the shape it has.

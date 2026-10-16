@@ -12,7 +12,7 @@ import type { Answers, Cli, Config, ConfigLayer, RepoPlan } from '../lib/types.t
 import { say, short } from '../lib/ui.ts';
 import type { PlannedChange } from '../lib/write-plan.ts';
 import { askPhase } from '../phases/run.ts';
-import { finish, planEverything, planRepo } from './setup.ts';
+import { finish, planEverything, planRepo, priorSource } from './setup.ts';
 
 /** The three `you` answers that belong to the folder rather than the person (D4). */
 const TRACK = ['work-kind', 'config-weight', 'uses-git'];
@@ -52,7 +52,10 @@ export async function runInit(cli: Cli): Promise<number> {
 
   const plan = await planTarget(target, answers, config, prompter);
   await askPhase('practices', prompter, answers, config);
-  const changes = insideOnly(await planEverything(config, answers, [plan]), target);
+  const changes = insideOnly(
+    await planEverything(config, answers, [plan], priorSource(cli, [plan])),
+    target,
+  );
   // `finish`'s outcome is not passed to `setup`'s `endRun`: `init` keeps no checkpoint, and
   // reaching its own end must not discard an unfinished `setup` run (BD-4, PLAN §0 F10).
   await finish(cli, changes, clackPrompter(), await hiddenByIgnore([plan], changes));

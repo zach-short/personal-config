@@ -120,3 +120,9 @@ answer. With the hook chosen, that run installs the guard again. Do not edit `co
 project's `.personal-config.json` by hand: the answers are hashed, so `doctor` reports the edit
 as drift, and nothing is rewritten until setup runs. `personal-config undo` right after the run
 also restores the removed guard, its policy file and the `settings.json` entry.
+
+A project's router takes the new commit line only while it is still what this tool wrote. A
+router that you or a Part 0 session edited is left alone and named in the preview, so change its
+commit line by hand. The same holds for Part 11 of an adapted standard. After a hand edit to
+`commitPolicy` in `.personal-config.json`, the router no longer matches what its saved answers
+render, so a re-run leaves it alone too.

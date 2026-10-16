@@ -725,9 +725,11 @@ describe('doctor against a generated light target', () => {
           })
         ).findings,
       );
-      expect(moved.map((f) => f.file).sort()).toEqual(documents.sort());
-      for (const f of moved)
-        expect(f.message).toContain('would now write this file differently');
+      // The ledger is a record and is never compared, and the other two no longer match what their
+      // saved answers render, so a re-run leaves them alone and says so (record-overwrite).
+      const compared = documents.filter((path) => !path.endsWith('HANDOFF.md'));
+      expect(moved.map((f) => f.file).sort()).toEqual(compared.sort());
+      for (const f of moved) expect(f.message).toContain('so a re-run leaves it alone');
     } finally {
       await cleanup(dir);
     }
