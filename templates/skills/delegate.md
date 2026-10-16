@@ -96,7 +96,7 @@ sign-off names them.
 Spawn a second Agent with its own `isolation: "worktree"`, never the builder's. A subagent in a
 shared worktree edits source even when it is told only to review. Use the Default tier, or Deep
 for a Deep item and for an item the owner named load-bearing. Where the repo's tier ceiling is
-below Deep, an item that needs a Deep review is held, never reviewed on a lower tier.
+below Deep, an item that needs a Deep review is held, never reviewed on a lower tier.{{AUDIT_DIAL}}
 
 Its brief: the item's done-when (the gate commands, and the proof a green gate cannot give), its
 "What is fixed" and "Not in scope", the builder's worktree path and branch, the patch path, the
