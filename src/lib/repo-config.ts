@@ -82,6 +82,15 @@ export async function readArchiveHome(repoDir: string): Promise<string | null> {
 }
 
 /**
+ * The completion-gate hook's command. No question asks for it, so only a person or Part 0 ever
+ * sets it, and a re-render reads it back here rather than blanking it: an empty value turns the
+ * gate off without a word (found 2026-10-16, an `init` re-run).
+ */
+export async function readGateCommand(repoDir: string): Promise<string | null> {
+  return stringAt(await readRepoJson(repoDir), 'gateCommand');
+}
+
+/**
  * Tracked or untracked, as `setup` recorded it. `doctor --fix` reads it so its one write lands
  * in the file `setup` would have chosen: a repo you own keeps its entries in `.gitignore`, and
  * a repo you do not is kept out of `.git/info/exclude`, which is not yours to commit. Null

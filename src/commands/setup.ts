@@ -218,7 +218,7 @@ export async function planRepo(
     scan,
     workProfile: perRepo.workProfile === 'folders' ? 'folders' : 'ledger',
     trackMode: trackModeFor(perRepo, folder),
-    archiveHome: archiveFor(perRepo, scan.name),
+    archiveHome: archiveFor(perRepo, scan),
     owned,
     // Asked into `perRepo` and, until 2026-09-19, left there: `pickShared` copies back only what
     // is about the person, and the plan carried no slot for it, so the answer never reached a
@@ -264,9 +264,14 @@ function pickModelIds(perRepo: Answers): Answers {
   );
 }
 
-function archiveFor(answers: Answers, repoName: string): string {
+/**
+ * An empty answer is no answer: the starter profile carries `""`, and a re-run with it wrote `""`
+ * over the repo's own archive home (board item 94). So the recorded one stands; clearing it is a
+ * hand edit.
+ */
+function archiveFor(answers: Answers, scan: RepoScan): string {
   const raw = String(answers.archiveHome ?? '');
-  return raw.replaceAll('<repo>', repoName);
+  return raw.replaceAll('<repo>', scan.name) || (scan.archiveHome ?? '');
 }
 
 /**
