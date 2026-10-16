@@ -7,8 +7,7 @@
 import { describe, expect, test } from 'bun:test';
 import { leftoverTokens } from '../src/lib/template.ts';
 import type { Answers, PlannedFile, RepoPlan, WorkProfile } from '../src/lib/types.ts';
-import { renderSkills } from '../src/render/skills.ts';
-import { DEFAULT_ANSWERS, testContext, testRepoPlan } from './helpers.ts';
+import { DEFAULT_ANSWERS, everySkill, testContext, testRepoPlan } from './helpers.ts';
 
 type Shape = {
   workKind: 'code' | 'non-code';
@@ -25,7 +24,7 @@ async function render(
 ): Promise<PlannedFile[]> {
   const answers: Answers = { ...DEFAULT_ANSWERS, skills: 'all', ...shape };
   const plan: RepoPlan = testRepoPlan({ workProfile });
-  return renderSkills(testContext(answers, plan));
+  return everySkill(testContext(answers, plan));
 }
 
 async function cleanUp(shape: Shape, workProfile: WorkProfile = 'ledger'): Promise<string> {

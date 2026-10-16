@@ -2,7 +2,8 @@
 
 Design: `DESIGN.md`, `RATIFIED` 2026-10-16 (D1 to D6). This plan turns it into two phases.
 
-**Status.** `PLANNED` 2026-10-16, Opus 5.5 (board item 108). Waits on GATE 2 (§7).
+**Status.** `PLANNED` 2026-10-16, Opus 5.5 (board item 108). Approved at GATE 2 the same day:
+Zach chose every recommended answer, recorded in §7.
 
 ## 0. Facts verified 2026-10-16 (supersede the design where they differ)
 
@@ -62,7 +63,45 @@ so the code they ran is the code a build starts from.
 
 ### Phase 1. Render the two skills per target
 
-**Status.** `PLANNED`.
+**Status.** `BUILT` 2026-10-16, Opus 5.5, gates green, not yet committed (the owner commits).
+Board item 108.
+
+*As built.* As scoped, with four deviations, each a consequence the plan did not see:
+
+- **`src/lib/hidden-tracked.ts` changed.** `meantToBeTracked` compared ignore lines to paths
+  exactly, so a folder line such as `/.claude/skills/close-out/` did not cover
+  `.claude/skills/close-out/SKILL.md`, and a tracked repo's preview would have warned that the
+  skill is hidden from git. A line ending in `/` now covers the folder, as git reads it
+  (`keptOutBy`). A case in the new suite fails without it (checked by undoing the fix).
+- **`finish` lost its warnings to `sayWarnings`.** The BD-3 line put `finish` at complexity 13,
+  over Biome's 12. The warnings moved together, in the same order.
+- **More test files changed than P11 named.** Five skill suites rendered only `renderSkills`
+  and looked up `/close-out` by name, so `tests/helpers.ts` gained `everySkill(ctx)` (both
+  renderers) and `tests/{skills,clean-up-skill,clean-up-last-step}.test.ts` use it.
+  `tests/global-leftovers.test.ts` runs with no target, so its global skill list lost the two.
+  `tests/tracks.test.ts`'s light `doctor` case now checks five files (P5 seen live), and a moved
+  proof line drifts the three documents but not the two skills, whose text does not carry it.
+- **The golden file changed two more hashes per variant than the plan said.** The two skill
+  keys were renamed with their hashes kept (the proof the bodies did not move). The ignore file
+  gained the two lines, and `PART0-PROMPT.md` lists every file the run writes in the repo, so it
+  gained two rows and a wider column. 83 keys still.
+
+The BD-3 line reads: "N skill file(s) in your home folder were kept because you changed them
+or wrote them yourself. Each one hides the copy this run writes into every folder. Move it aside
+to use the folder's own:" and then one path per line. The owner has not chosen this wording
+(R7); the hand-back asks.
+
+*Proof, 2026-10-16.* A temp home under the session scratchpad, with repos `a` (holding
+`docs/incomplete/`, so `folders`) and `b` (holding `HANDOFF.md`, so `ledger`), and a stamped
+`~/.claude/skills/close-out/SKILL.md` seeded as an older run would leave it. The code run
+planned `/close-out (no longer installed)` and removed it; `~/.claude/skills/` then held
+`audit autopilot clean-up delegate passoff scope`. `diff` of the two targets' `close-out` showed
+"Every phase and every board item ends the same way" and the phase header in `a`, and the
+`## Close-out, <date>` item-file body in `b`. A non-code run into a copy of that home planned
+"5 to remove" (the code-only skills and `commits.md`, F2, D5), wrote no global `/close-out` or
+`/handoff`, and both targets' `close-out` then read "in the same commit as the work". `doctor`
+on `b` after the code run: "no findings". Gates: typecheck clean, lint clean with no warnings,
+`bun test` 1820 pass in 102 files, `doctor . examples` 11 findings, the same 11 as at `81ce644`.
 
 **Scope.**
 
@@ -116,7 +155,23 @@ renames two keys per variant, and no hash in it may change.
 
 ### Phase 2. Long form and changelog
 
-**Status.** `PLANNED`.
+**Status.** `BUILT` 2026-10-16, a Sonnet 5.5 subagent in the main checkout, reviewed by the Opus
+5.5 lead; not yet committed. Board item 108.
+
+*As built.* `docs/choices/skills.md` names the per-folder paths, the ignore lines per mode, why
+the global copies go, the BD-3 line, and an undo that says `undo` keeps a file the run created
+(`src/commands/undo.ts`), so the per-folder copies are deleted by hand. `CHANGELOG.md` has two
+entries under `Unreleased`. `DESIGN.md` has `As built` notes under D1 and D3. One file the plan
+did not name: `catalog.json` embeds every long form, so `bun run catalog` rebuilt it; two keys
+moved (`catalogVersion` and `choices[28].body`), checked by a key-by-key comparison with `HEAD`.
+`grep -rn "claude/skills" docs/choices catalog.json` leaves only `/write-doc` lines.
+
+*Check, 2026-10-16.* The suite also ran in a `git archive HEAD` copy holding only this item's
+files, because another item's uncommitted edits shared the checkout. The first run there found
+a real defect: a case that runs the real bin took 5.5 s under load, past Bun's 5 s default, and
+the timeout's kill ended the next case's `git init` (exit 143). Those eight cases now take a
+30 s timeout (`CLI_TIMEOUT`). Then: 1820 pass in 102 files in both the copy and the main
+checkout, typecheck and lint clean, `doctor . examples` 11 findings, the same 11.
 
 **Scope.**
 
@@ -177,6 +232,10 @@ blocks from `CLAUDE.md`.
   v2.1.277 or later (P7), and a cloud session gets neither.
 - **Q3. BD-3: print a line for a global copy that cannot be removed?** Recommended: yes.
 
-### Answers
+### Answers, 2026-10-16
 
-Not yet given.
+Zach answered in chat: "all recs". Each question takes its recommendation.
+
+- **Q1: approved.** Phase 1 on Opus 5.5, Phase 2 on Sonnet 5.5.
+- **Q2: `.gitignore` in tracked mode.** The two lines join `renderIgnore`'s `personal` list.
+- **Q3: yes.** `setup` prints the BD-3 line.

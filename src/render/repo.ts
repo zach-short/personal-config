@@ -22,6 +22,7 @@ import {
   trackOf,
   workRecordShape,
 } from './context.ts';
+import { targetSkillIgnores } from './skills.ts';
 import { targetUsesGit } from './target-git.ts';
 
 export async function renderRepoFiles(
@@ -482,7 +483,13 @@ function renderIgnore(ctx: RenderContext): PlannedFile | null {
 
   // Only names this run actually plans: the short track writes no Part 0 prompt and, when light,
   // no board, and an ignore line for a file that is never written is a claim about a file.
-  const personal = ['.personal-config.json', ...(isShortTrack(ctx) ? [] : ['PART0-PROMPT.md'])];
+  const personal = [
+    '.personal-config.json',
+    ...(isShortTrack(ctx) ? [] : ['PART0-PROMPT.md']),
+    // shared-skills-track D3, BD-2: generated from the person's answers, so kept out in both
+    // modes, beside `.personal-config.json`.
+    ...targetSkillIgnores(ctx),
+  ];
   const untracked = [
     ledgerFile(ctx),
     // The items folder with a trailing slash, so the line matches the folder and not a file.

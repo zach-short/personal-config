@@ -7,6 +7,22 @@ The CLI. The working standard it installs is versioned separately — see
 
 ### Added
 
+- **`/close-out` and `/handoff` are written into each folder, not `~/.claude/skills/`.** Their
+  text names a folder's ledger, board and track, so one global copy was right for one folder and
+  wrong for the next. `setup` now renders both from each target's own answers into
+  `<folder>/.claude/skills/close-out/SKILL.md` and `<folder>/.claude/skills/handoff/SKILL.md`, and
+  `personal-config init <folder>` writes the same two files. The next `setup` run removes the old
+  global copies with a backup, so `undo` restores them; the other six skills stay in
+  `~/.claude/skills/`. The lighter setup now writes no skill into `~/.claude/skills/`, and a run
+  with no folder to configure writes neither skill. Each git folder gets the lines
+  `/.claude/skills/close-out/` and `/.claude/skills/handoff/` in `.gitignore` (tracked repo) or
+  `.git/info/exclude` (untracked repo); a plain folder gets no ignore file. The check for files
+  meant to be tracked now reads an ignore line ending in `/` as covering that folder. The long
+  form for the skills question describes the paths, the ignore lines and the undo.
+- **`setup` names a global `/close-out` or `/handoff` it kept.** A copy with no stamp, or one
+  marked `adapted`, is never removed, and a personal skill wins a name clash over a project one,
+  so it hides each folder's own copy. After the preview `setup` prints how many such files it kept
+  and the path of each, and says to move them aside to use the folder's own.
 - **`setup` removes the global files a run no longer renders.** A run on one track used to leave
   the other track's skills and rules in `~/.claude`. Now the preview lists, apart from the
   writes, each stamped global skill, `write-doc/SKILL.md`, `write-doc/style.md`, `commits.md`,

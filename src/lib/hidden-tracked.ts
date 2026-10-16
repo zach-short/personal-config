@@ -32,12 +32,20 @@ export function meantToBeTracked(root: string, files: PlannedFile[]): string[] {
     .flatMap((file) => file.contents.split('\n'))
     .map((line) => line.trim().replace(/^\//, ''))
     .filter(Boolean);
-  const skip = new Set([...ownIgnores, ...PERSONAL_BY_NAME]);
+  const skip = [...ownIgnores, ...PERSONAL_BY_NAME];
   return files
     .filter((file) => file.strategy !== 'append-lines')
     .map((file) => relative(root, file.path).split(sep).join('/'))
     .filter((path) => path !== '' && !path.startsWith('../') && !isAbsolute(path))
-    .filter((path) => !skip.has(path));
+    .filter((path) => !skip.some((entry) => keptOutBy(entry, path)));
+}
+
+/**
+ * A line ending in `/` keeps out a folder and everything under it, as git reads it
+ * (shared-skills-track D3 names the two skill folders that way).
+ */
+function keptOutBy(entry: string, path: string): boolean {
+  return entry.endsWith('/') ? path.startsWith(entry) : path === entry;
 }
 
 /**

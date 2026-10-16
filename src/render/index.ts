@@ -8,7 +8,7 @@ import { renderHooks } from './hooks.ts';
 import { renderPart0, renderRepoFiles } from './repo.ts';
 import { renderGlobalRules } from './rules.ts';
 import { renderShortStandard } from './short-standard.ts';
-import { renderSkills } from './skills.ts';
+import { renderSkills, renderTargetSkills } from './skills.ts';
 import { renderStandard } from './standard.ts';
 import { renderUserConfig } from './user-config.ts';
 import { renderWriteDoc } from './write-doc.ts';
@@ -23,6 +23,7 @@ export async function renderAll(ctx: RenderContext): Promise<PlannedFile[]> {
   const groups = await Promise.all([
     Promise.resolve(renderGlobalRules(ctx)),
     renderSkills(ctx),
+    renderTargetSkills(ctx),
     renderWriteDoc(ctx),
     renderHooks(ctx),
     renderRepoFiles(ctx, languages),

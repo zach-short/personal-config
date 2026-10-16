@@ -26,6 +26,8 @@ lack; O7 fixes nothing (§3).
 `--projects-dir`, and no `/close-out` or `/handoff` in a session started outside any target
 (D4).
 
+*As built, 2026-10-16:* a global copy that `resolveLeftover` cannot remove (no stamp, or marked `adapted`) is named by a printed line after the preview, per PLAN BD-3. It lists the count and each path, says the copy hides each folder's own, and removes nothing (`src/commands/setup.ts`, the message "skill file(s) in your home folder were kept"). The wording was not chosen by the owner at build time.
+
 **D2. The track-dependent set is `/close-out` and `/handoff` only** (2026-10-16, GATE 1 Q2,
 DIAL-1). The other six skills stay in `~/.claude/skills/`. A test renders every skill on both
 tracks and fails when a skill outside this set changes body, so a third one cannot drift in
@@ -41,6 +43,8 @@ them in tracked mode, because F17 holds for untracked mode only (`PLAN.md` §0 P
 
 *Defense.* They are generated from the person's own answers, which is the reason every other
 personal file this tool writes into a repo is kept out (`src/render/repo.ts:468-476`).
+
+*As built, 2026-10-16:* PLAN BD-2 put the two lines in `renderIgnore`'s `personal` list (`src/render/repo.ts`), so a tracked git repo takes them in `.gitignore`, an untracked git repo in `.git/info/exclude`, and a plain folder or `usesGit: no` gets no ignore file. `src/lib/hidden-tracked.ts` now treats an ignore line ending in `/` as covering the folder and everything under it (`keptOutBy`), so the two skill files are not reported as meant to be tracked.
 
 **D4. A session outside any target gets neither skill** (2026-10-16, GATE 1 Q2, DIAL-3). A run
 with no target removes the global copies and writes no per-target ones.

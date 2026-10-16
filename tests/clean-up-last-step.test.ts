@@ -7,8 +7,7 @@
 import { describe, expect, test } from 'bun:test';
 import { leftoverTokens } from '../src/lib/template.ts';
 import type { Answers, WorkProfile } from '../src/lib/types.ts';
-import { renderSkills } from '../src/render/skills.ts';
-import { DEFAULT_ANSWERS, testContext, testRepoPlan } from './helpers.ts';
+import { DEFAULT_ANSWERS, everySkill, testContext, testRepoPlan } from './helpers.ts';
 
 type Shape = {
   workKind: 'code' | 'non-code';
@@ -24,7 +23,7 @@ async function skill(
   workProfile: WorkProfile = 'ledger',
 ): Promise<string> {
   const answers: Answers = { ...DEFAULT_ANSWERS, skills: 'all', ...shape };
-  const files = await renderSkills(testContext(answers, testRepoPlan({ workProfile })));
+  const files = await everySkill(testContext(answers, testRepoPlan({ workProfile })));
   return files.find((f) => f.path.endsWith(`/${name}/SKILL.md`))?.contents ?? '';
 }
 

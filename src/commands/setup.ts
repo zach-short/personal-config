@@ -14,7 +14,7 @@ import { scanProjectsDir } from '../lib/discover.ts';
 import { removeIfEmpty } from '../lib/disk.ts';
 import { githubLogin, ownsRepo } from '../lib/git.ts';
 import { type HiddenFile, hiddenByIgnore, hiddenNote } from '../lib/hidden-tracked.ts';
-import { claudeSkillsDir, configFile, expandHome } from '../lib/paths.ts';
+import { claudeSkillsDir, configFile, contractHome, expandHome } from '../lib/paths.ts';
 import {
   clearCheckpoint,
   describeCheckpoint,
@@ -46,6 +46,7 @@ import { type RenderContext, targetAnswers } from '../render/context.ts';
 import { globalCandidates } from '../render/global-files.ts';
 import { declinedHookHelp } from '../render/hooks.ts';
 import { renderAll } from '../render/index.ts';
+import { shadowingCopies } from '../render/skills.ts';
 import { standardVersion } from '../render/standard.ts';
 
 export async function runSetup(cli: Cli): Promise<number> {
@@ -336,7 +337,41 @@ async function contextFor(
   return { config, answers: forTarget, stamp, date: today(), repo };
 }
 
-/** Global files are produced once per repo context; the first wins, the rest are identical. */
+/** Every note the preview carries below its summary line, each printed only when it applies. */
+async function sayWarnings(
+  changes: PlannedChange[],
+  guarded: PlannedChange[],
+  hidden: HiddenFile[],
+): Promise<void> {
+  if (guarded.length > 0) say(leftAlone(guarded));
+  const hiddenWarning = hiddenNote(hidden);
+  if (hiddenWarning) say(hiddenWarning);
+  const shadows = shadowNote(await shadowingCopies(changes.map((c) => c.file.path)));
+  if (shadows) say(shadows);
+
+  // Check for tier ceiling override warnings (F2/F4)
+  const ceilingWarning = await checkTierCeilingOverrides(changes);
+  if (ceilingWarning) say(ceilingWarning);
+}
+
+/**
+ * shared-skills-track PLAN BD-3. `leftovers` never removes a file this tool did not write, or one
+ * marked `adapted`, and such a global copy wins over each folder's own (F14). Named, not removed.
+ */
+function shadowNote(paths: string[]): string | null {
+  if (paths.length === 0) return null;
+  return [
+    `\n${paths.length} skill file(s) in your home folder were kept because you changed them or wrote them yourself.`,
+    "Each one hides the copy this run writes into every folder. Move it aside to use the folder's own:",
+    ...paths.map((path) => `  ${contractHome(path)}`),
+  ].join('\n');
+}
+
+/**
+ * Global files are produced once per context and the first wins. A global body that reads a
+ * per-target answer takes the first target's (shared-skills-track F7, D6); `/close-out` and
+ * `/handoff` are rendered into each target for that reason.
+ */
 function dedupe<T extends { path: string }>(files: T[]): T[] {
   const seen = new Set<string>();
   return files.filter((file) => {
@@ -421,13 +456,7 @@ export async function finish(
   say(
     `\n${real.length - removals} file(s) to write, ${removals} to remove, ${current} already current.`,
   );
-  if (guarded.length > 0) say(leftAlone(guarded));
-  const hiddenWarning = hiddenNote(hidden);
-  if (hiddenWarning) say(hiddenWarning);
-
-  // Check for tier ceiling override warnings (F2/F4)
-  const ceilingWarning = await checkTierCeilingOverrides(changes);
-  if (ceilingWarning) say(ceilingWarning);
+  await sayWarnings(changes, guarded, hidden);
 
   if (cli.dryRun) {
     say('\n--dry-run: nothing was written.');

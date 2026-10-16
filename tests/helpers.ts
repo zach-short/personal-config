@@ -4,8 +4,9 @@ import { join } from 'node:path';
 import type { Prompter } from '../src/lib/ask.ts';
 import { emptyConfig } from '../src/lib/config.ts';
 import { configFile } from '../src/lib/paths.ts';
-import type { Answers, Config, RepoPlan, RepoScan } from '../src/lib/types.ts';
+import type { Answers, Config, PlannedFile, RepoPlan, RepoScan } from '../src/lib/types.ts';
 import type { RenderContext } from '../src/render/context.ts';
+import { renderSkills, renderTargetSkills } from '../src/render/skills.ts';
 
 export async function tempDir(prefix = 'pc-test-'): Promise<string> {
   return mkdtemp(join(tmpdir(), prefix));
@@ -178,3 +179,11 @@ export const DEFAULT_ANSWERS: Answers = {
   'practices.copy-registers': 'ask-three-registers',
   'practices.drive-by-fixes': 'note-and-raise',
 };
+
+/**
+ * Every skill one context writes: the global ones and the two rendered into its target
+ * (shared-skills-track D1). A skill test reads a body by name, wherever it lands.
+ */
+export async function everySkill(ctx: RenderContext): Promise<PlannedFile[]> {
+  return [...(await renderSkills(ctx)), ...(await renderTargetSkills(ctx))];
+}

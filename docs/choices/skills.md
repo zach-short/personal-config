@@ -2,8 +2,10 @@
 
 ## What this is
 
-Up to eight skills under `~/.claude/skills/`, each a short document the agent loads when you type
-its name or when the description matches what you asked for.
+Up to eight skills, each a short document the agent loads when you type its name or when the
+description matches what you asked for. `/close-out` and `/handoff` are written into each folder
+`setup` configures, at `<folder>/.claude/skills/`, because their text depends on that folder's
+track, ledger and board names. The other six are written to `~/.claude/skills/`.
 
 - **`/close-out`** — the end-of-work ritual: update the record, then post the three hand-back
   blocks (the next prompt, the runtime entries, the next model).
@@ -29,7 +31,8 @@ its name or when the description matches what you asked for.
   dated report and board rows. It builds nothing. `/autopilot` offers it as "audit first" in its
   opening round, so one command audits and then builds; you can also type `/audit` alone.
 
-How many you get depends on the setup. The lighter setup gets `/close-out` and `/handoff` only.
+How many you get depends on the setup. The lighter setup gets `/close-out` and `/handoff` only,
+so it writes nothing to `~/.claude/skills/`.
 Non-code work on the full setup gets four: `/clean-up` drives commands that need an archive
 home, and only the full code setup is asked for one. `/delegate` is written only for code work on
 the full setup in git, with a board or with project folders: each subagent needs a worktree of
@@ -112,13 +115,35 @@ the only thing between that report and a delete row.
 
 ## What it writes and where
 
-`~/.claude/skills/<name>/SKILL.md`, one directory each. Existing skills of other names are not
-touched. If you already have a skill by one of these names that this tool did not write, it is
-left alone: the run's preview lists it as refused, because it carries no stamp, and nothing is
-written over it. To take the shipped skill in its place, move your own folder out of
-`~/.claude/skills/` and run `setup` again. A skill you keep in `~/.claude/skills/` wins over one
-of the same name in a project's `.claude/skills/`, so a copy left in place there is the one that
-runs.
+Six skills (`/scope`, `/passoff`, `/clean-up`, `/delegate`, `/autopilot`, `/audit`) go to
+`~/.claude/skills/<name>/SKILL.md`, one directory each. `/write-doc` is the seventh shared skill
+and has its own question. Existing skills of other names are not touched. If you already have a
+skill by one of these names that this tool did not write, it is left alone: the run's preview
+lists it as refused, because it carries no stamp, and nothing is written over it. To take the
+shipped skill in its place, move your own folder out of `~/.claude/skills/` and run `setup` again.
+
+`/close-out` and `/handoff` are written per folder, to `<folder>/.claude/skills/close-out/SKILL.md`
+and `<folder>/.claude/skills/handoff/SKILL.md`, from that folder's own answers (`TRACK_SKILLS` and
+`renderTargetSkills` in `src/render/skills.ts`). `personal-config init <folder>` writes the same two
+files in that folder. A `setup` run with no folder to configure writes neither skill anywhere.
+
+Each folder that uses git also gets two ignore lines, `/.claude/skills/close-out/` and
+`/.claude/skills/handoff/`, because the files come from your answers and are not meant to be
+committed. A tracked repo takes them in `.gitignore`, an untracked one in `.git/info/exclude`
+(`renderIgnore` in `src/render/repo.ts`). A plain folder, or an answer that you do not use git,
+gets no ignore file. The lines name the two folders and not `.claude/skills/` as a whole, so a
+skill your repo ships of its own stays tracked.
+
+**Why the global copies of those two are removed.** A skill you keep in `~/.claude/skills/` wins
+over one of the same name in a project's `.claude/skills/`. A global `/close-out` left in place
+would therefore hide every folder's own, and the folder would run text written for a different
+track. So the next `setup` run removes `~/.claude/skills/close-out/SKILL.md` and
+`~/.claude/skills/handoff/SKILL.md` through the removal step described below; the preview lists
+them as "(no longer installed)". A copy with no stamp, or one marked `adapted`, is never removed.
+For that case `setup` prints a line after the preview: how many skill files in your home folder
+were kept because you changed them or wrote them yourself, that each one hides the copy the run
+writes into every folder, and the path of each. To use the folder's own copy, move yours aside
+(`src/commands/setup.ts`, the message beginning "skill file(s) in your home folder were kept").
 
 Where `/delegate` is written, `~/.claude/rules/model-routing.md` gains one sentence, described in
 that question's long form.
@@ -137,13 +162,18 @@ the run. The builders' work stays in their worktrees; landing it is yours.
 it plans the removal of that skill's `SKILL.md` in the same preview, after the writes. This
 happens when you switch to a track that has fewer skills (a non-code run drops `/autopilot`,
 `/audit`, `/clean-up` and `/delegate`), when you move to the lighter setup, and when you answer
-**None** to this question. A removal only touches a file this tool stamped and you have not marked `adapted`; a file with no stamp, or an adapted one, is left alone and not listed. A skill folder this empties is removed too. The
+**None** to this question. A removal only touches a file this tool stamped and you have not marked `adapted`; a file with no stamp, or an adapted one, is left alone and not listed. A skill folder this empties is removed too. This is also how the old global `/close-out` and `/handoff` leave. The
 `/write-doc` folder is the one exception on the shared skills: see `write-doc.md`. The summary
 line counts removals apart: `N file(s) to write, M to remove, K already current.`
 
 ## How to undo it
 
-Delete the skill directories by hand, or run `personal-config undo` to restore anything a run overwrote or removed, including a skill a later run removed. The run before it is the one `undo` reverses. A
+Delete the skill directories by hand, including `.claude/skills/close-out/` and
+`.claude/skills/handoff/` in each folder, and the two ignore lines if you want them gone. Or run `personal-config undo` to restore anything a run overwrote or removed, including a global `/close-out` or `/handoff` a run removed. The run before it is the one `undo` reverses.
+`undo` keeps a file the run created and did not overwrite (`src/commands/undo.ts`), so the per-folder
+skill files that run wrote stay until you delete them by hand. Restoring a global copy brings back
+the shadowing described above: after an `undo`, delete either the global copies or each folder's
+copies. A
 run's folder under `docs/incomplete/` is an ordinary folder: archive it with `personal-config
 archive` or delete it. An audit's rows are ordinary board rows: mark one `SETTLED AS NO` to drop
 it. To stop being offered the audit in one repo, delete or rename its `docs/audit-lanes.md`.

@@ -1,8 +1,8 @@
 import { join } from 'node:path';
-import { readText } from '../lib/disk.ts';
+import { exists, readText } from '../lib/disk.ts';
 import { claudeSkillsDir, repoRoot } from '../lib/paths.ts';
 import { docStem, itemsDirFor } from '../lib/repo-config.ts';
-import { stampAfterFrontmatter, stampLine } from '../lib/stamp.ts';
+import { readStamp, stampAfterFrontmatter, stampLine } from '../lib/stamp.ts';
 import { fill } from '../lib/template.ts';
 import type { GlobalFile, PlannedFile } from '../lib/types.ts';
 import {
@@ -35,6 +35,15 @@ const LIGHT_SKILLS = ['close-out', 'handoff'] as const;
 const AUTOPILOT_SKILLS = ['autopilot', 'audit'] as const;
 
 /**
+ * shared-skills-track D1 and D2: the two skills whose body follows the folder's own track and work
+ * record. One copy in `~/.claude/skills/` carried the last run's track, or the first target's
+ * names (F3, F4, F7), so each target gets its own under `<target>/.claude/skills/`. The global
+ * copies leave through `leftovers`, because `skillFiles()` still names them: a personal skill wins
+ * a name clash with a project one (F14), so a kept global copy would hide every target's.
+ */
+const TRACK_SKILLS: readonly string[] = ['close-out', 'handoff'];
+
+/**
  * Every skill any track can install, which is the set a later run may find on disk and no longer
  * render (setup-global-leftovers BD-2). Built from the lists above so a new skill joins it where
  * it is offered.
@@ -58,7 +67,61 @@ function skillLabel(name: string): string {
  * the phrasings a user actually types rather than describing the skill to itself.
  */
 export async function renderSkills(ctx: RenderContext): Promise<PlannedFile[]> {
-  return Promise.all(wantedSkills(ctx).map((name) => renderSkill(ctx, name)));
+  const names = wantedSkills(ctx).filter((name) => !TRACK_SKILLS.includes(name));
+  return Promise.all(names.map((name) => renderSkill(ctx, name, skillPath(name))));
+}
+
+/**
+ * `/close-out` and `/handoff`, into the target this context renders (D1). A context with no target
+ * renders neither (D4): `join('', ...)` is a relative path, which would land them in whatever
+ * folder `setup` was started from.
+ */
+export async function renderTargetSkills(ctx: RenderContext): Promise<PlannedFile[]> {
+  const root = ctx.repo?.scan.path;
+  if (!root) return [];
+  return Promise.all(
+    targetSkills(ctx).map((name) => renderSkill(ctx, name, targetSkillPath(root, name))),
+  );
+}
+
+function targetSkills(ctx: RenderContext): string[] {
+  return wantedSkills(ctx).filter((name) => TRACK_SKILLS.includes(name));
+}
+
+function targetSkillPath(root: string, name: string): string {
+  return join(root, '.claude', 'skills', name, 'SKILL.md');
+}
+
+/**
+ * The ignore lines for the skills `renderTargetSkills` writes (D3), relative to the target root.
+ * The folder, not `.claude/skills/` as a whole: a repo may ship skills of its own.
+ */
+export function targetSkillIgnores(ctx: RenderContext): string[] {
+  return targetSkills(ctx).map((name) => `.claude/skills/${name}/`);
+}
+
+/**
+ * PLAN BD-3: a global copy `leftovers` will not remove, because it has no stamp or is marked
+ * `adapted`, still wins over each target's copy (F14). Only a skill some target is getting is
+ * checked; elsewhere the global copy hides nothing.
+ */
+export async function shadowingCopies(planned: string[]): Promise<string[]> {
+  const found = await Promise.all(
+    TRACK_SKILLS.filter((name) => planned.some((path) => isTargetCopy(path, name))).map(
+      async (name) => ((await isKeptCopy(skillPath(name))) ? skillPath(name) : null),
+    ),
+  );
+  return found.filter((path): path is string => path !== null);
+}
+
+function isTargetCopy(path: string, name: string): boolean {
+  return path !== skillPath(name) && path.endsWith(join('.claude', 'skills', name, 'SKILL.md'));
+}
+
+async function isKeptCopy(path: string): Promise<boolean> {
+  if (!(await exists(path))) return false;
+  const stamp = readStamp(await readText(path));
+  return stamp === null || stamp.adapted;
 }
 
 /**
@@ -104,11 +167,15 @@ function offeredSkills(ctx: RenderContext): readonly string[] {
     : [...SKILLS, 'delegate', ...AUTOPILOT_SKILLS];
 }
 
-async function renderSkill(ctx: RenderContext, name: string): Promise<PlannedFile> {
+async function renderSkill(
+  ctx: RenderContext,
+  name: string,
+  path: string,
+): Promise<PlannedFile> {
   const source = await readText(join(repoRoot(), 'templates', 'skills', `${name}.md`));
   const filled = fill(source, variables(ctx, name, shapeOf(ctx)));
   const body = stampAfterFrontmatter(filled, stampLine(ctx.stamp));
-  return planned(ctx, skillPath(name), skillLabel(name), body, { stamp: false });
+  return planned(ctx, path, skillLabel(name), body, { stamp: false });
 }
 
 /**

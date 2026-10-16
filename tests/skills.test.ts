@@ -11,8 +11,7 @@
 import { describe, expect, test } from 'bun:test';
 import { leftoverTokens } from '../src/lib/template.ts';
 import type { Answers, PlannedFile, RepoPlan, WorkProfile } from '../src/lib/types.ts';
-import { renderSkills } from '../src/render/skills.ts';
-import { DEFAULT_ANSWERS, testContext, testRepoPlan, testScan } from './helpers.ts';
+import { DEFAULT_ANSWERS, everySkill, testContext, testRepoPlan, testScan } from './helpers.ts';
 
 type Shape = {
   workKind: 'code' | 'non-code';
@@ -32,7 +31,7 @@ async function render(
 ): Promise<PlannedFile[]> {
   const answers: Answers = { ...DEFAULT_ANSWERS, skills: 'all', ...shape };
   const plan: RepoPlan = testRepoPlan({ workProfile });
-  return renderSkills(testContext(answers, plan));
+  return everySkill(testContext(answers, plan));
 }
 
 function skill(files: PlannedFile[], name: string): string {
@@ -204,7 +203,7 @@ describe('standard 2.0.0: the record is the item file and a log line', () => {
     const plan = testRepoPlan({
       scan: testScan({ ledgerDoc: 'NOTES.md', boardDoc: 'BOARD.md', itemsDoc: 'tasks' }),
     });
-    const files = await renderSkills(testContext(answers, plan));
+    const files = await everySkill(testContext(answers, plan));
     const text = `${skill(files, 'close-out')}\n${skill(files, 'handoff')}`;
     expect(text).toContain('`tasks/<n>-<slug>.md`');
     expect(text).toContain('the log in `NOTES.md`');

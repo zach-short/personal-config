@@ -29,7 +29,9 @@ import {
 
 const CLI = join(repoRoot(), 'src', 'cli.ts');
 const CODE_ONLY = ['audit', 'autopilot', 'clean-up', 'delegate'];
-const EVERY_SKILL = [...CODE_ONLY, 'close-out', 'handoff', 'passoff', 'scope'];
+// `/close-out` and `/handoff` render into each target (shared-skills-track D1), and these runs
+// have none, so the home folder holds the other six.
+const EVERY_SKILL = [...CODE_ONLY, 'passoff', 'scope'];
 const GONE = '(no longer installed)';
 
 type Run = { code: number; stdout: string };
@@ -114,13 +116,7 @@ describe('a later run removes what it no longer renders (D1)', () => {
       expect(run.stdout).toContain('Removed 5 file(s) this run no longer installs.');
       for (const name of CODE_ONLY) expect(await exists(skill(home, name))).toBe(false);
       expect(await exists(rule(home, 'commits'))).toBe(false);
-      expect(await skillFolders(home)).toEqual([
-        'close-out',
-        'handoff',
-        'passoff',
-        'scope',
-        'write-doc',
-      ]);
+      expect(await skillFolders(home)).toEqual(['passoff', 'scope', 'write-doc']);
       expect(await readText(rule(home, 'model-routing'))).not.toContain('/delegate');
     } finally {
       await cleanup(home);

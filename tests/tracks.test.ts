@@ -253,6 +253,13 @@ const COMMIT_PARAGRAPH = '**Commits are the owner’s.**';
  * `globalAnswers`, the `you` answers the global files were rendered from, beside `answers`. Read
  * by hand: with that key removed the file hashes to the old entry, so nothing else in it moved.
  * The same bytes in all three variants. 83 still, and no other key moved.
+ *
+ * **Two skills changed path per variant on 2026-10-16, board item 108 (shared-skills-track D1).**
+ * `/close-out` and `/handoff` render into the target, `<repo>/.claude/skills/<name>/SKILL.md`,
+ * not `~/.claude/skills/`. Their keys were renamed and their hashes kept: one target renders the
+ * body the global copy had. Two hashes moved with them on content: the ignore file gained the two
+ * skill folders (D3), and the Part 0 prompt lists every file the run writes in the repo, so it
+ * gained two rows and a wider column. 83 still, and no other key moved.
  */
 describe('§3.1 row 1 — code + full + git is the 0.3.0 output, byte for byte bar one skill', () => {
   const FULL = answersFor(CODE_FULL_GIT);
@@ -398,9 +405,10 @@ describe('§3.1 row 3 — code + light: D6 minus what D16 gave back', () => {
     const paths = names(files);
 
     expect(paths).not.toContain('~/.claude/rules/model-routing.md');
+    // shared-skills-track D1: the two skills land in the target, never in `~/.claude/skills/`.
     expect(paths.filter((p) => p.includes('/skills/')).sort()).toEqual([
-      '~/.claude/skills/close-out/SKILL.md',
-      '~/.claude/skills/handoff/SKILL.md',
+      '/tmp/example/.claude/skills/close-out/SKILL.md',
+      '/tmp/example/.claude/skills/handoff/SKILL.md',
     ]);
     expect(paths.filter((p) => p.includes('/hooks/'))).toEqual([
       '~/.claude/hooks/personal-config/completion-gate.sh',
@@ -437,8 +445,11 @@ describe('§3.1 row 3 — code + light: D6 minus what D16 gave back', () => {
     expect(config.boardFile).toBe('');
     expect(config.ledgerFile).toBe('HANDOFF.md');
     expect(config.workProfile).toBe('ledger');
-    // Ignore entries name only what this run writes: no Part 0 prompt on this track.
-    expect(text(files, '.gitignore')).toBe('/.personal-config.json\n');
+    // Ignore entries name only what this run writes: no Part 0 prompt on this track. The two
+    // skill folders are kept out in tracked mode too (shared-skills-track D3, PLAN BD-2).
+    expect(text(files, '.gitignore')).toBe(
+      '/.personal-config.json\n/.claude/skills/close-out/\n/.claude/skills/handoff/\n',
+    );
   });
 
   test('untracked and light, the exclude file names no board either', async () => {
@@ -455,6 +466,8 @@ describe('§3.1 row 3 — code + light: D6 minus what D16 gave back', () => {
       .filter(Boolean);
     expect(lines).toEqual([
       '/.personal-config.json',
+      '/.claude/skills/close-out/',
+      '/.claude/skills/handoff/',
       '/HANDOFF.md',
       '/CLAUDE.local.md',
       '/AGENT-PRACTICES.local.md',
@@ -505,6 +518,8 @@ describe('§3.1 row 4 — non-code, whatever the weight and whatever git says', 
 
     expect(paths.sort()).toEqual(
       [
+        '/tmp/accounts/.claude/skills/close-out/SKILL.md',
+        '/tmp/accounts/.claude/skills/handoff/SKILL.md',
         '/tmp/accounts/.personal-config.json',
         '/tmp/accounts/CLAUDE.md',
         '/tmp/accounts/HANDOFF.md',
@@ -519,8 +534,6 @@ describe('§3.1 row 4 — non-code, whatever the weight and whatever git says', 
         // and `EVERYTHING` gives no answer, which reads `ste` (D4).
         '~/.claude/rules/language-style.md',
         '~/.claude/settings.json',
-        '~/.claude/skills/close-out/SKILL.md',
-        '~/.claude/skills/handoff/SKILL.md',
         // write-doc-ste Phase 2: on non-code work the documents are the work (D5), and an absent
         // `writeDoc` reads `yes` (D9), so the smallest setup gains the skill's folder.
         '~/.claude/skills/write-doc/SKILL.md',
@@ -654,7 +667,9 @@ describe('doctor against a generated light target', () => {
         (f) => `${f.file}:${f.line} ${f.rule} — ${f.message}`,
       );
       expect(described).toEqual([]);
-      expect(report.checked).toBe(3);
+      // Three documents and the two skills rendered into the folder (shared-skills-track D1),
+      // which `doctor` walks and reproduces from their stamps (PLAN P5).
+      expect(report.checked).toBe(5);
 
       const onDisk = readStamp(await readText(join(dir, 'docs', 'AGENT-PRACTICES.md')));
       expect(onDisk?.standardVersion).toBe(await standardVersion());
@@ -674,11 +689,17 @@ describe('doctor against a generated light target', () => {
     const dir = await tempDir('pc-light-');
     try {
       const ctx = await generate(dir);
-      const every = [
+      const documents = [
         join(dir, 'CLAUDE.md'),
         join(dir, 'HANDOFF.md'),
         join(dir, 'docs', 'AGENT-PRACTICES.md'),
-      ].sort();
+      ];
+      // The two skills carry a stamp, so a standard behind reaches them; the proof line is not in
+      // their text, so moving it does not (shared-skills-track D1).
+      const skills = ['close-out', 'handoff'].map((name) =>
+        join(dir, '.claude', 'skills', name, 'SKILL.md'),
+      );
+      const every = [...documents, ...skills].sort();
       const drift = (findings: { rule: string; file: string; message: string }[]) =>
         findings.filter((f) => f.rule === 'stamp-drift');
 
@@ -699,7 +720,7 @@ describe('doctor against a generated light target', () => {
           })
         ).findings,
       );
-      expect(moved.map((f) => f.file).sort()).toEqual(every);
+      expect(moved.map((f) => f.file).sort()).toEqual(documents.sort());
       for (const f of moved)
         expect(f.message).toContain('would now write this file differently');
     } finally {
