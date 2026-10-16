@@ -242,14 +242,17 @@ function variables(
   ctx: RenderContext,
   name: string,
   shape: SkillShape,
-): Record<string, string> {
+): Record<string, string | null> {
+  // The land step's record is a log line and a `DONE` row (D1), which project folders keep none
+  // of, so there `agent-pushes` renders `/delegate` and `/close-out` as `agent-commits` does.
+  const lands = agentPushes(ctx) && !shape.folders;
   if (name === 'close-out') {
-    return closeOutVars(shape, namesOf(ctx), wantedSkills(ctx).includes('clean-up'));
+    return closeOutVars(shape, namesOf(ctx), wantedSkills(ctx).includes('clean-up'), lands);
   }
   if (name === 'handoff') return handoffVars(shape, namesOf(ctx));
   if (name === 'passoff') return passoffVars(shape, namesOf(ctx));
-  if (name === 'clean-up') return cleanUpVars(shape, namesOf(ctx));
-  if (name === 'delegate') return delegateVars(ctx, shape);
+  if (name === 'clean-up') return cleanUpVars(shape, namesOf(ctx), agentPushes(ctx));
+  if (name === 'delegate') return delegateVars(ctx, shape, lands);
   if (name === 'autopilot') return autopilotVars(ctx);
   if (name === 'audit') return auditVars(ctx);
   return {};
@@ -269,15 +272,21 @@ function auditVars(ctx: RenderContext): Record<string, string> {
 }
 
 /**
- * Whether the agent may commit, the one fact both skills read from the commit policy.
- * `agent-pushes` may do more than `agent-commits`, so it reads the same here: the builder commits
- * on its branch, and a row builds from its predecessor's branch. The skills' own text still says
- * no branch is pushed or merged: `agent-pushes` changed what the agent may do in the owner's
- * session, not what a builder subagent does with a worktree branch (item of 2026-10-16).
+ * Whether the agent may commit. True under `agent-pushes` too, because the builder commits on its
+ * branch under both policies; what `agent-pushes` adds is read from `agentPushes()`.
  */
 function agentCommits(ctx: RenderContext): boolean {
   const policy = answer(ctx, 'commitPolicy', 'print-blocks');
   return policy === 'agent-commits' || policy === 'agent-pushes';
+}
+
+/**
+ * Whether the run lands its own work: merges a signed-off branch into the base and pushes
+ * (autonomous-autopilot D1, D6). Separate from `agentCommits()` so `agent-commits` keeps every
+ * byte it renders, with no merge and no push, while `agent-pushes` gets the land step.
+ */
+function agentPushes(ctx: RenderContext): boolean {
+  return answer(ctx, 'commitPolicy', 'print-blocks') === 'agent-pushes';
 }
 
 /**
@@ -287,34 +296,38 @@ function agentCommits(ctx: RenderContext): boolean {
  * model family name (D12). Its `/autopilot` clauses render only on a board, where that skill does
  * (D22); on project folders they would name a skill that is not installed.
  */
-function delegateVars(ctx: RenderContext, shape: SkillShape): Record<string, string> {
+function delegateVars(
+  ctx: RenderContext,
+  shape: SkillShape,
+  lands: boolean,
+): Record<string, string | null> {
   const commits = agentCommits(ctx);
   const vars = shape.folders
     ? delegateFolderVars()
-    : delegateBoardVars(ctx, namesOf(ctx), commits);
+    : delegateBoardVars(ctx, namesOf(ctx), commits, lands);
+  // The land step takes section 6, so the worktree step moves to 7 under it.
+  const removal = lands ? 7 : 6;
   return {
     ...vars,
     TIER_TABLE: tierTable(ctx, ''),
-    WORKTREE_STEP: worktreeStep(6, 'run', [
-      'Remove each worktree that is finished: every builder, auditor and relayed pass that came',
-      'back with a worktree path and a branch. A',
-    ]),
-    COMMIT_RULE: commits
-      ? [
-          'Commit on your own worktree branch, naming the exact files in both the `git add` and',
-          '  the commit. Never push and never merge. If a hook blocks the commit, print the two',
-          '  commit blocks, do not work around it, and make the patch the auditor works from:',
-          `  ${MAKE_PATCH} List in your report every file the change adds.`,
-        ].join('\n')
-      : [
-          'Do not commit. Leave the change in the worktree. When it is done, make the patch the',
-          `  auditor works from: ${MAKE_PATCH} List in your report every file the change adds.`,
-        ].join('\n'),
-    // Item 95 audit, N1: the auditor's branch now holds the builder's commits, so step 6 keeps it.
+    // `null` drops the token's line, so section 5 and the worktree step stay one blank line apart.
+    LAND_STEP: lands ? landStep() : null,
+    WORKTREE_STEP: worktreeStep(
+      removal,
+      'run',
+      [
+        'Remove each worktree that is finished: every builder, auditor and relayed pass that came',
+        'back with a worktree path and a branch. A',
+      ],
+      lands,
+    ),
+    COMMIT_RULE: builderRule(commits, lands),
+    // Item 95 audit, N1: the auditor's branch now holds the builder's commits, so the worktree
+    // step keeps it.
     AUDIT_KEPT: commits
       ? [
           '',
-          "The auditor's branch now holds the builder's commits, so step 6 keeps the auditor's",
+          `The auditor's branch now holds the builder's commits, so step ${removal} keeps the auditor's`,
           "worktree until the builder's branch is merged. Expect that.",
         ].join('\n')
       : '',
@@ -331,6 +344,83 @@ function delegateVars(ctx: RenderContext, shape: SkillShape): Record<string, str
           "  `git add -N` puts the new files in your diffstat, so it can match the builder's.",
         ].join('\n'),
   };
+}
+
+/** G40: under `agent-pushes` the merge and the push are not banned, they wait for step 6 (4.1). */
+function builderRule(commits: boolean, lands: boolean): string {
+  if (lands)
+    return [
+      'Commit on your own worktree branch, naming the exact files in both the `git add` and',
+      "  the commit. The merge into the base and the push are the land step's (step 6), which this",
+      '  session sends you after the audit. If a hook blocks the commit, print the two commit',
+      '  blocks, do not work around it, and make the patch the auditor works from:',
+      `  ${MAKE_PATCH} List in your report every file the change adds.`,
+    ].join('\n');
+  if (commits)
+    return [
+      'Commit on your own worktree branch, naming the exact files in both the `git add` and',
+      '  the commit. Never push and never merge. If a hook blocks the commit, print the two',
+      '  commit blocks, do not work around it, and make the patch the auditor works from:',
+      `  ${MAKE_PATCH} List in your report every file the change adds.`,
+    ].join('\n');
+  return [
+    'Do not commit. Leave the change in the worktree. When it is done, make the patch the',
+    `  auditor works from: ${MAKE_PATCH} List in your report every file the change adds.`,
+  ].join('\n');
+}
+
+/**
+ * D1: the builder merges the base and gates in its own worktree, where its dependencies are and
+ * where this session never runs git; the lead only fast-forwards and pushes from the primary
+ * checkout, so the base never takes a tree no gate ran on. Words as design 4.1 gives them.
+ */
+function landStep(): string {
+  return [
+    '## 6. Land it',
+    '',
+    "After step 4 signs an item off, land it: the base takes the builder's branch, gated on the tree",
+    'that lands, and the push follows. The builder does the merge and the gates in its own worktree,',
+    'because its dependencies are there and that worktree is the one place this session never runs',
+    'git. Send it, with `SendMessage`, this step as it stands here, with `<base>`, the sign-off lines',
+    'and the gate list written in:',
+    '',
+    "1. Where the item's file is tracked, append these sign-off lines to its close-out section:",
+    '   <the lines step 4 wrote>. Commit that file alone, naming it.',
+    "2. From your worktree's own directory, run `git merge --no-edit <base>` as one plain command,",
+    '   with the branch name written out. A fast-forward and a merge commit are both right.',
+    '3. On a conflict in a file your item\'s "Files it owns" lists, resolve it, `git add` that file,',
+    '   run `git commit --no-edit`, and say which file and how. On a conflict in any other file, run',
+    '   `git merge --abort` and report the file list: that is an undeclared overlap, and the row is',
+    '   held.',
+    "4. Run the fresh-checkout recipe's install line again, then every gate below: <the item's",
+    "   done-when gates, and the repo's gate command where it has one>. A gate that cannot run here",
+    '   is reported as skipped, with the reason.',
+    '5. Report: the merge result with `git rev-parse HEAD`, each gate with its output, and',
+    '   `git status --porcelain`, which must print nothing.',
+    '',
+    'A builder that returns a pass-off instead of this report is at its budget. Land the row from a',
+    "worktree of your own: from the primary checkout, `git worktree add <a fresh path> <the builder's",
+    'branch>`, run steps 2 to 5 there with `git -C <that path>`, and remove that worktree in step 7.',
+    '',
+    'Then, from the primary checkout, with `git -C` and the branch name written out:',
+    '',
+    '```bash',
+    "git merge --ff-only <the builder's branch>",
+    'git push',
+    '```',
+    '',
+    'Never `--force`, and never a rebase: the auditor reproduced the commits that land. A refused',
+    "fast-forward holds the row with git's output as its reason; where the base moved while the",
+    'builder was gating, send the message once more first. A refused push lands the row, stops every',
+    'later push in this session, and the rundown says how far ahead the base is. A red gate goes back',
+    "to the builder as a blocking finding, through step 4's fix round. A gate that could not run",
+    'here is listed under **Not verified**.',
+    '',
+    'Only now write the record: the log line and `DONE - <date>` on the board, as step 4 says. Under',
+    "this policy a row is `DONE` when its commits are on the base. Then step 7 removes the row's",
+    'worktrees, whose branches the base now holds.',
+    '',
+  ].join('\n');
 }
 
 /**
@@ -379,11 +469,11 @@ function tierTable(ctx: RenderContext, indent: string): string {
  */
 function autopilotVars(ctx: RenderContext): Record<string, string> {
   const commits = agentCommits(ctx);
+  // `/autopilot` renders only on a board, so `agentPushes()` alone decides its land step.
+  if (agentPushes(ctx)) return { ...autopilotNames(ctx), ...autopilotLanding() };
   return {
-    LEDGER_FILE: ledgerFile(ctx),
-    BOARD_FILE: boardFile(ctx),
-    ITEMS_DIR: namesOf(ctx).items,
-    TIER_TABLE: tierTable(ctx, '   '),
+    ...autopilotNames(ctx),
+    LAND_ROUTE: '',
     AFTER_UNCOMMITTED: commits
       ? [
           '- A row whose predecessor in its lane, or an item its "Waits on" names, was signed off in',
@@ -408,10 +498,44 @@ function autopilotVars(ctx: RenderContext): Record<string, string> {
   };
 }
 
+function autopilotNames(ctx: RenderContext): Record<string, string> {
+  return {
+    LEDGER_FILE: ledgerFile(ctx),
+    BOARD_FILE: boardFile(ctx),
+    ITEMS_DIR: namesOf(ctx).items,
+    TIER_TABLE: tierTable(ctx, '   '),
+  };
+}
+
+/**
+ * Design 4.2 under `agent-pushes`: a successor builds from the base once its predecessor has
+ * landed, the record waits for the fast-forward, and the rundown reports what landed and pushed.
+ */
+function autopilotLanding(): Record<string, string> {
+  return {
+    AFTER_UNCOMMITTED: [
+      '- A row whose predecessor in its lane, or an item its "Waits on" names, was signed off in',
+      "  this run is runnable once that row has landed (`/delegate`'s step 6): it builds from the",
+      '  base, which now holds the predecessor. A predecessor whose landing is held holds it.',
+    ].join('\n'),
+    LAND_ROUTE: [
+      '',
+      '   Under this policy the record follows the landing: route a signed-off row to',
+      "   `/delegate`'s step 6, and write the log line and `DONE` when its fast-forward lands.",
+    ].join('\n'),
+    COMMIT_BLOCKS: [
+      '**Landed**: for each row, its branch, the merge commit or fast-forward, and',
+      '      whether the push went; the rows landed and not pushed, with how far ahead the base is;',
+      '      and the exact files step 4 commits.',
+    ].join('\n'),
+  };
+}
+
 function delegateBoardVars(
   ctx: RenderContext,
   names: RecordNames,
   commits: boolean,
+  lands: boolean,
 ): Record<string, string> {
   const { ledger, items } = names;
   const board = boardFile(ctx);
@@ -446,7 +570,7 @@ function delegateBoardVars(
       '  there: what changed and why, what is now fixed, which questions it answered, and what is',
       '  left owed. Otherwise put that text in your report. It is the one record you write.',
     ].join('\n'),
-    RECORD: delegateRecord(names, commits),
+    RECORD: lands ? landedRecord(names) : delegateRecord(names, commits),
     HELD: [
       'After that the row is `HELD`: its "Waits on" names the file the open findings are written in,',
       `  and the item's file gets a dated note of what is done and what is left.`,
@@ -478,6 +602,28 @@ function delegateRecord(names: RecordNames, commits: boolean): string {
     `  file under \`/autopilot\`. ${legacyBoard(names)}, the record is one step in \`${ledger}\``,
     '  at the next free number, read from the file now, with the same lines, and the row becomes',
     `  \`DONE - ${ledgerStem} <n>\`.`,
+  ].join('\n');
+}
+
+/**
+ * D1 under `agent-pushes`: the builder commits the sign-off lines itself in the land message, so
+ * the lead never writes in a worktree it did not make, and the log line and `DONE` follow the
+ * fast-forward, so a `DONE` row's commits are always on the base.
+ */
+function landedRecord(names: RecordNames): string {
+  const { ledger, ledgerStem, items } = names;
+  return [
+    "Write the record: the builder's and the auditor's models, the worktree, the branch, the",
+    '  commit state (landed on <base> at <hash>, or held at the land step), the relay passes, the',
+    "  verdict, each finding as `open`, and a Deep lift as the person's call. Where the item's file",
+    '  is tracked, these lines go into the land message (step 6), and the builder commits them.',
+    `  Where it is untracked, write the whole section at the end of \`${items}/<n>-<slug>.md\` here,`,
+    "  from the builder's report. The log line, `DONE - <date>` and the hand-back blocks wait for",
+    "  step 6's fast-forward: then add `- <date> · closed item <n>` at the end of the log in",
+    `  \`${ledger}\`, mark the row \`DONE - <date>\`, and post the \`/close-out\` hand-back blocks: in`,
+    `  chat, or into the run's state file under \`/autopilot\`. ${legacyBoard(names)}, the record`,
+    `  is one step in \`${ledger}\` at the next free number, read from the file now, with the same`,
+    `  lines, and the row becomes \`DONE - ${ledgerStem} <n>\`.`,
   ].join('\n');
 }
 
@@ -520,13 +666,17 @@ function delegateFolderVars(): Record<string, string> {
  * fold, only folders; and without git `archive` refuses outright, because both of its checks —
  * who cites the folder, whether its final state is recorded — are questions for git.
  */
-function cleanUpVars(shape: SkillShape, names: RecordNames): Record<string, string> {
+function cleanUpVars(
+  shape: SkillShape,
+  names: RecordNames,
+  pushes: boolean,
+): Record<string, string> {
   return {
     WHAT_MOVES: shape.folders
       ? 'closed project folders'
       : 'closed item files and their rows, old log lines, finished design folders',
     FINISHED: shape.folders ? finishedFolders() : finishedItems(names),
-    MOVE_STEPS: [shape.folders ? '' : foldMove(shape, names), folderMove(shape)]
+    MOVE_STEPS: [shape.folders ? '' : foldMove(shape, names, pushes), folderMove(shape, pushes)]
       .filter((step) => step !== '')
       .join('\n'),
     GREP_WHERE: shape.folders
@@ -538,14 +688,24 @@ function cleanUpVars(shape: SkillShape, names: RecordNames): Record<string, stri
     HISTORICAL_TEXT: shape.folders
       ? "a closed phase's `As built:` paragraph"
       : 'a close-out section, a log line, a `DONE` row, a ledger step',
-    COMMIT_CLAUSE: shape.git
-      ? [
-          ' Then the',
-          'commit blocks for everything the sweep changed. **The archive may be its own repository**:',
-          'its commit is rooted there and names its own files, exactly as the command printed it.',
-        ].join('\n')
-      : '',
+    COMMIT_CLAUSE: shape.git ? commitClause(pushes) : '',
   };
+}
+
+/** Design 4.3: under `agent-pushes` the sweep commits and pushes its own changes. */
+function commitClause(pushes: boolean): string {
+  if (pushes)
+    return [
+      ' Then commit',
+      'everything the sweep changed, naming the exact files, and push. **The archive may be its own',
+      'repository**: its commit is rooted there and names its own files, exactly as the command',
+      'printed it.',
+    ].join('\n');
+  return [
+    ' Then the',
+    'commit blocks for everything the sweep changed. **The archive may be its own repository**:',
+    'its commit is rooted there and names its own files, exactly as the command printed it.',
+  ].join('\n');
 }
 
 function finishedItems(names: RecordNames): string {
@@ -574,13 +734,25 @@ function finishedFolders(): string {
  * removes the file and its row. In git it waits for the owner's commit, because a file folded
  * before that commit takes its close-out out of the history the commit was meant to hold.
  */
-function foldMove(shape: SkillShape, names: RecordNames): string {
-  const commit = shape.git
-    ? [
-        "   Run it only once every `DONE` item's close-out is committed: a fold takes the file out",
-        '   of the tree.',
-      ]
-    : [];
+function foldMove(shape: SkillShape, names: RecordNames, pushes: boolean): string {
+  return [...foldMoveBody(names), ...foldMoveTiming(shape, pushes)].join('\n');
+}
+
+/** Design 4.3: under `agent-pushes` the land step, not the owner, committed each close-out. */
+function foldMoveTiming(shape: SkillShape, pushes: boolean): string[] {
+  if (!shape.git) return [];
+  if (pushes)
+    return [
+      "   Run it only once every `DONE` item's tracked close-out is on the base, which the land step",
+      '   did.',
+    ];
+  return [
+    "   Run it only once every `DONE` item's close-out is committed: a fold takes the file out",
+    '   of the tree.',
+  ];
+}
+
+function foldMoveBody(names: RecordNames): string[] {
   return [
     '1. **The board and the ledger**: `personal-config fold --dry-run`, then `personal-config fold`.',
     "   Each `DONE` item's file is written to the archive, read back, given an index line that keeps",
@@ -588,11 +760,10 @@ function foldMove(shape: SkillShape, names: RecordNames): string {
     '   stops that item. Log lines older than 90 days go to the archive log. `personal-config undo`',
     `   puts back what it removed. ${legacyBoard(names)}, every row and every step number stays;`,
     '   prompts and old bodies go.',
-    ...commit,
-  ].join('\n');
+  ];
 }
 
-function folderMove(shape: SkillShape): string {
+function folderMove(shape: SkillShape, pushes: boolean): string {
   const n = shape.folders ? '1' : '2';
   if (!shape.git)
     return [
@@ -604,10 +775,23 @@ function folderMove(shape: SkillShape): string {
   return [
     `${n}. **Each finished folder**: \`personal-config archive <slug>\`. It lists what cites the`,
     '   folder and whether the repo has recorded its final state. A path read at runtime blocks',
+    ...archiveCommit(pushes),
+  ].join('\n');
+}
+
+/** Design 4.3: under `agent-pushes` the sweep commits the folder's final state itself. */
+function archiveCommit(pushes: boolean): string[] {
+  if (pushes)
+    return [
+      "   the move: repoint it first. Uncommitted changes block it too: commit the folder's final",
+      '   state yourself, naming its files, then `personal-config archive <slug> --move --dry-run`,',
+      '   then again without `--dry-run`.',
+    ];
+  return [
     '   the move: repoint it first. Uncommitted changes block it too, and **the commit is the',
     "   owner's**: post the blocks it prints and stop there for that folder. Once it is committed,",
     '   `personal-config archive <slug> --move --dry-run`, then again without `--dry-run`.',
-  ].join('\n');
+  ];
 }
 
 /**
@@ -620,19 +804,20 @@ function closeOutVars(
   shape: SkillShape,
   names: RecordNames,
   cleanUp: boolean,
+  lands: boolean,
 ): Record<string, string> {
   const blocks = handBackBlocks(shape);
   return {
     CLOSE_OUT_TRIGGER: trigger(shape),
     WORK_UNIT: workUnit(shape),
     RECORD_WHERE: recordWhere(shape),
-    RECORD_STEPS: [recordStep(shape, names), foldStep(shape), landedEarly(shape)]
+    RECORD_STEPS: [recordStep(shape, names), foldStep(shape, lands), landedEarly(shape)]
       .filter((step) => step !== '')
       .join('\n'),
     BLOCK_COUNT: blocks.length === 3 ? 'three' : 'two',
     HAND_BACK_BLOCKS: blocks.join('\n'),
     PROOF_SENTENCE: proofSentence(shape),
-    WORKTREE_STEP: shape.git ? `\n\n${closeOutWorktreeStep()}` : '',
+    WORKTREE_STEP: shape.git ? `\n\n${closeOutWorktreeStep(lands)}` : '',
     CLEAN_UP_STEP: cleanUp ? `\n\n${cleanUpStep(shape, names)}` : '',
   };
 }
@@ -747,9 +932,9 @@ function phaseHeader(): string {
  * work is archived whole by Part 7's other half, and a step telling it to trim a log it does
  * not keep is a step that reads as a mistake in the document.
  */
-function foldStep(shape: SkillShape): string {
+function foldStep(shape: SkillShape, lands: boolean): string {
   if (shape.folders) return '';
-  if (shape.items) return itemFoldStep(shape);
+  if (shape.items) return itemFoldStep(shape, lands);
   const dead = shape.board
     ? "this item's prompt, now its row says `DONE`, and any step body older than the newest twenty"
     : 'any step body older than the newest twenty';
@@ -767,21 +952,32 @@ function foldStep(shape: SkillShape): string {
  * fold takes the file out of the tree, so folding it before the owner's commit leaves its
  * close-out out of the history that commit was meant to hold.
  */
-function itemFoldStep(shape: SkillShape): string {
-  const timing = shape.git
-    ? [
-        "  Fold an item only once the owner has committed its close-out, so this item's file waits",
-        '  for the next close-out or for `/clean-up`.',
-      ]
-    : [];
+function itemFoldStep(shape: SkillShape, lands: boolean): string {
+  return [...itemFoldBody(), ...foldTiming(shape, lands)].join('\n');
+}
+
+/** Design 4.3: under `agent-pushes` the land step, not the owner, put the close-out on the base. */
+function foldTiming(shape: SkillShape, lands: boolean): string[] {
+  if (!shape.git) return [];
+  if (lands)
+    return [
+      "  Fold an item only once its close-out is on the base, so this item's file waits for the next",
+      '  close-out or for `/clean-up`.',
+    ];
+  return [
+    "  Fold an item only once the owner has committed its close-out, so this item's file waits",
+    '  for the next close-out or for `/clean-up`.',
+  ];
+}
+
+function itemFoldBody(): string[] {
   return [
     "- **Fold what is dead.** `personal-config fold` moves each `DONE` item's file to the archive,",
     '  and its row leaves the table with it; the archive index line keeps what the row said. Log',
     '  lines older than 90 days go to the archive log. It writes the archive and reads it back',
     '  before it removes anything, which is the only safe order for a document git is not holding',
     '  a copy of.',
-    ...timing,
-  ].join('\n');
+  ];
 }
 
 function landedEarly(shape: SkillShape): string {
@@ -850,12 +1046,17 @@ function proofSentence(shape: SkillShape): string {
  * Its report sits above step 2's blocks because the model line is the first thing the owner acts
  * on, so it has to stay last in the message.
  */
-function closeOutWorktreeStep(): string {
+function closeOutWorktreeStep(lands: boolean): string {
   return [
-    worktreeStep(4, 'session', [
-      'Remove each worktree that is finished: each one its subagents came back with, and each one',
-      'it added itself with `git worktree add`. A',
-    ]),
+    worktreeStep(
+      4,
+      'session',
+      [
+        'Remove each worktree that is finished: each one its subagents came back with, and each one',
+        'it added itself with `git worktree add`. A',
+      ],
+      lands,
+    ),
     '',
     'Do this before you post the blocks in step 2, and put its report above them, so the model',
     'line stays last in the message. Never remove the worktree this session runs in.',
@@ -868,7 +1069,12 @@ function closeOutWorktreeStep(): string {
  * removal is limited to worktrees the run made because a worktree just added for new work is
  * clean and its branch is merged too, so "merged and clean" alone would take a peer's fresh one.
  */
-function worktreeStep(n: number, maker: 'run' | 'session', which: string[]): string {
+function worktreeStep(
+  n: number,
+  maker: 'run' | 'session',
+  which: string[],
+  lands: boolean,
+): string {
   return [
     `## ${n}. Remove the worktrees this ${maker} made`,
     '',
@@ -878,7 +1084,7 @@ function worktreeStep(n: number, maker: 'run' | 'session', which: string[]): str
     '',
     ...worktreeCommands(),
     '',
-    ...worktreeLimits(maker),
+    ...worktreeLimits(maker, lands),
   ].join('\n');
 }
 
@@ -899,15 +1105,33 @@ function worktreeCommands(): string[] {
   ];
 }
 
-function worktreeLimits(maker: 'run' | 'session'): string[] {
-  return [
+function worktreeLimits(maker: 'run' | 'session', lands: boolean): string[] {
+  const never = [
     'Never add `--force` and never use `-D`: git refuses to remove a dirty worktree or to delete an',
     `unmerged branch, and that refusal is the check. Never remove a worktree this ${maker} did not`,
     'make, because a worktree just added for new work is clean and its branch is merged too.',
+  ];
+  if (lands) return [...never, ...landedLimits()];
+  return [
+    ...never,
     'This step merges nothing, so it never merges into a branch the repo marks as protected, or into',
     'any other. Keep every other worktree, and report each one in one line with its reason: a commit',
     "the base does not hold, or uncommitted files. A change that waits for the owner's commit is the",
     'usual reason. That worktree stays until its work is committed and merged, then goes by the same',
+    'checks. Ignored files such as `node_modules` and `.env` go with a worktree when it is removed.',
+  ];
+}
+
+/**
+ * Design 4.1, section 7: under `agent-pushes` the merge is the land step's. The sentence on the
+ * owner's commit goes too: no commit waits for the owner under that policy, and design 4.5's
+ * sweep regex matches it.
+ */
+function landedLimits(): string[] {
+  return [
+    'The merge happened in the land step; this step only removes. Keep every other worktree, and',
+    'report each one in one line with its reason: a commit the base does not hold, or uncommitted',
+    'files. That worktree stays until its work is committed and merged, then goes by the same',
     'checks. Ignored files such as `node_modules` and `.env` go with a worktree when it is removed.',
   ];
 }

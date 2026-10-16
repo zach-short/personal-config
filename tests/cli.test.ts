@@ -12,7 +12,9 @@ const CLI = join(repoRoot(), 'src', 'cli.ts');
 async function run(args: string[], env: Record<string, string> = {}) {
   const proc = Bun.spawn(['bun', 'run', CLI, ...args], {
     cwd: repoRoot(),
-    env: { ...process.env, ...env },
+    // Bun caches the transpiled output of a large source file under `$HOME`; that write is
+    // Bun's, not the tool's, and the dry-run test below checks the tool wrote nothing.
+    env: { ...process.env, BUN_RUNTIME_TRANSPILER_CACHE_PATH: '0', ...env },
     stdout: 'pipe',
     stderr: 'pipe',
   });

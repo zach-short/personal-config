@@ -148,6 +148,31 @@ describe('what /autopilot says', () => {
     expect(text).toContain('No branch is pushed or merged.');
   });
 
+  /** Autonomous-autopilot Phase 1 (design 4.2): under agent-pushes a successor waits for a landing. */
+  const LANDED = [
+    "was signed off in this run is runnable once that row has landed (`/delegate`'s step 6): it builds from the base, which now holds the predecessor.",
+    'A predecessor whose landing is held holds it.',
+    "When `/audit` has written its rows, read the board again before step 6. Under this policy the record follows the landing: route a signed-off row to `/delegate`'s step 6, and write the log line and `DONE` when its fast-forward lands.",
+    '11. **Commit blocks**: **Landed**: for each row, its branch, the merge commit or fast-forward, and whether the push went; the rows landed and not pushed, with how far ahead the base is; and the exact files step 4 commits.',
+  ];
+
+  test('passes: under agent-pushes a row after a signed-off one builds once it has landed', async () => {
+    const text = (await autopilot({ commitPolicy: 'agent-pushes' })).replace(/\s+/g, ' ');
+    for (const phrase of LANDED) expect(text, phrase).toContain(phrase);
+    expect(text).not.toContain('No branch is pushed or merged.');
+    expect(text).not.toContain("builds from that row's worktree branch");
+  });
+
+  test('violates: under agent-commits and print-blocks nothing of the landing renders', async () => {
+    for (const policy of ['agent-commits', 'print-blocks']) {
+      const text = (await autopilot({ commitPolicy: policy })).replace(/\s+/g, ' ');
+      for (const phrase of LANDED) expect(text, `${policy}: ${phrase}`).not.toContain(phrase);
+      expect(text, policy).toContain(
+        'read the board again before step 6. 4. **A question a builder reports',
+      );
+    }
+  });
+
   /** The six blocking findings of the Fable review, 2026-10-05, each pinned where it was fixed. */
   test('the Deep review fixes hold', async () => {
     const text = (await autopilot()).replace(/\s+/g, ' ');

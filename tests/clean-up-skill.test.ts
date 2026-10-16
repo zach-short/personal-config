@@ -21,16 +21,47 @@ const CODE_FULL_NO_GIT: Shape = { workKind: 'code', configWeight: 'full', usesGi
 async function render(
   shape: Shape,
   workProfile: WorkProfile = 'ledger',
+  commitPolicy = 'print-blocks',
 ): Promise<PlannedFile[]> {
-  const answers: Answers = { ...DEFAULT_ANSWERS, skills: 'all', ...shape };
+  const answers: Answers = { ...DEFAULT_ANSWERS, skills: 'all', ...shape, commitPolicy };
   const plan: RepoPlan = testRepoPlan({ workProfile });
   return everySkill(testContext(answers, plan));
 }
 
-async function cleanUp(shape: Shape, workProfile: WorkProfile = 'ledger'): Promise<string> {
-  const files = await render(shape, workProfile);
+async function cleanUp(
+  shape: Shape,
+  workProfile: WorkProfile = 'ledger',
+  commitPolicy = 'print-blocks',
+): Promise<string> {
+  const files = await render(shape, workProfile, commitPolicy);
   return files.find((f) => f.path.endsWith('clean-up/SKILL.md'))?.contents ?? '';
 }
+
+/** Autonomous-autopilot Phase 1 (design 4.3): under agent-pushes the sweep commits and pushes. */
+describe('/clean-up under agent-pushes', () => {
+  const PUSHES = [
+    "Uncommitted changes block it too: commit the folder's final state yourself, naming its files, then `personal-config archive <slug> --move --dry-run`, then again without `--dry-run`.",
+    'Then commit everything the sweep changed, naming the exact files, and push. **The archive may be its own repository**: its commit is rooted there and names its own files, exactly as the command printed it.',
+    "Run it only once every `DONE` item's tracked close-out is on the base, which the land step did.",
+  ];
+  const OWNERS = [
+    "**the commit is the owner's**",
+    'Then the commit blocks for everything the sweep changed.',
+    "Run it only once every `DONE` item's close-out is committed",
+  ];
+
+  test('passes: the three sentences render, and the owner commits nothing', async () => {
+    const text = (await cleanUp(CODE_FULL_GIT, 'ledger', 'agent-pushes')).replace(/\s+/g, ' ');
+    for (const phrase of PUSHES) expect(text, phrase).toContain(phrase);
+    for (const phrase of OWNERS) expect(text, phrase).not.toContain(phrase);
+  });
+
+  test("violates: under agent-commits the owner's sentences stay and none of these renders", async () => {
+    const text = (await cleanUp(CODE_FULL_GIT, 'ledger', 'agent-commits')).replace(/\s+/g, ' ');
+    for (const phrase of PUSHES) expect(text, phrase).not.toContain(phrase);
+    for (const phrase of OWNERS) expect(text, phrase).toContain(phrase);
+  });
+});
 
 describe('who gets /clean-up', () => {
   test('passes: code + full installs it beside the others, /delegate, /autopilot and /audit among them in git', async () => {
