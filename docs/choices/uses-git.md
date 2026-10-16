@@ -92,7 +92,10 @@ rendered as a folder either way.
 
 **A later run removes `commits.md`.** Answering "no" after a "yes" means the run no longer
 renders `~/.claude/rules/commits.md`, so it plans the removal of that file. A removal only touches a file this tool stamped and you have not marked `adapted`; a file with no stamp, or an adapted one, is left alone and not listed. Files in
-your repos, and hook scripts with their `settings.json` entries, are not removed.
+your repos are not removed. The same run prunes the commit guard: with no git it removes the
+commit guard entry from `settings.json` when it matches this tool's entry exactly, then
+`commit-guard.sh` and `commit-policy` when no entry left in the file still runs the script. An entry
+you edited stays, and so does its script.
 
 ## How to undo it
 
@@ -100,4 +103,4 @@ Run `personal-config setup` again and answer the other way. Answering "yes" on a
 brings the committed-or-private question back; answering "no" stops it being asked and
 removes `commits.md` from `~/.claude/rules/`, and leaves the files an earlier run wrote inside your
 repos exactly where they are. `personal-config undo` restores anything an accepted run overwrote
-or removed, `commits.md` included.
+or removed, `commits.md` and the commit guard entry and script included.

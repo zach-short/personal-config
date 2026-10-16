@@ -181,7 +181,7 @@ under the preload's temp home.
 
 ### Phase 2. Long forms, catalog, changelog, board row
 
-**Status.** `PLANNED` 2026-10-16.
+**Status.** `BUILT` 2026-10-16, Sonnet 5.5, uncommitted. Five long forms corrected, `catalog.json` rebuilt, CHANGELOG entry added, board row 109 updated.
 
 **Scope.**
 

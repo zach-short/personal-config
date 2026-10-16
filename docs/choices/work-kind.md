@@ -68,10 +68,17 @@ work" plans the removal of the code-only global files: the `/autopilot`, `/audit
 `/delegate` skills and `~/.claude/rules/commits.md`, and it rewrites `model-routing.md` without
 the `/delegate` sentence. A removal only touches a file this tool stamped and you have not marked `adapted`; a file with no stamp, or an adapted one, is left alone and not listed. The preview lists each removal before anything changes.
 
+The same run prunes the hooks the new track does not want from `~/.claude/settings.json`. Switching
+to "Code" removes the delete guard entry and the write-doc check entry (the `PostToolUse` entry),
+and then their scripts and the emptied `write-doc` skill folder. Switching to "Other work" with git
+off removes the commit guard entry, `commit-guard.sh` and `commit-policy`. An entry is removed only
+when it matches the one this tool writes, and a script only when no entry left in the file still
+runs it, so an entry you edited stays with its script.
+
 ## How to undo it
 
 Run `personal-config setup` again and answer the other way; the run previews every file before it
 writes anything, and `personal-config undo` restores whatever an accepted run overwrote. Switching
 to "Code" replaces the short standard, router and ledger with the long forms and adds the code
 standard and the two code-specific rules; switching to "Other work" replaces them the other way and
-removes the global skills and `commits.md` that only the code track installs, and leaves the code standard in your repos on disk for you to delete. `personal-config undo` restores every removed file byte for byte.
+removes the global skills and `commits.md` that only the code track installs, and leaves the code standard in your repos on disk for you to delete. `personal-config undo` restores every removed file and every removed `settings.json` entry byte for byte.

@@ -69,10 +69,15 @@ saved profile supplies it.
 the lighter setup plans the removal of the extra skills and of `~/.claude/rules/model-routing.md`
 from the global folder. A removal only touches a file this tool stamped and you have not marked `adapted`; a file with no stamp, or an adapted one, is left alone and not listed. The preview lists each removal before anything changes.
 
+Going to the lighter setup also keeps only the completion gate among the hooks, so the same run
+removes the other entries from `~/.claude/settings.json`, such as the banner, when a run wants none
+of them. It matches each entry exactly, and it deletes a script only when no entry left in the file
+still runs it. An entry you edited stays, with its script.
+
 ## How to undo it
 
 Run `personal-config setup` again and answer the other way. Every run previews the full list of
 files before writing, and `personal-config undo` restores anything an accepted run overwrote.
 Going from lighter to the whole method replaces the short standard and router with the long ones
 and adds the board, the other skills your answers allow (two to six more) and the routing rule. Going the other way replaces the
-standard and the router and removes the extra skills and `model-routing.md` from `~/.claude`, and leaves the board in your repos on disk; delete it if you no longer want it. `personal-config undo` restores every removed file byte for byte.
+standard and the router and removes the extra skills and `model-routing.md` from `~/.claude`, and leaves the board in your repos on disk; delete it if you no longer want it. `personal-config undo` restores every removed file and `settings.json` entry byte for byte.

@@ -7,6 +7,16 @@ The CLI. The working standard it installs is versioned separately — see
 
 ### Added
 
+- **`setup` removes the hook entries and scripts a run no longer wants.** A non-code run used to
+  leave the delete guard and the write-doc save check in `~/.claude/settings.json` for every later
+  code session, and "No hooks" removed nothing. Now a later run prunes this tool's own five
+  entries that no target wants, matched by deep equality with key order ignored, and deletes a
+  script only where no entry left in the file still runs it, by an absolute, `~`, `$HOME` or
+  `${HOME}` path. An emptied `~/.claude/hooks/personal-config/` folder goes too. An entry you
+  edited stays, and so does its script. The preview lists each removal, and `personal-config undo`
+  restores them byte for byte. The long forms for hooks, kind of work, `/write-doc`, git and
+  configuration weight describe this, and the undo section of the `/write-doc` long form no longer
+  says that `SKILL.md` and `style.md` are removed while `check.sh` and its entry stay.
 - **`/close-out` and `/handoff` are written into each folder, not `~/.claude/skills/`.** Their
   text names a folder's ledger, board and track, so one global copy was right for one folder and
   wrong for the next. `setup` now renders both from each target's own answers into

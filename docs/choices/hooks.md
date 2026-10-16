@@ -46,8 +46,9 @@ exist will not. Three lines at startup is the cheapest way to make the habit aut
 including the ones where you just want to ask a question. And a banner people learn to skip is
 worse than no banner, because it looks like the problem is solved.
 
-**No hooks.** No hook is added to `settings.json`. (The output-style question writes to the same
-file, and answering "Act" there still adds its one key — see `output-style.md`.)
+**No hooks.** No hook is added to `settings.json`, and a run with this answer removes the entries
+and scripts an earlier run added (see "What it writes and where"). (The output-style question
+writes to the same file, and answering "Act" there still adds its one key — see `output-style.md`.)
 
 ## The completion gate, which comes with either option
 
@@ -416,6 +417,19 @@ policy" above). Plus a **merge** into
 an overwrite: existing hooks are preserved, and duplicate entries are not added. The merge is
 shown as a diff, confirmed on its own, and the previous file is backed up.
 
+**A later run removes an entry it no longer wants.** The tool knows the five entries it can write
+(the commit guard, the delete guard, the banner, the completion gate and the write-doc check). If
+a run wants none of the copies of one of them, because you changed an answer, it removes that entry
+from `settings.json` in the same merge, and it deletes the entry's script when no entry left in the
+file still runs it. An entry is matched by deep equality: the same event, the same fields and the
+same values, with the order of keys ignored. An entry you edited, even by one character, no longer
+matches, so it stays and so does its script. A script is kept as well when any entry names it by an
+absolute path or by a `~`, `$HOME` or `${HOME}` path, including an entry of your own. A script with no
+stamp, or one marked `adapted`, is never deleted. When that leaves `~/.claude/hooks/personal-config/`
+empty, the run removes the folder, and only that folder. The preview lists each removal, and its
+`settings.json` line says how many entries it removes. Hooks you wrote yourself are never touched,
+and an event or the `hooks` key that the removal empties goes with it.
+
 One more entry can come from a later question, for work that is not code: the answer **Every
 document it saves** to the `write-doc-check` question adds a `PostToolUse` entry that runs the
 `/write-doc` check script on every save. `write-doc.md` describes it, and how to remove it.
@@ -482,7 +496,11 @@ this tool writes still refuses a delete.
 
 ## How to undo it
 
-`personal-config undo` restores the previous `settings.json`. Or remove the entries by hand and
+`personal-config undo` restores the previous `settings.json`, and it restores every script and
+entry that a later run removed, byte for byte. A later run that does not want an entry also removes
+it, so an entry you copied by hand from the recipe below is removed by such a run when it matches
+this tool's entry exactly. To keep one, edit it so it differs, or point it at a script of your own.
+Or remove the entries by hand and
 delete the scripts: `SessionStart` is the banner, `Stop` the completion gate, and **`PreToolUse`
 is the guards — there may be two of them**, both matching `Bash`, and the `command` line of each
 names the script it runs, so read that to tell the commit guard from the delete guard. Removing

@@ -112,9 +112,13 @@ none of them changes.
 **A later run removes the skill's text files.** If a later run no longer installs `/write-doc`
 (you answer **No**, or switch to a track that does not ask), it plans the removal of
 `~/.claude/skills/write-doc/SKILL.md` and `style.md`, and then removes the folder if it is empty.
-A removal only touches a file this tool stamped and you have not marked `adapted`; a file with no stamp, or an adapted one, is left alone and not listed. It never removes `check.sh`, and it never removes `language-style.md`: a
-`check.sh` that a `settings.json` hook entry names would fail on every Write and Edit if the
-script went and the entry stayed, so `check.sh` and its entry are left for you to remove by hand.
+A removal only touches a file this tool stamped and you have not marked `adapted`; a file with no stamp, or an adapted one, is left alone and not listed. It never removes `language-style.md`. The `check.sh` script and its `PostToolUse` entry are
+handled together: if the run no longer wants the entry (**No**, a switch to a code track, or
+**Only what /write-doc writes** after **Every document it saves**), it removes the entry from
+`settings.json` when it matches this tool's entry exactly. It removes `check.sh` only when no entry
+left in the file still runs it, by an absolute, `~`, `$HOME` or `${HOME}` path, so an entry you
+edited keeps its script. Under **No** or a code track the folder then goes too. Under **Only what
+/write-doc writes** the skill is still installed, so `check.sh` stays in the folder and nothing runs it.
 
 ## The follow-up: when the check runs
 
@@ -191,7 +195,9 @@ adds nothing.
 
 ## How to undo it
 
-If you answered **Every document it saves**, remove the hook entry first. Open
+The simplest undo is to run `personal-config setup` again with **No**, or with **Only what
+/write-doc writes** to keep the skill: the run removes the entry and, under **No**, the folder.
+By hand, if you answered **Every document it saves**, remove the hook entry first. Open
 `~/.claude/settings.json`, find the entry under `PostToolUse` whose `matcher` is `Write|Edit` and
 whose `command` ends in `write-doc/check.sh hook`, and delete that entry alone. Then delete the
 folder `~/.claude/skills/write-doc/`. The order matters: with the folder gone and the entry left in
@@ -202,10 +208,12 @@ folder is the whole undo. Nothing else this tool writes reads the folder.
 `personal-config undo` restores files the last run replaced, and leaves files it created in place.
 So it removes the entry only when the run that added it was your last one and `settings.json`
 existed before it, and then it also takes back anything else that run merged into the file. It
-restores `SKILL.md` and `style.md` after a later run removed them, and makes the folder again.
-Running setup again never removes the hook entry or `check.sh`: an answer of **No**, or of
-**Only what /write-doc writes**, removes `SKILL.md` and `style.md` but leaves `check.sh` and the
-entry in place. Remove the entry first, as above, then the folder.
+restores `SKILL.md` and `style.md` after a later run removed them, and makes the folder again. It
+also restores the entry and `check.sh` if a later run removed them.
+Running setup again does remove the entry: an answer of **No** removes the entry, `SKILL.md`,
+`style.md`, `check.sh` and the folder, and an answer of **Only what /write-doc writes** removes the
+entry and keeps the skill files and `check.sh`, because that answer still renders them. An entry you
+edited stays, and so does `check.sh`. Remove such an entry by hand first, as above, then the folder.
 
 To keep your own edited version of `SKILL.md` through later runs, delete the stamp below its
 frontmatter. A file with no stamp is refused, not replaced. `style.md` and `check.sh` carry their
