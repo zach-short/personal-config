@@ -1,5 +1,5 @@
 {
-  "catalogVersion": "0.8.0+81d77836",
+  "catalogVersion": "0.8.0+0c72de28",
   "questions": [
     {
       "id": "work-kind",
@@ -681,14 +681,14 @@
           "example": "Exactly Opus 5.5, nothing else"
         },
         {
-          "value": "claude-sonnet-5",
-          "label": "claude-sonnet-5 (specific)",
-          "example": "Exactly Sonnet 5, nothing else"
+          "value": "claude-sonnet-5-5",
+          "label": "claude-sonnet-5-5 (specific)",
+          "example": "Exactly Sonnet 5.5, nothing else"
         },
         {
-          "value": "claude-haiku-4-5",
-          "label": "claude-haiku-4-5 (specific)",
-          "example": "Exactly Haiku 4.5, nothing else"
+          "value": "claude-haiku-5-5",
+          "label": "claude-haiku-5-5 (specific)",
+          "example": "Exactly Haiku 5.5, nothing else"
         },
         {
           "value": "claude-fable-5-1",
@@ -774,14 +774,14 @@
           "example": "Exactly Opus 5.5, nothing else"
         },
         {
-          "value": "claude-sonnet-5",
-          "label": "claude-sonnet-5 (specific)",
-          "example": "Exactly Sonnet 5, nothing else"
+          "value": "claude-sonnet-5-5",
+          "label": "claude-sonnet-5-5 (specific)",
+          "example": "Exactly Sonnet 5.5, nothing else"
         },
         {
-          "value": "claude-haiku-4-5",
-          "label": "claude-haiku-4-5 (specific)",
-          "example": "Exactly Haiku 4.5, nothing else"
+          "value": "claude-haiku-5-5",
+          "label": "claude-haiku-5-5 (specific)",
+          "example": "Exactly Haiku 5.5, nothing else"
         },
         {
           "value": "claude-fable-5-1",
@@ -814,7 +814,7 @@
       "phase": "discover",
       "kind": "text",
       "ask": "Which Mechanical model ID?",
-      "placeholder": "e.g. claude-sonnet-5",
+      "placeholder": "e.g. claude-sonnet-5-5",
       "readMore": "model-ids",
       "configKey": "modelIds.mechanical",
       "when": {
@@ -867,14 +867,14 @@
           "example": "Exactly Opus 5.5, nothing else"
         },
         {
-          "value": "claude-sonnet-5",
-          "label": "claude-sonnet-5 (specific)",
-          "example": "Exactly Sonnet 5, nothing else"
+          "value": "claude-sonnet-5-5",
+          "label": "claude-sonnet-5-5 (specific)",
+          "example": "Exactly Sonnet 5.5, nothing else"
         },
         {
-          "value": "claude-haiku-4-5",
-          "label": "claude-haiku-4-5 (specific)",
-          "example": "Exactly Haiku 4.5, nothing else"
+          "value": "claude-haiku-5-5",
+          "label": "claude-haiku-5-5 (specific)",
+          "example": "Exactly Haiku 5.5, nothing else"
         },
         {
           "value": "claude-fable-5-1",
@@ -911,7 +911,7 @@
       "phase": "discover",
       "kind": "text",
       "ask": "Which Light model ID?",
-      "placeholder": "e.g. claude-haiku-4-5",
+      "placeholder": "e.g. claude-haiku-5-5",
       "readMore": "model-ids",
       "configKey": "modelIds.light",
       "when": {
@@ -1458,7 +1458,7 @@
     },
     {
       "id": "model-ids",
-      "body": "# Model IDs for tier ceilings\n\nWhen you set a tier ceiling on a repo, this tool asks which model ID represents each tier in your\nsetup. This is asked once per person and reused across all capped repos.\n\n## Why model IDs matter\n\nModel IDs control what the Agent tool, the model picker, and Claude Code accept or reject. A\nceiling on \"Default\" in the `availableModels` list means:\n\n- Family names like `opus` match every Opus version.\n- Version prefixes like `claude-opus-5` match Opus 5 and later versions.\n- An exact model like `claude-opus-5-5` turns off the family's wildcard and allows only that\n  version.\n\nIf you pick \"sonnet\" for your Mechanical tier, the ceiling allows Sonnet 5.0, 5.1, and any\nfuture Sonnet version. If you pick `claude-sonnet-5`, only that exact version is allowed.\n\n## The options\n\n### Family names (recommended)\n\n- **claude-opus** (matches Opus 4, 5, 5.5, future versions)\n- **claude-sonnet** (matches Sonnet 4, 4.1, 5, future versions)\n- **claude-haiku** (matches Haiku 3, 4, 4.5, future versions)\n- **claude-fable** (matches Fable 5, 5.1, future versions)\n\nFamily names survive new releases. When Claude releases Opus 5.6, your ceiling on \"opus\" will\nautomatically include it.\n\n**Best for:** People who want future model versions to work without reconfiguring.\n\n### Exact versions\n\n- **claude-opus-5-5** (exactly Opus 5.5, nothing else)\n- **claude-sonnet-5** (exactly Sonnet 5, nothing else)\n- **claude-haiku-4-5** (exactly Haiku 4.5, nothing else)\n- **claude-fable-5-1** (exactly Fable 5.1, nothing else)\n\nExact versions freeze at that release and never match newer versions. They give you predictable\nbehavior across sessions.\n\n**Best for:** Teams or workflows where consistency and predictability matter more than automatic\nupgrades.\n\n### Other — type it\n\nIf your setup uses a model not listed, type its ID exactly as Claude Code names it. Examples:\n\n- `claude-opus-5` (prefix form)\n- `gpt-4` (if using an OpenAI provider integration)\n- A custom model ID from your organization's setup\n\n**Best for:** Uncommon setups or local models.\n\n## How to undo\n\nRun setup again and pick a different model ID, or edit `.claude/settings.local.json` in the\naffected repos directly.\n\n## Related\n\n- `tier-ceiling` — the per-repo ceiling that caps which tiers are available\n- `model-tiers` — your personal configuration of Deep, Default, Mechanical, and Light models\n"
+      "body": "# Model IDs for tier ceilings\n\nWhen you set a tier ceiling on a repo, this tool asks which model ID represents each tier in your\nsetup. This is asked once per person and reused across all capped repos.\n\n## Why model IDs matter\n\nModel IDs control what the Agent tool, the model picker, and Claude Code accept or reject. A\nceiling on \"Default\" in the `availableModels` list means:\n\n- Family names like `opus` match every Opus version.\n- Version prefixes like `claude-opus-5` match Opus 5 and later versions.\n- An exact model like `claude-opus-5-5` turns off the family's wildcard and allows only that\n  version.\n\nIf you pick \"sonnet\" for your Mechanical tier, the ceiling allows Sonnet 5, 5.5, and any\nfuture Sonnet version. If you pick `claude-sonnet-5-5`, only that exact version is allowed.\n\n## The options\n\n### Family names (recommended)\n\n- **claude-opus** (matches Opus 5, 5.5, future versions)\n- **claude-sonnet** (matches Sonnet 5, 5.5, future versions)\n- **claude-haiku** (matches Haiku 4.5, 5.5, future versions)\n- **claude-fable** (matches Fable 5, 5.1, future versions)\n\nFamily names survive new releases. When Claude releases Opus 5.6, your ceiling on \"opus\" will\nautomatically include it.\n\n**Best for:** People who want future model versions to work without reconfiguring.\n\n### Exact versions\n\n- **claude-opus-5-5** (exactly Opus 5.5, nothing else)\n- **claude-sonnet-5-5** (exactly Sonnet 5.5, nothing else)\n- **claude-haiku-5-5** (exactly Haiku 5.5, nothing else)\n- **claude-fable-5-1** (exactly Fable 5.1, nothing else)\n\nExact versions freeze at that release and never match newer versions. They give you predictable\nbehavior across sessions.\n\n**Best for:** Teams or workflows where consistency and predictability matter more than automatic\nupgrades.\n\n### Other — type it\n\nIf your setup uses a model not listed, type its ID exactly as Claude Code names it. Examples:\n\n- `claude-opus-5` (prefix form)\n- `gpt-4` (if using an OpenAI provider integration)\n- A custom model ID from your organization's setup\n\n**Best for:** Uncommon setups or local models.\n\n## How to undo\n\nRun setup again and pick a different model ID, or edit `.claude/settings.local.json` in the\naffected repos directly.\n\n## Related\n\n- `tier-ceiling` — the per-repo ceiling that caps which tiers are available\n- `model-tiers` — your personal configuration of Deep, Default, Mechanical, and Light models\n"
     },
     {
       "id": "model-routing",

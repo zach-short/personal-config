@@ -13,16 +13,16 @@ ceiling on "Default" in the `availableModels` list means:
 - An exact model like `claude-opus-5-5` turns off the family's wildcard and allows only that
   version.
 
-If you pick "sonnet" for your Mechanical tier, the ceiling allows Sonnet 5.0, 5.1, and any
-future Sonnet version. If you pick `claude-sonnet-5`, only that exact version is allowed.
+If you pick "sonnet" for your Mechanical tier, the ceiling allows Sonnet 5, 5.5, and any
+future Sonnet version. If you pick `claude-sonnet-5-5`, only that exact version is allowed.
 
 ## The options
 
 ### Family names (recommended)
 
-- **claude-opus** (matches Opus 4, 5, 5.5, future versions)
-- **claude-sonnet** (matches Sonnet 4, 4.1, 5, future versions)
-- **claude-haiku** (matches Haiku 3, 4, 4.5, future versions)
+- **claude-opus** (matches Opus 5, 5.5, future versions)
+- **claude-sonnet** (matches Sonnet 5, 5.5, future versions)
+- **claude-haiku** (matches Haiku 4.5, 5.5, future versions)
 - **claude-fable** (matches Fable 5, 5.1, future versions)
 
 Family names survive new releases. When Claude releases Opus 5.6, your ceiling on "opus" will
@@ -33,8 +33,8 @@ automatically include it.
 ### Exact versions
 
 - **claude-opus-5-5** (exactly Opus 5.5, nothing else)
-- **claude-sonnet-5** (exactly Sonnet 5, nothing else)
-- **claude-haiku-4-5** (exactly Haiku 4.5, nothing else)
+- **claude-sonnet-5-5** (exactly Sonnet 5.5, nothing else)
+- **claude-haiku-5-5** (exactly Haiku 5.5, nothing else)
 - **claude-fable-5-1** (exactly Fable 5.1, nothing else)
 
 Exact versions freeze at that release and never match newer versions. They give you predictable

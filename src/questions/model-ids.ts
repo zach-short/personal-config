@@ -26,14 +26,14 @@ export const POPULAR_MODEL_IDS = [
     example: 'Exactly Opus 5.5, nothing else',
   },
   {
-    value: 'claude-sonnet-5',
-    label: 'claude-sonnet-5 (specific)',
-    example: 'Exactly Sonnet 5, nothing else',
+    value: 'claude-sonnet-5-5',
+    label: 'claude-sonnet-5-5 (specific)',
+    example: 'Exactly Sonnet 5.5, nothing else',
   },
   {
-    value: 'claude-haiku-4-5',
-    label: 'claude-haiku-4-5 (specific)',
-    example: 'Exactly Haiku 4.5, nothing else',
+    value: 'claude-haiku-5-5',
+    label: 'claude-haiku-5-5 (specific)',
+    example: 'Exactly Haiku 5.5, nothing else',
   },
   {
     value: 'claude-fable-5-1',
