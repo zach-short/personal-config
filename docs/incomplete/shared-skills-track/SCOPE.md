@@ -1,6 +1,6 @@
 # SCOPE: shared global skills flip to the track of the last `setup` run
 
-**Status:** `SCOPED`, waiting on GATE 1. Opened 2026-10-16 by board item 108, on Opus 5.5. Owner:
+**Status:** `SCOPED`. GATE 1 answered 2026-10-16 (§7); next is a design and plan for O5, then GATE 2. Opened 2026-10-16 by board item 108, on Opus 5.5. Owner:
 Zach. Split from item 101 (the leftovers design D2, archived 2026-10-16 to
 `~/Projects/archive/personal-config/setup-global-leftovers/DESIGN.md`). This document
 proposes and decides nothing. §7 holds the questions, and the answers are written in below them.
@@ -202,6 +202,15 @@ contradict D2's rule, since the files sit inside the folder. O6 and O7 supersede
 - **Q5. Correct `dedupe`'s false comment (F8) with this build, or alone now?** Recommended: with
   this build, so `setup.ts` changes once.
 
-### Answers
+### Answers, 2026-10-16
 
-Not yet given.
+Zach answered all five in one reply, in chat, the same day the scope was finished: "all recs".
+
+- **Q1: yes.** Build a fix.
+- **Q2: O5**, with DIAL-1 to DIAL-3 at their defaults. `/close-out` and `/handoff` are rendered
+  into each target's `.claude/skills/`, excluded from git, and the `~/.claude/skills/` copies are
+  removed. A session outside any target gets neither skill. DIAL-4 does not apply; DIAL-5 is yes.
+- **Q3: yes.** setup-tracks' layer split is superseded for `/close-out` and `/handoff` only, dated
+  2026-10-16. The design records the supersession line R8 asks for.
+- **Q4: leave F2 and F6 to leftovers D1.** They are recorded here only.
+- **Q5: with this build.** F8's comment is corrected in the same change to `setup.ts`.
