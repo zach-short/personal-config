@@ -1,7 +1,7 @@
 # PLAN: `personal-config init`
 
 **Status:** `BUILT` 2026-10-16: all three phases, by board items 102, 103 and 104. Phase 3's CI
-step is written, not seen running (R10). `PLANNED` 2026-10-16, GATE 2 answered the same day,
+step seen green 2026-10-16 on run `38920504583` (commit `bc21b66`), `node-install` on Node 20, 22 and 24. `PLANNED` 2026-10-16, GATE 2 answered the same day,
 every recommendation taken (§7).
 Written by board item 86 at `0214402`. Design: `DESIGN.md`, `RATIFIED` 2026-10-05 (`D1` to `D9`),
 amended at GATE 2 (`D10`, `D11`). This plan authorizes the three phases below without a further
@@ -225,7 +225,7 @@ commit that takes this phase's `README.md`, `CHANGELOG.md` and `.github/workflow
 load average 3.39: `typecheck` exit 0; `lint` 191 files, exit 0; `bun test` 1772 pass, 0 fail, 96
 files, exit 0. `doctor . examples` exits 1 on the same 20 findings items 102 and 103 recorded, none
 in a file this phase touched. The hand-run proof in scope item 4 passes, and item 104's close-out
-quotes it. CI step written, not seen running (R10): Zach pushes.
+quotes it. CI step seen green on run `38920504583` for Node 20, Node 22 and Node 24 (2026-10-16, commit `bc21b66`): the step "setup, then init and doctor in a scratch folder" wrote 8 files for `setup`, 7 for `init`, and `doctor` reported no findings. The run's `gates` job is red for two causes outside this effort: macOS `doctor . examples` reports only the three `relative-dates` lines in `docs/incomplete/worktree-sweep/SCOPE.md` (item 104's open finding), and ubuntu `bun test` fails `tests/fold-migrate-ranges.test.ts:193` (item 105's test; `readdir` order, `5-…` before `4-…`).
 
 *As built:* the proof's `PATH` is `<temp>/prefix/bin:<temp>/nodebin:/usr/bin:/bin`, where
 `<temp>/nodebin` holds one symlink to `node`. On this machine `node` and `bun` are both in
