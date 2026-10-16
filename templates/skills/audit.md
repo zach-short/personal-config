@@ -134,10 +134,12 @@ When the last lane ends, or the stop rules end the audit:
    below the table.
    - A security fix row is Deep. It is never built in this run: the Deep lift question came
      before the row existed.
-   - A dead-code delete row is Default. It names each file to delete and the evidence that nothing
-     imports it.
+   - A dead-code delete row with grep evidence that nothing imports the file is Mechanical. It
+     names each file to delete and that evidence.
+   - A parity or copy fix whose target the finding cites by `file:line` is Mechanical. A finding
+     whose fix has to find a cause is Default.
    - A finding that needs an owner decision is a `HELD` row, with the question written in it.
-   - Any other row takes the tier of the lane's verify step, and is `OPEN`.
+   - Any other row takes the tier the ladder in the model rule gives its finding, and is `OPEN`.
 3. **Under `/autopilot`**, go back to its procedure: it reads the board again and launches. Typed
    alone, post the report's path and the rows written, and stop. Nothing is built.
 

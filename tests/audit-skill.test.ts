@@ -121,6 +121,10 @@ describe('what /audit says', () => {
       'Take each number from `personal-config passoff next` at the moment you write, never from memory, and run it again before the next row.',
     );
     expect(text).toContain('A security fix row is Deep.');
+    expect(text).toContain(
+      'A dead-code delete row with grep evidence that nothing imports the file is Mechanical.',
+    );
+    expect(text).toContain('ladder');
   });
 
   /** The Fable review of the stop rules, 2026-10-15: a review launched after a cap was blocking. */
