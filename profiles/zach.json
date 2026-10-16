@@ -8,7 +8,7 @@
   "models": {
     "deep": "Fable 5.1",
     "default": "Opus 5.5",
-    "fast": "Sonnet 5",
+    "fast": "Sonnet 5.5",
     "light": "Haiku 5.5"
   },
   "answers": {
@@ -26,7 +26,7 @@
     "chatStyle": "ste",
     "skills": "all",
     "modelIds.default": "claude-opus-5-5",
-    "modelIds.mechanical": "claude-sonnet-5",
+    "modelIds.mechanical": "claude-sonnet-5-5",
     "modelIds.light": "claude-haiku-5-5",
     "practices.comments": "why-only",
     "practices.function-length": "house-6-15",
