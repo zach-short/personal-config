@@ -12,7 +12,7 @@
     "light": "Haiku 5.5"
   },
   "answers": {
-    "commitPolicy": "print-blocks",
+    "commitPolicy": "agent-pushes",
     "attribution": "none",
     "modelLightEnabled": "yes",
     "modelRouting": "delegate-or-stop",
