@@ -85,7 +85,9 @@ the done screen stays in the scrollback when the run ends. `cancelRun()` exits t
 
 ### Phase 1. Route the bare command, the renderers and the home screen
 
-**Status.** `BUILT` 2026-10-16, uncommitted (see As built below).
+**Status.** `BUILT` 2026-10-16. Committed by Zach as `32bee9d` on `worktree-bare-command-home`
+and merged with `main` in `ad1ea66` (verified 2026-10-16, `git log`). The "uncommitted" in the As
+built note below was true when it was written and is out of date (R5).
 
 **Scope.**
 
@@ -156,8 +158,8 @@ a real child process, not by setting the property.
 
 ### Phase 2. Setup inside the frame
 
-**Status.** `PLANNED` 2026-10-16. Waits on item 109 closing, because both edit
-`src/commands/setup.ts` (F9), unless the owner answers otherwise at GATE 2.
+**Status.** `BUILT` 2026-10-16 in the main checkout on `ad1ea66`, uncommitted. Gates green, not
+seen running in a terminal (see As built below). Item 109 closed first, as GATE 2 asked.
 
 **Scope.**
 
@@ -190,10 +192,58 @@ done, and `← back`, `Read more…` and `ctrl+c` then a resume each behave as i
 **Watch for.** A `say()` line that reaches the real stdout while a frame is drawn breaks the
 in-place redraw; the sink must be set before the first question and cleared on every exit path.
 
+**As built, 2026-10-16** (uncommitted in the main checkout on `ad1ea66`). Gates green, not seen
+running in a terminal.
+
+- `framePrompters(io?)` in `src/lib/frame.ts` returns `{ ask, confirm, run }`. `ask` and `confirm`
+  are the pair `runSetup(cli, prompters?)` takes (BD-5). `run(setup)` sets the sink, runs setup,
+  draws the last screen, and puts the sink back in a `finally`. `src/cli.ts`'s `'guided'` route is
+  `frame.run(() => runSetup(parseCli(argv), frame))`, not `runSetup(cli, framePrompters())` as
+  scope 4 wrote it, because nothing else could draw the done screen or clear the sink.
+- `runSetup` wraps the frame's `ask` in `checkpointing()` through the code that already wraps
+  `clackPrompter()`: a `prompters` argument counts as interactive. With `prompters` the clack intro
+  is not printed, because the frame has its own header. With none, every line runs as before.
+- The cancel path calls `setSink(null)` and then `cancelRun()`, so its message reaches the
+  terminal. An `exit` handler shows the cursor again (BD-8).
+- `ui.ts` also gained `drawScreen(text, out?)`, and `clearScreen()` takes an optional stream, so a
+  test can draw into its own stream. `src/commands/home.ts` calls both with no argument, as before.
+- **BD-6, built differently.** The write step is one static screen: the step, and the confirm's
+  own words. It has no spinner, because `commitPlan()` is one `await` with no progress (F6) and the
+  done screen replaces the step when it returns. The done screen shows the last 6 non-blank lines
+  `setup` said after the write (the counts, the backup line, the clipboard line), not 6 paths:
+  `finish()` says no paths, and scope 2 allowed no other change to `setup.ts`.
+- **BD-7, as built.** The panel heading names the repo (`Each repo · <name>`) from `pick()`'s
+  result, in the order `chooseRepos` plans them. The rail says `Each repo (n of m)`. A repo starts
+  when its first question is asked again, unless `← back` led there. On a resumed run that replays
+  whole repos, the count starts from the first repo the frame draws, so it can be low.
+- **BD-11, one change for the owner to read.** The review hints are `↑/↓ scroll · ←/→ yes or no ·
+  enter choose · ctrl+c quit`. BD-11's line has no key for the choice, and ↑/↓ scrolls. `y` and
+  `n` answer at once, as in clack. Text questions show `enter next · ctrl+c quit`.
+- **BD-12 (new, 2026-10-16).** A frame multiselect starts with its default ticked, so enter takes
+  the default as it does on every other kind. `setup`'s clack multiselect starts empty and is
+  unchanged. No question is a multiselect as of 2026-10-16 (counted from `ALL_QUESTIONS`), so no
+  screen shows it yet. The repo picker is not a question, and it starts empty, as `setup`'s does.
+  Reverse by passing `initialValues: []`.
+- An ended run that wrote nothing (declined, already current) ends on what `setup` said, in the
+  panel of the step it ended on, with no done screen.
+- Tests: `tests/frame-prompter.test.ts` (17 cases, through `PassThrough` streams by way of
+  `tests/frame-driver.ts`), `tests/guided-run.test.ts` (a whole run through the frame writes the
+  same files as `--yes`; a select that ignored its default made it fail), `tests/ui-sink.test.ts`.
+  No existing test was edited.
+- Gates, in the main checkout: `bun run typecheck` clean; `bun run lint` checked 209 files, no
+  warnings; `bun test` 1,884 pass, 0 fail; `bun run doctor . examples` 13 findings (7 advisory), all
+  in untracked or `examples/` markdown and none in a file this phase touched; `bun run build` gives
+  `dist/cli.js` 384,077 bytes, up 14,300 from 369,777 at `ad1ea66`. `node dist/cli.js | cat` and
+  `bun run src/cli.ts | cat` both `diff` equal to `node dist/cli.js --help`.
+- During the build, a rewrite of `main` at 16:23 (a `reset` to `d28c90a`, then a rebase that
+  reworded `b1d4ef7`) discarded the uncommitted `ui.ts` and `setup.ts` edits once. They were made
+  again; the tree at `ad1ea66` equals `d28c90a`'s (`git diff --stat`).
+
 ### Phase 3. README, CHANGELOG, board row
 
-**Status.** `PLANNED` 2026-10-16. Waits on the owner's word that the main checkout's uncommitted
-edits to `README.md` and `CHANGELOG.md` are settled.
+**Status.** `PLANNED` 2026-10-16. Waits on Phase 2 being committed. The wait on the main checkout's
+edits to `README.md` and `CHANGELOG.md` is over: Zach said on 2026-10-16 that the main checkout no
+longer holds another session's edits to tracked files.
 
 **Scope.** One paragraph in `README.md` on the bare command; one line under the next version in
 `CHANGELOG.md`; board row 110's "Files it owns" corrected to the files this plan names
@@ -217,7 +267,9 @@ As `DESIGN.md` section 4, all seven accepted (D4).
 - `dist/cli.js` is 351,547 bytes at `52a3838`.
 - `@clack/prompts` 1.8.1 pins `@clack/core` 1.5.1 exactly; a bump of one is a bump of both.
 - The main checkout holds another session's uncommitted edits to 13 tracked files (git status at
-  session start, 2026-10-16), including `src/lib/types.ts` and `src/lib/write-plan.ts`.
+  session start, 2026-10-16), including `src/lib/types.ts` and `src/lib/write-plan.ts`. *Out of
+  date 2026-10-16 (R5):* those edits were item 109's, committed in `6ad97ef` and `7b67efe`; `git
+  status` at the start of Phase 2 showed no modified tracked file.
 - `doctor .` in a worktree checks fewer files than in the main checkout (`CLAUDE.md`, "Gates that
   lie"): rerun it there after the merge.
 

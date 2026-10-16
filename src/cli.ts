@@ -14,6 +14,7 @@ import { runWorktree } from './commands/worktree.ts';
 import { runDoctor } from './doctor/index.ts';
 import { bareRoute, checkUsage, parseCli } from './lib/args.ts';
 import { exists } from './lib/disk.ts';
+import { framePrompters } from './lib/frame.ts';
 import { configFile } from './lib/paths.ts';
 import type { Cli } from './lib/types.ts';
 import { version } from './lib/version.ts';
@@ -80,7 +81,10 @@ async function main(): Promise<number> {
   if (argv.length === 0) {
     const route = bareRoute(interactive(), await exists(configFile()));
     if (route === 'home') return runHome(runArgv);
-    if (route === 'guided') return runSetup(parseCli(argv));
+    if (route === 'guided') {
+      const frame = framePrompters();
+      return frame.run(() => runSetup(parseCli(argv), frame));
+    }
   }
   return runArgv(argv);
 }

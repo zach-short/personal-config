@@ -40,7 +40,7 @@ import type {
   RepoScan,
   TrackMode,
 } from '../lib/types.ts';
-import { previewTree, renderDiff, say, short, targetList } from '../lib/ui.ts';
+import { note, previewTree, renderDiff, say, short, targetList } from '../lib/ui.ts';
 import { version } from '../lib/version.ts';
 import {
   commitPlan,
@@ -63,12 +63,21 @@ import { renderAll } from '../render/index.ts';
 import { shadowingCopies } from '../render/skills.ts';
 import { standardVersion } from '../render/standard.ts';
 
-export async function runSetup(cli: Cli): Promise<number> {
-  const interactive = process.stdin.isTTY === true && !cli.yes;
-  const asking: Prompter = interactive ? clackPrompter() : defaultsPrompter();
+/**
+ * `prompters` is the bare command's frame (bare-command-home BD-5): one prompter for the
+ * questions, one for the batch confirm, as below. With none, a terminal gets clack and anything
+ * else the defaults, as before. The frame draws its own header, so it gets no clack intro.
+ */
+export async function runSetup(
+  cli: Cli,
+  prompters?: { ask: Prompter; confirm: Prompter },
+): Promise<number> {
+  const interactive = prompters !== undefined || (process.stdin.isTTY === true && !cli.yes);
+  const asking: Prompter =
+    prompters?.ask ?? (interactive ? clackPrompter() : defaultsPrompter());
 
-  if (interactive) p.intro('personal-config — setup');
-  else say('personal-config — setup (non-interactive)');
+  if (prompters === undefined && interactive) p.intro('personal-config — setup');
+  else if (!interactive) say('personal-config — setup (non-interactive)');
 
   const config = await loadConfig(cli, null);
   const answers: Answers = { ...config.answers };
@@ -91,7 +100,7 @@ export async function runSetup(cli: Cli): Promise<number> {
   // prompter: under `--yes` that is `defaultsPrompter`, which would answer it `true` without a
   // person ever seeing it — a confirm in name only. `confirmBatch` returns early where there is
   // no TTY, so this is never asked of a terminal that is not there.
-  return endRun(await finish(cli, changes, clackPrompter(), hidden));
+  return endRun(await finish(cli, changes, prompters?.confirm ?? clackPrompter(), hidden));
 }
 
 /**
@@ -659,7 +668,7 @@ export async function confirmBatch(
   const seeDiffs = await prompter.confirm('Show the per-file diff first?', false);
   if (seeDiffs) {
     for (const change of real) {
-      p.note(renderDiff(change), short(change.file.path));
+      note(renderDiff(change), short(change.file.path));
     }
   }
   return prompter.confirm(`Write these ${real.length} file(s)?`, true);

@@ -1,19 +1,58 @@
+import type { Writable } from 'node:stream';
+import * as p from '@clack/prompts';
 import { diffLines } from './diff.ts';
 import { contractHome } from './paths.ts';
 import type { RepoScan } from './types.ts';
 import type { PlannedChange } from './write-plan.ts';
 
+/** Where `say()` sends a line. A line may hold newlines; a sink that lays lines out splits it. */
+export type Sink = (line: string) => void;
+
+function toConsole(line: string): void {
+  console.log(line);
+}
+
+let sink: Sink = toConsole;
+
+/**
+ * The frame collects what `setup` says into its next panel, because a line printed to the
+ * terminal while a frame is drawn breaks the in-place redraw (bare-command-home BD-4). `null`
+ * puts the console back; every other command never calls this.
+ */
+export function setSink(next: Sink | null): void {
+  sink = next ?? toConsole;
+}
+
 /** Console output lives here alone, so every other module stays testable without capture. */
 export function say(line = ''): void {
-  console.log(line);
+  sink(line);
+}
+
+/**
+ * A titled block, as `p.note` draws it in a terminal. Behind a sink it is the title, then the
+ * body, as two lines: the frame draws its own box, and clack's would sit inside it (BD-5).
+ */
+export function note(body: string, title: string): void {
+  if (sink === toConsole) {
+    p.note(body, title);
+    return;
+  }
+  sink(title);
+  sink(body);
 }
 
 /**
  * Erase the screen and put the cursor top left, so a frame draws from the top (bare-command-home
  * BD-8). Not the alternate screen: the last frame stays in the scrollback when the run ends.
  */
-export function clearScreen(): void {
-  process.stdout.write('\x1b[2J\x1b[H');
+export function clearScreen(out: Writable = process.stdout): void {
+  out.write('\x1b[2J\x1b[H');
+}
+
+/** A whole screen that waits for no key: the frame's last one, left in the scrollback. */
+export function drawScreen(text: string, out: Writable = process.stdout): void {
+  clearScreen(out);
+  out.write(`${text}\n`);
 }
 
 export function short(path: string): string {
