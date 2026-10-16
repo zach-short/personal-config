@@ -160,7 +160,9 @@ function variables(
   name: string,
   shape: SkillShape,
 ): Record<string, string> {
-  if (name === 'close-out') return closeOutVars(shape, namesOf(ctx));
+  if (name === 'close-out') {
+    return closeOutVars(shape, namesOf(ctx), wantedSkills(ctx).includes('clean-up'));
+  }
   if (name === 'handoff') return handoffVars(shape, namesOf(ctx));
   if (name === 'passoff') return passoffVars(shape, namesOf(ctx));
   if (name === 'clean-up') return cleanUpVars(shape, namesOf(ctx));
@@ -519,7 +521,11 @@ function folderMove(shape: SkillShape): string {
  * the reader can make. None holds on the short track, and the runtime-pass block never held for a
  * ledger target on any track.
  */
-function closeOutVars(shape: SkillShape, names: RecordNames): Record<string, string> {
+function closeOutVars(
+  shape: SkillShape,
+  names: RecordNames,
+  cleanUp: boolean,
+): Record<string, string> {
   const blocks = handBackBlocks(shape);
   return {
     CLOSE_OUT_TRIGGER: trigger(shape),
@@ -532,7 +538,40 @@ function closeOutVars(shape: SkillShape, names: RecordNames): Record<string, str
     HAND_BACK_BLOCKS: blocks.join('\n'),
     PROOF_SENTENCE: proofSentence(shape),
     WORKTREE_STEP: shape.git ? `\n\n${closeOutWorktreeStep()}` : '',
+    CLEAN_UP_STEP: cleanUp ? `\n\n${cleanUpStep(shape, names)}` : '',
   };
+}
+
+/**
+ * Workflow-refinement D4 (ezhomesteading, 2026-10-16): every close-out ends by sweeping what
+ * earlier work left finished, because nothing else runs `/clean-up` and closed folders pile up.
+ * Rendered only where `/clean-up` is, so the step never names a skill that is not installed. It
+ * comes after the worktree step, and like it lands above the blocks, so the model line stays last.
+ */
+function cleanUpStep(shape: SkillShape, names: RecordNames): string {
+  const n = shape.git ? 5 : 4;
+  const what = shape.folders ? cleanUpFolders() : cleanUpBoard(names);
+  return [
+    `## ${n}. Run \`/clean-up\`, last`,
+    '',
+    'Load `/clean-up` with the Skill tool and run it for what earlier work left finished.',
+    ...what,
+    'It waits for a yes in chat before it moves anything. Put its report and its blocks above the',
+    'blocks of step 2, so the model line stays last in the message.',
+  ].join('\n');
+}
+
+function cleanUpFolders(): string[] {
+  return ['Each project folder whose phases are all checked off moves to the archive.'];
+}
+
+function cleanUpBoard(names: RecordNames): string[] {
+  return [
+    `On a board with a \`${names.items}/\` folder, its fold moves each \`DONE\` item's file and its`,
+    'row to the archive, and a `DONE` row with no file gets an archive file that holds the row.',
+    `${legacyBoard(names)}, the fold moves \`DONE\` prompts and old`,
+    'step bodies, and every row stays. Finished design folders move to the archive on both.',
+  ];
 }
 
 function trigger(shape: SkillShape): string {

@@ -1,6 +1,6 @@
 # Design: one file per board item, and a ledger that holds only what is true
 
-**Status.** `RATIFIED` 2026-10-15. Amended the same day at GATE 2 with D16 and D17 (`PLAN.md` §7.1). Opened as `SCOPE.md` on 2026-10-15 by Opus 5.5, answered in
+**Status.** `RATIFIED` 2026-10-15. Amended the same day at GATE 2 with D16 and D17 (`PLAN.md` §7.1). Amended 2026-10-16 with D18 (board item 107). Opened as `SCOPE.md` on 2026-10-15 by Opus 5.5, answered in
 full at GATE 1 the same day (every recommendation taken, `SCOPE.md` §7), and turned into this file
 the same day by Opus 5.5. No board row carries this work yet; the rows come after GATE 2 (`PLAN.md`
 §6). The standard moves to 2.0.0.
@@ -355,6 +355,10 @@ and the index line keeps the number taken. Doing it in 2.0.0 avoids a second maj
 **What it beat.** Keeping §2.1 as written, which leaves the table growing one line per closed item
 for ever.
 
+*Amended 2026-10-16 by D18:* a migrated board's `DONE` row with no item file now leaves the table
+too, with an archive file written for it. The sentence "1.x boards are untouched" holds for a board
+with no items folder only.
+
 ### D17. "Files it owns" is exempt from the row cell ceiling (GATE 2 question 2, A; 2026-10-15)
 
 `row-cell-ceiling` checks every column except the one whose header starts with "files". **Amends**
@@ -366,6 +370,45 @@ miss collisions it catches at `61a3b6e`. The ceiling exists for prose, and this 
 
 **What it beat.** A separate 400-character ceiling, which still pushes a long list toward
 directories; and capping it like every cell, as GATE 1's answer reads literally.
+
+### D18. A migrated board's `DONE` row with no file leaves the table with a file written for it (2026-10-16)
+
+Decided by Zach at ezhomesteading's workflow-refinement GATE 2, 2026-10-16 12:18 EDT: his answer to
+that plan's BD-2 was "Amend D16 upstream" (`~/Projects/ezhomesteading/docs/incomplete/workflow-refinement/PLAN.md`
+§7, the decision in its §1). **Amends** D16's last two sentences.
+
+On a migrated board (D12: its items folder exists), `fold board` treats a `DONE` row that has no
+item file, live or archived, as D16 treats a row with one, except that the file is written rather
+than moved. In order, in the one fold:
+
+1. Write `<archiveHome>/<itemsDir>/<n>-<slug>.md` (D7's name, from the task cell). It holds
+   `# <n>. <task>`, the row as it stood, header and all, its line copied byte for byte, and where
+   the record is: the ledger step its status cell names, in the archive's `<LEDGER>-log.md` when
+   the step is at or below `ledgerFrozenAt`; and the section in the archive's `<BOARD>-closed.md`
+   that holds its prompt or its range's shared context, where one exists.
+2. Read the archive file back byte for byte.
+3. Write the index line, which keeps the row's task and status cells:
+   `- **passoff/24-build-the-thing.md** ✅ - item 24, <task cell>, <status cell>, folded <date>.`
+4. Cut the row from the table, in the same `commitPlan` as the index line.
+
+A row whose number the archive already holds under another name or other bytes is not touched;
+that is `item-files`' finding. A `DONE` row with a live file keeps D16's path. A board with no items
+folder is still untouched: its rows keep `DONE - <LEDGER> n`, and a citation of the row resolves on
+the table.
+
+**The defense.** 1.x `DONE` rows are most of a migrated board: on ezhomesteading, 127 of 194 rows
+and 80,465 bytes, which keep a session's start read near 40k tokens where the budget is 15k
+(that `PLAN.md` §0.1 and §0.2). Writing the file keeps D16's invariant that a row leaves the table
+only once its words are in the archive, read back. The file is found by number (D13), so the 285
+citations there of `DONE` rows with no section anywhere (§0.3) still resolve.
+
+**What it beat.** Keeping D16 as written and accepting the 40k start; and a one-off script that
+folds the rows outside `commitPlan`, with no preview, no backup and no read-back (that design's
+option A3).
+
+**What it costs, accepted.** The archive's items folder holds two shapes: a moved item file with a
+close-out, and a written file holding only a row and pointers. The written file's first line names
+the task, as a moved file's does, so every reader keyed on `# <n>.` reads both.
 
 ## 4. The shapes
 
