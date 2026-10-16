@@ -105,6 +105,12 @@ twice. The global files follow the track of the run that wrote them last (§1, c
 `PLAN.md` §0 row F1), so an `init` that wrote them would quietly re-shape every other project on
 the machine to fit this one. *Source:* Q2 A, §2. *Supersedes:* nothing. *Date:* 2026-10-05.
 
+*As built, 2026-10-16 (board item 103):* `init` writes one thing outside the folder, and D8 is
+why. When it overwrites a file that already exists in the folder, `commitPlan` backs that file up
+under `~/.config/personal-config/backups/`, which is what lets `undo` restore it. A git target
+always has one: `git init` writes a default `.git/info/exclude`, and an untracked target edits it.
+`~/.claude` and `config.json` are unchanged, and `tests/init-parity.test.ts` pins both halves.
+
 **D3. Without `~/.config/personal-config/config.json`, `init` stops before it asks anything.** It
 prints the copy settled at GATE 1 (Q5, plain register):
 

@@ -4,6 +4,7 @@ import { runCatalog } from './commands/catalog.ts';
 import { runContext } from './commands/context.ts';
 import { runFold } from './commands/fold.ts';
 import { runHandoff } from './commands/handoff.ts';
+import { runInit } from './commands/init.ts';
 import { runPassoff } from './commands/passoff.ts';
 import { runSetup } from './commands/setup.ts';
 import { runUndo } from './commands/undo.ts';
@@ -17,6 +18,7 @@ import { version } from './lib/version.ts';
 const HELP = `personal-config — set up an agent-driven working style in your repos
 
   personal-config setup                        ask, preview, then write
+  personal-config init [path]                  set up one project with your saved answers
   personal-config doctor                       check what is written, against the rules it follows
   personal-config upgrade [path…]             what changed in the standard since a repo adapted it
   personal-config undo                         restore the files the last run overwrote
@@ -57,6 +59,7 @@ overwrites, and can be undone.`;
  */
 const DISPATCH: Record<string, (cli: Cli) => Promise<number>> = {
   setup: runSetup,
+  init: runInit,
   catalog: () => runCatalog(),
   doctor: runDoctor,
   undo: () => runUndo(),
