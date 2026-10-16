@@ -14,6 +14,9 @@ import {
   logFold,
   type Migration,
   migrateFold,
+  type RowFile,
+  type RowRecord,
+  rowFold,
   boardFold as sectionFold,
   withoutRows,
 } from '../lib/fold.ts';
@@ -44,7 +47,8 @@ const USAGE = [
   'Moves what §2.1 already calls dead weight out of the live documents and into the archive:',
   "a `DONE` item's prompt, and every ledger step body but the newest --keep (default 20).",
   'The board keeps every row; the ledger keeps every step number, title and date.',
-  `In a repo with an items folder, a \`DONE\` item's file and its row move to the archive, and`,
+  `In a repo with an items folder, a \`DONE\` item's file and its row move to the archive, a`,
+  '`DONE` row with no file leaves the table with an archive file written that holds it, and',
   `ledger log lines older than --log-days (default ${LOG_DAYS}) move to the archive's log.`,
   'With no target it does both.',
   '',
@@ -98,6 +102,17 @@ type Half = {
   dest: string;
   /** Items the fold leaves alone, each with the reason. */
   held: string[];
+  /**
+   * Whether the trim, the index lines and the removals must all land or none of them: a migrated
+   * board's half, whose rows leave the table only beside an archive file and an index line.
+   */
+  whole: boolean;
+  /**
+   * The board text the trim was computed from, on a migrated board's half; null elsewhere. The
+   * trim is refused if the file no longer holds it when the plan is resolved, because the trim
+   * would write over an edit made in between (item 107's audit, F3).
+   */
+  source: string | null;
 };
 
 /**
@@ -173,7 +188,20 @@ async function prepareBoard(
   const itemsDir = join(root, names.items);
   // D12: migrated is read from the folder on disk, never from the config's default name.
   if (hasItemsFolder(itemsDir)) {
-    return prepareItems(livePath, text, itemsDir, join(archiveHome, names.items), names.items);
+    // The trim re-encodes the board and a row file is built from its decoded text, so a byte that
+    // is not UTF-8 would change in both, and the read-back compares the decoded copy with itself
+    // (item 107's audit, F1). Refused before anything is planned.
+    const raw = await rawBytes(livePath);
+    if (raw !== null && !raw.equals(Buffer.from(text, 'utf8')))
+      throw new Error(notUtf8(livePath));
+    return prepareItems({
+      livePath,
+      board: text,
+      itemsDir,
+      archiveItems: join(archiveHome, names.items),
+      itemsName: names.items,
+      record: await rowRecord(root, archiveHome, names),
+    });
   }
   return prepareAppend(livePath, 'board', sectionFold(text), archiveHome, names.board, 'board');
 }
@@ -237,6 +265,8 @@ async function prepareAppend(
     moved: `${fold.folded.length} ${noun}, ${foldedLines(fold)} line(s)`,
     dest: archivePath,
     held: [],
+    whole: false,
+    source: null,
   };
 }
 
@@ -246,64 +276,172 @@ function indexWhat(kind: AppendKind): string {
   return 'folded ledger log lines, appended as the log is folded';
 }
 
-/**
- * The board half on a migrated board (D6, D16). An archive file that already holds the same bytes
- * is not written again, which is what makes a fold after `undo` safe; one with different bytes
- * holds that item, because no tool can judge which copy is the real one.
- */
-async function prepareItems(
-  livePath: string,
-  board: string,
-  itemsDir: string,
-  archiveItems: string,
-  itemsName: string,
-): Promise<Half | null> {
-  const moves = itemFold(board, await listItems(itemsDir));
-  if (moves.length === 0) return null;
+/** Where a 1.x row's record went: the ledger, how far its log froze, and the closed archive. */
+async function rowRecord(
+  root: string,
+  archiveHome: string,
+  names: DocNames,
+): Promise<RowRecord> {
+  const closedName = `${docStem(names.board)}-closed.md`;
+  const closedPath = join(archiveHome, closedName);
+  return {
+    ledger: names.ledger,
+    frozenAt: await readLedgerFrozenAt(root),
+    closedName,
+    closed: (await exists(closedPath)) ? await readText(closedPath) : '',
+  };
+}
 
+/** What the board half on a migrated board reads, gathered once by `prepareBoard`. */
+type ItemsBoard = {
+  livePath: string;
+  board: string;
+  itemsDir: string;
+  archiveItems: string;
+  itemsName: string;
+  record: RowRecord;
+};
+
+/**
+ * The board half on a migrated board (D6, D16, D18). An item file moves; a `DONE` row with no
+ * file gets one written in the archive. Either way the row leaves the table only in the plan that
+ * follows the read-back. An archive file that already holds the same bytes is not written again,
+ * which is what makes a fold after `undo` safe; one with different bytes holds that item, because
+ * no tool can judge which copy is the real one.
+ */
+async function prepareItems(at: ItemsBoard): Promise<Half | null> {
+  const listing = await listItems(at.itemsDir);
+  const moves = itemFold(at.board, listing);
+  const rows = rowFold(at.board, listing, await listItems(at.archiveItems), at.record);
+  if (moves.length === 0 && rows.length === 0) return null;
+
+  const items = await movable(moves, at);
+  const written = await writable(rows, at.archiveItems);
+  const go = items.moving.map(({ move }) => move);
+  return {
+    which: 'board',
+    livePath: at.livePath,
+    trimmed: withoutRows(at.board, [
+      ...go.map((move) => move.line),
+      ...written.go.map((row) => row.line),
+    ]),
+    writes: [...items.writes, ...written.writes],
+    checks: [...items.checks, ...written.checks],
+    removals: go.map((move) => join(at.itemsDir, move.name)),
+    index: [
+      folderEntry(at.itemsName),
+      ...go.map((move) => itemEntry(at.itemsName, move)),
+      ...written.go.map((row) => rowEntry(at.itemsName, row)),
+    ],
+    ids: [...go.map((move) => move.number), ...written.go.map((row) => row.number)],
+    moved: movedNote(go.length, written.go.length),
+    dest: `${at.archiveItems}/`,
+    held: [...items.held, ...written.held],
+    whole: true,
+    source: at.board,
+  };
+}
+
+/** The archive writes and read-back checks a set of moves or written rows adds to the half. */
+type Planned = { writes: ArchiveWrite[]; checks: Check[]; held: string[] };
+
+/** D6: the `DONE` items whose live file can move, and the ones an archive copy holds. */
+async function movable(
+  moves: ItemMove[],
+  at: ItemsBoard,
+): Promise<Planned & { moving: { move: ItemMove; raw: Buffer }[] }> {
   const found = await Promise.all(
     moves.map(async (move) => ({
       move,
-      raw: await rawBytes(join(itemsDir, move.name)),
-      there: await rawBytes(join(archiveItems, move.name)),
+      raw: await rawBytes(join(at.itemsDir, move.name)),
+      there: await rawBytes(join(at.archiveItems, move.name)),
     })),
   );
   const moving = found.flatMap(({ move, raw, there }) =>
     raw !== null && (there === null || there.equals(raw)) ? [{ move, raw, there }] : [],
   );
-  const fresh = moving.filter(({ there }) => there === null).map(({ move }) => move);
-  const go = moving.map(({ move }) => move);
-  const held = found
-    .filter(({ raw, there }) => raw !== null && there !== null && !there.equals(raw))
-    .map(({ move }) => move);
-
   return {
-    which: 'board',
-    livePath,
-    trimmed: withoutRows(
-      board,
-      go.map((move) => move.line),
-    ),
-    writes: fresh.map((move) => ({
-      path: join(archiveItems, move.name),
-      text: move.text,
-      label: `archive — item ${move.number}`,
-    })),
+    moving,
+    writes: moving
+      .filter(({ there }) => there === null)
+      .map(({ move }) => ({
+        path: join(at.archiveItems, move.name),
+        text: move.text,
+        label: `archive — item ${move.number}`,
+      })),
     checks: moving.map(({ move, raw }) => ({
       id: `item ${move.number}`,
-      archive: join(archiveItems, move.name),
+      archive: join(at.archiveItems, move.name),
       text: move.text,
       bytes: raw,
-      live: join(itemsDir, move.name),
+      live: join(at.itemsDir, move.name),
       line: false,
     })),
-    removals: go.map((move) => join(itemsDir, move.name)),
-    index: [folderEntry(itemsName), ...go.map((move) => itemEntry(itemsName, move))],
-    ids: go.map((move) => move.number),
-    moved: `${go.length} item file(s) and their row(s)`,
-    dest: `${archiveItems}/`,
-    held: held.map((move) => heldNote(move, join(archiveItems, move.name))),
+    held: found
+      .filter(({ raw, there }) => raw !== null && there !== null && !there.equals(raw))
+      .map(({ move }) => heldNote(`item ${move.number}`, join(at.archiveItems, move.name))),
   };
+}
+
+/**
+ * D18: the rows whose archive file can be written, or is already there byte for byte. Its read-back
+ * has no live file to compare, because the row is the live copy, and the row is cut only after the
+ * file reads back as exactly these bytes.
+ */
+async function writable(
+  rows: RowFile[],
+  archiveItems: string,
+): Promise<Planned & { go: RowFile[] }> {
+  const found = await Promise.all(
+    rows.map(async (row) => ({
+      row,
+      bytes: Buffer.from(row.text, 'utf8'),
+      there: await rawBytes(join(archiveItems, row.name)),
+    })),
+  );
+  const going = found.filter(({ bytes, there }) => there === null || there.equals(bytes));
+  return {
+    go: going.map(({ row }) => row),
+    writes: going
+      .filter(({ there }) => there === null)
+      .map(({ row }) => ({
+        path: join(archiveItems, row.name),
+        text: row.text,
+        label: `archive — row ${row.number}`,
+      })),
+    checks: going.flatMap(({ row, bytes }) => rowChecks(row, bytes, archiveItems)),
+    held: found
+      .filter(({ bytes, there }) => there !== null && !there.equals(bytes))
+      .map(({ row }) => heldNote(`row ${row.number}`, join(archiveItems, row.name))),
+  };
+}
+
+/**
+ * Two reads of one file. The bytes must be the file this fold built, and the row's own line must be
+ * in it, whole, as the board has it: the second does not trust the first's construction, so a file
+ * that holds anything but the row as it stood stops the cut.
+ */
+function rowChecks(row: RowFile, bytes: Buffer, archiveItems: string): Check[] {
+  const archive = join(archiveItems, row.name);
+  return [
+    { id: `row ${row.number}`, archive, text: row.text, bytes, live: null, line: false },
+    {
+      id: `row ${row.number}'s line`,
+      archive,
+      text: row.row,
+      bytes: null,
+      live: null,
+      line: true,
+    },
+  ];
+}
+
+function movedNote(files: number, rows: number): string {
+  const parts = [
+    ...(files > 0 ? [`${files} item file(s) and their row(s)`] : []),
+    ...(rows > 0 ? [`${rows} row(s) with no file, each written to the archive as one`] : []),
+  ];
+  return parts.join(', ');
 }
 
 /**
@@ -327,8 +465,17 @@ function itemEntry(itemsName: string, move: ItemMove): IndexEntry {
   };
 }
 
-function heldNote(move: ItemMove, archived: string): string {
-  return `item ${move.number}: ${short(archived)} already exists with different bytes. Neither copy can be judged the real one, so the item, its file and its row stay.`;
+/** D18's line: the task and the status cell, because the status is where the record is. */
+function rowEntry(itemsName: string, row: RowFile): IndexEntry {
+  const key = `${itemsName}/${row.name}`;
+  return {
+    key,
+    line: `- **${key}** ✅ — item ${row.number}, ${row.task}, ${row.status}, folded ${today()}.`,
+  };
+}
+
+function heldNote(what: string, archived: string): string {
+  return `${what}: ${short(archived)} already exists with different bytes. Neither copy can be judged the real one, so it, any live file and its row stay.`;
 }
 
 /**
@@ -442,7 +589,7 @@ function keptNote(halves: Half[]): string {
 }
 
 function keptLines(half: Half): string[] {
-  if (half.removals.length > 0) {
+  if (half.whole) {
     return [
       '  the board — every row but the ones above. Each row that leaves is one line in the',
       '  archive index with its task text, and its number stays taken: the next free number',
@@ -473,6 +620,10 @@ async function write(cli: Cli, archiveHome: string, all: Half[]): Promise<number
   if (halves.length === 0) return 1;
   const archive = await resolvePlan(halves.flatMap(archiveFiles));
   const trim = await resolvePlan(halves.map(trimFile));
+  const stale = halves.filter(
+    (half, i) => half.source !== null && trim[i]?.before !== half.source,
+  );
+  if (stale.length > 0) return refuse(boardMoved(stale));
   const removals = await Promise.all(
     halves.flatMap((half) =>
       half.removals.map((path) => resolveRemoval(path, 'item — folded')),
@@ -496,7 +647,12 @@ async function write(cli: Cli, archiveHome: string, all: Half[]): Promise<number
   // Asked again here, because the index can gain an `adapted` stamp while the confirm sits open,
   // and a guarded index line is skipped while the removal beside it would still land.
   const guarded = index.filter((change) => change.guard !== 'none');
-  if (guarded.length > 0 && removals.length > 0) return refuse(heldForGuard(guarded));
+  if (guarded.length > 0 && halves.some((half) => half.whole))
+    return refuse(heldForGuard(guarded));
+  // `indexEdits` reads a missing index as nothing to add, and the rows would then leave the table
+  // with no index line (item 107's audit, F4).
+  if (halves.some((half) => half.whole) && !(await exists(join(archiveHome, 'INDEX.md'))))
+    return refuse(noIndex(archiveHome));
   // One plan, so one backup taken before any of it lands: the index line first, then the trims,
   // then the removals, which `commitPlan` refuses without their backup in hand (D14).
   return finish(await commitPlan([...index, ...trim, ...removals]), halves);
@@ -506,20 +662,38 @@ async function write(cli: Cli, archiveHome: string, all: Half[]): Promise<number
  * The halves that can fold whole. `edit()` is an overwrite, so a board or an `INDEX.md` whose
  * stamp is marked `adapted` (or missing, on a file that carries ours) makes its trim or its index
  * line a no-op in `commitPlan` — while a removal beside it still lands. That leaves a live `DONE`
- * row whose file is gone and an archive file no index line names, and exits 0. So an item half
- * with a guarded board or index is held whole, before anything is written (D16).
+ * row whose file is gone and an archive file no index line names, and exits 0. A written row
+ * file (D18) has no removal beside it, but the same skipped trim leaves the row on the table and a
+ * second copy in the archive. So a migrated board's half with a guarded board or index is held
+ * whole, before anything is written (D16, D18).
  */
 async function unguarded(archiveHome: string, halves: Half[]): Promise<Half[]> {
   const index = await resolvePlan(await indexEdits(archiveHome, halves));
   const indexGuarded = index.filter((change) => change.guard !== 'none');
   const kept: Half[] = [];
   for (const half of halves) {
-    const [trim] = half.removals.length > 0 ? await resolvePlan([trimFile(half)]) : [];
+    const [trim] = half.whole ? await resolvePlan([trimFile(half)]) : [];
     const guarded = [...indexGuarded, ...(trim && trim.guard !== 'none' ? [trim] : [])];
-    if (half.removals.length === 0 || guarded.length === 0) kept.push(half);
+    if (!half.whole || guarded.length === 0) kept.push(half);
     else say(heldForGuard(guarded));
   }
   return kept;
+}
+
+function notUtf8(path: string): string {
+  return [
+    `${short(path)} holds bytes that are not valid UTF-8, so no row or trim of it can be written`,
+    'byte for byte. Nothing was folded. Find the bytes (`grep -naxv ".*" <file>`), fix them by',
+    'hand, then run this again.',
+  ].join('\n');
+}
+
+function boardMoved(halves: Half[]): string {
+  return [
+    `${halves.map((half) => short(half.livePath)).join(', ')} changed while this fold read it.`,
+    'Nothing was trimmed and nothing was removed; any archive file this run wrote holds exactly',
+    'what it read, and a run again finds it. Run it again, so it plans from what is there now.',
+  ].join('\n');
 }
 
 function heldForGuard(guarded: PlannedChange[]): string {

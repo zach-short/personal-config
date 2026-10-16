@@ -96,8 +96,9 @@ defaults are `/audit`'s.
 2. **Agents in flight.** The default; fewer; or one at a time.
 3. **Unattended.** Say what the run needs: a permission mode that does not stop on a prompt, and
    the app or the terminal left open on a machine that stays awake. Where no timer exists, say that
-   the run ends when nothing is in flight, and that it cannot wait out a usage freeze. Options:
-   ready, or stop here.
+   the run ends when nothing is in flight, and that it cannot wait out a usage freeze. Say that the
+   run ends with `/clean-up`, which moves finished work to the archive without asking again.
+   Options: ready, or stop here.
 4. **Models.** Each tier's name and the family you will pass for it:
 
    {{TIER_TABLE}}
@@ -229,7 +230,15 @@ file that holds the row's open findings.
 ## 8. The end
 
 1. End the timer: `ScheduleWakeup` with `stop: true`, or no new wake.
-2. Write `RUNDOWN.md` in the run folder from `STATE.md`, with these sections in this order. Each is present, and
+2. **Run `/clean-up`**, with the Skill tool, as the run's last step before the rundown. The
+   person's "ready" in the opening round is the yes its previews wait for: post each preview in
+   chat and go on. On a board with a `{{ITEMS_DIR}}/` folder, its fold moves each `DONE` item's
+   file and its row to the archive, and a `DONE` row with no file gets an archive file that holds
+   the row. On a 1.x board, with no `{{ITEMS_DIR}}/` folder, the fold moves `DONE` prompts and old
+   step bodies, and every row stays. A move its own rules hold, such as one that waits for a
+   commit, is not run: it goes under **Decisions waiting for the owner**. What moved goes in the
+   rundown's first paragraph, and its commit blocks join the rundown's.
+3. Write `RUNDOWN.md` in the run folder from `STATE.md`, with these sections in this order. Each is present, and
    says "none" where it is empty.
    1. **In one paragraph**: what ran, what is done, what is held, and why the run ended.
    2. **Audit**: "not run", or the report's path, each lane's last step, the findings verified,
@@ -245,12 +254,12 @@ file that holds the row's open findings.
    9. **Not verified**: what no one saw running.
    10. **Warnings**, such as a tool that deletes uncommitted worktrees.
    11. **Commit blocks**: {{COMMIT_BLOCKS}}
-3. Add one line at the end of the log in `{{LEDGER_FILE}}` for the run:
+4. Add one line at the end of the log in `{{LEDGER_FILE}}` for the run:
    `- <date> · autopilot run · <the run folder>/RUNDOWN.md`. A run is not an item, so it gets no
    item file and no row. On a 1.x board, with no `{{ITEMS_DIR}}/` folder, write the run's own
    ledger step instead, at the next free number, read from the file now, pointing at the rundown.
-4. Where a push notification tool exists, send one line that names the rundown's path.
-5. Post the rundown's first paragraph and its path in chat.
+5. Where a push notification tool exists, send one line that names the rundown's path.
+6. Post the rundown's first paragraph and its path in chat.
 
 ## 9. Standing orders
 

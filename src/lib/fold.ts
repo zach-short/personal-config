@@ -264,10 +264,14 @@ export type ItemMove = {
 export function itemFold(markdown: string, listing: ItemEntry[]): ItemMove[] {
   const board = parseBoard(markdown);
   if (board === null) return [];
+  const numbers = board.rows.map((row) => row.number.trim());
   return board.rows.filter(isDone).flatMap((row) => {
     const files = listing.filter((entry) => isItemFor(entry.name, row.number));
     const file = files[0];
     if (files.length !== 1 || file === undefined || row.number.trim() === '') return [];
+    // Two rows for one number would both be cut while the one file moves once, and the second
+    // row's line would be in no archive file (item 107's audit, F2).
+    if (numbers.indexOf(numberOf(row)) !== numbers.lastIndexOf(numberOf(row))) return [];
     return [
       {
         number: row.number.trim(),
@@ -281,6 +285,10 @@ export function itemFold(markdown: string, listing: ItemEntry[]): ItemMove[] {
   });
 }
 
+function numberOf(row: BoardRow): string {
+  return row.number.trim();
+}
+
 /**
  * The board with these rows cut (D16). Table rows are consecutive lines with no blank between,
  * so cutting one leaves no seam to heal, and every other byte stays where it was.
@@ -291,6 +299,163 @@ export function withoutRows(markdown: string, lines: number[]): string {
     .split('\n')
     .filter((_, index) => !cut.has(index + 1))
     .join('\n');
+}
+
+/**
+ * One `DONE` row on a migrated board that has no item file, live or archived (per-item-board
+ * `DESIGN.md` D18): the archive file written for it, and what its row said, which the archive
+ * index line carries once the row leaves the table.
+ */
+export type RowFile = {
+  number: string;
+  /** The row's task cell as written. */
+  task: string;
+  /** The row's status cell as written, typography and all. */
+  status: string;
+  /** D7's name, which the archive file takes. */
+  name: string;
+  /** The file's whole text: the row as it stood, then where its record is. */
+  text: string;
+  /** The row's own line on the board, which the read-back finds whole in the archive file. */
+  row: string;
+  /** The row's 1-based line on the board, which the fold cuts. */
+  line: number;
+};
+
+/** Where a 1.x row's record went, for the pointers its archive file carries. */
+export type RowRecord = {
+  /** The ledger's file name, `HANDOFF.md`. */
+  ledger: string;
+  /** `ledgerFrozenAt`, or null where the ledger still holds its step log. */
+  frozenAt: number | null;
+  /** The closed archive's file name, `PASSOFF-closed.md`. */
+  closedName: string;
+  /** Its text, or `''` where the archive has none. */
+  closed: string;
+};
+
+/** A row number a file can be named for: D7's `<n>`, one decimal part allowed. */
+const ITEM_NUMBER = /^\d+(?:\.\d+)?$/;
+
+/**
+ * D18: every `DONE` row with no item file anywhere. Such a row was closed under 1.x, when the
+ * record was a ledger step and not a file, so D16's move has nothing to move, and the row would
+ * stay on the table for good. A number the archive already holds is left alone unless it is this
+ * very file, name and text, which is a fold run again after `undo`. Any other file there is a row
+ * D16 already moved, or a second copy, and either is `item-files`'s finding, not this fold's.
+ * A number on two rows is left alone too: one file cannot hold both, and cutting both by line
+ * would lose the one the file does not hold.
+ */
+export function rowFold(
+  markdown: string,
+  live: ItemEntry[],
+  archived: ItemEntry[],
+  record: RowRecord,
+): RowFile[] {
+  const board = parseBoard(markdown);
+  if (board === null) return [];
+  const numbers = board.rows.map((row) => row.number.trim());
+  return board.rows.filter(isDone).flatMap((row) => {
+    const number = row.number.trim();
+    if (!ITEM_NUMBER.test(number) || numbers.indexOf(number) !== numbers.lastIndexOf(number))
+      return [];
+    if (live.some((entry) => isItemFor(entry.name, number))) return [];
+    const file = rowFileOf(row, board, record);
+    const there = archived.filter((entry) => isItemFor(entry.name, number));
+    return there.every((entry) => entry.name === file.name && entry.text === file.text)
+      ? [file]
+      : [];
+  });
+}
+
+function rowFileOf(row: BoardRow, board: Board, record: RowRecord): RowFile {
+  const number = row.number.trim();
+  const task = cellAt(row.cells, board.columns.task);
+  const status = cellAt(row.cells, board.columns.status);
+  const text = [
+    `# ${number}. ${task}`.trimEnd(),
+    '',
+    'This row closed before the board kept one file per item, so it had no file of its own.',
+    '`personal-config fold board` wrote this file when the row left the table.',
+    '',
+    '## The row, as it stood when it left the table',
+    '',
+    ...rowTable(row, board.header),
+    '',
+    '## Where its record is',
+    '',
+    ...recordPointers(number, status, record),
+    '',
+  ].join('\n');
+  return {
+    number,
+    task,
+    status,
+    name: itemFileName(number, task),
+    text,
+    row: row.text,
+    line: row.line,
+  };
+}
+
+/** The header rebuilt from its cells, a separator, then the row's own line, byte for byte. */
+function rowTable(row: BoardRow, header: string[]): string[] {
+  return [`| ${header.join(' | ')} |`, `|${header.map(() => '---').join('|')}|`, row.text];
+}
+
+function recordPointers(number: string, status: string, record: RowRecord): string[] {
+  const steps = stepsNamed(status, docStem(record.ledger));
+  const sections = closedSections(number, record.closed);
+  const log = `the archive's \`${docStem(record.ledger)}-log.md\``;
+  return [
+    ...steps.map(
+      (step) =>
+        `- Ledger step ${step}: ${record.frozenAt !== null && step <= record.frozenAt ? log : `\`${record.ledger}\``}.`,
+    ),
+    ...(steps.length === 0 ? ['- Its status cell names no ledger step.'] : []),
+    ...sections.map(
+      (opening) =>
+        `- The section that opens \`${opening}\` in the archive's \`${record.closedName}\`.`,
+    ),
+    ...(sections.length === 0
+      ? [`- The archive's \`${record.closedName}\` has no section for it.`]
+      : []),
+  ];
+}
+
+/**
+ * The step numbers a status cell cites: `HANDOFF 24`, `HANDOFF step 24`, `HANDOFF 97 + 98` and
+ * `HANDOFF 46 and 47`. A comma is not read as a joiner, because a cell such as `HANDOFF 24, 2026-…`
+ * goes on with a date, not a step.
+ */
+function stepsNamed(status: string, stem: string): number[] {
+  const escaped = stem.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const cite = new RegExp(
+    `\\b${escaped}\\s+(?:step\\s+)?(\\d+)((?:\\s*(?:\\+|and)\\s*\\d+)*)`,
+    'g',
+  );
+  const found = [...status.matchAll(cite)].flatMap(
+    (match) => `${match[1]} ${match[2] ?? ''}`.match(/\d+/g)?.map(Number) ?? [],
+  );
+  return [...new Set(found)];
+}
+
+/**
+ * How each closed-archive section for this row opens: its own `### <n>.` prompt, or a range
+ * section `### <a>–<b>.` whose span holds it. Only the opening, which a search finds: the rest of
+ * the heading is the archive's own text, and a copy here is one more place for it to be read as
+ * live (an undated "today" in a heading is `relative-dates`'s finding wherever it is copied).
+ */
+function closedSections(number: string, closed: string): string[] {
+  const value = Number(number);
+  const openings = closed.split('\n').flatMap((text) => {
+    const item = text.match(ITEM_HEADING);
+    if (item?.[1] === number) return [item[0]];
+    const range = text.match(RANGE_HEADING);
+    const holds = range !== null && value >= Number(range[1]) && value <= Number(range[2]);
+    return holds ? [range[0]] : [];
+  });
+  return [...new Set(openings)];
 }
 
 /**
@@ -515,11 +680,7 @@ function rangeItemOf(
   header: string[],
 ): ItemFile {
   const number = row.number.trim();
-  const table = [
-    `| ${header.join(' | ')} |`,
-    `|${header.map(() => '---').join('|')}|`,
-    row.text,
-  ];
+  const table = rowTable(row, header);
   return {
     number,
     name: itemFileName(number, task),
