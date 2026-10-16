@@ -87,6 +87,14 @@ this phase (`docs/incomplete/context-ceilings/SCOPE.md` §7). G64 holds.
 | G74 | `item-files` needs a file for every non-`DONE` row of a migrated board | The example board has five non-`DONE` rows, so the example folder holds five files, not one | `src/doctor/rules/item-files.ts`; `examples/PASSOFF.md` |
 | G75 | This machine's global ignore names files, not `passoff/` | `git check-ignore -v examples/passoff/1-x.md` exits 1. The re-include is for an adopter whose global ignore does name the folder, as `/HANDOFF.md` once hid `examples/HANDOFF.md` | `~/.config/git/ignore`; `.gitignore` |
 
+Added by Phase 8, re-checked at `94260bc` on 2026-10-16. G44, G52 and G60 are superseded: the log
+froze at step 117.
+
+| # | Claim | Verified state | Citation |
+|---|---|---|---|
+| G76 | This repo was migrated before Phase 8's session opened | `fold migrate` ran on 2026-10-15 at 19:14 UTC; `.personal-config.json` gained `itemsDir: passoff` and `ledgerFrozenAt: 117`. No transcript in this project shows the run | `~/.config/personal-config/backups/2026-10-15T19-14-43-001/manifest.json`; transcript search 2026-10-16 |
+| G77 | A `setup` re-run with another profile empties `archiveHome` | The 2026-10-16 run used `starter` and wrote `archiveHome: ""`, after which `fold` refused. It kept `itemsDir` and `ledgerFrozenAt`, so G61's fix holds for those two keys only | backup `2026-10-16T15-14-01-000` against `.personal-config.json`; `bun run src/cli.ts fold --dry-run` |
+
 ## 1. Decisions taken since ratification
 
 Build-level calls. Each has a one-line reversal so a later deviation can cite it.
@@ -458,7 +466,16 @@ phase is the exception, and only for the sections listed.
 
 ### Phase 8. Migrate this repo, and the runtime pass
 
-**Status:** `PLANNED`. Waits on Phase 7. Zach present.
+**Status:** `BUILT 2026-10-16` (board item 94, its close-out in the item file). Deviations:
+
+- Scope items 1 to 3 were done before the session for item 94 opened: `fold migrate` ran on
+  2026-10-15 (G76), `setup` re-rendered on 2026-10-16, and items 86, 95 to 100 and 102 to 104 closed
+  in the new shape. The session proved the copy from the run's backup and wrote scope item 4.
+- BD-6: item 94 closed in the 2.0.0 shape, because the ledger was already frozen.
+- Done when: the pre-migration `doctor` run was rebuilt from the backup over `git archive HEAD`.
+  Nothing new comes from the migration (item 94's close-out names the findings). No session ran on
+  2026-10-14, so the earlier context figures are from 2026-10-15 before the migration.
+- The `setup` re-run dropped `archiveHome` (G77), the hazard G61 named for `ledgerFrozenAt`.
 
 **Scope**
 
