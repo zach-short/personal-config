@@ -36,6 +36,10 @@ fi
 # `no-rule` is read as `print-blocks`, so it blocks every commit (the owner's call of 2026-10-04,
 # reversing the first build's call to read it as `agent-commits`). The person asked for no
 # written rule, and the guard they also asked for keeps its own rule: commits are the owner's.
+#
+# `agent-pushes` is never written here: that answer installs no guard, and a re-run removes this
+# script and the file. A file that holds it anyway was written by hand or left by an old install,
+# and it reads as an unknown word, so as `print-blocks`.
 policy=print-blocks
 policy_file="$(dirname "${BASH_SOURCE[0]}")/commit-policy"
 if [ -r "$policy_file" ]; then

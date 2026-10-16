@@ -21,6 +21,12 @@ first for a file git has never seen, because `--only` silently drops untracked p
 commit still typechecks; and build HEAD in isolation before pushing, because gates run against
 the working tree and a partial commit can leave the branch unbuildable while your tree is green.
 
+If you chose *the agent may commit and push*, Part 11 says that in one line: the agent may run
+`git add`, `git commit` and `git push`. The short standard's git section still follows it with
+the two rules for whoever commits (name the exact files, and copy a file aside with `cp` in
+place of `git checkout --` or `git stash`), because that text is part of the shipped standard and
+this tool does not edit it.
+
 If you chose *no rule*, Part 11 says nothing about commits.
 
 ## How to undo or change it

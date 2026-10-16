@@ -211,7 +211,7 @@ describe('what /autopilot says', () => {
     );
   });
 
-  for (const policy of ['print-blocks', 'agent-commits', 'no-rule'])
+  for (const policy of ['print-blocks', 'agent-commits', 'agent-pushes', 'no-rule'])
     test(`${policy} leaves no token unfilled, with the stamp below the frontmatter`, async () => {
       const text = await autopilot({ commitPolicy: policy });
       expect(text.startsWith('---\nname: autopilot\n')).toBe(true);

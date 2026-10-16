@@ -110,6 +110,13 @@ export const YOU_QUESTIONS: Question[] = [
         recommended: false,
       },
       {
+        value: 'agent-pushes',
+        label: 'The agent may commit and push',
+        example:
+          'Agent runs `git add`, `git commit` and `git push`; no commit guard is installed',
+        recommended: false,
+      },
+      {
         value: 'no-rule',
         label: 'No rule — leave it to the agent',
         example: 'Nothing is written; the agent does whatever it would do by default',

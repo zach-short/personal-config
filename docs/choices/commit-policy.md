@@ -30,6 +30,27 @@ without you, so the blast radius is one `git reset`.
 wrong file is just as destructive whether an agent or a person runs it. And a rewritten history
 is a worse recovery than a missing commit.
 
+**The agent may commit and push.** The rule file holds one line: the agent may run `git add`,
+`git commit` and `git push`. No commit guard is installed, whatever you answer to `hooks`.
+
+*The defense.* Some people work in one session per checkout, review on the remote, and want the
+agent to finish the job. Under the other answers that person removes the guard by hand and
+rewrites the rule, and the next `setup` run writes both back. This answer is the way to say it
+once and have it stay said.
+
+*The strongest argument against it.* Nothing is enforced. The guard also blocks `git stash`,
+`git checkout --`, `git restore`, `git reset --hard` and `git switch --discard-changes` under
+every other answer, because those throw away uncommitted work that a parallel session may own.
+Under this answer those pass too. A push is also the one step that leaves your machine, so a
+mistake it carries is on the remote before you see it. If you ever run two sessions in one
+checkout, the collision problem under **The agent may commit** applies here as well, and nothing
+catches it.
+
+The recommendation when this answer was added (2026-10-16) was to keep the guard for the five
+discard commands alone. The owner of this tool chose no guard at all, because that is what they
+had set up by hand. If you want the discard commands blocked, answer **The agent may commit,
+never push** instead.
+
 **No rule.** Nothing is written.
 
 *The defense.* Fewer rules in context, and the agent behaves reasonably by default.
@@ -78,6 +99,13 @@ are yours. Under **The agent may commit** it lets through one plain command,
 `git commit <files> -m "<message>"`, with the files named and nothing else in the command, and
 still blocks a push, staging everything, and every other commit. `hooks.md` has the detail.
 
+Under **The agent may commit and push** the guard is not installed and no `commit-policy` file
+is written, even if you chose the hook. If an earlier run installed them, this run removes
+`commit-guard.sh`, `commit-policy` and the guard's `PreToolUse` entry in `settings.json`, and
+lists each removal in the preview. Other hooks you chose (the banner, the completion gate, the
+delete guard for non-code work) are written as before. In each repo's router and standard the
+commit line says the agent may run `git add`, `git commit` and `git push`.
+
 **A later run removes the rule.** Answering "no rule" on a later run plans the removal of
 `~/.claude/rules/commits.md`. A removal only touches a file this tool stamped and you have not marked `adapted`; a file with no stamp, or an adapted one, is left alone and not listed. The hook script and its `settings.json` entry stay, because
 this removal does not edit `settings.json`.
@@ -86,3 +114,9 @@ this removal does not edit `settings.json`.
 
 Delete `~/.claude/rules/commits.md` by hand, or run setup again and answer "no rule", which removes it. After a removal, `personal-config undo` restores the file. If the hook was installed, run `personal-config undo` to
 restore the previous `settings.json`, or remove the `PreToolUse` entry by hand.
+
+To undo **The agent may commit and push**, run setup again in each project and give another
+answer. With the hook chosen, that run installs the guard again. Do not edit `commitPolicy` in a
+project's `.personal-config.json` by hand: the answers are hashed, so `doctor` reports the edit
+as drift, and nothing is rewritten until setup runs. `personal-config undo` right after the run
+also restores the removed guard, its policy file and the `settings.json` entry.

@@ -7,6 +7,24 @@ The CLI. The working standard it installs is versioned separately — see
 
 ### Added
 
+- **A fourth commit policy, "The agent may commit and push" (`agent-pushes`).** The other three
+  answers all block something: only you and no rule block every commit, and the agent may commit
+  allows one commit shape and blocks every push. There was no answer that let the agent commit
+  and push, so a person who removed the guard and the rule by hand had both written back by the
+  next `setup` run. Under `agent-pushes`, `~/.claude/rules/commits.md` holds one line, that the
+  agent may run `git add`, `git commit` and `git push`, plus the attribution rule your
+  attribution answer controls. Each repo's router and Part 11 of its standard say the same.
+  No commit guard and no `commit-policy` file are installed, whatever the hooks answer, so the
+  discard commands the guard blocks under every other policy (`git stash`, `git restore`,
+  `git reset --hard` and the rest) are not blocked either. A run with this answer removes a
+  guard, its policy file and its `settings.json` entry that an earlier run installed. The banner,
+  the completion gate and the delete guard are unchanged. `/delegate` and `/autopilot` read it as
+  they read the agent may commit: the builder commits on its branch, and no branch is pushed. A
+  `commit-policy` file that holds `agent-pushes` by hand reads as an unknown word, so the guard
+  blocks every commit. The long forms for the commit policy, Part 11's commit paragraph and hooks
+  describe it. To move an existing project to this answer, run `setup` in it again; editing
+  `commitPolicy` in its `.personal-config.json` by hand changes the config hash and shows as
+  drift.
 - **`setup` removes the hook entries and scripts a run no longer wants.** A non-code run used to
   leave the delete guard and the write-doc save check in `~/.claude/settings.json` for every later
   code session, and "No hooks" removed nothing. Now a later run prunes this tool's own five

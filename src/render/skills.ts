@@ -269,6 +269,18 @@ function auditVars(ctx: RenderContext): Record<string, string> {
 }
 
 /**
+ * Whether the agent may commit, the one fact both skills read from the commit policy.
+ * `agent-pushes` may do more than `agent-commits`, so it reads the same here: the builder commits
+ * on its branch, and a row builds from its predecessor's branch. The skills' own text still says
+ * no branch is pushed or merged: `agent-pushes` changed what the agent may do in the owner's
+ * session, not what a builder subagent does with a worktree branch (item of 2026-10-16).
+ */
+function agentCommits(ctx: RenderContext): boolean {
+  const policy = answer(ctx, 'commitPolicy', 'print-blocks');
+  return policy === 'agent-commits' || policy === 'agent-pushes';
+}
+
+/**
  * `/delegate`. Rendered only for code + full + git (`offeredSkills`), so the two axes left are the
  * work-record shape (D22: a board, or project folders recorded through the phase header) and the
  * commit policy (D10). The tier names are the person's own, filled here so the template carries no
@@ -276,7 +288,7 @@ function auditVars(ctx: RenderContext): Record<string, string> {
  * (D22); on project folders they would name a skill that is not installed.
  */
 function delegateVars(ctx: RenderContext, shape: SkillShape): Record<string, string> {
-  const commits = answer(ctx, 'commitPolicy', 'print-blocks') === 'agent-commits';
+  const commits = agentCommits(ctx);
   const vars = shape.folders
     ? delegateFolderVars()
     : delegateBoardVars(ctx, namesOf(ctx), commits);
@@ -366,7 +378,7 @@ function tierTable(ctx: RenderContext, indent: string): string {
  * rundown's last section follows the same policy (D10).
  */
 function autopilotVars(ctx: RenderContext): Record<string, string> {
-  const commits = answer(ctx, 'commitPolicy', 'print-blocks') === 'agent-commits';
+  const commits = agentCommits(ctx);
   return {
     LEDGER_FILE: ledgerFile(ctx),
     BOARD_FILE: boardFile(ctx),

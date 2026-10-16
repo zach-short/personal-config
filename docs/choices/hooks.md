@@ -207,7 +207,7 @@ wants to get right.
 
 The answer reaches the guard in a file beside it, `~/.claude/hooks/personal-config/commit-policy`,
 which holds one word: `print-blocks`, `agent-commits` or `no-rule`. It is written whenever the
-guard is.
+guard is, and the fourth answer, `agent-pushes`, writes no guard.
 
 - **`print-blocks`** (only you commit): the guard behaves as the sections above describe. Every
   commit is blocked, and the message asks for the two printed blocks.
@@ -218,6 +218,12 @@ guard is.
 - **`no-rule`** (no commit rule): the guard blocks every commit, exactly as it does under
   `print-blocks`, with the same message. The file still says `no-rule`, so your answer is on
   record, and the guard reads that word as `print-blocks`.
+- **`agent-pushes`** (the agent may commit and push): no guard is installed and no file is
+  written. A run with this answer removes the guard, this file and the guard's `settings.json`
+  entry if an earlier run installed them. The discard commands in "The commit guard also blocks
+  throwing work away" are then not blocked either; `commit-policy.md` gives the reason and the
+  argument against it. A file that holds `agent-pushes` anyway reads as an unknown word, so as
+  `print-blocks`.
 
 *Why `no-rule` blocks every commit.* That answer writes no commit rule, but the person also took
 the commit guard, and the guard's own rule is that commits are the owner's. Letting commits
@@ -436,7 +442,7 @@ document it saves** to the `write-doc-check` question adds a `PostToolUse` entry
 
 **Your answer here is not the only input.** Two earlier answers also decide — what kind of work
 you do, and whether you keep it in git — because the guards protect things you may have already
-said you do not have:
+said you do not have. Your commit policy decides the commit guard too, in the last row:
 
 | What you work on | Your setup | What is installed |
 |---|---|---|
@@ -446,6 +452,7 @@ said you do not have:
 | Code | The lighter one | The completion gate **only** — no guard, no banner — whichever option you picked. |
 | Work that is not code | The lighter one | The **delete guard** and the completion gate. No commit guard, no banner. |
 | Anything | Either, "No hooks" | Nothing. No script, no entry. |
+| Code or not, kept in git, commit policy "The agent may commit and push" | Either | No commit guard, whichever option you picked. Everything else in the row that matches you is installed as that row says. |
 
 The commit guard goes when you keep nothing in git because it guards only the commands that
 write or push a commit and `git add -A`, and nothing else. Each git command among them needs a

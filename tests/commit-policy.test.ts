@@ -255,6 +255,7 @@ beforeAll(async () => {
   homes.extraWord = await makeHome(`${STAMP}agent-commits please\n`);
   homes.crlf = await makeHome(`${STAMP.replace('\n', '\r\n')}agent-commits\r\n`);
   homes.bare = await makeHome('agent-commits');
+  homes.agentPushes = await makeHome(`${STAMP}agent-pushes\n`);
 });
 
 afterAll(async () => {
@@ -720,6 +721,8 @@ describe('a policy the guard cannot read means print-blocks', () => {
     ['an unreadable file', 'unreadable'],
     ['an empty file', 'empty'],
     ['a file holding only the stamp and a comment', 'commentsOnly'],
+    // Never written by setup, which installs no guard for it (2026-10-16); a hand edit fails closed.
+    ['agent-pushes, which the guard does not know', 'agentPushes'],
   ];
 
   for (const [what, key] of states) {

@@ -260,6 +260,11 @@ const COMMIT_PARAGRAPH = '**Commits are the owner’s.**';
  * body the global copy had. Two hashes moved with them on content: the ignore file gained the two
  * skill folders (D3), and the Part 0 prompt lists every file the run writes in the repo, so it
  * gained two rows and a wider column. 83 still, and no other key moved.
+ *
+ * **`commit-guard.sh` moved per variant on 2026-10-16, the `agent-pushes` commit policy.** It
+ * gained a four-line comment saying it never reads that word from setup, and reads it as
+ * `print-blocks` if a hand edit writes it. No code line changed. Every variant here answers
+ * `print-blocks`, so nothing else moved: the same three keys, 83 still.
  */
 describe('§3.1 row 1 — code + full + git is the 0.3.0 output, byte for byte bar one skill', () => {
   const FULL = answersFor(CODE_FULL_GIT);

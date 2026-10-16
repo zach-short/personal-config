@@ -103,11 +103,23 @@ function wantedHooks(ctx: RenderContext): HookSet {
   if (answer(ctx, 'configWeight', 'full') === 'light')
     return { guard: false, deleteGuard, banner: false, gate: true };
   return {
-    guard: wantsGuard && trackOf(ctx).usesGit,
+    guard: wantsGuard && trackOf(ctx).usesGit && !agentPushes(ctx),
     deleteGuard,
     banner: choice === 'banner' || choice === 'both',
     gate: true,
   };
+}
+
+/**
+ * `agent-pushes` writes no commit guard, whatever the `hooks` answer (the owner's answer of
+ * 2026-10-16). The guard also blocks `git stash`, `git restore` and `git reset --hard` under every
+ * policy, and keeping it for those alone was the recommendation; the owner chose no guard at all.
+ * A re-run then prunes an installed guard, its `commit-policy` file and its `settings.json` entry
+ * (`hookLeftovers`), so the answer takes effect on machines that already have one. The delete
+ * guard is not a commit guard and is not touched.
+ */
+function agentPushes(ctx: RenderContext): boolean {
+  return answer(ctx, 'commitPolicy', 'print-blocks') === 'agent-pushes';
 }
 
 /**
@@ -128,7 +140,10 @@ async function scriptFile(ctx: RenderContext, name: string): Promise<PlannedFile
   return planned(ctx, join(claudeHooksDir(), name), label, source, { extension: 'sh' });
 }
 
-/** The three answers the guard knows. Anything else is written as the safest of them. */
+/**
+ * The three answers the guard knows. Anything else is written as the safest of them. The fourth
+ * answer, `agent-pushes`, never reaches here: it writes no guard (`agentPushes`).
+ */
 const COMMIT_POLICIES = ['print-blocks', 'agent-commits', 'no-rule'];
 
 /**
