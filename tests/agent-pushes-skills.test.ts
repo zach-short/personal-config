@@ -13,7 +13,7 @@ import { DEFAULT_ANSWERS, testContext, testRepoPlan } from './helpers.ts';
 
 /** Design 4.5, as written, global so `match` returns every hit. */
 const OWNERS_GIT =
-  /never (push|merge)|no branch is pushed|commits? (is|are) the owner|pushing is|owner'?s commit|owner has committed|landing it is yours|merges nothing/gi;
+  /never (push|merge)|no branch is pushed|commits? (is|are) the owner|pushing is|owner'?s commit|owner has committed|landing it is yours|merges nothing|commit blocks for everything/gi;
 
 /** Code + full + git with a board: the one shape that renders `/delegate` and `/autopilot`. */
 async function render(commitPolicy: string): Promise<PlannedFile[]> {
@@ -44,5 +44,13 @@ describe('the sweep leaves no owner-only git sentence under agent-pushes', () =>
   test('violates: the agent-commits skills still match, so the regex sees the sentences', async () => {
     const skills = (await render('agent-commits')).filter((f) => f.path.endsWith('SKILL.md'));
     expect(joined(skills).match(OWNERS_GIT)?.length ?? 0).toBeGreaterThanOrEqual(6);
+  });
+
+  // Deep review of row 113, finding 4: the regex missed `/clean-up`'s print-blocks sentence.
+  test("violates: agent-commits' /clean-up commit-blocks sentence is one of the matches", async () => {
+    const cleanUp = (await render('agent-commits')).filter((f) =>
+      f.path.endsWith('clean-up/SKILL.md'),
+    );
+    expect(joined(cleanUp).match(OWNERS_GIT)).toContain('commit blocks for everything');
   });
 });

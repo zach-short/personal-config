@@ -420,7 +420,10 @@ function landStep(): string {
     '',
     'A builder that returns a pass-off instead of this report is at its budget. Land the row from a',
     "worktree of your own: from the primary checkout, `git worktree add <a fresh path> <the builder's",
-    'branch>`, run steps 2 to 5 there with `git -C <that path>`, and remove that worktree in step 7.',
+    // Deep review of row 113, finding 3: step 1 commits the sign-off lines, so skipping it left
+    // them uncommitted wherever the item file is tracked.
+    'branch>`, run steps 1 to 5 there with `git -C <that path>`, step 1 only where the pass-off does',
+    'not say the lines were committed, and remove that worktree in step 7.',
     '',
     'Then, from the primary checkout, with `git -C` and the branch name written out:',
     '',
@@ -431,10 +434,12 @@ function landStep(): string {
     '',
     'Never `--force`, and never a rebase: the auditor reproduced the commits that land. A refused',
     "fast-forward holds the row with git's output as its reason; where the base moved while the",
-    'builder was gating, send the message once more first. A refused push lands the row, stops every',
-    'later push in this session, and the rundown says how far ahead the base is. A red gate goes back',
-    "to the builder as a blocking finding, through step 4's fix round. A gate that could not run",
-    'here is listed under **Not verified**.',
+    // Deep review of row 113, finding 2: a second step 1 would append the sign-off lines twice.
+    'builder was gating, send the message once more first, and the second send skips step 1, whose',
+    'lines are committed already. A refused push lands the row, stops every later push in this',
+    'session, and the rundown says how far ahead the base is. A red gate goes back to the builder as',
+    "a blocking finding, through step 4's fix round. A gate that could not run here is listed under",
+    '**Not verified**.',
     '',
     'Only now write the record: the log line and `DONE - <date>` on the board, as step 4 says. Under',
     "this policy a row is `DONE` when its commits are on the base. Then step 7 removes the row's",
@@ -514,13 +519,15 @@ function autopilotVars(ctx: RenderContext): Record<string, string | null> {
           '  run without a commit. Such a row is held, and its "Waits on" names the commit it waits',
           '  for. Nothing is built on work the owner has not seen.',
         ].join('\n'),
+    FOLD_COMMIT: "and its commit blocks join the rundown's.",
+    // The title is in the token, so `agent-pushes` can render its own in place of this one.
     COMMIT_BLOCKS: commits
       ? [
-          'for each worktree, its branch, in the merge order above, and the two',
+          '**Commit blocks**: for each worktree, its branch, in the merge order above, and the two',
           '      blocks for a worktree whose commit a hook blocked. No branch is pushed or merged.',
         ].join('\n')
       : [
-          'for each worktree, the two blocks the owner runs, `git -C <worktree>',
+          '**Commit blocks**: for each worktree, the two blocks the owner runs, `git -C <worktree>',
           '      add <files>` and `git -C <worktree> commit <files> -m "..."`, naming the same files.',
         ].join('\n'),
     // `null` drops the token's line, so step 4 keeps its bytes under every other policy.
@@ -553,6 +560,8 @@ function autopilotLanding(): Record<string, string> {
       '   Under this policy the record follows the landing: route a signed-off row to',
       "   `/delegate`'s step 6, and write the log line and `DONE` when its fast-forward lands.",
     ].join('\n'),
+    // Deep review of row 113, finding 5: the fold prints no blocks here, step 4 commits its files.
+    FOLD_COMMIT: "and its commit is step 4's.",
     COMMIT_BLOCKS: [
       '**Landed**: for each row, its branch, the merge commit or fast-forward, and',
       '      whether the push went; the rows landed and not pushed, with how far ahead the base is;',
@@ -752,6 +761,7 @@ function delegateBoardVars(
       "session sees the claim. Then find whether the item's file is tracked: it is when",
       `\`git ls-files --error-unmatch ${items}/<n>-<slug>.md\` succeeds here. Only a tracked file is`,
       "in a builder's worktree. Say which it is in the builder's brief.",
+      ...(lands ? claimCommit(items) : []),
     ].join('\n'),
     ITEM_FILE_RULE: [
       '',
@@ -765,6 +775,21 @@ function delegateBoardVars(
       `  and the item's file gets a dated note of what is done and what is left.`,
     ].join('\n'),
   };
+}
+
+/**
+ * Deep review of row 113, finding 1: `passoff claim` writes the claim line into the item file
+ * here, uncommitted, and the builder's branch commits the same file, so the land step's
+ * `--ff-only` is refused until the claim is committed. A tracked file is never new, so a plain
+ * `git commit <path>` takes it with no `git add`.
+ */
+function claimCommit(items: string): string[] {
+  return [
+    'Where it is tracked, commit the claim before step 2, naming the file:',
+    `\`git commit ${items}/<n>-<slug>.md -m "claim item <n>"\`. The land step fast-forwards the`,
+    'primary checkout, and git refuses a fast-forward that would overwrite an uncommitted edit to',
+    'that file.',
+  ];
 }
 
 /**

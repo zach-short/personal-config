@@ -245,6 +245,34 @@ describe('what /delegate says', () => {
     }
   });
 
+  /**
+   * Deep review of row 113, findings 1 to 3: the claim is committed before the build so the
+   * fast-forward is not refused, a resend does not append the sign-off lines twice, and the
+   * budget fallback still commits them.
+   */
+  const LAND_FIXES = [
+    'Where it is tracked, commit the claim before step 2, naming the file:',
+    'git refuses a fast-forward that would overwrite an uncommitted edit to that file.',
+    'send the message once more first, and the second send skips step 1, whose lines are committed already.',
+    'run steps 1 to 5 there with `git -C <that path>`, step 1 only where the pass-off does not say the lines were committed',
+  ];
+
+  test('passes: under agent-pushes the claim is committed and the land step sends step 1 once', async () => {
+    const text = (await delegateUnder('agent-pushes')).replace(/\s+/g, ' ');
+    for (const phrase of LAND_FIXES) expect(text, phrase).toContain(phrase);
+    // The items folder is the rendered name, as the claim's `git ls-files` line uses it.
+    const items = text.match(/git ls-files --error-unmatch (\S+)\/<n>-<slug>\.md/)?.[1] ?? '';
+    expect(items).not.toBe('');
+    expect(text).toContain(`\`git commit ${items}/<n>-<slug>.md -m "claim item <n>"\``);
+    expect(text).not.toContain('run steps 2 to 5 there');
+  });
+
+  test('violates: under agent-commits none of the land fixes renders', async () => {
+    const text = (await delegateUnder('agent-commits')).replace(/\s+/g, ' ');
+    for (const phrase of LAND_FIXES) expect(text, phrase).not.toContain(phrase);
+    expect(text).not.toContain('claim item <n>');
+  });
+
   /** Autonomous-autopilot Phase 2 (design D4, 4.1 step 3): the audit dial, on a board only. */
   const DIAL = [
     'where its opening round chose audits by tier, a Mechanical or Light item lands on its gates with no auditor unless a trigger fires',

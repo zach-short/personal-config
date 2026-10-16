@@ -240,7 +240,7 @@ file that holds the row's open findings.
    the row. On a 1.x board, with no `{{ITEMS_DIR}}/` folder, the fold moves `DONE` prompts and old
    step bodies, and every row stays. A move its own rules hold, such as one that waits for a
    commit, is not run: it goes under **Decisions waiting for the owner**. What moved goes in the
-   rundown's first paragraph, and its commit blocks join the rundown's.
+   rundown's first paragraph, {{FOLD_COMMIT}}
 3. Write `RUNDOWN.md` in the run folder from `STATE.md`, with these sections in this order. Each is present, and
    says "none" where it is empty.
    1. **In one paragraph**: what ran, what is done, what is held, and why the run ended.
@@ -256,7 +256,7 @@ file that holds the row's open findings.
       peak context.
    9. **Not verified**: what no one saw running.
    10. **Warnings**, such as a tool that deletes uncommitted worktrees.
-   11. **Commit blocks**: {{COMMIT_BLOCKS}}
+   11. {{COMMIT_BLOCKS}}
 4. Add one line at the end of the log in `{{LEDGER_FILE}}` for the run:
    `- <date> · autopilot run · <the run folder>/RUNDOWN.md`. A run is not an item, so it gets no
    item file and no row. On a 1.x board, with no `{{ITEMS_DIR}}/` folder, write the run's own

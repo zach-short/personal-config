@@ -113,7 +113,7 @@ describe('what /autopilot says', () => {
         '**Budget**',
         '**Not verified**',
         '**Warnings**',
-        '**Commit blocks**',
+        policy === 'agent-pushes' ? '**Landed**' : '**Commit blocks**',
       ];
       const at = sections.map((s) => text.indexOf(s, text.indexOf('Write `RUNDOWN.md`')));
       expect(at.every((i) => i > 0)).toBe(true);
@@ -160,7 +160,7 @@ describe('what /autopilot says', () => {
     "was signed off in this run is runnable once that row has landed (`/delegate`'s step 6): it builds from the base, which now holds the predecessor.",
     'A predecessor whose landing is held holds it.',
     "When `/audit` has written its rows, read the board again before step 6. Under this policy the record follows the landing: route a signed-off row to `/delegate`'s step 6, and write the log line and `DONE` when its fast-forward lands.",
-    '11. **Commit blocks**: **Landed**: for each row, its branch, the merge commit or fast-forward, and whether the push went; the rows landed and not pushed, with how far ahead the base is; and the exact files step 4 commits.',
+    '11. **Landed**: for each row, its branch, the merge commit or fast-forward, and whether the push went; the rows landed and not pushed, with how far ahead the base is; and the exact files step 4 commits.',
   ];
 
   test('passes: under agent-pushes a row after a signed-off one builds once it has landed', async () => {
@@ -178,6 +178,28 @@ describe('what /autopilot says', () => {
         'read the board again before step 6. 4. **A question a builder reports',
       );
     }
+  });
+
+  /**
+   * Deep review of row 113, finding 5: under agent-pushes the rundown's last section has one
+   * title, and the fold's commit is step 4's, since no commit blocks are printed.
+   */
+  test('passes: under agent-pushes section 11 has one title and the fold commits in step 4', async () => {
+    const text = (await autopilot({ commitPolicy: 'agent-pushes' })).replace(/\s+/g, ' ');
+    expect(text).toContain("rundown's first paragraph, and its commit is step 4's.");
+    expect(text).toContain('11. **Landed**: for each row');
+    expect(text).not.toContain('**Commit blocks**');
+    expect(text).not.toContain("its commit blocks join the rundown's.");
+  });
+
+  test('violates: under agent-commits section 11 keeps its title and the fold its blocks', async () => {
+    const text = (await autopilot({ commitPolicy: 'agent-commits' })).replace(/\s+/g, ' ');
+    expect(text).toContain(
+      "rundown's first paragraph, and its commit blocks join the rundown's.",
+    );
+    expect(text).toContain('11. **Commit blocks**: for each worktree');
+    expect(text).not.toContain("and its commit is step 4's.");
+    expect(text).not.toContain('**Landed**');
   });
 
   /** The six blocking findings of the Fable review, 2026-10-05, each pinned where it was fixed. */
