@@ -100,4 +100,12 @@ describe('readHome', () => {
       expect(state.summary).toContainEqual(['Projects folder', '~/code']);
     });
   });
+
+  test('an empty model id is not listed as a model', async () => {
+    await withHome(async (folder) => {
+      await writeFile(configFile(), JSON.stringify({ models: { deep: '', default: 'm-1' } }));
+      const state = await readHome(folder);
+      expect(state.summary).toContainEqual(['Models', 'm-1']);
+    });
+  });
 });

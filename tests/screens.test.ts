@@ -8,6 +8,7 @@ import {
   panelInner,
   RAIL_WIDTH,
   rail,
+  sizeOf,
   stripAnsi,
   toneFor,
   visibleWidth,
@@ -137,6 +138,12 @@ describe('helpers', () => {
   test('wrap breaks at spaces and splits a word longer than the line', () => {
     expect(wrap('one two three', 7)).toEqual(['one two', 'three']);
     expect(wrap('abcdefghij', 4)).toEqual(['abcd', 'efgh', 'ij']);
+  });
+
+  test('sizeOf treats a reported 0 as unknown', () => {
+    expect(sizeOf(0, 0)).toEqual({ columns: 80, rows: 24 });
+    expect(sizeOf(undefined, undefined)).toEqual({ columns: 80, rows: 24 });
+    expect(sizeOf(120, 40)).toEqual({ columns: 120, rows: 40 });
   });
 
   test('toneFor reads NO_COLOR and COLORFGBG', () => {

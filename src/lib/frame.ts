@@ -32,6 +32,7 @@ import {
   painter,
   panelInner,
   showsRail,
+  sizeOf,
   toneFor,
   wrap,
 } from './screens.ts';
@@ -92,7 +93,7 @@ export function terminalIo(): FrameIo {
   return {
     input: process.stdin,
     output: process.stdout,
-    size: () => ({ columns: process.stdout.columns ?? 80, rows: process.stdout.rows ?? 24 }),
+    size: () => sizeOf(process.stdout.columns, process.stdout.rows),
     where: short(process.cwd()),
     paint: painter(toneFor(process.env)),
   };

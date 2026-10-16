@@ -238,6 +238,14 @@ running in a terminal.
 - During the build, a rewrite of `main` at 16:23 (a `reset` to `d28c90a`, then a rebase that
   reworded `b1d4ef7`) discarded the uncommitted `ui.ts` and `setup.ts` edits once. They were made
   again; the tree at `ad1ea66` equals `d28c90a`'s (`git diff --stat`).
+- **A second build, 2026-10-16.** A session in the worktree `bare-command-home` built Phase 2 at
+  the same time, as `c7b847e` on its branch. Zach kept this build (`e6bb1b7`) and dropped that
+  one. Its pseudo-terminal walk (`script` with `stty cols 100 rows 30`, an empty temp `HOME`,
+  enter on every step) found two defects this build shares, fixed on branch `frame-fixes`:
+  a terminal that reports 0 columns now draws at 80 (`sizeOf()` in `src/lib/screens.ts`, read by
+  `terminalIo()` and `runHome()`), and a model tier saved as `''` is left out of the home summary.
+  The same walk of this build reached the done screen with "Wrote 8 file(s)." and found nothing
+  else. Gates in the worktree: `bun test` 1,886 pass, 0 fail; `doctor . examples` nothing failing.
 
 ### Phase 3. README, CHANGELOG, board row
 

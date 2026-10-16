@@ -4,7 +4,7 @@ import { savedUserConfig } from '../lib/config.ts';
 import { exists } from '../lib/disk.ts';
 import { configFile, expandHome } from '../lib/paths.ts';
 import { readDocNames, readStandardPath } from '../lib/repo-config.ts';
-import { type HomeView, homeScreen, painter, toneFor } from '../lib/screens.ts';
+import { type HomeView, homeScreen, painter, sizeOf, toneFor } from '../lib/screens.ts';
 import type { ConfigLayer } from '../lib/types.ts';
 import { clearScreen, short } from '../lib/ui.ts';
 
@@ -82,7 +82,10 @@ async function folderFacts(cwd: string): Promise<Omit<HomeFacts, 'configLoads'>>
 
 function summaryOf(layer: ConfigLayer): Array<[string, string]> {
   const answers = layer.answers ?? {};
-  const models = Object.values(layer.models ?? {}).filter((id) => typeof id === 'string');
+  // A tier saved as '' is a tier left to the profile, not a model to list.
+  const models = Object.values(layer.models ?? {}).filter(
+    (id) => typeof id === 'string' && id !== '',
+  );
   const projects = answers.projectsDir ?? layer.projectsDir;
   return [
     ['Saved answers', String(Object.keys(answers).length)],
@@ -112,7 +115,12 @@ export async function runHome(run: Runner): Promise<number> {
   const choice = await new SelectPrompt({
     options: menu.map((_, index) => ({ value: index })),
     render() {
-      return homeScreen(paint, view(this.cursor), terminalSize(), where);
+      return homeScreen(
+        paint,
+        view(this.cursor),
+        sizeOf(process.stdout.columns, process.stdout.rows),
+        where,
+      );
     },
   }).prompt();
 
@@ -120,8 +128,4 @@ export async function runHome(run: Runner): Promise<number> {
   if (entry === undefined || entry.argv.length === 0) return 0;
   clearScreen();
   return run(entry.argv);
-}
-
-function terminalSize(): { columns: number; rows: number } {
-  return { columns: process.stdout.columns ?? 80, rows: process.stdout.rows ?? 24 };
 }

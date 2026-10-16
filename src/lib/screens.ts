@@ -120,6 +120,15 @@ function pieces(word: string, width: number): string[] {
   return out;
 }
 
+/**
+ * The size to draw at, from what the terminal reports. `||`, not `??`: a pseudo-terminal opened
+ * with no size reports 0 columns, and a frame drawn at 0 puts every character on its own line
+ * (found 2026-10-16 by a `script` walk of the bare command).
+ */
+export function sizeOf(columns?: number, rows?: number): { columns: number; rows: number } {
+  return { columns: columns || 80, rows: rows || 24 };
+}
+
 export function showsRail(columns: number, rows: number): boolean {
   return columns >= MIN_COLUMNS && rows >= MIN_ROWS;
 }
