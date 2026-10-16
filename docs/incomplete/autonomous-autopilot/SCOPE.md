@@ -81,6 +81,15 @@ Every claim was checked by this session on 2026-10-16. Line numbers are in the w
 | G36 | A returned builder can be continued | `SendMessage` to the agent's id "continue[s] a previously spawned agent with its context intact"; `/delegate` step 4 already uses it for fix rounds | the Agent tool's definition; `templates/skills/delegate.md:123-124` |
 | G37 | `cd` moves the session's working directory | The standing orders forbid it for the lead; an agent in a worktree runs git as plain commands from its own directory | `templates/skills/autopilot.md:269-271` |
 
+### The owner's statement on git, added 2026-10-16
+
+| # | Claim | Verified state | Citation |
+|---|---|---|---|
+| G38 | Under `agent-pushes` no generated text may discourage git use | The owner, quoted by the session that started this one: "There can be no remnants of discouraging Claude from using Git. In any capacity." and "From here on out, I have no issue with Claude doing anything itself related to Git. Including adding committing merging patching etc" | cross-session message from `local_7673e55b`, 2026-10-16 |
+| G39 | The rule line names three verbs | `Claude may run \`git add\`, \`git commit\` and \`git push\`.` in three places, and a test pins it as `MAY_PUSH` | `src/render/rules.ts:87`; `src/render/context.ts:178-179`; `src/questions/practices-policy.ts:147-149`; `tests/agent-pushes.test.ts:33`, `:54`, `:78`, `:196` |
+| G40 | Sentences that reserve git for the owner, rendered under `agent-pushes` | "Never push and never merge." (G1); "No branch is pushed or merged." (G2); "This step merges nothing, so it never merges into a branch the repo marks as protected, or into any other." in the worktree step | `src/render/skills.ts:305`, `:402`, `:907` |
+| G41 | Sentences that state a harness refusal or a verified breakage, not a reservation | "never `git -C` on another worktree, which isolation refuses"; "Never `git apply -N`: on git 2.49.0 it replaced the auditor's whole index"; the builder's "never through a shell variable or `git -C`" for the preflight merge | `templates/skills/autopilot.md:271`; `templates/skills/delegate.md:109`; `src/render/skills.ts:347`; `templates/skills/delegate.md:66-68` |
+
 ### Prior decisions this scope touches
 
 | Decision | What it says | What this scope does to it |
@@ -104,6 +113,15 @@ repositories to completion. It is skill text in `templates/skills/{autopilot,del
 policy seam in `src/render/skills.ts` beside `agentCommits()`, tests with a violating and a
 passing case for each new sentence, and the long forms that describe the skills and the commit
 policy. It lands as one `setup` re-run on each machine.
+
+**This also is**, from G38: a sweep of everything the tool renders under `agent-pushes` for a
+sentence that reserves a git action for the owner, and its replacement with the step that does
+the action (the land step for G40's three sentences) or with the permission line (G39). A
+sentence that states a harness refusal or a verified breakage (G41) is a fact about git or the
+harness and stays, worded as a fact: "isolation refuses `git -C` on another worktree" rather than
+"never run". The build's done-when includes a grep of the rendered output under `agent-pushes`
+for the reserving forms (`never (push|merge)`, `no branch is pushed`, `commits are the owner's`,
+`pushing is`), and a test that pins the grep empty.
 
 **This is not:**
 
@@ -395,6 +413,38 @@ working tree.
 *The strongest argument against it.* The run ends with one thing left for the owner to paste, after
 landing everything else itself.
 
+### 3.8 The rule line under `agent-pushes` (G38, G39)
+
+The one line in `commits.md`, each router and Part 11 names three verbs. The owner wants every git
+action covered. Three wordings, in the plain register the other rule lines use:
+
+**A. "Claude may run any git command, including `git add`, `git commit`, `git merge` and
+`git push`."** *Recommended.* The general permission first, then the four verbs a reader looks for.
+
+*The defense.* "Any git command" is the owner's statement in five words, and the examples keep the
+line greppable where the old one was.
+
+*The strongest argument against it.* The line names no exception, so a reader who wants one for
+a destructive command finds none. That matches G38; the land step's text describes what the step
+does, which is to push without `--force`, and the rule line is where the permission lives.
+
+**B. "Claude runs git itself: add, commit, merge, rebase, push, and the rest."** Shorter, verbs
+as words.
+
+*The strongest argument against it.* It drops the backticked commands a reader greps for, and
+"the rest" is vague.
+
+**C. "Git is Claude's to run, in full. Nothing here reserves a git command for the owner."** Two
+sentences, the second aimed at the sweep in section 2.
+
+*The strongest argument against it.* It is a sentence about the document, not about what to do.
+
+Whatever the wording, it replaces `AGENT_PUSHES` in `src/render/rules.ts`, `commitRuleLine` in
+`src/render/context.ts`, the `agent-pushes` paragraph in `src/questions/practices-policy.ts`, the
+`MAY_PUSH` constant in `tests/agent-pushes.test.ts`, and the quoted line in
+`docs/choices/commit-policy.md` and `docs/choices/commit-policy-practice.md`; then `catalog.json`
+is rebuilt.
+
 ## 4. Dials
 
 Each is a number or a choice the design leaves open, with a recommended default, and belongs in
@@ -454,6 +504,14 @@ the skill's defaults table so the opening round can offer it.
   together freeze each other at 25% apiece.
 - **The run commits in the owner's checkout** (3.7 A). Named files keep a parallel session's edits
   out of the commit; they stay in the working tree for the owner to find.
+- **Deleting a ban without its replacement.** If "Never push and never merge." leaves the builder
+  brief before the land step exists, parallel builders merge on their own, each from its own base,
+  with no gate on the landed tree. The sweep in section 2 and the land step in 3.1 ship in one
+  change, and the test that pins the grep empty lives beside the test that pins the land step
+  present.
+- **The owner's own adapted files are outside this scope.** The adapted standards, memories,
+  `/land-worktrees` and `/notes-to-board` carry the same reservations and are handled in another
+  session (the starting session, 2026-10-16). This build edits none of them.
 
 ## 6. Open questions
 
@@ -474,6 +532,10 @@ Asked in chat on 2026-10-16, in one batch. The recommended answer is first in ea
    a new `autonomy` question with a long form.
 7. **End of run:** A, the run commits and pushes the run folder and the fold's moves, naming the
    files; or B, print the blocks.
+8. **The rule line** (added 2026-10-16 after the owner's statement, G38): A, "Claude may run any
+   git command, including `git add`, `git commit`, `git merge` and `git push`."; or B, "Claude
+   runs git itself: add, commit, merge, rebase, push, and the rest."; or C, "Git is Claude's to
+   run, in full. Nothing here reserves a git command for the owner."
 
 ## 7. Answers
 
@@ -504,6 +566,10 @@ three). Every part took the recommendation.
    config question.
 7. **End of run:** A. The run commits and pushes the run folder and the fold's moves from the
    primary checkout, naming the exact files, with the message `autopilot run <date>`.
+8. **The rule line:** A, asked and answered 2026-10-16 after the owner's statement (G38) reached
+   this session: "Claude may run any git command, including `git add`, `git commit`, `git merge`
+   and `git push`." It replaces the three-verb line in every place section 3.8 names, and the
+   build sweeps every sentence G40 lists.
 
 Still open for the design step: the exact opening-round wording for the new questions (the plain
 register, D16); whether `/passoff`'s item template gains an "owner's call" line (hazards, section
