@@ -153,7 +153,24 @@ must not move the confirm out of the unconditional path that test pins.
 
 ### Phase 2. The `init` command and its tests
 
-**Status:** `PLANNED`.
+**Status:** `BUILT` 2026-10-16 by board item 103, on `b797eae`; Zach commits, so the hash is the
+commit that takes `src/commands/init.ts`. Gates: `typecheck` and `lint` exit 0; `bun test` ran
+1772 tests across 96 files, 1772 pass, exit 0. `doctor . examples` exits 1 on the same 20
+findings item 102 recorded, none in a file this phase touched. The parity test passes for a git
+repo and a plain folder; the hand check in the done-when passes and is quoted in item 103's
+close-out.
+
+*As built:* BD-1's check after the filter is D2's, not the filter restated: a kept file under
+`~/.claude` or `~/.config/personal-config` throws, which only a target inside one of them can
+cause (`insideOnly`, `src/commands/init.ts`). BD-9's line has one more space than written here, so
+its description starts in the same column as `setup`'s and `doctor`'s. BD-2's first three
+refusals had no settled copy; they follow `checkUsage`'s `personal-config: <problem>` shape
+(`src/lib/args.ts`) and are listed in item 103's close-out for Zach to keep or reword (R7). The
+parity test seeds `config.json` with three answers that are not the profile's defaults before
+`setup` runs, because with the defaults both commands agree whether or not `init` reads the
+record; with the seed, dropping the D10 overlay fails it for both targets. It does not catch a
+dropped BD-3 overlay, which only differs in a folder holding older answers;
+`tests/init.test.ts` does, and fails without it.
 
 **Scope**
 
