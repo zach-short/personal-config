@@ -18,19 +18,23 @@ if (!ITEMS || ITEMS.length === 0) {
   );
 }
 
+// Item 106 renamed the Mechanical tier from "Sonnet 5" to "Sonnet 5.5", and an exact match sent
+// every renamed row to opus without a warning. The board holds both spellings, so the match is on
+// the family name (the first word), and a version bump no longer changes the route.
 function tierToModel(tier) {
-  if (tier === 'Fable 5.1') return 'fable';
-  if (tier === 'Sonnet 5') return 'sonnet';
+  const family = String(tier || '').trim().split(/\s+/)[0].toLowerCase();
+  if (family === 'fable') return 'fable';
+  if (family === 'sonnet') return 'sonnet';
   return 'opus';
 }
 
-// B2: triage carried no model, so every triage agent inherited the workflow default (Sonnet 5 on
-// the last run) and a Mechanical-tier read decided what Opus and Fable were allowed to build.
+// B2: triage carried no model, so every triage agent inherited the workflow default (a Sonnet
+// model on the last run) and a Mechanical-tier read decided what Opus and Fable were allowed to build.
 // model-routing.md: never let a subagent inherit the session tier for read-and-report work. A bad
 // triage is also a *quiet* failure — a wrongly-cleared item builds and looks fine — so the floor
 // here is the Default tier, raised to Deep only where the item itself is Deep.
 function triageModel(item) {
-  return item.model === 'Fable 5.1' ? 'fable' : 'opus';
+  return tierToModel(item.model) === 'fable' ? 'fable' : 'opus';
 }
 
 const TRIAGE_SCHEMA = {
