@@ -1,8 +1,52 @@
-# SCOPE: setup leaves another track's global files behind
+# DESIGN: setup leaves another track's global files behind
 
 **Status:** `RATIFIED`. Opened 2026-10-16 by board item 101, on Opus 5.5. Owner: Zach. GATE 1
-was answered 2026-10-16; the answers are under §6. The next stage renames this file to
-`DESIGN.md` and writes them in as decisions.
+was answered 2026-10-16 (§6). This file was `SCOPE.md` until 2026-10-16, when the answers were
+written in below as D1 to D4. From here it changes by amendment only: a new dated decision or an
+`As built:` note, never an edit to a decision in place. `PLAN.md` beside it orders the build.
+
+## Decisions
+
+**D1. A `setup` run plans a removal for each global file this tool wrote that the run no longer
+renders** (2026-10-16, GATE 1 Q1, option O1). The files it may remove are DIAL-1's list: each
+skill's `SKILL.md`, the three `write-doc/` files, and the rules `commits.md`, `docs-lookup.md` and
+`model-routing.md`. A file counts as this tool's when it carries a stamp not marked `adapted`
+(DIAL-2). The preview names each removal, `commitPlan` backs it up, and `undo` restores it.
+
+*Defense.* It is the one option that keeps the settled model (G13: one track for the global
+layer, set by the last `setup`) and makes it true on disk. `rendersDelegate` then agrees with
+the installed skills by construction, the stale stamps of G5 go, and `init`'s notice ("Run
+`personal-config setup` to change them") describes what `setup` does. The removal machinery
+exists and is tested for `fold` (G9, G10). O2 fixed one sentence and made render depend on the
+machine; O3 left the contradiction in every session until a non-technical person deleted files
+by hand; O4 and O5 reopen settled designs (setup-tracks, init-command D6).
+
+*What it costs, accepted.* A person with both kinds of work loses the other track's skills and
+rules on each run. That is O1's strongest argument against it (§3), and the owner took it.
+
+**D2. G6 is not fixed here** (2026-10-16, GATE 1 Q2). The skills both tracks install keep
+flipping to the last run's track. Board item 108 scopes it, with O4 and O5 as its candidates.
+
+**D3. Hook scripts and `settings.json` entries are out of D1** (2026-10-16, GATE 1 Q3). A
+removed script under a kept `settings.json` entry fails on every matching tool call, and
+`merge-json` cannot remove an entry (G11). G7's delete-guard entry goes to board item 109.
+
+**D4. `--yes` carries out a planned removal** (2026-10-16, GATE 1 Q4). The preview lists it and
+`undo` restores it, which is the same footing as every overwrite `--yes` already makes.
+
+*Supersessions.* None. D1 to D4 add behaviour to `setup`; no earlier decision said a run must
+leave a global file in place.
+
+## Rules that survive unchanged
+
+- `renderAll` stays a function of the answers and touches no disk. `doctor`'s rerender reads it
+  and must not see a removal (§5).
+- `init` writes and removes nothing outside its folder (init-command D2, G14).
+- Which skills and rules each track is offered (setup-tracks D3, D6, D9, DIAL-6;
+  delegate-autopilot D1, D22).
+- A file with no stamp, or a stamp marked `adapted`, is never replaced, and now never removed.
+- `fold`'s removals keep their current behaviour, including that a removal leaves its folder.
+- Hook scripts, `settings.json` and `config.json` are never removed (D3).
 
 **Why this exists.** `docs/incomplete/init-command/PLAN.md` §0 row F1 (now in the archive at
 `init-command/PLAN.md:36`) confirmed that a non-code `setup` run rewrites
