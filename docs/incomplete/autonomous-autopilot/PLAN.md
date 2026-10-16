@@ -26,7 +26,7 @@ phase reads first.
 | The worktree step is one function | `worktreeStep(n, maker, which)`, `worktreeCommands()`, `worktreeLimits(maker)` | `src/render/skills.ts:884-915` |
 | `/passoff` renders on every track; `/autopilot` on code + full + git with a board | `offeredSkills()`; `rendersAutopilot(ctx)` already exists for `model-routing.md` | `src/render/skills.ts:150-168`, `:179-182` |
 | The long forms are embedded in `catalog.json` | `bun run catalog` rebuilds it; Phase 0 rebuilt it | `package.json:42`; `git show --stat eecac7a` |
-| The next free row is 112 | archive holds 108, 109, 111; the board's highest row is 110 | `ls ~/Projects/archive/personal-config/passoff`; `PASSOFF.md` (main checkout) |
+| The next free row is 112 | archive holds 108, 109, 111; the board's highest row is 110. Superseded the same day: see BD-7 | `ls ~/Projects/archive/personal-config/passoff`; `PASSOFF.md` (main checkout) |
 | The four gates were green at `a589d4c` on 2026-10-16; `bun test` ran 1772 tests in 96 files in a clean copy | `CLAUDE.md` Commands; the standard's Part 6 | run 2026-10-16 |
 
 ## 1. Decisions taken since ratification
@@ -50,6 +50,7 @@ phase reads first.
 - BD-6. The new test for the sweep and the land step lives in `tests/agent-pushes-skills.test.ts`,
   a file of its own, not appended to `tests/agent-pushes.test.ts` (X1: that file is lane-owned by
   Phase 0's rule-line pins and this one renders every file under one policy). Reversal: append.
+- BD-7 (2026-10-16, after the rows were written). Item 112 was taken between this plan's check and its board rows: the nested-board `doctor` fix (`4348b20`) closed as item 112 and was folded to the archive. The five rows are 113 to 117, and every number below reads so. Reversal: none; a number is never reused.
 
 ## 2. Phases
 
@@ -69,7 +70,7 @@ artifact. Each is marked load-bearing on the board so `/delegate` gives it a Dee
 **Lanes.** Phases 1, 2, 3 and 5 are lane A, in order: each edits `src/render/skills.ts` and the
 two skill templates. Phase 4 is lane B and may run at once. Phase 5 waits on all four.
 
-**Board rows.** 112 (Phase 1), 113 (Phase 2), 114 (Phase 3), 115 (Phase 4), 116 (Phase 5).
+**Board rows.** 113 (Phase 1), 114 (Phase 2), 115 (Phase 3), 116 (Phase 4), 117 (Phase 5).
 
 ### Phase 1: the seam, the land step and the sweep
 
@@ -143,7 +144,7 @@ section 6 one blank line apart under the other policies, or those bytes move and
 
 ### Phase 2: the Autonomy call, the decider, scope-first rows, the audit dial, the cross-board wait
 
-**Status:** not started. **Model: Default, load-bearing (Deep review). Lane A. Waits on 112.**
+**Status:** not started. **Model: Default, load-bearing (Deep review). Lane A. Waits on 113.**
 
 Scope.
 
@@ -194,7 +195,7 @@ question under **Held**, even when the builder finished." must still pass under 
 
 ### Phase 3: the end-of-run commit and the owner's-call sentence
 
-**Status:** not started. **Model: Default. Lane A. Waits on 113.**
+**Status:** not started. **Model: Default. Lane A. Waits on 114.**
 
 Scope.
 
@@ -258,7 +259,7 @@ in the catalog byte for byte, so a trailing newline change shows as a catalog di
 
 ### Phase 5: re-run `setup` and walk one supervised landing
 
-**Status:** not started. **Model: Default. Lane A. Waits on 112, 113, 114, 115.**
+**Status:** not started. **Model: Default. Lane A. Waits on 113, 114, 115, 116.**
 
 Scope.
 
