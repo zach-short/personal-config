@@ -93,25 +93,32 @@ describe('what /autopilot says', () => {
       expect(text.split(value), value).toHaveLength(2);
   });
 
-  test("the rundown's sections appear in D13's order", async () => {
-    const text = await autopilot();
-    const sections = [
-      '**In one paragraph**',
-      '**Audit**: "not run", or the report',
-      '**Rows**: for each row',
-      '**Defects found and not fixed.**',
-      '**Collisions and merge order**',
-      '**Judgment calls**, each',
-      '**Decisions waiting for the owner**',
-      '**Budget**',
-      '**Not verified**',
-      '**Warnings**',
-      '**Commit blocks**',
-    ];
-    const at = sections.map((s) => text.indexOf(s, text.indexOf('Write `RUNDOWN.md`')));
-    expect(at.every((i) => i > 0)).toBe(true);
-    expect([...at].sort((a, b) => a - b)).toEqual(at);
-  });
+  // Autonomous-autopilot D2: under agent-pushes section 7 is retitled for the decider's answers.
+  const seventhTitles: Array<[string, string]> = [
+    ['print-blocks', '**Decisions waiting for the owner**'],
+    ['agent-commits', '**Decisions waiting for the owner**'],
+    ['agent-pushes', '**Decisions taken for the owner**'],
+  ];
+  for (const [policy, seventh] of seventhTitles)
+    test(`the rundown's sections appear in D13's order under ${policy}`, async () => {
+      const text = await autopilot({ commitPolicy: policy });
+      const sections = [
+        '**In one paragraph**',
+        '**Audit**: "not run", or the report',
+        '**Rows**: for each row',
+        '**Defects found and not fixed.**',
+        '**Collisions and merge order**',
+        '**Judgment calls**, each',
+        seventh,
+        '**Budget**',
+        '**Not verified**',
+        '**Warnings**',
+        '**Commit blocks**',
+      ];
+      const at = sections.map((s) => text.indexOf(s, text.indexOf('Write `RUNDOWN.md`')));
+      expect(at.every((i) => i > 0)).toBe(true);
+      expect([...at].sort((a, b) => a - b)).toEqual(at);
+    });
 
   test('it says four questions per call, and asks nothing after the opening round', async () => {
     const text = await autopilot();
@@ -285,5 +292,79 @@ describe('the audit-first option', () => {
       'minus the start reading, plus the latest reading after the reset. Never count a drop as negative spend.',
     ])
       expect(text, phrase).toContain(phrase);
+  });
+});
+
+/**
+ * Autonomous-autopilot Phase 2 (design D2 to D5, D9, 4.2): under agent-pushes the opening round
+ * gains the Autonomy call, the wake decides a builder's question by severity, scope-first rows are
+ * scoped in the run, and a wait on another board holds the run. The other policies render none of it.
+ */
+describe('the Autonomy call and what it governs', () => {
+  const AUTONOMY = [
+    'all of them, including rows written during the run',
+    'read one window and the caps are joint',
+    '*Caught at once*',
+    '*Looks right until tested*',
+    '*Compiles and passes every gate, wrong in production*',
+    "owner's call",
+    'The fourth question on one row holds it',
+    'holds on the holding wake instead of ending',
+    '**Decisions taken for the owner**',
+    'Waits elsewhere',
+    'scoped: <path>',
+    'or its item file carries a dated note that a run scoped it and its gate was answered (section 5).',
+    'a row whose prompt says to scope first is runnable for scoping',
+    'is `DONE` there, or absent from both that table and the items folder beside it',
+  ];
+  const DEFAULTS = [
+    'More than 300 lines changed, or more than 8 files',
+    '3, then the row is held',
+  ];
+  const TITLES = [
+    '8. **Questions during the run.**',
+    '9. **Scope-first rows.**',
+    '10. **Audits.**',
+    '11. **Other boards.**',
+  ];
+
+  test('passes: under agent-pushes the four questions follow the second call, in order', async () => {
+    const text = await autopilot({ commitPolicy: 'agent-pushes' });
+    const second = text.indexOf('**Second call**');
+    const at = TITLES.map((title) => text.indexOf(title, second));
+    expect(at.every((i) => i > second)).toBe(true);
+    expect([...at].sort((a, b) => a - b)).toEqual(at);
+    expect(text.indexOf('**Later calls.**')).toBeGreaterThan(at.at(-1) ?? 0);
+  });
+
+  test('passes: under agent-pushes the decider, the scoping run and the waits render', async () => {
+    const text = (await autopilot({ commitPolicy: 'agent-pushes' })).replace(/\s+/g, ' ');
+    for (const phrase of AUTONOMY) expect(text, phrase).toContain(phrase);
+    for (const value of DEFAULTS) expect(text.split(value), value).toHaveLength(2);
+    // The `2eff50c` rule stays, as the answer under question 8's other choice.
+    expect(text).toContain(
+      'Anything else holds the row, with the question under **Held**, even when the builder finished.',
+    );
+  });
+
+  test('violates: under agent-commits and print-blocks none of it renders', async () => {
+    for (const policy of ['agent-commits', 'print-blocks']) {
+      const text = (await autopilot({ commitPolicy: policy })).replace(/\s+/g, ' ');
+      for (const phrase of [...AUTONOMY, ...DEFAULTS, ...TITLES])
+        expect(text, `${policy}: ${phrase}`).not.toContain(phrase);
+      expect(text, policy).toContain('**Decisions waiting for the owner**, copy variants');
+      expect(text, policy).toContain(
+        'Which Deep rows to lift. Several may be chosen; none is the default.',
+      );
+    }
+  });
+
+  test("the owner's-call mark is on at least two lines under agent-pushes, none under agent-commits", async () => {
+    const lines = async (policy: string) =>
+      (await autopilot({ commitPolicy: policy }))
+        .split('\n')
+        .filter((line) => /owner.s call/.test(line)).length;
+    expect(await lines('agent-pushes')).toBeGreaterThanOrEqual(2);
+    expect(await lines('agent-commits')).toBe(0);
   });
 });

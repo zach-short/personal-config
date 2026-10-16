@@ -322,6 +322,7 @@ function delegateVars(
       lands,
     ),
     COMMIT_RULE: builderRule(commits, lands),
+    AUDIT_DIAL: lands ? auditDial() : '',
     // Item 95 audit, N1: the auditor's branch now holds the builder's commits, so the worktree
     // step keeps it.
     AUDIT_KEPT: commits
@@ -366,6 +367,25 @@ function builderRule(commits: boolean, lands: boolean): string {
   return [
     'Do not commit. Leave the change in the worktree. When it is done, make the patch the',
     `  auditor works from: ${MAKE_PATCH} List in your report every file the change adds.`,
+  ].join('\n');
+}
+
+/**
+ * Design D4, step 3: an unaudited row still has its gates run twice, by the builder and again by
+ * the land step on the tree that lands. The diffstat numbers stay in `/autopilot`'s defaults
+ * table, whose test pins each value written once.
+ */
+function auditDial(): string {
+  return [
+    '',
+    '',
+    'Under `/autopilot`, where its opening round chose audits by tier, a Mechanical or Light item',
+    'lands on its gates with no auditor unless a trigger fires: a file changed outside its "Files it',
+    'owns", a fix round or a relay pass, a number claimed, a diffstat above `/autopilot`\'s audit',
+    "trigger, or a decider's load-bearing mark. Read the triggers from the builder's report, which",
+    'carries the diffstat, the files changed, the relay passes and the numbers claimed. With no',
+    "trigger, step 4 signs it off on the builder's report, with the verdict",
+    '"not audited: <tier>, no trigger", and step 6 runs its gates again on the tree that lands.',
   ].join('\n');
 }
 
@@ -469,11 +489,18 @@ function tierTable(ctx: RenderContext, indent: string): string {
  */
 function autopilotVars(ctx: RenderContext): Record<string, string | null> {
   const commits = agentCommits(ctx);
+  const autonomy = agentPushes(ctx) ? autopilotAutonomy() : autopilotSupervised();
   // `/autopilot` renders only on a board, so `agentPushes()` alone decides its land step.
   if (agentPushes(ctx))
-    return { ...autopilotNames(ctx), ...autopilotLanding(), END_COMMIT: endCommit() };
+    return {
+      ...autopilotNames(ctx),
+      ...autopilotLanding(),
+      ...autonomy,
+      END_COMMIT: endCommit(),
+    };
   return {
     ...autopilotNames(ctx),
+    ...autonomy,
     LAND_ROUTE: '',
     AFTER_UNCOMMITTED: commits
       ? [
@@ -532,6 +559,165 @@ function autopilotLanding(): Record<string, string> {
       '      and the exact files step 4 commits.',
     ].join('\n'),
   };
+}
+
+/**
+ * Design 4.2's Phase 2 tokens under the other three policies: the bytes the template held before
+ * them, and `null` where a token sits alone on its line, so nothing those policies render moves.
+ */
+function autopilotSupervised(): Record<string, string | null> {
+  return {
+    EXTRA_DEFAULTS: null,
+    CROSS_BOARD: null,
+    SCOPE_FIRST: '- Its prompt does not say to scope first.',
+    SHARED_WINDOW: '',
+    DEEP_ROWS_OPTIONS: '. Several may be chosen; none is the default.',
+    AUTONOMY_CALL: null,
+    STATE_EXTRAS: null,
+    SCOPE_RUN: null,
+    QUESTION_RULE: [
+      '4. **A question a builder reports for the owner** is answered here, never by asking. Where it only',
+      ...heldQuestion(),
+    ].join('\n'),
+    CROSS_BOARD_HOLD: null,
+    DECISIONS_SECTION: '**Decisions waiting for the owner**, copy variants among them.',
+  };
+}
+
+/** The `2eff50c` rule for a builder's question, which both policies keep for one answer. */
+function heldQuestion(): string[] {
+  return [
+    '   implements a decision the row or the design already made, take it, and log it under',
+    '   **Judgment calls** with a one-line reversal. Anything else holds the row, with the question',
+    '   under **Held**, even when the builder finished.',
+  ];
+}
+
+/**
+ * Design D2 to D5 and 4.2 under `agent-pushes`: the run decides, scopes, audits and waits by the
+ * Autonomy call's answers. Each token names the answer it depends on, because the person may
+ * have chosen the other one, and the skill must still say what happens then.
+ */
+function autopilotAutonomy(): Record<string, string | null> {
+  return {
+    // Written once here; `/delegate`'s audit dial names the trigger row instead of its numbers.
+    EXTRA_DEFAULTS: [
+      '| Audit trigger: diffstat | More than 300 lines changed, or more than 8 files |',
+      '| Decider questions per row | 3, then the row is held |',
+    ].join('\n'),
+    CROSS_BOARD: [
+      '- An item its "Waits on" names on another board, as `<absolute path to the other board> item',
+      '  <n>`, is `DONE` there, or absent from both that table and the items folder beside it (the',
+      "  board's folder name lowercased, as the standard names it). Read that file by path on every",
+      "  wake. Where the Autonomy call's question 11 took the other answer, such a wait is unmet.",
+    ].join('\n'),
+    SCOPE_FIRST: [
+      '- Its prompt does not say to scope first, or its item file carries a dated note that a run',
+      '  scoped it and its gate was answered (section 5).',
+    ].join('\n'),
+    SHARED_WINDOW: [
+      '',
+      '   Where several runs are open at once, say that they read one window and the caps are joint, and',
+      '   offer a larger weekly share.',
+    ].join('\n'),
+    DEEP_ROWS_OPTIONS: [
+      ':',
+      '   all of them, including rows written during the run; the rows named; or none, the default.',
+    ].join('\n'),
+    AUTONOMY_CALL: autonomyCall(),
+    STATE_EXTRAS: [
+      '  A row a run scoped (section 5) adds "scoped: <path>" to its line.',
+      '- **Waits elsewhere**: one line for each row whose "Waits on" names another board: the row,',
+      "  the board's path, the item, and whether the wait was met on the last wake.",
+    ].join('\n'),
+    SCOPE_RUN: scopeRun(),
+    QUESTION_RULE: decider(),
+    CROSS_BOARD_HOLD: [
+      "- Where the Autonomy call's question 11 took the default, a run with nothing in flight and at",
+      '  least one open wait on another board holds on the holding wake instead of ending, until the',
+      '  end time.',
+    ].join('\n'),
+    DECISIONS_SECTION: [
+      '**Decisions taken for the owner**, each with its reversal and its decider, followed by the',
+      '      decisions still waiting, under **Decisions waiting for the owner**, copy variants among',
+      '      them.',
+    ].join('\n'),
+  };
+}
+
+/**
+ * Design 4.2's four questions, as written, except question 9's "calls the owner's", which reads
+ * "marks as the owner's call" so it names the mark the decider looks for (D2).
+ */
+function autonomyCall(): string {
+  return [
+    '',
+    '**Autonomy call, after the second call. Four questions.** Each default is first and marked',
+    'recommended.',
+    '',
+    "8. **Questions during the run.** Decide a builder's question here, by how loud a wrong answer",
+    "   would be, with the item file's own words binding and every decision logged with its reversal;",
+    "   or hold every row that asks, as the wake procedure's step 4 says without this answer.",
+    '9. **Scope-first rows.** Scope them in the run and answer the gate by each recommendation,',
+    "   holding only a question the item file or the document marks as the owner's call; or leave",
+    '   them out.',
+    '10. **Audits.** By tier: Deep and Default rows audited, Mechanical and Light rows landed on their',
+    '    gates unless a trigger fires; or every row.',
+    '11. **Other boards.** Read every "Waits on" that names another board by path on each wake, and',
+    '    hold instead of ending while such a wait is open; or treat such a wait as unmet.',
+  ].join('\n');
+}
+
+/**
+ * Design D3: the scoping lands before the build, so the builder reads the document from the base
+ * and `doctor` scans it at the land step's gate; the Deep gate stands in for the audit.
+ */
+function scopeRun(): string {
+  return [
+    '',
+    "Where the Autonomy call's question 9 took the default, a row whose prompt says to scope first is",
+    'runnable for scoping, and its launch is a scoping run. Spawn a Default subagent in its own',
+    "worktree with `/scope`'s text (its absolute path, read-only) and the row's prompt; it writes",
+    '`docs/incomplete/<slug>/SCOPE.md` with every option carrying a recommendation, commits it naming',
+    "the file, and asks no gate. Send the document's open questions and its path to a Deep decider",
+    "under the wake procedure's step 4; it answers each by its recommendation unless the document or",
+    'the code gives a reason not to, and holds on a question the item file or the document marks as',
+    'the owner\'s. The scoper writes the answers under a dated **Answers** section, each as "decided',
+    'by <model> in `<run folder>`, <date>, reversal: ...", commits, and you land the branch by',
+    "`/delegate`'s step 6 with no audit: the Deep gate is its review. Add a dated note to the row's",
+    "item file naming the document and the gate's outcome; the row then counts as scoped, and a later",
+    'wake may launch its build with the document as its design input. A held gate holds the row with',
+    "the document landed, so the owner's morning starts at the gate.",
+  ].join('\n');
+}
+
+/**
+ * Design D2: the marks are listed because a rule a decider has to interpret is one it interprets
+ * in its own favour, and the class goes up when unsure because a quiet wrong answer costs more.
+ */
+function decider(): string {
+  return [
+    '4. **A question a builder reports for the owner** is answered here, never by asking. Where the',
+    "   Autonomy call's question 8 took the default, decide it. The item file's words come first: a",
+    '   question it marks as the owner\'s holds the row, and so does an answer that would widen "Files',
+    '   it owns" into a file another open row lists. The marks are the phrase "owner\'s call", a name',
+    '   followed by "\'s call", "do not pick before", and an "Ask before building" entry the opening',
+    '   round did not reach. Then decide by what a wrong answer does, going up a class when unsure:',
+    '   - *Caught at once* (a gate or the eye shows it: a copy variant, a casing, a default value, a',
+    '     file to add that no other open row lists): this session decides.',
+    '   - *Looks right until tested* (a choice between designs, a flow, a shared primitive): a',
+    '     Default subagent decides.',
+    '   - *Compiles and passes every gate, wrong in production* (money, sync or merge rules, a',
+    '     notification, data removed, a migration, a public contract, a file two rows touch): a Deep',
+    "     subagent decides, or holds the row when it finds the question is the owner's.",
+    '',
+    '   A decider runs in its own worktree, reads the item file, the question and the code it names,',
+    '   and returns the decision, a one-line reversal, and whether the row is now load-bearing, which',
+    '   is an audit trigger. Send the answer to the builder with `SendMessage`, and log it under',
+    "   **Judgment calls** with the reversal and the decider's model. The fourth question on one row",
+    "   holds it. Under question 8's other answer, this session decides nothing: where it only",
+    ...heldQuestion(),
+  ].join('\n');
 }
 
 function delegateBoardVars(

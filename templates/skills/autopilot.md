@@ -33,6 +33,7 @@ and the rest of this skill names them.
 | Wake while agents run | 1800 seconds |
 | This session's context | No cap, recorded on every wake |
 | Calls of row questions in the opening round | 3, so at most 12 row questions |
+{{EXTRA_DEFAULTS}}
 
 ## 1. Before anything
 
@@ -55,8 +56,9 @@ A row is runnable when all of these hold:
   `SETTLED AS NO`), because the items in a lane run in order. A `HELD` or `IN FLIGHT` row ahead of
   it holds it back.
 - Every item its "Waits on" names is `DONE`, or has left the table at a fold.
+{{CROSS_BOARD}}
 {{AFTER_UNCOMMITTED}}
-- Its prompt does not say to scope first.
+{{SCOPE_FIRST}}
 - Its "Files it owns" overlaps no row marked `IN FLIGHT`, and no other row in the same launch.
   Check the whole launch set at once, as `/delegate`'s step 5 does; of two rows that overlap, the
   lower row number goes.
@@ -92,7 +94,7 @@ defaults are `/audit`'s.
    share of the five-hour window; or a shorter run; or a number of rows the person types. Where no
    usage tool exists, say that the budget will not be measured, and require an end time or a
    number of rows. Where the audit call ran, its stop is the end time: offer no other end time
-   here.
+   here.{{SHARED_WINDOW}}
 2. **Agents in flight.** The default; fewer; or one at a time.
 3. **Unattended.** Say what the run needs: a permission mode that does not stop on a prompt, and
    the app or the terminal left open on a machine that stays awake. Where no timer exists, say that
@@ -108,9 +110,10 @@ defaults are `/audit`'s.
 
 **Second call, only when it has something to ask. Up to three questions.**
 
-5. **Deep rows.** Which Deep rows to lift. Several may be chosen; none is the default.
+5. **Deep rows.** Which Deep rows to lift{{DEEP_ROWS_OPTIONS}}
 6. **Load-bearing rows.** Which other runnable rows get a Deep review. None is the default.
 7. **Rows to leave out** of this run. None is the default.
+{{AUTONOMY_CALL}}
 
 **Later calls.** Each candidate row's open "Ask before building" questions, as the row wrote them,
 with the row's own options, four in each call, up to the default number of calls. A copy question
@@ -132,6 +135,7 @@ the next free number. `STATE.md` in it has these sections:
   to the row questions.
 - **Rows**: one line for each row: number, tier, status, agent ids, worktree path, branch, patch
   path, relay passes, review rounds, verdict.
+{{STATE_EXTRAS}}
 - **Queue**: the runnable rows not yet launched, in launch order.
 - **Readings**: one line for each wake: the time, the usage reading or "not measured", and this
   session's context.
@@ -155,6 +159,7 @@ read of the board.
 
 Otherwise, claim each runnable row, then run `/delegate`'s step 2 for each, up to the
 agents-in-flight cap, with the Agent calls in one message.
+{{SCOPE_RUN}}
 
 Write `STATE.md`. Then start `/loop` with no interval and this prompt: "Read `<the run
 folder>/STATE.md` first. If `/autopilot`, `/delegate` or, while the audit runs, `/audit` is no
@@ -179,10 +184,7 @@ On every wake, and whenever a background agent returns:
    and the board. Route each returned audit agent by `/audit`'s
    sections 4 to 6, and record its step under **Audit**; its next step launches in step 6, never
    here. When `/audit` has written its rows, read the board again before step 6.{{LAND_ROUTE}}
-4. **A question a builder reports for the owner** is answered here, never by asking. Where it only
-   implements a decision the row or the design already made, take it, and log it under
-   **Judgment calls** with a one-line reversal. Anything else holds the row, with the question
-   under **Held**, even when the builder finished.
+{{QUESTION_RULE}}
 5. **Where the five-hour window has reached its default share**, freeze launches and hold on the
    holding wake. After its reset, resume the stopped agents with `SendMessage`.
 6. **Launch.** Unless a cap is reached or launches are frozen, read the board fresh and launch the
@@ -205,6 +207,7 @@ On every wake, and whenever a background agent returns:
 - When nothing is in flight after this wake's launches, the run ends: no row was runnable, or
   none could launch. The one exception is a hold with a timer: a freeze, or agents a limit
   stopped, which wait on the holding wake.
+{{CROSS_BOARD_HOLD}}
 - Where no usage tool exists and a limit stops the agents, hold on the holding wake, then resume
   them with `SendMessage`. Where no timer exists either, end the run there: nothing will wake this
   session. The stopped agents' rows go under **Held**. A stopped audit step is written in the
@@ -248,7 +251,7 @@ file that holds the row's open findings.
    4. **Defects found and not fixed.**
    5. **Collisions and merge order**, including any number two rows both claimed.
    6. **Judgment calls**, each with its reversal.
-   7. **Decisions waiting for the owner**, copy variants among them.
+   7. {{DECISIONS_SECTION}}
    8. **Budget**: the usage readings or "not measured", agents by model, hours, and this session's
       peak context.
    9. **Not verified**: what no one saw running.

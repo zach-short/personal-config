@@ -245,6 +245,36 @@ describe('what /delegate says', () => {
     }
   });
 
+  /** Autonomous-autopilot Phase 2 (design D4, 4.1 step 3): the audit dial, on a board only. */
+  const DIAL = [
+    'where its opening round chose audits by tier, a Mechanical or Light item lands on its gates with no auditor unless a trigger fires',
+    "a diffstat above `/autopilot`'s audit trigger, or a decider's load-bearing mark.",
+    '"not audited: <tier>, no trigger"',
+  ];
+
+  test('passes: under agent-pushes on a board, step 3 carries the audit dial', async () => {
+    const raw = await delegateUnder('agent-pushes');
+    const text = raw.replace(/\s+/g, ' ');
+    for (const phrase of DIAL) expect(text, phrase).toContain(phrase);
+    expect(raw).toContain('never reviewed on a lower tier.\n\nUnder `/autopilot`, where');
+    // The numbers live in `/autopilot`'s defaults table alone.
+    expect(raw).not.toContain('300');
+  });
+
+  test('violates: under agent-commits, print-blocks and on folders no audit dial renders', async () => {
+    const renders: Array<[string, WorkProfile]> = [
+      ['agent-commits', 'ledger'],
+      ['print-blocks', 'ledger'],
+      ['agent-pushes', 'folders'],
+    ];
+    for (const [policy, profile] of renders) {
+      const raw = await delegateUnder(policy, profile);
+      for (const phrase of DIAL)
+        expect(raw.replace(/\s+/g, ' '), `${policy} ${profile}`).not.toContain(phrase);
+      expect(raw).toContain('never reviewed on a lower tier.\n\nIts brief:');
+    }
+  });
+
   /** Judgment call: the land step's record is a log line and a `DONE` row, which folders lack. */
   test('passes: on project folders agent-pushes renders as agent-commits', async () => {
     expect(await delegateUnder('agent-pushes', 'folders')).toBe(
