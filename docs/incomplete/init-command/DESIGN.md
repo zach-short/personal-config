@@ -1,13 +1,23 @@
-# SCOPE: configure one folder from a global install
+# DESIGN: configure one folder from a global install
 
-**Status:** `RATIFIED` 2026-10-05: GATE 1 answered the same day, every recommendation taken (§7). Opened 2026-10-05 as `SCOPING`. Owner: Zach. One repo, `personal-config`, at `8bdf8bb`
-(`cut 0.8.0`).
+**Status:** `RATIFIED` 2026-10-05: GATE 1 answered the same day, every recommendation taken (§9).
+Opened 2026-10-05 as `SCOPE.md` (`SCOPING`), committed at `c334832`, and renamed to `DESIGN.md` on
+2026-10-16 by board item 86, which wrote the answers in as `D1` to `D9` and the GATE 2 amendments `D10` and `D11` (§3). Owner: Zach. One
+repo, `personal-config`. The scope was written at `8bdf8bb` (`cut 0.8.0`); the plan re-verifies it
+at `0214402` (`PLAN.md` §0).
 
 **Why this exists.** Zach asked on 2026-10-05 whether `personal-config` should be installed once,
 globally, and then run inside a single new project to set that project up. At `8bdf8bb` the install half
 works and the per-project half does not: `setup` always scans a projects directory and always
-rewrites the global files in `~/.claude`. This document lays out what exists and the choices that
-decide how a per-folder command behaves. It decides nothing.
+rewrites the global files in `~/.claude`. This document lays out what exists, records what Zach
+decided, and lists what the build must leave alone.
+
+**How to read this.** §1 is ground truth as of 2026-10-05; where `PLAN.md` §0 differs, the plan
+wins. §2 is the non-scope list. §3 holds the frozen decisions `D1` to `D11`, and §4 the rules that
+survive unchanged. **From here this document changes by amendment only**: a new dated `D<n>`, a
+dated supersession naming what it replaces, or an `As built:` note. Never by editing a decision in
+place. §5 to §9 are the scope as GATE 1 saw it, kept so the strongest argument against each
+choice stays findable.
 
 ## 1. What exists, verified 2026-10-05
 
@@ -40,6 +50,11 @@ without the `/delegate` sentence while `/delegate` stays installed (inferred fro
 above; to be confirmed with a dry run in the plan's §0). Second, a re-run in a configured repo
 does not read that repo's saved answers.
 
+*Confirmed 2026-10-16 (R5), `PLAN.md` §0 row F1:* at `0214402` a non-code `setup` run into a temp
+`$HOME` that a code run had set up first rewrites `model-routing.md` with no `/delegate` line, and
+`/delegate`, `/autopilot`, `/audit` and `/clean-up` stay installed. The inference holds. It is a
+`setup` defect, outside this build, and is board item 101.
+
 ## 2. What this is, and what it is not
 
 **This is:**
@@ -65,7 +80,159 @@ does not read that repo's saved answers.
 - Removing files from a folder, or an uninstall for one project.
 - New questions. The catalog does not change, so `catalog.json` and the long forms do not either.
 
-## 3. Options
+## 3. Decisions, ratified 2026-10-05
+
+Zach answered GATE 1 in one batch on 2026-10-05 and took every recommendation (§9). Each decision
+below cites the option it came from, in §5, where its strongest counter-argument is kept.
+
+**D1. A new command, `personal-config init [path]`.** It configures exactly one folder. With no
+path it configures the current directory; with one path it configures that one. `setup` keeps its
+meaning: scan a projects directory, write the global files.
+
+*Defense.* The two jobs differ in what they write, so they get two names. `git init`, `npm init`
+and `bun init` have already taught that word to mean "set up this directory", and the help line
+for each command states its behaviour without a condition. A path on `setup` (§5 Q1 B) makes one
+command mean two things and changes what `setup .` does inside a projects directory. A flag
+(Q1 C) makes the unsafe behaviour the default. The cost is a second entry point to one engine;
+D8 and the parity test in `PLAN.md` hold the two together. *Source:* Q1 A, DIAL-1.
+*Supersedes:* nothing. *Date:* 2026-10-05.
+
+**D2. `init` never writes `~/.claude`.** It writes the folder's own files, the list in §2, and
+nothing in the global rules, skills, hooks or settings.
+
+*Defense.* One rule with no exceptions is a rule a person can trust without reading the preview
+twice. The global files follow the track of the run that wrote them last (§1, confirmed by
+`PLAN.md` §0 row F1), so an `init` that wrote them would quietly re-shape every other project on
+the machine to fit this one. *Source:* Q2 A, §2. *Supersedes:* nothing. *Date:* 2026-10-05.
+
+**D3. Without `~/.config/personal-config/config.json`, `init` stops before it asks anything.** It
+prints the copy settled at GATE 1 (Q5, plain register):
+
+> No saved answers found. Run `personal-config setup` once to set up your machine, then run
+> `personal-config init` in each project.
+
+*Defense.* Without the saved config `init` holds no record of which skills, hooks and rules are
+installed, and a router that names `/close-out` on a machine without it renders cleanly and is
+wrong for its reader (§5 Q2 B). One refusal on a first run costs less than a folder of documents
+that point at nothing. *Source:* Q2 A, Q5. *Supersedes:* nothing. *Date:* 2026-10-05.
+
+**D4. `init` asks the three track questions, the `discover` phase and the `practices` phase.**
+The track questions are `work-kind`, `config-weight` and `uses-git`. The person's answers (models,
+hooks, commit policy, skills and the rest) come from the saved config and are not asked.
+
+*Defense.* The track belongs to the folder: one project is code in git, the next is a set of
+documents. Everything else was answered once in `setup`. Asking every question again (Q3 B) is
+about thirty questions to add one project, and a person answer changed here would do nothing,
+because D2 keeps `init` away from the files those answers render. A question whose answer does
+nothing is a trap. *Source:* Q3 A. *Supersedes:* nothing. *Date:* 2026-10-05.
+
+**D5. `init` reads the folder's own `.personal-config.json` as a layer.** In a folder that was
+set up before, that file's answers are the defaults, so running `init` again is how a person
+changes one answer.
+
+*Defense.* A re-run should start from what the folder already has. Ignoring the file (Q4 B) makes
+the person re-answer every per-folder question to change one, and an answer they forget to repeat
+reverts without a word. `doctor` and `upgrade` already load this layer. The gap with `setup`,
+which does not, is recorded in §2 and stays out of scope. *Source:* Q4 A. *Supersedes:* nothing.
+*Date:* 2026-10-05.
+
+**D6. One printed line when the folder's track differs from the saved one.** It compares
+`workKind`, `configWeight` and `usesGit`. It is printed, never asked, and `init` changes nothing
+because of it.
+
+*Defense.* This is the mitigation for the strongest argument against D4: a non-code folder gets a
+short router while the installed skills are the code set, and the person may not see it. D2 keeps
+`init` from fixing that silently, so the least it can do is say so. *Source:* Q3 A, DIAL-4.
+*Supersedes:* nothing. *Date:* 2026-10-05.
+
+**D7. The dials stand at their recommended defaults (§6).** DIAL-1: the current directory, or one
+path. DIAL-2: refuse a target that holds two or more git repos one level down, and name `setup`.
+DIAL-3: always refuse the home directory. DIAL-4: as D6. DIAL-5: `--yes` accepts every default
+for this one folder and still previews. DIAL-6: the Part 0 prompt is copied to the clipboard, as
+`setup` does.
+
+*Defense.* DIAL-2 and DIAL-3 catch the two places a person types `init` one level too high:
+where they meant `setup`, and their home directory, where a ledger is never what was meant.
+DIAL-5 and DIAL-6 keep the contract `setup` already documents. *Source:* §6, §9.
+*Supersedes:* nothing. *Date:* 2026-10-05.
+
+**D8. `init` writes through the same path as `setup`.** Every file goes through `planned()`,
+`resolvePlan()`, the preview, the confirm and `commitPlan()`, so the backup and `undo` work
+unchanged. It plans its one target with the same `planRepo` and renders with the same
+`renderAll`.
+
+*Defense.* The repo's first rule is that nothing is written without a stamp and a preview
+(`CLAUDE.md`). A second write path would be a second set of bugs in the one place a person trusts
+the tool not to lose a file. Sharing `planRepo` and `renderAll` is also what lets a test pin that a
+folder set up by `init` and one set up by `setup` are the same bytes. *Source:* §2, Q1 A's
+mitigation. *Supersedes:* nothing. *Date:* 2026-10-05.
+
+**D9. The build ships its own documentation.** README text for the global install (the
+`npm install -g` command the README never shows, §1) and for `init`, a `--help` line, and a
+`CHANGELOG.md` entry.
+
+*Defense.* The question that opened this work was how to install once and set up each project. A
+command the README does not mention answers it for nobody. *Source:* §2. *Supersedes:* nothing.
+*Date:* 2026-10-05.
+
+### Amendments, GATE 2, 2026-10-16
+
+**D10. `setup` records the `you` answers it rendered the global files from.** They go under one
+new key in `~/.config/personal-config/config.json`, outside `answers`, so `loadConfig`'s merge and
+`configHash` never read it. `init` compares the folder's track against it (D6) and takes
+`outputStyle`, `chatStyle`, `writeDoc` and `writeDocCheck` from it (D4). A `config.json` written
+before the key existed has none, and `init` then prints no notice.
+
+*Defense.* `PLAN.md` §0 found that D6 has nothing to compare against (F2) and that D4 cannot take
+four of the person's answers from the saved config, because it holds none of them (F3). Reading
+the installed skills instead (GATE 2 Q1 B) is silent when `skills` is `none`, and it lets a new
+folder's `.personal-config.json` record profile values the person never chose. Zach chose A on
+2026-10-16. *Supersedes, in part:* §4's first rule. `setup`'s questions, defaults, targets and
+global files stay the same; its `config.json` gains the one key, and the `config.json` entries in
+`tests/golden/full-track.json` move with it. The rest of that rule stands. *Date:* 2026-10-16.
+
+**D11. The three new messages are in the plain register, to match D3.** Zach chose plain on
+2026-10-16 (GATE 2 Q2). The text is:
+
+> This folder is set up as {folder}; your global rules and skills were set up for {saved}. `init`
+> leaves them as they are. Run `personal-config setup` to change them.
+
+> {path} holds {n} git repos. `init` sets up one project. To set up all of them, run
+> `personal-config setup --projects-dir {path}`.
+
+> `init` does not set up your home directory. Run it inside a project folder.
+
+*Defense.* R7: the owner picks user-facing copy, and the warm and terse variants are in
+`PLAN.md` §7. *Supersedes:* nothing. *Date:* 2026-10-16.
+
+## 4. Rules that survive unchanged
+
+The build changes none of these. A phase that finds it must change one stops and asks (R12).
+
+- **`setup`'s behaviour.** It scans a projects directory one level down, asks every question,
+  configures every picked target, writes the global files, and loads no repo's
+  `.personal-config.json` (`src/commands/setup.ts:41`). Its output for the same inputs stays byte
+  for byte the same, which `tests/golden/full-track.json` pins. *Amended 2026-10-16 by D10:*
+  `config.json` gains one key; every other file stays byte for byte the same.
+- **The catalog and the long forms.** No question is added, removed or reworded, so `catalog.json`
+  and `docs/choices/*.md` do not change (§2).
+- **`standard/`.** No word of the standard, the short standard, their version lines or their
+  changelog.
+- **The global renderers.** `renderGlobalRules`, `renderSkills`, `renderWriteDoc`, `renderHooks`
+  and `renderUserConfig` are not edited. `init` leaves their output out of its plan; it does not
+  change what they produce. *Amended 2026-10-16 by D10:* `renderUserConfig` writes the one new
+  key; the other four are not edited.
+- **The repo renderers.** `renderRepoFiles`, `renderStandard`, `renderShortStandard`,
+  `renderConventions`, `renderCeiling` and `renderPart0` produce the same bytes for the same
+  context, whichever command called them.
+- **The stamp and the hash.** `configHash`, `hashedAnswers`, `UNHASHED_ANSWERS` and
+  `PERSONAL_ANSWERS` keep their members (`src/lib/config.ts:93`, `:106`, `:133`).
+- **The merge order of `loadConfig`** for every command that already calls it.
+- **`doctor`, `upgrade` and `undo`.** They work on a folder `init` set up exactly as on one
+  `setup` set up, with no change to their code.
+- **The two network calls** listed at `README.md:112`, and no third.
+
+## 5. Options
 
 ### Q1. The shape of the command
 
@@ -189,7 +356,7 @@ R7 applies: this is copy a person reads. Three registers:
   project in a few questions."
 - **Terse.** "Run `personal-config setup` first. `init` reuses its answers."
 
-## 4. Dials
+## 6. Dials
 
 | Dial | Recommended default | Why |
 |---|---|---|
@@ -200,7 +367,7 @@ R7 applies: this is copy a person reads. Three registers:
 | DIAL-5 `--yes` | Accepts every default for this one folder, still previews | Same contract as `setup` (`--help` text) |
 | DIAL-6 The Part 0 prompt | Copied to the clipboard, as `setup` does | `copyPart0`, `src/commands/setup.ts:464` |
 
-## 5. Hazards this work walks into
+## 7. Hazards this work walks into
 
 - **Stamp drift.** The stamp hash covers the person's answers too (`config.ts:106`). If `init`
   saves a different answer set from the one `setup` would save for the same folder, `doctor`
@@ -220,7 +387,7 @@ R7 applies: this is copy a person reads. Three registers:
   done-when needs the packed tarball installed with `npm install -g` and `init` run in a scratch
   folder, as the CI `node-install` job does for `doctor`.
 
-## 6. Open questions for GATE 1
+## 8. Open questions for GATE 1
 
 1. Q1: the shape. Recommended A, `personal-config init [path]`.
 2. Q2: the global files. Recommended A, never write them and refuse without a saved config.
@@ -228,9 +395,9 @@ R7 applies: this is copy a person reads. Three registers:
    Recommended Q3 A and Q4 A.
 4. Q5: the refusal copy, plain, warm or terse. Recommended plain.
 
-The dials in §4 take their recommended defaults unless the answer changes one.
+The dials in §6 take their recommended defaults unless the answer changes one.
 
-## 7. GATE 1 answers, 2026-10-05
+## 9. GATE 1 answers, 2026-10-05
 
 Zach answered the four questions in one batch on 2026-10-05 and took every recommendation.
 
@@ -245,5 +412,5 @@ Zach answered the four questions in one batch on 2026-10-05 and took every recom
 4. **Q5: plain.** "No saved answers found. Run `personal-config setup` once to set up your machine,
    then run `personal-config init` in each project."
 
-The §4 dials stand at their recommended defaults. Next: Stage 3, this file renamed to `DESIGN.md`
+The §6 dials stand at their recommended defaults. Next: Stage 3, this file renamed to `DESIGN.md`
 with the answers written in as `D1` to `Dn`, then the plan and GATE 2.
