@@ -35,7 +35,7 @@ Nine parts, in this order. Skip one only when it is genuinely empty, and say so.
 6. **Do these, in order.** Numbered, each carrying its reason and its constraint. A step that
    says only what to do gets done differently than intended.
 7. **Ask before building.** The named decisions that are the owner's, each with what makes it a
-   real question. Say explicitly that both are their calls, and that either answer may be no.
+   real question. Say explicitly that both are their calls, and that either answer may be no.{{OWNERS_CALL}}
 8. **Not in scope, whoever asks.** The negative list, named. It survives a persuasive
    mid-session argument in a way that an unstated boundary does not.
 9. **Hand back.** The literal gate commands that must be green, what the owner should do and

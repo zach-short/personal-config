@@ -250,7 +250,7 @@ function variables(
     return closeOutVars(shape, namesOf(ctx), wantedSkills(ctx).includes('clean-up'), lands);
   }
   if (name === 'handoff') return handoffVars(shape, namesOf(ctx));
-  if (name === 'passoff') return passoffVars(shape, namesOf(ctx));
+  if (name === 'passoff') return passoffVars(shape, namesOf(ctx), ownersCall(ctx));
   if (name === 'clean-up') return cleanUpVars(shape, namesOf(ctx), agentPushes(ctx));
   if (name === 'delegate') return delegateVars(ctx, shape, lands);
   if (name === 'autopilot') return autopilotVars(ctx);
@@ -467,10 +467,11 @@ function tierTable(ctx: RenderContext, indent: string): string {
  * is held for that commit, and under `agent-commits` it builds from that row's branch (D24). The
  * rundown's last section follows the same policy (D10).
  */
-function autopilotVars(ctx: RenderContext): Record<string, string> {
+function autopilotVars(ctx: RenderContext): Record<string, string | null> {
   const commits = agentCommits(ctx);
   // `/autopilot` renders only on a board, so `agentPushes()` alone decides its land step.
-  if (agentPushes(ctx)) return { ...autopilotNames(ctx), ...autopilotLanding() };
+  if (agentPushes(ctx))
+    return { ...autopilotNames(ctx), ...autopilotLanding(), END_COMMIT: endCommit() };
   return {
     ...autopilotNames(ctx),
     LAND_ROUTE: '',
@@ -495,6 +496,8 @@ function autopilotVars(ctx: RenderContext): Record<string, string> {
           'for each worktree, the two blocks the owner runs, `git -C <worktree>',
           '      add <files>` and `git -C <worktree> commit <files> -m "..."`, naming the same files.',
         ].join('\n'),
+    // `null` drops the token's line, so step 4 keeps its bytes under every other policy.
+    END_COMMIT: null,
   };
 }
 
@@ -1232,11 +1235,47 @@ function itemRecording(shape: SkillShape, names: RecordNames): string {
  * `/passoff`. Where the prompt goes (D1, D7, D16), and what is true once it has run: the close-out
  * section on 2.0.0, the ledger step on a 1.x board and in project folders.
  */
-function passoffVars(shape: SkillShape, names: RecordNames): Record<string, string> {
+function passoffVars(
+  shape: SkillShape,
+  names: RecordNames,
+  ownersCall: boolean,
+): Record<string, string> {
   return {
     PROMPT_HOME: shape.items ? promptHome(names) : '',
     TRUTH: shape.items ? "The item's close-out section" : 'The ledger step',
+    OWNERS_CALL: ownersCall ? ownersCallSentence() : '',
   };
+}
+
+/**
+ * Autonomous-autopilot D10: the phrase `/autopilot`'s decider holds a row on (D2). Only where that
+ * skill renders and the run may decide unattended, so every other policy keeps its bytes.
+ */
+function ownersCall(ctx: RenderContext): boolean {
+  return rendersAutopilot(ctx) && agentPushes(ctx);
+}
+
+function ownersCallSentence(): string {
+  return [
+    '',
+    "   Where a question must wait for the owner even in an unattended run, write **owner's call**",
+    "   before it: `/autopilot`'s decider holds a row on those words and never answers it.",
+  ].join('\n');
+}
+
+/**
+ * Autonomous-autopilot D7: after the fold the run commits its own folder and the fold's tracked
+ * moves, by name, and pushes. Words as design 4.2's "Step 4 gains"; the inner backticks around
+ * the two file names are dropped, because a code span cannot nest one.
+ */
+function endCommit(): string {
+  return [
+    "   Then commit the run from the primary checkout, with `git -C`: `git add <the run folder's",
+    '   STATE.md and RUNDOWN.md, and each tracked file the fold moved, removed or changed>`, then',
+    '   `git commit <the same files> -m "autopilot run <date>"`, then `git push`. Untracked records',
+    '   stay as they are. Where the archive is its own repository, commit there too, naming its',
+    '   files, and push where it has a remote.',
+  ].join('\n');
 }
 
 function promptHome(names: RecordNames): string {

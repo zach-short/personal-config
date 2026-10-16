@@ -258,6 +258,7 @@ file that holds the row's open findings.
    `- <date> · autopilot run · <the run folder>/RUNDOWN.md`. A run is not an item, so it gets no
    item file and no row. On a 1.x board, with no `{{ITEMS_DIR}}/` folder, write the run's own
    ledger step instead, at the next free number, read from the file now, pointing at the rundown.
+{{END_COMMIT}}
 5. Where a push notification tool exists, send one line that names the rundown's path.
 6. Post the rundown's first paragraph and its path in chat.
 
