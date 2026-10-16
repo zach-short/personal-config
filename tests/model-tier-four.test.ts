@@ -134,4 +134,16 @@ describe('Mechanical and Light do not claim the same worked example', () => {
       await cleanup(dir);
     }
   });
+
+  test('the Default row no longer calls itself the right answer for most work', async () => {
+    const dir = await tempDir('pc-light-');
+    try {
+      const rule = ruleContents(await renderFor(dir, { ...FULL, modelLightEnabled: 'yes' }));
+      const defaultRow = rule.split('\n').find((line) => line.startsWith('| Default |'));
+      expect(defaultRow).toBeDefined();
+      expect(defaultRow).not.toContain('right answer for most work');
+    } finally {
+      await cleanup(dir);
+    }
+  });
 });

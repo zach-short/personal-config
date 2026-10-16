@@ -112,19 +112,20 @@ so a partial commit can leave the branch unbuildable while the tree is green.
  * Three rows, or four where the person opted in. The fourth rides on the opt-in answer and not on
  * `models.light` being non-empty: the other three render `<unset>` rather than dropping their row,
  * and someone who opted in but left the name blank has the same thing to go and fix. Mechanical
- * keeps only whole-phase work here — a single instantly-checkable step is Light's row once Light
- * exists, and leaving it in both is the one wording failure D1 exists to prevent.
+ * takes the placed, multi-file or gate-checked change, and Light takes the change the task states
+ * in full with the place named. Leaving one example in both rows is the one wording failure D1
+ * exists to prevent.
  */
 function tierTable(ctx: RenderContext): string {
   const tiers = ctx.config.models;
   const rows = [
-    `| Deep | ${tiers.deep || '<unset>'} | Only where a mistake compiles, passes every gate, and is wrong in production. |`,
-    `| Default | ${tiers.default || '<unset>'} | The default, and the right answer for most work — anything whose failure is loud. |`,
-    `| Mechanical | ${tiers.fast || '<unset>'} | Whole phases of mechanical work: sweeps, ratchet edits, doc reconciliation. |`,
+    `| Deep | ${tiers.deep || '<unset>'} | Only where a mistake compiles, passes every gate and a person's test, and is wrong in production: money paths, sync and merge rules, a notification that must never send. Prefer one narrow Deep review of a short load-bearing path over a whole Deep phase. |`,
+    `| Default | ${tiers.default || '<unset>'} | The task has to find a cause or choose between designs, and a wrong answer would look right until a person tests it: a stale cache, a flow or auth change, a new shared primitive, a scope or design document, the lead of a multi-lane row. The fallback when no lower row fits, never the first pick. |`,
+    `| Mechanical | ${tiers.fast || '<unset>'} | The change is clear but the task has to place it, or it spans several files, and the whole check is the gates and reading the output: the same fix on two platforms, a removal a grep proves safe, a copy move into a shared module, a sweep, a ratchet edit, doc reconciliation. |`,
   ];
   if (answer(ctx, 'modelLightEnabled') === 'yes') {
     rows.push(
-      `| Light | ${tiers.light || '<unset>'} | One narrow step you can check the moment it lands: a read-only report, a single bounded transform you verify after, a format conversion. |`,
+      `| Light | ${tiers.light || '<unset>'} | The task states the change and the place. Nothing to find, nothing to choose, and a gate or a picture shows a wrong result at once: a spacing or token value, a string given in full, a one-file rename checked by a grep, a read-only report. |`,
     );
   }
   return `| Tier | Model | Use for |\n|---|---|---|\n${rows.join('\n')}`;
@@ -144,7 +145,7 @@ function modelRoutingRule(ctx: RenderContext): PlannedFile | null {
     ctx,
     rulePath('model-routing'),
     RULES['model-routing'],
-    `# Run the model the task asks for\n\n**Before starting any task that names a model, check your own model against it.** Tasks are\nassigned a model on purpose — a board's Model column, a pass-off prompt's \`**Model: X**\` line, a\nskill or a doc that names one. The assignment is a deliberate choice, not a preference, so\nrunning the wrong model on it silently is the failure it exists to prevent.\n\nDo this check **first** — before reading the codebase, before planning, before writing anything.\nIf they match, say so in one line and carry on.\n\n${action}\n## The tiers\n\n**The discriminator is: can the failure be silent?** Not how big or scary the work feels —\nsizing by fear over-assigns the expensive tier.\n\n${table}\n`,
+    `# Run the model the task asks for\n\n**Before starting any task that names a model, check your own model against it.** Tasks are\nassigned a model on purpose — a board's Model column, a pass-off prompt's \`**Model: X**\` line, a\nskill or a doc that names one. The assignment is a deliberate choice, not a preference, so\nrunning the wrong model on it silently is the failure it exists to prevent.\n\nDo this check **first** — before reading the codebase, before planning, before writing anything.\nIf they match, say so in one line and carry on.\n\n${action}\n## The tiers\n\n**The discriminator is: can the failure be silent?** Then: how much does the task have to find,\nand how much does it have to decide? Read the table from the bottom and stop at the first row\nthat fits. Sizing by fear over-assigns the expensive tier.\n\n${table}\n`,
   );
 }
 

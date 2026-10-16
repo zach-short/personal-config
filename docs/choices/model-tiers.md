@@ -13,18 +13,28 @@ without naming a specific release that will be obsolete in six months.
 
 ## How to choose which work gets which
 
-**The discriminator is: can the failure be silent?** Not how big or how scary the work feels.
+**The discriminator is: can the failure be silent?** Then ask how much the task has to find and
+how much it has to decide. Read the table from the bottom and stop at the first row that fits.
 Sizing by fear over-assigns the expensive tier and teaches you to ignore the label.
 
-- **Deep** is for work where a mistake compiles, passes every gate, and is wrong in production:
-  money paths, sync and merge rules, a notification that must never send. Prefer **one narrow
-  Deep review of a short load-bearing path** over a whole Deep phase.
-- **Default** is the right answer for most work — anything where failure is loud. A build
-  break, a red gate, a wrong screen. The gates do that reasoning for you.
-- **Mechanical** is for whole phases that are genuinely mechanical: close-out sweeps, ratchet
-  edits, doc reconciliation. Escalate the moment a gate fails for a non-obvious reason.
-- **Light**, if you take it, is for one narrow step whose result you can check immediately: a
-  read-only report, a single bounded transform you verify afterwards, a format conversion.
+- **Light**, if you take it, is for a task that states the change and the place. There is nothing
+  to find and nothing to choose, and a gate or a picture shows a wrong result at once: a spacing or
+  token value, a string given in full, a one-file rename checked by a grep, a read-only report.
+- **Mechanical** is for a change that is clear but that the task has to place, or that spans
+  several files, where the whole check is the gates and reading the output: the same fix on two
+  platforms, a removal a grep proves safe, a copy move into a shared module, a sweep, a ratchet
+  edit, doc reconciliation. Escalate the moment a gate fails for a non-obvious reason.
+- **Default** is for a task that has to find a cause or choose between designs, where a wrong
+  answer would look right until a person tests it: a stale cache, a flow or auth change, a new
+  shared primitive, a scope or design document, the lead of a multi-lane row. It is the fallback
+  when no lower row fits, never the first pick.
+- **Deep** is for work where a mistake compiles, passes every gate and a person's test, and is
+  wrong in production: money paths, sync and merge rules, a notification that must never send.
+  Prefer **one narrow Deep review of a short load-bearing path** over a whole Deep phase.
+
+When you file a task and two tiers fit, take the lower one and name the gate or picture that
+catches a wrong answer. If nothing catches it, take the higher one. After a build fails, escalate
+up one tier and never down.
 
 ### A worked example — where one person draws the Mechanical/Light line
 
@@ -74,6 +84,7 @@ names one model and that is the one it names.
 `~/.claude/rules/model-routing.md` carries the table — three rows, or four where you opted into
 Light. Generated boards and pass-off prompts use the Default tier's name in their `**Model:**`
 headers.
+The standard's Part 4 names Light in prose, filled with the model name or "not configured".
 
 ## How to undo it
 
