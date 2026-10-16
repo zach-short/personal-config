@@ -133,9 +133,17 @@ the run. The builders' work stays in their worktrees; landing it is yours.
 `REPORT.md`, and it adds rows to the board at the next free numbers. It reads
 `docs/audit-lanes.md`, which you write; this tool never writes it.
 
+**A later run removes what it no longer installs.** When a setup run no longer renders a skill,
+it plans the removal of that skill's `SKILL.md` in the same preview, after the writes. This
+happens when you switch to a track that has fewer skills (a non-code run drops `/autopilot`,
+`/audit`, `/clean-up` and `/delegate`), when you move to the lighter setup, and when you answer
+**None** to this question. A removal only touches a file this tool stamped and you have not marked `adapted`; a file with no stamp, or an adapted one, is left alone and not listed. A skill folder this empties is removed too. The
+`/write-doc` folder is the one exception on the shared skills: see `write-doc.md`. The summary
+line counts removals apart: `N file(s) to write, M to remove, K already current.`
+
 ## How to undo it
 
-Delete the skill directories, or run `personal-config undo` to restore anything overwritten. A
+Delete the skill directories by hand, or run `personal-config undo` to restore anything a run overwrote or removed, including a skill a later run removed. The run before it is the one `undo` reverses. A
 run's folder under `docs/incomplete/` is an ordinary folder: archive it with `personal-config
 archive` or delete it. An audit's rows are ordinary board rows: mark one `SETTLED AS NO` to drop
 it. To stop being offered the audit in one repo, delete or rename its `docs/audit-lanes.md`.

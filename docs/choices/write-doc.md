@@ -109,6 +109,13 @@ it. The three files are listed in the preview and confirmed with the rest of the
 is written before you can see it. None of the profiles this tool ships is for non-code work, so
 none of them changes.
 
+**A later run removes the skill's text files.** If a later run no longer installs `/write-doc`
+(you answer **No**, or switch to a track that does not ask), it plans the removal of
+`~/.claude/skills/write-doc/SKILL.md` and `style.md`, and then removes the folder if it is empty.
+A removal only touches a file this tool stamped and you have not marked `adapted`; a file with no stamp, or an adapted one, is left alone and not listed. It never removes `check.sh`, and it never removes `language-style.md`: a
+`check.sh` that a `settings.json` hook entry names would fail on every Write and Edit if the
+script went and the entry stayed, so `check.sh` and its entry are left for you to remove by hand.
+
 ## The follow-up: when the check runs
 
 **Should your agent check every document it saves, or only what /write-doc writes?** It is asked
@@ -195,9 +202,10 @@ folder is the whole undo. Nothing else this tool writes reads the folder.
 `personal-config undo` restores files the last run replaced, and leaves files it created in place.
 So it removes the entry only when the run that added it was your last one and `settings.json`
 existed before it, and then it also takes back anything else that run merged into the file. It
-never removes the skill folder. Running setup again does not undo either one: an answer of **No**,
-or of **Only what /write-doc writes**, plans nothing to remove, and this tool does not delete a file
-or an entry an earlier run wrote.
+restores `SKILL.md` and `style.md` after a later run removed them, and makes the folder again.
+Running setup again never removes the hook entry or `check.sh`: an answer of **No**, or of
+**Only what /write-doc writes**, removes `SKILL.md` and `style.md` but leaves `check.sh` and the
+entry in place. Remove the entry first, as above, then the folder.
 
 To keep your own edited version of `SKILL.md` through later runs, delete the stamp below its
 frontmatter. A file with no stamp is refused, not replaced. `style.md` and `check.sh` carry their

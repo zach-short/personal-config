@@ -78,7 +78,11 @@ are yours. Under **The agent may commit** it lets through one plain command,
 `git commit <files> -m "<message>"`, with the files named and nothing else in the command, and
 still blocks a push, staging everything, and every other commit. `hooks.md` has the detail.
 
+**A later run removes the rule.** Answering "no rule" on a later run plans the removal of
+`~/.claude/rules/commits.md`. A removal only touches a file this tool stamped and you have not marked `adapted`; a file with no stamp, or an adapted one, is left alone and not listed. The hook script and its `settings.json` entry stay, because
+this removal does not edit `settings.json`.
+
 ## How to undo it
 
-Delete `~/.claude/rules/commits.md`. If the hook was installed, run `personal-config undo` to
+Delete `~/.claude/rules/commits.md` by hand, or run setup again and answer "no rule", which removes it. After a removal, `personal-config undo` restores the file. If the hook was installed, run `personal-config undo` to
 restore the previous `settings.json`, or remove the `PreToolUse` entry by hand.

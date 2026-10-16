@@ -53,6 +53,10 @@ on the page — so the question is skipped rather than asked and discarded. It *
 non-code work on the full setup: routing a task to the right model is not a fact about source
 code.
 
+**A later run removes the rule.** Answering "skip", or choosing the lighter setup, means a later
+run no longer installs `~/.claude/rules/model-routing.md`, and it plans the removal of that file.
+A removal only touches a file this tool stamped and you have not marked `adapted`; a file with no stamp, or an adapted one, is left alone and not listed. 
+
 ## How to undo it
 
-Delete `~/.claude/rules/model-routing.md`.
+Delete `~/.claude/rules/model-routing.md` by hand, or run setup again and answer "skip", which removes it. After a removal, `personal-config undo` restores the file.

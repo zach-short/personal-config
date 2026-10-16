@@ -38,6 +38,10 @@ the tool is absent: say so, and fall back to the installed package's own README 
 non-code setup is not asked it at all. Weight makes no difference: a lighter code setup still
 gets the rule, because looking a version up costs nothing to follow.
 
+**A later run removes the rule.** If a later run gives a docs tool of `none`, or moves to a
+non-code setup that does not ask this question, it no longer installs the rule and plans the
+removal of `~/.claude/rules/docs-lookup.md`. A removal only touches a file this tool stamped and you have not marked `adapted`; a file with no stamp, or an adapted one, is left alone and not listed. 
+
 ## How to undo it
 
-Delete `~/.claude/rules/docs-lookup.md`.
+Delete `~/.claude/rules/docs-lookup.md` by hand, or run setup again with a docs tool of `none`, which removes it. After a removal, `personal-config undo` restores the file.

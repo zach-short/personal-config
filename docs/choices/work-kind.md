@@ -63,10 +63,15 @@ The answer is saved with the rest of that target's answers into `.personal-confi
 decides which questions the rest of the run asks — answering "Other work" skips the eleven
 code-conventions questions in the practices phase.
 
+**A later run removes what the new track no longer renders.** Switching from "Code" to "Other
+work" plans the removal of the code-only global files: the `/autopilot`, `/audit`, `/clean-up` and
+`/delegate` skills and `~/.claude/rules/commits.md`, and it rewrites `model-routing.md` without
+the `/delegate` sentence. A removal only touches a file this tool stamped and you have not marked `adapted`; a file with no stamp, or an adapted one, is left alone and not listed. The preview lists each removal before anything changes.
+
 ## How to undo it
 
 Run `personal-config setup` again and answer the other way; the run previews every file before it
 writes anything, and `personal-config undo` restores whatever an accepted run overwrote. Switching
 to "Code" replaces the short standard, router and ledger with the long forms and adds the code
 standard and the two code-specific rules; switching to "Other work" replaces them the other way and
-leaves the code standard and the two rules on disk for you to delete.
+removes the global skills and `commits.md` that only the code track installs, and leaves the code standard in your repos on disk for you to delete. `personal-config undo` restores every removed file byte for byte.

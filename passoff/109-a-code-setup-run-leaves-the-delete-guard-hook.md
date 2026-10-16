@@ -47,8 +47,11 @@ the non-code track once has `rm` blocked in every code session, with no message 
 3. Scope with `/scope` into `docs/incomplete/<slug>/SCOPE.md`. Options include: prune this tool's entries
    when a run no longer wants them; own a marker key per entry so a prune is exact; leave it and print a
    line naming the entry. Each with its strongest argument against, what it writes, and how to undo it.
-4. Name every file a build would touch. Check item 101's state first: it owns `src/lib/write-plan.ts` and
-   `src/render/rules.ts`, and item 107 owns `src/render/skills.ts`.
+4. Name every file a build would touch. Check item 101's state first: it owns `src/lib/write-plan.ts`,
+   `src/render/rules.ts` and `src/render/skills.ts`.
+   Item 101 (commit 1a6bdd4) leaves `write-doc/check.sh` out of the files it removes on purpose (BD-3):
+   under `writeDocCheck: every`, `settings.json` names it as a hook command, and removing the script
+   while the entry stays would fail every Write and Edit. This item owns the script and its entry.
 5. GATE 1: ask Zach in one batch, in chat, the same turn the scope is finished. Whether to fix it at all
    is his call, and the answer may be no. Stop there.
 

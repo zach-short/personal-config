@@ -5,7 +5,7 @@
 it gets its own item that scopes it, with options O4 and O5 as the candidates.
 
 **Model: Opus 5.5. Lane J. Waits on nothing to scope. A build that edits `src/render/skills.ts` waits
-on item 107, which is `IN FLIGHT` and owns that file.** Scope first. Which option wins is Zach's call;
+on item 101, which is `IN FLIGHT` and owns that file.** Scope first. Which option wins is Zach's call;
 do not pick one before GATE 1.
 
 You are picking up personal-config, a Bun and TypeScript CLI that installs documents, hooks and skills
@@ -53,7 +53,7 @@ because the file is wanted by both tracks and only its body is wrong.
 3. Scope with `/scope` into `docs/incomplete/<slug>/SCOPE.md`. Carry O4 and O5, and add any option step 1
    or 2 turns up, for example one body that names the track in a line instead of branching. Give each its
    strongest argument against, what it writes, and how to undo it.
-4. Name every file a build would touch, and list the ones item 107 owns. State which options need a
+4. Name every file a build would touch, and list the ones item 101 owns. State which options need a
    supersession of init-command D2 or D6.
 5. GATE 1: ask Zach in one batch, in chat, the same turn the scope is finished. Both the option and
    whether to build at all are his calls, and either answer may be no. Stop there.
@@ -68,7 +68,7 @@ because the file is wanted by both tracks and only its body is wrong.
 
 - Removing leftover files (item 101).
 - Hook scripts and `settings.json` entries (item 109).
-- Any edit to `src/render/skills.ts` while item 107 is `IN FLIGHT`.
+- Any edit to `src/render/skills.ts` while item 101 is `IN FLIGHT`.
 - A `setup` run against the real `~/.claude`. Use a temp home.
 
 ## Hand back

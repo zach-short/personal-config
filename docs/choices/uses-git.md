@@ -90,9 +90,14 @@ only when the target is both yours and in git. Discovery finds plain folders as 
 repositories, so a folder of files is a target whichever way this is answered — and it is
 rendered as a folder either way.
 
+**A later run removes `commits.md`.** Answering "no" after a "yes" means the run no longer
+renders `~/.claude/rules/commits.md`, so it plans the removal of that file. A removal only touches a file this tool stamped and you have not marked `adapted`; a file with no stamp, or an adapted one, is left alone and not listed. Files in
+your repos, and hook scripts with their `settings.json` entries, are not removed.
+
 ## How to undo it
 
 Run `personal-config setup` again and answer the other way. Answering "yes" on a later run
-brings the committed-or-private question back; answering "no" only stops it being asked, and
-leaves any files an earlier run already wrote exactly where they are. `personal-config undo`
-restores anything an accepted run overwrote.
+brings the committed-or-private question back; answering "no" stops it being asked and
+removes `commits.md` from `~/.claude/rules/`, and leaves the files an earlier run wrote inside your
+repos exactly where they are. `personal-config undo` restores anything an accepted run overwrote
+or removed, `commits.md` included.

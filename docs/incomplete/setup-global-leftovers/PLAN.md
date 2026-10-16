@@ -69,7 +69,7 @@ under the session scratchpad. `code.json` and `nc.json` are `profiles/starter.js
 
 ### Phase 1. Plan and carry out the removals
 
-**Status.** `BUILT` 2026-10-16, Opus 5.5, on `0fe4c26` with the changes uncommitted. Board item
+**Status.** `BUILT` 2026-10-16, Opus 5.5, committed as `1a6bdd4`. Board item
 101.
 
 *As built.* Each renderer names its own files: `skillFiles()` in `skills.ts`, `writeDocFiles()`
@@ -139,7 +139,14 @@ temp home and asserts the paths are under it.
 
 ### Phase 2. Long forms, catalog and changelog
 
-**Status.** `PLANNED`. Starts after Phase 1 is committed.
+**Status.** `BUILT` 2026-10-16, Sonnet 5.5, on `1a6bdd4`, changes uncommitted.
+
+*As built.* Each of the eight long forms gained a paragraph in "what it writes" and a changed
+"how to undo it". All eight name the same rule: a later run removes a stamped, not adapted global
+file it no longer renders, and `undo` restores it. `write-doc.md` also says `check.sh` and
+`language-style.md` stay (BD-3, BD-7) and that an emptied folder goes. `CHANGELOG.md` has one
+entry under Unreleased. `catalog.json` was rebuilt with `bun run catalog`. `passoff/109` names
+`check.sh`, and items 108 and 109 now wait on item 101 in place of item 107, which is closed.
 
 **Scope.**
 

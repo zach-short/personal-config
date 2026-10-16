@@ -7,6 +7,18 @@ The CLI. The working standard it installs is versioned separately — see
 
 ### Added
 
+- **`setup` removes the global files a run no longer renders.** A run on one track used to leave
+  the other track's skills and rules in `~/.claude`. Now the preview lists, apart from the
+  writes, each stamped global skill, `write-doc/SKILL.md`, `write-doc/style.md`, `commits.md`,
+  `docs-lookup.md` and `model-routing.md` that the run's answers no longer produce, and the run
+  removes them with a backup, so `personal-config undo` restores each one byte for byte. The
+  summary reads `N file(s) to write, M to remove, K already current.` A removal follows every
+  answer that stops a file (a track change, `skills: none`, a commit policy of no rule, a docs
+  tool of `none`, a skipped or light model-routing rule). A file with no stamp, or one marked
+  `adapted`, is never planned. A skill folder that a removal empties is removed. `write-doc/check.sh`
+  and `language-style.md` are never removed. The long forms for the skills, work-kind,
+  config-weight, uses-git, commit-policy, docs-lookup, model-routing and write-doc questions
+  describe the removal.
 - **`personal-config init [path]`, which sets up one project with the answers `setup` saved.**
   It configures the current directory, or the one folder you name, and writes only inside it:
   the router, the standard, the ledger and the board or the project folders, the conventions
