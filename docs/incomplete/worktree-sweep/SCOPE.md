@@ -59,7 +59,7 @@ Every option below starts from the same scope, so it is stated once:
 - The branch is an ancestor of the base (`git merge-base --is-ancestor`). Under print-blocks the
   auditors' branches never moved, so they qualify; a branch with its own commits does not.
 - It is never the worktree the session runs in, and never a detached HEAD (no branch ties it to
-  an item; `committed-status-f2d341` and `sad-curie-308775` are both detached today).
+  an item; `committed-status-f2d341` and `sad-curie-308775` were both detached on 2026-10-15).
 - No process stands in it. The skill text can check `lsof -t +d <wt>` (one level, cheap) and the
   newest file time; neither is exact, and a peer is cheaper to ask than to detect.
 
@@ -97,8 +97,8 @@ step.
 - For: frees every auditor worktree, which is two of every three a `/delegate` run leaves, and the
   only ones the owner never commits in.
 - Against: it trusts the role, not the content. An auditor that wrote something unique (a scratch
-  test, a note) loses it. The close-out must record which worktree had which role, which it does
-  not do today.
+  test, a note) loses it. The close-out must record which worktree had which role, which it
+  did not do on 2026-10-15.
 
 ### D. Archive, then remove: keep a patch of every dirty worktree before it goes
 
@@ -119,7 +119,7 @@ header line. `git apply` restores it on any checkout at that base.
   sweep, it runs after several items close, and it runs after the commits exist. `/close-out`
   runs before its own item's commit, so it could only ever sweep earlier items.
 - **`/close-out`, as a second pass in step 4.** Fires more often, but each run must read every
-  `COMMITTED` item, not only its own, which widens a step that is today scoped to "this session
+  `COMMITTED` item, not only its own, which widens a step that on 2026-10-15 was scoped to "this session
   made it".
 - **A CLI subcommand, `personal-config worktrees` (dry run by default).** The checks become code
   with violating and passing fixture tests, which skill text never gets. It is the largest build:

@@ -105,14 +105,14 @@ Verified 2026-10-16 01:20 to 01:40 EDT. Do not relitigate these.
    or hyphen) is shared context for rows `a` to `b`. Default, so you do not stop to ask: every
    non-`DONE` row in the range gets an item file whose body opens with that range section's text
    under a `## Shared context (rows a to b)` heading, then the row's own cells. A `DONE` row in the
-   range goes to the closed archive as a `DONE` row with no section does today. The level-2 prose
+   range goes to the closed archive as a `DONE` row with no section did on 2026-10-16. The level-2 prose
    sections stay on the board above the table's closing note, untouched, and the dry run lists
    them. Tests: a fixture with one range of three rows (one `DONE`, two `OPEN`) and one level-2
    prose section. Write each choice you make as a judgment call with its reversal.
 3. **Check every 2.0.0 skill text on both shapes.** Render the skills into a temp `$HOME` and read
    `close-out`, `handoff`, `passoff`, `clean-up`, `delegate` and `autopilot`. Each must do the
    right thing on a repo with `passoff/` and on one without. Only `templates/skills/autopilot.md:250`
-   names the 1.x case today. If one breaks on either shape, stop Stage B and write it as the
+   named the 1.x case on 2026-10-16. If one breaks on either shape, stop Stage B and write it as the
    finding; do not widen this item to fix skills.
 4. **Gates:** `bun run typecheck && bun run lint && bun test` in the worktree, then
    `bun run doctor . examples` from the main checkout with your changed files copied in.
