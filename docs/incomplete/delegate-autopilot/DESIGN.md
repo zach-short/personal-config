@@ -493,6 +493,12 @@ Opened as board row 82 in HANDOFF 97.
 
 ### D19. The landing process stays out of this effort
 
+**Superseded in part, 2026-10-16, under `agent-pushes` only.**
+`docs/incomplete/autonomous-autopilot/DESIGN.md` D1 lands each signed-off row inside the run: the
+builder merges the base and gates in its worktree, the lead fast-forwards the primary checkout and
+pushes. Under `print-blocks`, `agent-commits` and `no-rule` this decision stands, and the landing
+stays out.
+
 ### D20. When the caps allow fewer launches than there are runnable rows, board order decides (GATE 2, question 1, A)
 
 The lowest-numbered runnable row launches first. This settles §4.2.2's last line.
@@ -574,6 +580,11 @@ safety the branch does not already give.
 
 **Supersedes:** nothing; D9 still marks the predecessor `DONE`, and this decides what that `DONE`
 means for the row after it. **Ratified** 2026-10-04, Zach in chat, "all recommended".
+
+**Superseded in part, 2026-10-16, under `agent-pushes` only.** A predecessor lands on the base
+before its successor launches (autonomous-autopilot D1), so the successor builds from the base and
+no branch stacks. Under `agent-commits` the branch stacking above stands; under `print-blocks` the
+hold stands.
 
 ## 4. The skill texts, outlined
 
@@ -881,6 +892,11 @@ A build phase does not touch these, however helpful the edit looks.
 - **The five shipped skills' text.** `templates/skills/{close-out,scope,passoff,handoff,clean-up}.md`
   render the bytes they render now. The golden proves it: only new keys and `model-routing.md`
   move (`PLAN.md` §5).
+
+**Amended 2026-10-16.** Under `agent-pushes`, `/passoff` carries one added sentence
+(autonomous-autopilot D10) and `/clean-up` and `/close-out` carry the run's own commit in place of
+the owner's blocks (D7). The other policies render the bytes above.
+
 - **The `skills` question's two values**, `all` and `none`, its id, its `configKey` and its place
   in the phase. Only the `all` label changes (D16). The renderer's acceptance of an array from a
   profile stays as it is.
