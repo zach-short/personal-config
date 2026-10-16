@@ -11,6 +11,7 @@ import { configHash, loadConfig, savedUserConfig } from '../lib/config.ts';
 import { today } from '../lib/date.ts';
 import { scanProjectsDir } from '../lib/discover.ts';
 import { githubLogin, ownsRepo } from '../lib/git.ts';
+import { type HiddenFile, hiddenByIgnore, hiddenNote } from '../lib/hidden-tracked.ts';
 import { configFile, expandHome } from '../lib/paths.ts';
 import {
   clearCheckpoint,
@@ -53,11 +54,12 @@ export async function runSetup(cli: Cli): Promise<number> {
   await askPhase('practices', prompter, answers, config);
 
   const changes = await planEverything(config, answers, repos);
+  const hidden = await hiddenByIgnore(repos, changes);
   // The batch confirm is not one of the questions, so it must not ride on the question
   // prompter: under `--yes` that is `defaultsPrompter`, which would answer it `true` without a
   // person ever seeing it — a confirm in name only. `confirmBatch` returns early where there is
   // no TTY, so this is never asked of a terminal that is not there.
-  return finish(cli, changes, clackPrompter());
+  return finish(cli, changes, clackPrompter(), hidden);
 }
 
 /**
@@ -357,6 +359,7 @@ export async function finish(
   cli: Cli,
   changes: PlannedChange[],
   prompter: Prompter,
+  hidden: HiddenFile[] = [],
 ): Promise<number> {
   // `willWrite`, not a contents comparison of its own: a hook whose bytes are already current
   // but whose executable bit is missing is a file to write, and a local filter here would have
@@ -369,6 +372,8 @@ export async function finish(
   const current = changes.length - real.length - guarded.length;
   say(`\n${real.length} file(s) to write, ${current} already current.`);
   if (guarded.length > 0) say(leftAlone(guarded));
+  const hiddenWarning = hiddenNote(hidden);
+  if (hiddenWarning) say(hiddenWarning);
 
   // Check for tier ceiling override warnings (F2/F4)
   const ceilingWarning = await checkTierCeilingOverrides(changes);

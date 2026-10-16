@@ -3,7 +3,7 @@ import { DEFAULT_KEEP } from './fold.ts';
 import { LOG_DAYS } from './log.ts';
 import type { Cli } from './types.ts';
 
-const COMMANDS = [
+export const COMMANDS = [
   'setup',
   'catalog',
   'doctor',

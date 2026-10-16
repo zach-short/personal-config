@@ -237,6 +237,11 @@ const COMMIT_PARAGRAPH = '**Commits are the owner’s.**';
  * that removes the worktrees the run or session made, where the base holds the branch and the
  * tree is clean: subagent worktrees had filled the disk. The same bytes in all three variants.
  * 83 still, and no other key moved.
+ *
+ * **One skill moved per variant on 2026-10-15, board row 99 (per-item-board G68).** `/audit`
+ * writes each row's prompt as its own item file, `passoff/<n>-<slug>.md`, numbered by `passoff
+ * next`, with the 1.x sentence for a board that has no items folder. The same bytes in all three
+ * variants. 83 still, and no other key moved.
  */
 describe('§3.1 row 1 — code + full + git is the 0.3.0 output, byte for byte bar one skill', () => {
   const FULL = answersFor(CODE_FULL_GIT);

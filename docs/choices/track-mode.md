@@ -42,6 +42,29 @@ Tracked: `CLAUDE.md`, `HANDOFF.md`, `PASSOFF.md`, `docs/AGENT-PRACTICES.md`, and
 `AGENT-PRACTICES.local.md`, the same ledger and board, and every one of them added to
 `.git/info/exclude` — **not** `.gitignore`, because that file belongs to the repo.
 
+## When an ignore rule already hides a tracked file
+
+Committed mode only says what setup writes. Whether git will take it is decided by every ignore
+rule git reads, and one of those is outside the repo: your global excludes file
+(`core.excludesFile`, by default `~/.config/git/ignore`). If you once put `HANDOFF.md`,
+`PASSOFF.md` or `AGENT-PRACTICES.md` there to keep them out of other people's repos, the same
+rule hides them in your own, and `git add` refuses them. A worktree then starts without them, so
+an agent working there is told to read files it cannot see.
+
+So after planning, setup asks git (`git check-ignore -v`) about each file it means to be tracked,
+and the preview names every one an ignore rule hides, with the rule that hides it:
+
+```
+2 file(s) meant to be tracked are hidden by an ignore rule, so `git add` will refuse them:
+  app/HANDOFF.md  (~/.config/git/ignore:2:HANDOFF.md)
+  app/docs/AGENT-PRACTICES.md  (~/.config/git/ignore:1:AGENT-PRACTICES.md)
+```
+
+It is a warning and does not change the plan, because you may keep them untracked on purpose. To
+commit them, remove the rule or `git add -f` them. Files setup itself ignores
+(`.personal-config.json`, `PART0-PROMPT.md`), `.claude/settings.local.json`, files git already
+tracks, and every file in private mode are not checked.
+
 ## How to undo it
 
 Delete the files and remove the lines from `.gitignore` or `.git/info/exclude`.

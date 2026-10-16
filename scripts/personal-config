@@ -3,13 +3,11 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-# name:one-line description — single source of truth for both the menu and completion
-COMMANDS=(
+# name:one-line description for the dev-only tasks. The CLI's own subcommands are not listed
+# here: cli_commands reads them from `src/cli.ts --help`, so a command added to the CLI reaches
+# this wrapper, its menu and its completion without an edit here.
+DEV_COMMANDS=(
   "build:Bundle src/cli.ts to dist/cli.js"
-  "setup:Run the wizard against this repo (bun run src/cli.ts setup)"
-  "catalog:Regenerate catalog.json from the wizard's questions"
-  "doctor:Check this repo's generated docs against what setup would write now"
-  "undo:Restore the last run's overwritten files, once"
   "test:Run the bun test suite"
   "typecheck:Typecheck with tsc --noEmit"
   "lint:Lint with biome"
@@ -27,11 +25,30 @@ cli() { bun "$ROOT/src/cli.ts" "$@"; }
 # Dev tasks are about this checkout, so they, and only they, run inside it.
 dev() { (cd "$ROOT" && bun run "$@"); }
 
+# The CLI's subcommands as name:description lines, read from the usage block of its --help (the
+# lines that start "  personal-config <name>"). A command with several usage lines, such as
+# `passoff next` and `passoff claim`, appears once, with its first description.
+cli_commands() {
+  cli --help | awk '
+    /^  personal-config [a-z]/ {
+      name = $2
+      if (name in seen) next
+      seen[name] = 1
+      # The usage (name, subword, arguments) ends at the first run of two spaces; the rest is
+      # the description.
+      line = $0
+      sub(/^  personal-config +/, "", line)
+      sub(/^[^ ]+( [^ ]+)*  +/, "", line)
+      print name ":" line
+    }'
+}
+
+all_commands() {
+  cli_commands
+  printf "%s\n" "${DEV_COMMANDS[@]}"
+}
+
 cmd_build() { dev build "$@"; }
-cmd_setup() { cli setup "$@"; }
-cmd_catalog() { cli catalog "$@"; }
-cmd_doctor() { cli doctor "$@"; }
-cmd_undo() { cli undo "$@"; }
 cmd_test() { dev test "$@"; }
 cmd_typecheck() { dev typecheck "$@"; }
 cmd_lint() { dev lint "$@"; }
@@ -40,9 +57,16 @@ cmd_format() { dev format "$@"; }
 cmd_help() {
   echo "usage: personal-config <command>"
   echo
-  for entry in "${COMMANDS[@]}"; do
+  # A failed read of the CLI's list is said on stderr; the dev commands still print.
+  local from_cli
+  from_cli="$(cli_commands)" || {
+    from_cli=""
+    echo "personal-config: could not read the CLI's command list; showing the dev commands only" >&2
+  }
+  while IFS= read -r entry; do
+    [[ -n "$entry" ]] || continue
     printf "  %-10s %s\n" "${entry%%:*}" "${entry#*:}"
-  done
+  done < <(printf "%s\n" "$from_cli" "${DEV_COMMANDS[@]}")
 }
 
 cmd_shell() {
@@ -69,16 +93,14 @@ EOF
 }
 
 cmd___complete() {
-  for entry in "${COMMANDS[@]}"; do
-    echo "$entry"
-  done
+  all_commands
 }
 
 # Same table drives an fzf picker on bare invocation — only when it'd actually be
 # interactive, so a cron job or `personal-config test | something` never gets asked anything.
 interactive_pick() {
   local lines
-  lines="$(for entry in "${COMMANDS[@]}"; do
+  lines="$(all_commands | while IFS= read -r entry; do
     printf "%-10s %s\n" "${entry%%:*}" "${entry#*:}"
   done)"
   echo "$lines" | fzf --prompt='personal-config> ' --height='~70%' --reverse --no-info \
@@ -96,15 +118,25 @@ shift || true
 
 case "$sub" in
   build) cmd_build "$@" ;;
-  setup) cmd_setup "$@" ;;
-  catalog) cmd_catalog "$@" ;;
-  doctor) cmd_doctor "$@" ;;
-  undo) cmd_undo "$@" ;;
   test) cmd_test "$@" ;;
   typecheck) cmd_typecheck "$@" ;;
   lint) cmd_lint "$@" ;;
   format) cmd_format "$@" ;;
   shell) cmd_shell ;;
   --complete) cmd___complete ;;
-  help|*) cmd_help ;;
+  help|-h|--help) cmd_help ;;
+  --version) cli --version ;;
+  *)
+    # Anything else is the CLI's, if the CLI lists it; otherwise print the usage.
+    # A failed --help read (bun missing, a crash) stops here with a message, never falls through
+    # to the usage with exit 0. An unknown name prints the usage on stderr and exits 1.
+    known="$(cli_commands)" || { echo "personal-config: could not read the CLI's command list" >&2; exit 1; }
+    if printf "%s\n" "$known" | cut -d: -f1 | grep -qxF -- "$sub"; then
+      cli "$sub" "$@"
+    else
+      echo "personal-config: unknown command '$sub'" >&2
+      cmd_help >&2
+      exit 1
+    fi
+    ;;
 esac

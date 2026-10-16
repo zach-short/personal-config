@@ -61,6 +61,27 @@ export async function isIgnored(dir: string, path: string): Promise<boolean> {
   }
 }
 
+/**
+ * The rule that hides a path, as `check-ignore -v` names it: `source:line:pattern`, where the
+ * source can be a file outside the repo entirely — the owner's global excludes file is the case
+ * this exists for (board item 98). Null where nothing hides it, which includes a path git already
+ * tracks: an ignore rule does not apply to a tracked file, so there is nothing to warn about.
+ *
+ * Two calls, because `-v` alone cannot answer the question. With `-v`, git exits 0 and prints
+ * the last pattern that *matched*, and that can be a negation: a global `HANDOFF.md` and a repo
+ * `!HANDOFF.md` print `.gitignore:1:!HANDOFF.md` for a file `git add` takes (git 2.49.0). The
+ * plain `-q` exit is git's own verdict on whether the path is ignored, so it decides and `-v`
+ * only names the rule. Reading a leading `!` off the pattern instead would be this code
+ * re-deriving git's precedence rules, which is the thing `isIgnored` exists to avoid.
+ */
+export async function ignoreRule(dir: string, path: string): Promise<string | null> {
+  if (!(await isIgnored(dir, path))) return null;
+  const out = await git(dir, ['check-ignore', '-v', '--', path]);
+  if (!out) return null;
+  const tab = out.indexOf('\t');
+  return tab === -1 ? out : out.slice(0, tab);
+}
+
 /** `git@github.com:owner/repo.git` and `https://github.com/owner/repo` both yield `owner`. */
 export function ownerFromRemote(url: string | null): string | null {
   if (!url) return null;

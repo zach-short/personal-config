@@ -121,10 +121,17 @@ When the last lane ends, or the stop rules end the audit:
    it reached, its verified findings with evidence, what it dropped as a duplicate or a known
    false positive, and what no agent could run or check. A finding that was not verified is
    listed as not verified, and gets no row.
-2. **Write the rows yourself.** Only this session writes the board. Read the next free row
-   number from the board file at the moment you write, never from memory. Each row is a table
-   line (`# | Task | Status | Model | Lane | Waits on | Files it owns`) and a standalone prompt
-   that cites the report.
+2. **Write the rows yourself.** Only this session writes the board. Each row is a table line
+   (`# | Task | Status | Model | Lane | Waits on | Files it owns`) and its own item file,
+   `{{ITEMS_DIR}}/<n>-<slug>.md`, written in the same edit. The file opens with `# <n>. <Title>`,
+   then the dated line saying why it exists, which cites the report, then a standalone prompt.
+   Take each number from `personal-config passoff next` at the moment you write, never from
+   memory, and run it again before the next row. It reads the table, the folder and the archive,
+   so a number is never reused, even after its row has left the table. The slug is the title in
+   lower case, each run of other characters one hyphen, cut at a hyphen to at most 48
+   characters. On a 1.x board, with no `{{ITEMS_DIR}}/` folder beside it, read the next free row
+   number from the board file at the moment you write, and the prompt is a `### <n>.` section
+   below the table.
    - A security fix row is Deep. It is never built in this run: the Deep lift question came
      before the row existed.
    - A dead-code delete row is Default. It names each file to delete and the evidence that nothing

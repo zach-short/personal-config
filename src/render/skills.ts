@@ -166,8 +166,21 @@ function variables(
   if (name === 'clean-up') return cleanUpVars(shape, namesOf(ctx));
   if (name === 'delegate') return delegateVars(ctx, shape);
   if (name === 'autopilot') return autopilotVars(ctx);
-  if (name === 'audit') return { BOARD_FILE: boardFile(ctx), TIER_TABLE: tierTable(ctx, '') };
+  if (name === 'audit') return auditVars(ctx);
   return {};
+}
+
+/**
+ * `/audit`. Rendered only where `/autopilot` is, which is always a board beside a ledger, so its
+ * rows' prompts are item files named by D7, numbered by `passoff next` (D16), with the 1.x
+ * sentence for a repo that has not migrated (D12 As built, G68).
+ */
+function auditVars(ctx: RenderContext): Record<string, string> {
+  return {
+    BOARD_FILE: boardFile(ctx),
+    ITEMS_DIR: namesOf(ctx).items,
+    TIER_TABLE: tierTable(ctx, ''),
+  };
 }
 
 /**

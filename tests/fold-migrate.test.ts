@@ -278,6 +278,28 @@ describe('fold migrate, end to end', () => {
   );
 
   test(
+    'the archive header counts the steps frozen, not the one block they travel in',
+    async () => {
+      const repo = await legacyRepo();
+      try {
+        const three = BOLD_LEDGER.replace(
+          '## Style rules',
+          '**3. Finished it.** Done 2026-10-03.\n\nBody of three.\n\n## Style rules',
+        );
+        await Bun.write(join(repo.dir, 'HANDOFF.md'), three);
+        const { code } = await run(repo.dir, ['fold', 'migrate', '--force'], repo.home);
+        expect(code).toBe(0);
+        const log = await read(join(repo.archive, 'HANDOFF-log.md'));
+        expect(log).toMatch(/^## Folded \d{4}-\d{2}-\d{2} from `HANDOFF.md` — 3 step\(s\)$/m);
+        expect(log).toContain('Body of three.');
+      } finally {
+        await repo.done();
+      }
+    },
+    SPAWN_TIMEOUT,
+  );
+
+  test(
     'a second run refuses and changes nothing',
     async () => {
       const repo = await legacyRepo();

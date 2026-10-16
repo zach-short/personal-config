@@ -10,9 +10,9 @@ import { join } from 'node:path';
 import { readText } from '../src/lib/disk.ts';
 import { repoRoot } from '../src/lib/paths.ts';
 import { leftoverTokens } from '../src/lib/template.ts';
-import type { Answers, PlannedFile, WorkProfile } from '../src/lib/types.ts';
+import type { Answers, PlannedFile, RepoPlan, WorkProfile } from '../src/lib/types.ts';
 import { renderSkills } from '../src/render/skills.ts';
-import { DEFAULT_ANSWERS, testContext, testRepoPlan } from './helpers.ts';
+import { DEFAULT_ANSWERS, testContext, testRepoPlan, testScan } from './helpers.ts';
 
 const CODE_FULL_GIT = { workKind: 'code', configWeight: 'full', usesGit: 'yes' } as const;
 
@@ -118,7 +118,7 @@ describe('what /audit says', () => {
     const text = (await audit()).replace(/\s+/g, ' ');
     expect(text).toContain('Only this session writes the board.');
     expect(text).toContain(
-      'Read the next free row number from the board file at the moment you write',
+      'Take each number from `personal-config passoff next` at the moment you write, never from memory, and run it again before the next row.',
     );
     expect(text).toContain('A security fix row is Deep.');
   });
@@ -154,4 +154,67 @@ describe('what /audit says', () => {
       expect(text).toContain('---\n\n<!-- personal-config v');
       expect(leftoverTokens(text)).toEqual([]);
     });
+});
+
+/**
+ * Board row 99 (per-item-board `PLAN.md` G68). On a 2.0.0 board each row's prompt is its own item
+ * file named by D7, and the next free number comes from `passoff next`, which reads the table, the
+ * live folder and the archive (D16), because a folded row has left the table. A 1.x board keeps
+ * the section below the table, in the one sentence the six skills carry (D12 As built).
+ */
+describe("where /audit writes its rows' prompts (G68)", () => {
+  async function auditIn(plan: RepoPlan): Promise<string> {
+    const answers: Answers = { ...DEFAULT_ANSWERS, skills: 'all', ...CODE_FULL_GIT };
+    const files = await renderSkills(testContext(answers, plan));
+    return skill(files, 'audit').replace(/\s+/g, ' ');
+  }
+
+  test('on a 2.0.0 board each prompt is an item file, in the same edit as its row', async () => {
+    const text = await audit();
+    const flat = text.replace(/\s+/g, ' ');
+    expect(flat).toContain(
+      'Each row is a table line (`# | Task | Status | Model | Lane | Waits on | Files it owns`) and its own item file, `passoff/<n>-<slug>.md`, written in the same edit.',
+    );
+    expect(flat).toContain(
+      'The file opens with `# <n>. <Title>`, then the dated line saying why it exists, which cites the report, then a standalone prompt.',
+    );
+    expect(flat).toContain(
+      'The slug is the title in lower case, each run of other characters one hyphen, cut at a hyphen to at most 48 characters.',
+    );
+  });
+
+  test('the number comes from the table, the folder and the archive, never the board alone (D16)', async () => {
+    const flat = (await audit()).replace(/\s+/g, ' ');
+    expect(flat).toContain(
+      'It reads the table, the folder and the archive, so a number is never reused, even after its row has left the table.',
+    );
+    expect(flat).not.toContain('and a standalone prompt that cites the report');
+  });
+
+  test('a 1.x board reads the number from the board and keeps the section below the table', async () => {
+    const flat = (await audit()).replace(/\s+/g, ' ');
+    expect(flat).toContain(
+      'On a 1.x board, with no `passoff/` folder beside it, read the next free row number from the board file at the moment you write, and the prompt is a `### <n>.` section below the table.',
+    );
+  });
+
+  test('the folder follows an adopted board name (D7)', async () => {
+    const text = await auditIn(testRepoPlan({ scan: testScan({ boardDoc: 'BOARD.md' }) }));
+    expect(text).toContain('its own item file, `board/<n>-<slug>.md`');
+    expect(text).toContain('with no `board/` folder beside it');
+    expect(text).not.toContain('passoff/<n>-');
+  });
+
+  test('an itemsDir override is the folder it names', async () => {
+    const text = await auditIn(
+      testRepoPlan({ scan: testScan({ boardDoc: 'BOARD.md', itemsDoc: 'tasks' }) }),
+    );
+    expect(text).toContain('its own item file, `tasks/<n>-<slug>.md`');
+    expect(text).toContain('with no `tasks/` folder beside it');
+  });
+
+  test('the template has no contraction, which the prose hook checks', async () => {
+    const source = await readText(join(repoRoot(), 'templates', 'skills', 'audit.md'));
+    expect(source).not.toMatch(/n't\b|\b(it|that|there|what)'s\b|'(re|ll|ve|d)\b/i);
+  });
 });

@@ -347,7 +347,7 @@ async function appended(
   if (fresh.length === 0) return existing;
 
   const noun = { board: 'prompt', ledger: 'step', log: 'log line' }[kind];
-  const header = `## Folded ${today()} from \`${source}\` — ${fresh.length} ${noun}(s)`;
+  const header = `## Folded ${today()} from \`${source}\` — ${fold.count ?? fresh.length} ${noun}(s)`;
   const joiner = kind === 'log' ? '\n' : '\n\n';
   return `${existing.replace(/\n+$/, '')}\n\n${header}\n\n${fresh.map(bodyOf).join(joiner)}\n`;
 }
@@ -749,6 +749,7 @@ async function migrateHalves(
   const log: Fold = {
     folded: migration.log === null ? [] : [migration.log],
     trimmed: migration.ledger,
+    count: migration.steps,
   };
   const halves = await Promise.all([
     prepareAppend(boardPath, 'board', closed, archiveHome, names.board, 'board'),

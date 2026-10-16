@@ -324,7 +324,7 @@ bun run doctor . examples
 | `examples/` | A filled ledger, board, Part 0 prompt and archive index for a fictional repo |
 | `tests/` | The `bun test` suite |
 | `tools/` | Workflow scripts for this repo's own board. See [`tools/README.md`](tools/README.md). |
-| `scripts/personal-config` | A bash dispatcher for the dev tasks (`build`, `setup`, `catalog`, `doctor`, `undo`, `test`, `typecheck`, `lint`, `format`). Run it with `help`. |
+| `scripts/personal-config` | A bash dispatcher. It forwards every CLI subcommand, reading the list from `src/cli.ts --help` so the two cannot drift, and runs it from your current directory. It adds the dev tasks `build`, `test`, `typecheck`, `lint`, `format` and `shell`. Run it with `help`. |
 
 A change to either form of the standard has to bump `standard/VERSION` and add an entry to `standard/CHANGELOG.md`, and CI fails without both. The CLI has its own [`CHANGELOG.md`](CHANGELOG.md). Read [`CONTRIBUTING.md`](CONTRIBUTING.md), [`CLAUDE.md`](CLAUDE.md) and [`docs/conventions-ts.md`](docs/conventions-ts.md) before you send a change.
 

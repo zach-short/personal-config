@@ -40,7 +40,16 @@ export type Folded = {
   stub: string | null;
 };
 
-export type Fold = { folded: Folded[]; trimmed: string };
+export type Fold = {
+  folded: Folded[];
+  trimmed: string;
+  /**
+   * What the archive header counts, where the blocks are not the units: `fold migrate` hands the
+   * whole step log over as one block, so the block count would read `1 step(s)` over 117 steps.
+   * Left unset, the header counts the blocks, which is right for `fold ledger` and `fold board`.
+   */
+  count?: number;
+};
 
 const EMPTY: Fold = { folded: [], trimmed: '' };
 
@@ -323,6 +332,8 @@ export type ItemFile = {
 export type Migration = {
   /** The highest step in the log, which `ledgerFrozenAt` records; 0 for a log with none. */
   frozenAt: number;
+  /** The number of steps in that section, which the archive header names; 0 when there is none. */
+  steps: number;
   /** The whole step log section, heading included, for `<LEDGER>-log.md`; null when empty. */
   log: Folded | null;
   /** Every `DONE` item's section still on the board, for `<BOARD>-closed.md`. */
@@ -442,7 +453,7 @@ function withoutTrailingRules(text: string): string {
   return `${lines.join('\n')}\n`;
 }
 
-type LedgerPart = Pick<Migration, 'frozenAt' | 'log' | 'ledger' | 'problems'>;
+type LedgerPart = Pick<Migration, 'frozenAt' | 'steps' | 'log' | 'ledger' | 'problems'>;
 
 /**
  * The step log's section runs from the `##` heading above its first step to the next heading of
@@ -460,13 +471,20 @@ function migrateLedger(markdown: string, date: string, ledgerName: string): Ledg
   if (/^##\s+Log\s*$/m.test(markdown)) {
     return {
       frozenAt,
+      steps: steps.length,
       log: null,
       ledger: markdown,
       problems: ['the ledger already has a `## Log`'],
     };
   }
   if (steps.length === 0)
-    return { frozenAt, log: null, ledger: withLogSection(lines, fresh), problems: [] };
+    return {
+      frozenAt,
+      steps: 0,
+      log: null,
+      ledger: withLogSection(lines, fresh),
+      problems: [],
+    };
 
   const tops = proseLines(markdown)
     .filter(({ text }) => /^#{1,2}\s/.test(text))
@@ -479,6 +497,7 @@ function migrateLedger(markdown: string, date: string, ledgerName: string): Ledg
   if (split.length > 0) {
     return {
       frozenAt,
+      steps: steps.length,
       log: null,
       ledger: markdown,
       problems: split.map((h) => `the step log is split by \`${h.text}\` at line ${h.line}`),
@@ -509,7 +528,13 @@ function migrateLedger(markdown: string, date: string, ledgerName: string): Ledg
     ...(after.length === 0 ? fresh.slice(0, 3) : fresh),
     ...after,
   ];
-  return { frozenAt, log, ledger: endWithNewline(ledger.join('\n')), problems: [] };
+  return {
+    frozenAt,
+    steps: steps.length,
+    log,
+    ledger: endWithNewline(ledger.join('\n')),
+    problems: [],
+  };
 }
 
 /** A ledger with no steps gains its `## Log` before Style rules, or at the end. */
