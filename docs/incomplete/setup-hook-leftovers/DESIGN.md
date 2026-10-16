@@ -1,7 +1,99 @@
-# SCOPE: a `setup` run leaves hook entries and scripts the run no longer wants
+# DESIGN: a `setup` run leaves hook entries and scripts the run no longer wants
 
-Board item 109, lane J, Opus 5.5. Split from item 101 at its GATE 1 (Q3, answered 2026-10-16). This
-document proposes and decides nothing. Section 6 holds the questions for GATE 1.
+**Status:** `RATIFIED`. Opened 2026-10-16 by board item 109, on Opus 5.5. Owner: Zach. GATE 1 was
+answered 2026-10-16 (§6). This file was `SCOPE.md` until 2026-10-16, when the answers were written
+in below as D1 to D4. From here it changes by amendment only: a new dated decision or an `As built:`
+note, never an edit to a decision in place. `PLAN.md` beside it orders the build.
+
+## Decisions
+
+**D1. A `setup` run removes each hook entry this tool renders that no target in the run wants,
+with its script in the same batch** (2026-10-16, GATE 1 Q1, option O1). The entry is removed from
+`~/.claude/settings.json` in the same planned write that merges the entries the run does want, and
+the script is planned for removal beside it. A script goes only where its entry goes: never while
+an entry in the file the run leaves still runs it. An entry the person edited stays, and so does
+its script. The preview names every removal, `commitPlan` backs it up, and `personal-config undo`
+restores it. O4's long-form corrections come with it (H16).
+
+*Defense.* It closes all four leaks of §1 (H1 to H4) with one rule, the rule item 101 already
+applies to skills and rules: what this run does not render, and this tool wrote, goes. It uses the
+one ownership signal an entry has, its exact JSON, which is frozen by design (H7). The removal
+travels the same preview, backup and undo path as every write (H10). O2 needs an unverified claim
+about Claude Code (H17) and still needs O1's exact match for every install made so far. O3 and O4
+leave the defect in place and tell the person about it at a moment they are not reading.
+
+*What it costs, accepted.* This is the first time a run deletes from a file the person owns
+(O1's argument against it, §3).
+
+**D2. An entry that is deep-equal JSON to the entry this version renders counts as this tool's**
+(2026-10-16, GATE 1 Q2, DIAL-3). Deep-equal means the same event key and the same value, with the
+order of an object's keys ignored and the order of an array kept. A prefix match on the folder path
+(H8) does not count. An identical entry a person wrote by hand from `hooks.md`'s own recipe (H9) is
+removed too, in the preview and undoable.
+
+*Defense.* No entry carries a stamp (H6), so a rule that edits only stamped entries never prunes
+anything. The command strings are fixed once a release carries them (H7), so an exact match is
+this tool's text in every case but H9's, and H9's person sees the removal before it lands.
+
+**D3. All five entries, and a "No hooks" run prunes** (2026-10-16, GATE 1 Q3, DIAL-1 and DIAL-2).
+The five are the commit guard (with its `commit-policy` file), the delete guard, the session
+banner, the completion gate and the write-doc check (`write-doc/check.sh`). "No hooks" means no
+hooks from this tool: a run with that answer removes what an earlier run added.
+
+*Defense.* H3 and H4 leak through the same gap as H1. Reading "No hooks" as "add nothing, keep
+everything" leaves H4 open with no way out but a hand edit.
+
+**D4. No printed notice stands in for the removal** (2026-10-16, GATE 1 Q4). O3's line does not
+reach the person at the moment of harm, a blocked `rm` days later or a style finding on a
+`README.md` save.
+
+*Supersessions.*
+
+- **Item 101 D3** ("Hook scripts and `settings.json` entries are out of D1",
+  `docs/incomplete/setup-global-leftovers/DESIGN.md`, in the archive once item 101 folds) is
+  superseded in full for the five entries and their scripts. Its reason (a removed script under a
+  kept entry fails on every call) survives as D1's pairing rule.
+- **Item 101 BD-3** (`write-doc/check.sh` stays out of the removal list) is superseded: `check.sh`
+  goes under D1's pairing rule. Its own reversal line named this item.
+- **Item 101's rule that "Hook scripts, `settings.json` and `config.json` are never removed"**
+  loses its first two terms. `config.json` is still never removed.
+- The comment at `src/render/hooks.ts:84-86` ("`hooks: none` is still none ... nothing is added to
+  `settings.json`") stays true as written: "No hooks" still adds nothing. It gains a removal.
+
+## How the design meets §5's hazards
+
+Each hazard is answered by a build-level decision in `PLAN.md` §1 that implements D1 to D4 (R12).
+
+| §5 hazard | Answer | Where |
+|---|---|---|
+| A script removed under a kept entry | A script is removed only where no command in the `settings.json` this run leaves names its path, and only where it is stamped and not `adapted`. An edited entry stays, names the script, and keeps it | BD-6 |
+| One planned file per `settings.json` per plan (H13) | The prune rides the same `PlannedFile` as the merge, as a new optional `prune` list. No second file for that path is ever planned | BD-3 |
+| `renderHooks` plans nothing under "No hooks" (H4) | The prune is decided in `planEverything`, after render, from the disk. Where no settings file was rendered and there is something to prune, it adds one `settings.json` file whose merge contents are `{}` | BD-1, BD-3 |
+| The declined-run help reads the merge contents as additions (H14) | `contents` keeps holding additions only. The prune is a separate field the help never reads, so its bytes do not change | BD-3, BD-11 |
+| `mergeJson` is shared with the ceiling's `settings.local.json` (H12) | `mergeJson` is not changed. The prune is a second step in the `merge-json` branch that runs only when `prune` is present, and `ceiling.ts` never sets it | BD-3 |
+| Two targets on two tracks | The run wants the union of what every target's context rendered for `settings.json`, read before `dedupe`. At `9fdf169` every context renders the same hooks (PLAN F4); the union keeps that true if a hook answer ever becomes per target | BD-1 |
+| The emptied `write-doc/` folder | With `check.sh` gone the folder is empty, and item 101's `removeEmptySkillFolders` removes it. A test pins it | BD-7 |
+| No gate checks `settings.json` (H15) | Every case is a test in a temp home, and the proof run repeats §1's four runs with the real bin | PLAN Phase 1 |
+
+## Rules that survive unchanged
+
+- `mergeJson` adds and never removes. Every merge without a `prune` list, the ceiling's
+  `settings.local.json` included, gives the same bytes it gives at `9fdf169`.
+- The entry strings this tool renders do not change (H7). The prune matches against the same
+  builders the merge uses, so the two cannot drift.
+- `renderAll` stays a function of the answers and touches no disk. `doctor`'s rerender compares
+  only `.md` files (`src/doctor/rerender.ts:89-91`) and never sees a prune.
+- `init` writes and removes nothing under `~/.claude` (init-command D2, `insideOnly`).
+- What each guard blocks, its block message, and which answers want which hook
+  (`wantedHooks`, `wantsWriteDocHook`).
+- A script with no stamp, or a stamp marked `adapted`, is never removed (item 101 BD-4).
+- The output style key (§2's non-scope).
+- Item 101's removals of skills and rules, and `fold`'s removals, keep their behaviour.
+
+**Why this exists.** Board item 109, lane J, split from item 101 at its GATE 1 (Q3, answered
+2026-10-16). Item 101 removed leftover skills and rules and left hook entries and scripts out,
+because `merge-json` could not remove an entry. The ground truth below finds the leak on four paths,
+not one.
 
 ## 1. What exists, verified 2026-10-16
 
