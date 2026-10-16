@@ -61,11 +61,14 @@ work is recorded. It never builds a Deep item unless you typed `/delegate` on th
 follows your commit policy: under "only me" its builder never commits.
 
 `/autopilot` is for the hours you are away. The questions a row needs are asked before you leave,
-and a row that would need you later is held with its reason on the board, so nothing is decided
-for you overnight. Every row it builds is still built, audited and recorded by `/delegate`, and
-the rundown says what ran, what was held, what the budget was and what nobody saw running. Its
-skill file sets `disable-model-invocation: true`, so the agent cannot start it on its own; its
-description is not even in the agent's context until you type it.
+and a row that would need you later is held with its reason on the board, so nothing is decided for
+you overnight. Under **The agent may commit and push** that changes: a question a builder raises is
+decided in the run, by a subagent on the tier a wrong answer calls for, and the rundown lists each
+decision with the one step that reverses it. Write **owner's call** in an item file before a
+question you want kept, and the run holds that row instead. Every row it builds is still built,
+audited and recorded by `/delegate`, and the rundown says what ran, what was held, what the budget
+was and what nobody saw running. Its skill file sets `disable-model-invocation: true`, so the agent
+cannot start it on its own; its description is not even in the agent's context until you type it.
 
 `/audit` is for the spare budget before a usage window resets. One opening round covers the
 audit and the build, and the run stops at the reset time your lane file names, or at a later time
@@ -100,10 +103,13 @@ so the step frees disk only once that work is committed and merged.
 
 `/autopilot` is that risk run all night. "All of them" now puts an overnight loop in the skills
 list of a person who chose "all" for `/close-out`. The loop rests on the harness's `/loop` skill
-and its timer, whose text this tool does not control, so a change there can break the loop with
-no error: the run stops early, or never stops scheduling. The rundown's readings, one per wake,
-are the only sign of a missed wake. And where your harness has no usage tool, the budget is an end
-time or a row count, not a share of your plan.
+and its timer, whose text this tool does not control, so a change there can break the loop with no
+error: the run stops early, or never stops scheduling. The rundown's readings, one per wake, are
+the only sign of a missed wake. And where your harness has no usage tool, the budget is an end time
+or a row count, not a share of your plan. Under **The agent may commit and push** a wrong merge is
+on the remote before anyone looks. Every landing re-runs the gates on the tree that lands, and
+nothing force-pushes or rebases, but a landed row that CI alone can fail is red on the base, not in
+a worktree.
 
 `/audit` cannot carry the guard `/autopilot` has. The harness blocks a model's Skill call to a
 skill that sets `disable-model-invocation: true`, and `/autopilot` loads `/audit` that way. So its
@@ -151,7 +157,11 @@ that question's long form.
 `/autopilot` writes nothing at setup beyond its skill file. When it runs, it makes
 `docs/incomplete/autopilot-<date>/` in the repo, holding `STATE.md`, written on every wake, and
 `RUNDOWN.md`, written at the end, and it writes one ledger step per row it signs off and one for
-the run. The builders' work stays in their worktrees; landing it is yours.
+the run. Under every commit policy but **The agent may commit and push**, the builders' work stays
+in their worktrees and landing it is yours. Under that policy the run lands each signed-off row as
+it goes: the builder merges the base and runs the gates in its worktree, the session fast-forwards
+your checkout and pushes, and the row's worktrees go. The run's own folder and the fold's moves are
+committed and pushed at the end, with the files named.
 
 `/audit` also writes nothing at setup beyond its skill file. When it runs, it makes
 `docs/incomplete/audit-<date>/`, holding the raw tool output under `raw/<lane>/` and a

@@ -2,7 +2,10 @@
 
 **Status:** `RATIFIED` 2026-10-15: the question in section 6 was answered the same day, every recommendation taken (section 7). Opened 2026-10-15 as `SCOPING`. Owner: Zach. One repo, `personal-config`, at `d281489`
 (`delegate and close-out remove the merged, clean worktrees they made`). Nothing is built until
-`0ac7cf1` lands on `main`. Nothing in this task removed a worktree.
+`0ac7cf1` lands on `main`. Nothing in this task removed a worktree. Under
+`agent-pushes` a landed row's worktrees pass the existing merged-and-clean check
+(autonomous-autopilot D1, 2026-10-16); this sweep stays needed under `print-blocks` and
+`agent-commits`.
 
 **Why this exists.** On 2026-10-15 subagent worktrees filled the disk: 36 worktrees under one
 projects folder, about 55 GB, with free space near 3 GB. Commit `d281489` gave `/delegate` and

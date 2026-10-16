@@ -20,7 +20,7 @@ The CLI. The working standard it installs is versioned separately — see
   `git reset --hard` and the rest) are not blocked either. A run with this answer removes a
   guard, its policy file and its `settings.json` entry that an earlier run installed. The banner,
   the completion gate and the delete guard are unchanged. `/delegate` and `/autopilot` read it as
-  they read the agent may commit: the builder commits on its branch, and no branch is pushed. A
+  they read the agent may commit, and land what they build: see the commit-policy long form. A
   `commit-policy` file that holds `agent-pushes` by hand reads as an unknown word, so the guard
   blocks every commit. The long forms for the commit policy, Part 11's commit paragraph and hooks
   describe it. To move an existing project to this answer, run `setup` in it again; editing
