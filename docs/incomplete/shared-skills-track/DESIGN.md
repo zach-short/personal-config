@@ -1,9 +1,87 @@
-# SCOPE: shared global skills flip to the track of the last `setup` run
+# DESIGN: shared global skills flip to the track of the last `setup` run
 
-**Status:** `SCOPED`. GATE 1 answered 2026-10-16 (§7); next is a design and plan for O5, then GATE 2. Opened 2026-10-16 by board item 108, on Opus 5.5. Owner:
-Zach. Split from item 101 (the leftovers design D2, archived 2026-10-16 to
-`~/Projects/archive/personal-config/setup-global-leftovers/DESIGN.md`). This document
-proposes and decides nothing. §7 holds the questions, and the answers are written in below them.
+**Status:** `RATIFIED`. Opened 2026-10-16 by board item 108, on Opus 5.5. Owner: Zach. Split
+from item 101 (the leftovers design D2, archived 2026-10-16 to
+`~/Projects/archive/personal-config/setup-global-leftovers/DESIGN.md`). GATE 1 was answered
+2026-10-16 (§7). This file was `SCOPE.md` until 2026-10-16, when the answers were written in
+below as D1 to D6. From here it changes by amendment only: a new dated decision or an
+`As built:` note, never an edit to a decision in place. `PLAN.md` beside it orders the build.
+
+## Decisions
+
+**D1. `/close-out` and `/handoff` are rendered into each target, from that target's context,
+and the `~/.claude/skills/` copies are removed** (2026-10-16, GATE 1 Q2, option O5). Each target
+gets `<target>/.claude/skills/close-out/SKILL.md` and `<target>/.claude/skills/handoff/SKILL.md`,
+rendered from the same context that renders its router and ledger. The global copies leave
+through item 101's removal: they stay in `skillFiles()`, no context renders them any more, so
+`leftovers` plans their removal, the preview names it and `undo` restores it.
+
+*Defense.* It fixes the defect where it starts. Each folder reads a body rendered from its own
+answers, so F3, F4 and F7 go together, in both directions. The removal is required: on a name
+clash the personal copy wins (F14), so a per-target copy beside a kept global one changes
+nothing a session sees. O4 does not fix F7; O6 makes the skill depend on a router a folder may
+lack; O7 fixes nothing (§3).
+
+*What it costs, accepted.* Two files in every target, a stale copy in a repo later dropped from
+`--projects-dir`, and no `/close-out` or `/handoff` in a session started outside any target
+(D4).
+
+**D2. The track-dependent set is `/close-out` and `/handoff` only** (2026-10-16, GATE 1 Q2,
+DIAL-1). The other six skills stay in `~/.claude/skills/`. A test renders every skill on both
+tracks and fails when a skill outside this set changes body, so a third one cannot drift in
+silently.
+
+*Defense.* F5: `/scope` and `/passoff` render the same body on both tracks apart from the stamp,
+and the code-only skills are never on both tracks.
+
+**D3. The per-target copies are kept out of git** (2026-10-16, GATE 1 Q2, DIAL-2). The ignore
+lines name the two skill folders, anchored to the target root, and never `.claude/skills/` as a
+whole, because a repo may ship skills of its own. `PLAN.md` BD-2 settles which ignore file takes
+them in tracked mode, because F17 holds for untracked mode only (`PLAN.md` §0 P4).
+
+*Defense.* They are generated from the person's own answers, which is the reason every other
+personal file this tool writes into a repo is kept out (`src/render/repo.ts:468-476`).
+
+**D4. A session outside any target gets neither skill** (2026-10-16, GATE 1 Q2, DIAL-3). A run
+with no target removes the global copies and writes no per-target ones.
+
+*Defense.* A track-neutral global copy is the only alternative, and F14 makes it shadow every
+per-target copy, which undoes D1.
+
+**D5. F2 and F6 stay with leftovers D1** (2026-10-16, GATE 1 Q4). A run for one track still
+removes the other track's global skills. This design records that and changes nothing about it.
+
+**D6. `dedupe`'s comment is corrected in this build** (2026-10-16, GATE 1 Q5). It claims every
+target renders the same global files (F8). The new comment says the first target wins and that a
+global body reading a per-target answer takes the first target's.
+
+*Supersessions* (2026-10-16, GATE 1 Q3, accepted by the owner).
+
+- **setup-tracks, the global layer for skills** (`docs/incomplete/setup-tracks/DESIGN.md`: G3
+  "four skills" in the global layer, G26 "two read the person's answer for the global layer and
+  must keep doing so", DIAL-6). Superseded for `/close-out` and `/handoff` only: their location
+  and the answers their bodies read move to the target. The rest stands: the other six skills,
+  the light track's set of two (DIAL-6), and `commits.md` reading the person's `usesGit`.
+- **init-command D2's §2 file list**
+  (`~/Projects/archive/personal-config/init-command/DESIGN.md:102`). Amended: `init` now writes
+  the folder's two skill files. D2's rule stands, because both files sit inside the folder, and
+  `init` still removes nothing under `~/.claude`.
+- **init-command D6's notice** (the same file, `:153-160`) no longer covers `/close-out` and
+  `/handoff`, because `init` writes them for the folder's own track. The notice stands for the
+  other skills and the rules.
+- **Not superseded: leftovers D1.** D1 removes the global copies by D1's own machinery.
+
+## Rules that survive unchanged
+
+- `renderAll` stays a function of the answers and touches no disk. `doctor`'s rerender reads it.
+- `init` writes and removes nothing under `~/.claude` (init-command D2, `insideOnly`).
+- Which skills each track is offered (setup-tracks D3, D6, D9, DIAL-6; delegate-autopilot D1,
+  D22). Only where two of them are written changes.
+- The skill templates' text. The same variables fill the same templates; only the context they
+  read and the path they land at change.
+- A file with no stamp, or a stamp marked `adapted`, is never replaced and never removed.
+- Hook scripts, `settings.json` and `config.json` (item 109 owns the hook entries).
+- `/scope` and `/passoff` stay global and keep their bodies (F5).
 
 ## 1. What exists, verified 2026-10-16
 
@@ -33,6 +111,15 @@ removed.
 | F16 | Personal skills do not load in cloud sessions | Holds per the docs: "All your projects on this machine, but not Cowork or cloud sessions" | Context7, page `slash-commands` |
 | F17 | Per-repo files this tool writes are kept out of git through `.git/info/exclude` | Holds. Run 1 added seven entries (`/CLAUDE.local.md`, `/HANDOFF.md`, `/PASSOFF.md`, `/passoff/` and three more) | run 1, `p/repo/.git/info/exclude` |
 | F18 | Item 101 is built, committed and closed | Holds. Phase 1 `1a6bdd4`, Phase 2 `d1f90d7`; its row became `DONE - 2026-10-16` while this scope was written. Item 107, which the board row once named as this item's wait, is `DONE` too | `git log -- docs/incomplete/setup-global-leftovers`; `PASSOFF.md:107,110` |
+
+*Amended 2026-10-16, after GATE 1:* **F17 holds for untracked mode only.** `renderIgnore`
+writes the ledger, the board and `CLAUDE.local.md` to `.git/info/exclude` only when the target
+is untracked. A tracked target gets `/.personal-config.json` and `/PART0-PROMPT.md` in
+`.gitignore` and nothing else, and a folder or a `usesGit: no` run gets no ignore file
+(`src/render/repo.ts:478-512`). Run 1 wrote `.git/info/exclude`, which only untracked mode does; a repo with no remote
+reads as not owned, so untracked (`src/lib/git.ts:113-116`). D3 and
+`PLAN.md` BD-2 carry the consequence. The non-git question below is answered in part by
+`PLAN.md` §0 P8.
 
 Not verified: whether a project `.claude/skills/` loads in a session started in a non-git folder
 (F13's docs say "repository"), and whether `doctor`'s rerender compares the global skill paths
