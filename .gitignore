@@ -28,3 +28,5 @@ tests/fixtures/
 # The published bundle — built by `bun run build`, never committed.
 dist/
 /PART0-PROMPT.md
+/.claude/skills/close-out/
+/.claude/skills/handoff/

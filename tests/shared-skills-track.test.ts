@@ -243,6 +243,12 @@ describe('a setup run with a target', () => {
   );
 });
 
+/** This checkout's copy of a target skill, or `null` when it has none. */
+async function checkoutCopy(name: string): Promise<string | null> {
+  const path = targetSkill(repoRoot(), name);
+  return (await exists(path)) ? readText(path) : null;
+}
+
 describe('what is outside a target (D4)', () => {
   test(
     'a run with no target removes the global copies and writes neither skill',
@@ -250,12 +256,15 @@ describe('what is outside a target (D4)', () => {
       const home = await freshHome();
       try {
         for (const name of TRACK_SKILLS) await seedGlobal(home, name);
+        // A context with no target must not fall back to a relative path (PLAN watch-for). The
+        // run's working directory is this checkout, which may hold its own copies from an `init`
+        // of this repo, so the check is that the run left them as they were, not that none exist.
+        const before = await Promise.all(TRACK_SKILLS.map((n) => checkoutCopy(n)));
         await setup(home, join(home, 'empty'), CODE);
         for (const name of TRACK_SKILLS) {
           expect(await exists(globalSkill(home, name))).toBe(false);
-          // A context with no target must not fall back to a relative path (PLAN watch-for).
-          expect(await exists(targetSkill(repoRoot(), name))).toBe(false);
         }
+        expect(await Promise.all(TRACK_SKILLS.map((n) => checkoutCopy(n)))).toEqual(before);
       } finally {
         await cleanup(home);
       }
