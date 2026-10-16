@@ -44,6 +44,8 @@ export function renderConventions(ctx: RenderContext, languages: string[]): Plan
         join(root, conventionsPath(ctx, language)),
         `code standard — ${LANGUAGE_LABELS[language] ?? language}`,
         document(ctx, language, rules, languages),
+        // Part 0 may rewrite a rule here, as it did in one repo replaced on 2026-10-16.
+        { replace: 'if-unedited' },
       );
     })
     .filter((f): f is PlannedFile => f !== null);

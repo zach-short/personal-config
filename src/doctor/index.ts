@@ -9,7 +9,7 @@ import { expandHome } from '../lib/paths.ts';
 import { readDocNames } from '../lib/repo-config.ts';
 import type { Cli, Config, Finding, PlannedFile } from '../lib/types.ts';
 import { version } from '../lib/version.ts';
-import { commitPlan, resolvePlan } from '../lib/write-plan.ts';
+import { commitPlan, recordGuard, resolvePlan } from '../lib/write-plan.ts';
 import { standardVersion } from '../render/standard.ts';
 import { type Rerender, rerender } from './rerender.ts';
 import { absenceEvidence } from './rules/absence-evidence.ts';
@@ -127,13 +127,23 @@ async function stampFindings(
   const render: Rerender = configured
     ? await rerender(root, expectation.config, docs)
     : () => null;
-  return docs.flatMap((doc) =>
-    stampDrift(doc, {
+  return docs.flatMap((doc) => {
+    const file = render(doc);
+    return stampDrift(doc, {
       standardVersion: expectation.standardVersion,
-      rendered: render(doc),
+      rendered: file?.contents ?? null,
+      keptOnRerun: file !== null && keptOnRerun(file, doc.text),
       configured,
-    }),
-  );
+    });
+  });
+}
+
+/**
+ * The guard's own answer, asked with the render at the file's stamp as the prior one: the same
+ * question `setup` asks before it writes, so the finding and the run cannot disagree.
+ */
+function keptOnRerun(file: PlannedFile, text: string): boolean {
+  return recordGuard(file, text, () => file.contents) !== 'none';
 }
 
 /**

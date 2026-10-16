@@ -33,4 +33,6 @@ Fills `{{TRACKER}}` throughout the standard copy's Part 12.
 
 ## How to undo it
 
-Edit the standard copy, or re-run `setup`.
+Edit the standard copy, or re-run `setup`. A re-run rewrites the copy only while it is
+unadapted (it still has Part 0's `{{WORKTREE_SETUP}}` line); an adapted copy is left alone and
+named in the preview.

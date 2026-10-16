@@ -46,27 +46,29 @@ async function drift(repo: Rendered, config = repo.config) {
 }
 
 describe('a repo `setup` just rendered', () => {
-  test('re-renders to the bytes on disk, file for file, and the Part 0 prompt is not compared', async () => {
+  test('re-renders to the bytes on disk, file for file; the Part 0 prompt and the records are not compared', async () => {
     const repo = await rendered();
     try {
       const docs = await collectDocs(repo.dir);
       const render = await rerender(repo.dir, repo.config, docs);
+      const uncompared = ['PART0-PROMPT.md', 'HANDOFF.md', 'PASSOFF.md'];
 
       const compared = docs.filter(
-        (doc) => readStamp(doc.text) !== null && basename(doc.path) !== 'PART0-PROMPT.md',
+        (doc) => readStamp(doc.text) !== null && !uncompared.includes(basename(doc.path)),
       );
       expect(compared.map((doc) => basename(doc.path)).sort()).toEqual([
         'AGENT-PRACTICES.md',
         'CLAUDE.md',
-        'HANDOFF.md',
-        'PASSOFF.md',
         'conventions-typescript.md',
       ]);
-      for (const doc of compared) expect(render(doc)).toBe(doc.text);
+      for (const doc of compared) expect(render(doc)?.contents).toBe(doc.text);
 
-      const part0 = docs.find((doc) => basename(doc.path) === 'PART0-PROMPT.md');
-      expect(part0 && readStamp(part0.text)).not.toBeNull();
-      expect(part0 && render(part0)).toBeNull();
+      // Each is stamped, and none has a render to drift from (record-overwrite Q3).
+      for (const name of uncompared) {
+        const doc = docs.find((d) => basename(d.path) === name);
+        expect(doc && readStamp(doc.text)).not.toBeNull();
+        expect(doc && render(doc)).toBeNull();
+      }
     } finally {
       await cleanup(repo.dir);
     }
@@ -109,8 +111,13 @@ describe('a repo `setup` just rendered', () => {
         'AGENT-PRACTICES.md',
         'CLAUDE.md',
       ]);
-      for (const f of findings)
-        expect(f.message).toContain('would now write this file differently');
+      // The standard still holds Part 0's token, so a re-run replaces it. The router's saved
+      // answers no longer render its bytes, so a re-run leaves it alone and the finding says so
+      // (record-overwrite): this is the shape a hand edit to `.personal-config.json` leaves.
+      const message = (name: string) =>
+        findings.find((f) => basename(f.file) === name)?.message;
+      expect(message('AGENT-PRACTICES.md')).toContain('would now write this file differently');
+      expect(message('CLAUDE.md')).toContain('so a re-run leaves it alone');
     } finally {
       await cleanup(repo.dir);
     }
@@ -119,15 +126,16 @@ describe('a repo `setup` just rendered', () => {
   test('a file whose stamp date differs is rendered at its own date, not its neighbours`', async () => {
     const repo = await rendered();
     try {
-      // The ledger's body says "Started <date>" from the same date as its stamp. Moving the
-      // stamp's date alone makes the file inconsistent with itself, and the render at the new
-      // date is the one that shows it — while every other file, rendered at the old date, stays
-      // equal. One render per distinct stamp, not per repo.
-      const ledger = join(repo.dir, 'HANDOFF.md');
-      const text = await readText(ledger);
-      await writeText(ledger, text.replace('· 2026-09-15 · config', '· 2026-09-16 · config'));
+      // The standard's body says "Adapted to this repo <date>" from the same date as its stamp.
+      // Moving the stamp's date alone makes the file inconsistent with itself, and the render at
+      // the new date is the one that shows it — while every other file, rendered at the old date,
+      // stays equal. One render per distinct stamp, not per repo. The ledger made this point
+      // until record-overwrite Q3 stopped comparing it.
+      const standard = join(repo.dir, 'docs', 'AGENT-PRACTICES.md');
+      const text = await readText(standard);
+      await writeText(standard, text.replace('· 2026-09-15 · config', '· 2026-09-16 · config'));
       const findings = await drift(repo);
-      expect(findings.map((f) => basename(f.file))).toEqual(['HANDOFF.md']);
+      expect(findings.map((f) => basename(f.file))).toEqual(['AGENT-PRACTICES.md']);
     } finally {
       await cleanup(repo.dir);
     }

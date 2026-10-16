@@ -1,15 +1,25 @@
-import { basename, resolve } from 'node:path';
+import { basename, join, resolve, sep } from 'node:path';
+import { loadConfig } from '../lib/config.ts';
 import { scanRepo } from '../lib/discover.ts';
+import { exists, readText } from '../lib/disk.ts';
 import { isGitRepo } from '../lib/git.ts';
 import { readRecordedTrackMode, readWorkProfile } from '../lib/repo-config.ts';
 import { readStamp, type StampParts } from '../lib/stamp.ts';
-import type { Config, RepoPlan } from '../lib/types.ts';
+import type { Cli, Config, PlannedFile, RepoPlan } from '../lib/types.ts';
+import type { PriorRender } from '../lib/write-plan.ts';
 import { type RenderContext, targetAnswers } from '../render/context.ts';
 import { renderAll } from '../render/index.ts';
 import type { Doc } from './scan.ts';
 
-/** What `setup` would write at this doc's path now, or null where no run would write there. */
-export type Rerender = (doc: Doc) => string | null;
+/**
+ * What `setup` would write at this doc's path now, or null where no run would write there. The
+ * whole planned file and not its contents alone, so `doctor` can read the `replace` rule that
+ * decides whether a re-run would write it at all (record-overwrite).
+ */
+export type Rerender = (doc: Compared) => PlannedFile | null;
+
+/** All a re-render reads of a doc. `setup` builds these from the files it is about to plan. */
+export type Compared = Pick<Doc, 'path' | 'text'>;
 
 /**
  * The plan `setup` would write into a configured repo now, rebuilt from that repo's own record
@@ -31,12 +41,16 @@ export type Rerender = (doc: Doc) => string | null;
  *
  * One render per distinct stamp, not per file — a repo's files usually share one.
  */
-export async function rerender(root: string, config: Config, docs: Doc[]): Promise<Rerender> {
+export async function rerender(
+  root: string,
+  config: Config,
+  docs: Compared[],
+): Promise<Rerender> {
   const stamps = plainStamps(docs);
   if (stamps.size === 0) return () => null;
 
   const repo = await recordedPlan(root, config);
-  const byStamp = new Map<string, Map<string, string>>();
+  const byStamp = new Map<string, Map<string, PlannedFile>>();
   for (const [key, stamp] of stamps) byStamp.set(key, await renderAt(config, repo, stamp));
 
   return (doc) => {
@@ -48,8 +62,50 @@ export async function rerender(root: string, config: Config, docs: Doc[]): Promi
   };
 }
 
+/**
+ * The record guard's `prior` for a `setup` or `init` run (record-overwrite): each `if-unedited`
+ * file rendered at its own stamp, from the answers its repo saved before this run, which is the
+ * same render `doctor` compares the file against. Built before anything is written, so the repo's
+ * `.personal-config.json` still holds the last run's answers rather than this run's.
+ *
+ * `--from` is dropped from the layers: it carries this run's new answers, and a render from them
+ * would call every file that predates them edited. A repo with no `.personal-config.json` has
+ * nothing to render from, so it gets no prior and its differing files are refused, as `doctor`
+ * reports nothing for a plain stamp there.
+ */
+export async function priorRender(
+  cli: Cli,
+  roots: string[],
+  files: PlannedFile[],
+): Promise<PriorRender> {
+  const renders = await Promise.all(roots.map((root) => priorFor(cli, root, files)));
+  return (path, before) => {
+    for (const render of renders) {
+      const file = render({ path, text: before });
+      if (file !== null) return file.contents;
+    }
+    return null;
+  };
+}
+
+async function priorFor(cli: Cli, root: string, files: PlannedFile[]): Promise<Rerender> {
+  if (!(await exists(join(root, '.personal-config.json')))) return () => null;
+  const inside = files.filter(
+    // Resolved on both sides: `--projects-dir` may be relative, and the scan keeps it as given.
+    (file) =>
+      file.replace === 'if-unedited' && resolve(file.path).startsWith(`${resolve(root)}${sep}`),
+  );
+  const docs = await Promise.all(
+    inside.map(async (file) => ({
+      path: file.path,
+      text: (await exists(file.path)) ? await readText(file.path) : '',
+    })),
+  );
+  return rerender(root, await loadConfig({ ...cli, from: null }, root), docs);
+}
+
 /** The distinct stamps worth rendering for: an adapted file is never compared (D1). */
-function plainStamps(docs: Doc[]): Map<string, StampParts> {
+function plainStamps(docs: Compared[]): Map<string, StampParts> {
   const found = new Map<string, StampParts>();
   for (const doc of docs) {
     const stamp = readStamp(doc.text);
@@ -66,7 +122,7 @@ async function renderAt(
   config: Config,
   repo: RepoPlan,
   stamp: StampParts,
-): Promise<Map<string, string>> {
+): Promise<Map<string, PlannedFile>> {
   const answers = targetAnswers(config.answers, repo);
   const ctx: RenderContext = {
     config: { ...config, answers },
@@ -76,17 +132,22 @@ async function renderAt(
     repo,
   };
   const files = await renderAll(ctx);
-  return new Map(files.filter(isCompared).map((file) => [file.path, file.contents]));
+  return new Map(files.filter(isCompared).map((file) => [file.path, file]));
 }
 
 /**
+ * A file `setup` writes once and never again (`replace: 'never'`: the ledger, the board, the
+ * archive index) is not compared either: it grows by design, and a finding that told its owner to
+ * re-run `setup` would name a run that leaves it alone (record-overwrite Q3).
+ *
  * The Part 0 prompt is a snapshot of discovery at the moment `setup` ran — the docs that
  * existed, the worktrees beside the checkout — and it exists to be pasted once and deleted.
  * Re-deriving it after the run has written the ledger and the board finds those documents and
  * reports a different prompt, which is not the file being stale; it is the snapshot doing its
  * job. Everything else `setup` writes is a document meant to stay current.
  */
-function isCompared(file: { path: string }): boolean {
+function isCompared(file: PlannedFile): boolean {
+  if (file.replace === 'never') return false;
   return file.path.endsWith('.md') && basename(file.path) !== 'PART0-PROMPT.md';
 }
 

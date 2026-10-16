@@ -70,3 +70,8 @@ Re-run `personal-config setup` in that project and give a different line, or an 
 remove it; the line and the row disappear together. Nothing else depends on the wording, so
 there is no other file to clean up. `personal-config undo` restores anything an accepted run
 overwrote.
+
+The ledger's row is the exception. A re-run never replaces a ledger that exists, because it is
+your record after the first run, so change or delete the row by hand. The router takes the new
+line while it is still what this tool wrote; one you edited is left alone and named in the
+preview.

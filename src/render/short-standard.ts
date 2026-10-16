@@ -38,7 +38,10 @@ export async function renderShortStandard(ctx: RenderContext): Promise<PlannedFi
   if (!root) return null;
 
   const body = pipeline(await shortBoilerplate(), ctx);
-  return planned(ctx, join(root, standardPath(ctx)), 'the working standard, short form', body);
+  // No Part 0 on this track, so no mark: the render at its stamp is the only test it gets.
+  return planned(ctx, join(root, standardPath(ctx)), 'the working standard, short form', body, {
+    replace: 'if-unedited',
+  });
 }
 
 const WHAT_IS_NEXT = '## What is next';

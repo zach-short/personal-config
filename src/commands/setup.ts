@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import { dirname } from 'node:path';
 import * as p from '@clack/prompts';
+import { priorRender } from '../doctor/rerender.ts';
 import {
   cancelMessage,
   checkpointing,
@@ -45,6 +46,7 @@ import { version } from '../lib/version.ts';
 import {
   commitPlan,
   type PlannedChange,
+  type PriorRender,
   resolveLeftover,
   resolvePlan,
   willWrite,
@@ -94,7 +96,7 @@ export async function runSetup(
 
   await askPhase('practices', prompter, answers, config);
 
-  const changes = await planEverything(config, answers, repos);
+  const changes = await planEverything(config, answers, repos, priorSource(cli, repos));
   const hidden = await hiddenByIgnore(repos, changes);
   // The batch confirm is not one of the questions, so it must not ride on the question
   // prompter: under `--yes` that is `defaultsPrompter`, which would answer it `true` without a
@@ -306,18 +308,35 @@ export async function planEverything(
   config: Config,
   answers: Answers,
   repos: RepoPlan[],
+  prior: PriorSource = async () => () => null,
 ): Promise<PlannedChange[]> {
   const merged: Config = { ...config, answers, models: modelsFrom(answers, config) };
   const targets: (RepoPlan | null)[] = repos.length > 0 ? repos : [null];
   const contexts = await Promise.all(targets.map((repo) => contextFor(merged, answers, repo)));
   const rendered = (await Promise.all(contexts.map(renderAll))).flat();
   const files = await pruneHooks(dedupe(rendered), rendered);
-  const resolved = await resolvePlan(files);
+  const resolved = await resolvePlan(files, await prior(files));
   return [
     ...resolved,
     ...(await leftovers(files)),
     ...(await scriptLeftovers(files, resolved)),
   ];
+}
+
+/**
+ * Where the record guard's `prior` comes from, once the plan's files are known. A parameter, so a
+ * test that calls `planEverything` with no repo on disk renders as before.
+ */
+export type PriorSource = (files: PlannedFile[]) => Promise<PriorRender>;
+
+/** `setup`'s and `init`'s source: each target's own render at the stamps already on its disk. */
+export function priorSource(cli: Cli, repos: RepoPlan[]): PriorSource {
+  return (files) =>
+    priorRender(
+      cli,
+      repos.map((repo) => repo.scan.path),
+      files,
+    );
 }
 
 /**
@@ -439,12 +458,11 @@ async function contextFor(
 }
 
 /** Every note the preview carries below its summary line, each printed only when it applies. */
-async function sayWarnings(
-  changes: PlannedChange[],
-  guarded: PlannedChange[],
-  hidden: HiddenFile[],
-): Promise<void> {
+async function sayWarnings(changes: PlannedChange[], hidden: HiddenFile[]): Promise<void> {
+  const guarded = changes.filter((c) => c.guard === 'no-stamp');
   if (guarded.length > 0) say(leftAlone(guarded));
+  const edited = changes.filter((c) => c.guard === 'edited');
+  if (edited.length > 0) say(leftEdited(edited));
   const hiddenWarning = hiddenNote(hidden);
   if (hiddenWarning) say(hiddenWarning);
   const shadows = shadowNote(await shadowingCopies(changes.map((c) => c.file.path)));
@@ -548,23 +566,24 @@ export async function finish(
   // but whose executable bit is missing is a file to write, and a local filter here would have
   // reported it as current and returned before `commitPlan` could repair it.
   const real = changes.filter(willWrite);
-  const guarded = changes.filter((c) => c.guard === 'no-stamp');
+  const refused = changes.filter((c) => c.guard === 'no-stamp' || c.guard === 'edited');
+  const kept = changes.filter((c) => c.guard === 'kept').length;
 
   say('\nThis run would write:\n');
   say(previewTree(changes));
   const removals = real.filter((c) => c.remove === true).length;
-  const current = changes.length - real.length - guarded.length;
+  const current = changes.length - real.length - refused.length - kept;
   say(
-    `\n${real.length - removals} file(s) to write, ${removals} to remove, ${current} already current.`,
+    `\n${real.length - removals} file(s) to write, ${removals} to remove, ${current} already current${keptNote(kept)}.`,
   );
-  await sayWarnings(changes, guarded, hidden);
+  await sayWarnings(changes, hidden);
 
   if (cli.dryRun) {
     say('\n--dry-run: nothing was written.');
     return 'dry-run';
   }
   if (real.length === 0) {
-    say(guarded.length > 0 ? '\nNothing left to write.' : '\nEverything is already current.');
+    say(refused.length > 0 ? '\nNothing left to write.' : '\nEverything is already current.');
     return 'already-current';
   }
 
@@ -637,6 +656,26 @@ function leftAlone(guarded: PlannedChange[]): string {
     `\n${guarded.length} file(s) left alone — no stamp, so this tool did not write them:`,
     ...guarded.map((c) => `  ${short(c.file.path)}`),
     'Delete one to have it generated fresh; leave it and no re-run will touch it.',
+  ].join('\n');
+}
+
+/**
+ * A record this run would have replaced before record-overwrite, now counted apart from "already
+ * current", which it is not: its bytes differ from the seed, and they are meant to.
+ */
+function keptNote(kept: number): string {
+  return kept > 0 ? `, ${kept} record(s) kept as they are` : '';
+}
+
+/**
+ * Named, as `leftAlone` names its files, because the new version is one the person may want: a
+ * changed commit line lands in the router only this way. Both ways out are theirs to take.
+ */
+function leftEdited(edited: PlannedChange[]): string {
+  return [
+    `\n${edited.length} file(s) left alone — changed since this tool wrote them:`,
+    ...edited.map((c) => `  ${short(c.file.path)}`),
+    'Move one aside and run again to take the new version; add ` · adapted` to its stamp to keep it for good.',
   ].join('\n');
 }
 

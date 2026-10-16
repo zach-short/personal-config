@@ -78,7 +78,7 @@ describe('an adopted code standard', () => {
     });
   });
 
-  test('a stamped file under the adopted name is updated in place', async () => {
+  test('a stamped file under the adopted name is the one planned, and an edit to it is kept', async () => {
     await inRepo({ 'package.json': '{}\n' }, async (dir) => {
       // A file this tool wrote and stamped, since renamed by the person and then edited.
       await commitPlan(await resolvePlan(await planFor(dir)));
@@ -87,10 +87,16 @@ describe('an adopted code standard', () => {
         join(dir, 'docs/conventions-typescript.md'),
         join(dir, 'docs/conventions-ts.md'),
       );
-      await Bun.write(join(dir, 'docs/conventions-ts.md'), `${generated}\nedited\n`);
+      const edited = `${generated}\nedited\n`;
+      await Bun.write(join(dir, 'docs/conventions-ts.md'), edited);
 
-      await commitPlan(await resolvePlan(await planFor(dir)));
-      expect(await Bun.file(join(dir, 'docs/conventions-ts.md')).text()).toBe(generated);
+      // Until record-overwrite (2026-10-16) the edit was replaced by the render; now a file that
+      // no longer matches what this tool wrote is left alone, under its adopted name.
+      const second = await resolvePlan(await planFor(dir));
+      const adopted = second.find((c) => c.file.path === join(dir, 'docs/conventions-ts.md'));
+      expect(adopted?.guard).toBe('edited');
+      await commitPlan(second);
+      expect(await Bun.file(join(dir, 'docs/conventions-ts.md')).text()).toBe(edited);
       expect(await Bun.file(join(dir, 'docs/conventions-typescript.md')).exists()).toBe(false);
     });
   });

@@ -51,4 +51,6 @@ question wherever it goes.
 
 ## How to undo it
 
-Re-run `setup` with the other answer; the standard copy is stamped and re-rendered.
+Re-run `setup` with the other answer; the standard copy is stamped and re-rendered. That holds
+while the copy is unadapted, which means it still has Part 0's `{{WORKTREE_SETUP}}` line. An
+adapted copy is left alone and named in the preview, so cut or restore Part 12 in it by hand.

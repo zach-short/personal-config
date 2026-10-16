@@ -58,3 +58,8 @@ the documents say it is not yet written and make writing it the first session's 
 Run `personal-config setup` again in that repo or folder and give a different line, or an empty
 one to remove it. Nothing else depends on the wording, so there is no other file to clean up;
 `personal-config undo` restores anything an accepted run overwrote.
+
+The ledger is the exception. A re-run never replaces a ledger that exists, because it is your
+record after the first run, so edit the first row of its facts table by hand. The router takes
+the new line while it is still what this tool wrote; one you edited is left alone and named in
+the preview, and you edit its line by hand too.

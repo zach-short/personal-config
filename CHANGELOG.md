@@ -111,6 +111,25 @@ The CLI. The working standard it installs is versioned separately — see
   first row that fits, Default is the fallback, and an opt-in Light tier fills the new
   `{{MODEL_LIGHT}}` placeholder or reads `not configured`. See `standard/CHANGELOG.md`.
 
+### Fixed
+
+- **`setup` and `init` no longer replace your ledger, board or filled-in router with a fresh
+  template.** A stamp is written once and survives every later edit, so a re-run read a ledger
+  with thousands of lines of steps as its own output and replaced it. On 2026-10-16 one
+  `init --yes` run planned `HANDOFF.md [+67 −2598]` and wrote it, and the same run did the same
+  in other repos. Now a ledger, a board or an archive index that already exists is written
+  once and then kept, and the preview marks it as your record. The router, the
+  standard and each code standard are replaced only while they still match what this tool
+  rendered at their own stamp, using the answers the repo saved before the run. One that you or a
+  Part 0 session edited is marked as edited, left alone and named below the preview. Move it aside and run again to take the new version, or add ` · adapted` to its stamp
+  to keep it. A standard that still has Part 0's `{{WORKTREE_SETUP}}` line was never adapted and
+  still takes a newer version. A router written by an older version and never edited can read
+  as edited too, because the current templates stand in for the old ones; it is left alone in
+  the same way. `doctor` no longer compares the ledger or the board against a re-render, and its
+  drift finding on an edited router or standard says that a re-run leaves the file alone,
+  where it used to say "re-run it". Files already replaced are in
+  `~/.config/personal-config/backups/`; `personal-config undo` restores the latest run.
+
 ## 0.8.0 — 2026-10-05
 
 ### Added
