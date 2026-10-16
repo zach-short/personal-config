@@ -1,4 +1,4 @@
-import { type BoardRow, cellAt, parseBoard } from './board.ts';
+import { type Board, type BoardRow, cellAt, parseBoard } from './board.ts';
 import { type ItemEntry, isItemFor, itemFileName } from './items.ts';
 import { type LedgerStep, ledgerSteps, type StepForm, stepHeading } from './ledger.ts';
 import { staleLogLines } from './log.ts';
@@ -338,16 +338,31 @@ export type Migration = {
   log: Folded | null;
   /** Every `DONE` item's section still on the board, for `<BOARD>-closed.md`. */
   closed: Folded[];
+  /**
+   * Every range section (`### 26–30.`), whole, also for `<BOARD>-closed.md`: it leaves the board,
+   * and a range whose rows are all `DONE` has no item file to carry it.
+   */
+  shared: Folded[];
   items: ItemFile[];
   board: string;
   ledger: string;
   /** Numbered sections with no row, left on the board where they are. */
   unrowed: string[];
+  /** Level-2 headings below the table, which are prose and stay on the board untouched. */
+  prose: string[];
   problems: string[];
 };
 
 /** A numbered item heading, as `headingBlock` opens one. */
 const ITEM_HEADING = /^#{2,4}\s*(\d+(?:\.\d+)?)[.):]/;
+
+/**
+ * A level-3 heading that is shared context for a run of rows, `### 26–30.` with an en dash or a
+ * hyphen. One board files items this way (G59): the section is the reason for rows 26 to 30, and
+ * no row has a heading of its own below it, so `ITEM_HEADING` sees nothing and those rows got no
+ * file. Level 3 only, as that board writes it: a range at any other level is left where it is.
+ */
+const RANGE_HEADING = /^###\s*(\d+)\s*[–-]\s*(\d+)\./;
 
 /**
  * The conversion as data. The board loses every section a row names, `DONE` ones to the closed
@@ -369,15 +384,20 @@ export function migrateFold(
   };
 }
 
-type BoardPart = Pick<Migration, 'closed' | 'items' | 'board' | 'unrowed' | 'problems'>;
+type BoardPart = Pick<
+  Migration,
+  'closed' | 'shared' | 'items' | 'board' | 'unrowed' | 'prose' | 'problems'
+>;
 
 function migrateBoard(markdown: string): BoardPart {
   const parsed = parseBoard(markdown);
   const empty: BoardPart = {
     closed: [],
+    shared: [],
     items: [],
     board: markdown,
     unrowed: [],
+    prose: [],
     problems: [],
   };
   if (parsed === null) return empty;
@@ -395,22 +415,124 @@ function migrateBoard(markdown: string): BoardPart {
       .filter((block) => block.heading.match(ITEM_HEADING)?.[1] === row.number.trim())
       .map((block) => ({ row, block })),
   );
+  const ranges = rangeSections(markdown);
   const problems = [
     ...twice.map((n) => `the board has two sections for item ${n}`),
     ...rowTwice.map((n) => `the board has two rows for item ${n}`),
-    ...overlaps(blocks.map(({ block }) => block)),
+    ...rangeProblems(ranges, parsed.rows),
+    ...overlaps([...blocks.map(({ block }) => block), ...ranges.map((range) => range.block)]),
   ];
   if (problems.length > 0) return { ...empty, problems };
 
   const closed = blocks.filter(({ row }) => isDone(row)).map(({ block }) => block);
-  const items = blocks
-    .filter(({ row }) => !isDone(row))
-    .map(({ row, block }) => itemFileOf(row, block, cellAt(row.cells, parsed.columns.task)));
-  const cut = applyFold(
-    markdown,
-    blocks.map(({ block }) => block),
+  const items = parsed.rows
+    .filter((row) => !isDone(row))
+    .flatMap((row) => openItem(row, blocks, ranges, parsed));
+  const cut = withoutTrailingRules(
+    applyFold(markdown, [...blocks.map(({ block }) => block), ...ranges.map((r) => r.block)]),
   );
-  return { closed, items, board: withoutTrailingRules(cut), unrowed, problems: [] };
+  const shared = ranges.map((range) => range.block);
+  return { closed, shared, items, board: cut, unrowed, prose: proseBelow(cut), problems: [] };
+}
+
+/**
+ * One open row's file, or none. Its own section wins, as before ranges were read; a range it sits
+ * in is appended to that file as shared context, or, where the row has no section of its own,
+ * is the file's body, with the row's cells after it.
+ */
+function openItem(
+  row: BoardRow,
+  blocks: { row: BoardRow; block: Folded }[],
+  ranges: RangeSection[],
+  board: Board,
+): ItemFile[] {
+  const own = blocks.find((entry) => entry.row === row)?.block;
+  const range = ranges.find((r) => inRange(row, r));
+  const task = cellAt(row.cells, board.columns.task);
+  if (own !== undefined) {
+    const file = itemFileOf(row, own, task);
+    return [range === undefined ? file : { ...file, text: `${file.text}\n${sharedOf(range)}` }];
+  }
+  if (range === undefined) return [];
+  return [rangeItemOf(row, range, task, board.header)];
+}
+
+/** A range heading's number pair and its block, which ends where `headingBlock`'s would. */
+type RangeSection = { first: number; last: number; block: Folded };
+
+function rangeSections(markdown: string): RangeSection[] {
+  const lines = markdown.split('\n');
+  return lines.flatMap((text, index) => {
+    const match = text.match(RANGE_HEADING);
+    if (match === null) return [];
+    const after = lines.slice(index + 1);
+    const next = after.findIndex((line) => /^#{1,3}\s/.test(line));
+    const body = next === -1 ? after : after.slice(0, next);
+    const [first, last] = [Number(match[1]), Number(match[2])];
+    const block: Folded = {
+      id: `${first}–${last}`,
+      heading: text,
+      text: [text, ...body].join('\n'),
+      start: index + 1,
+      end: index + 1 + body.length,
+      stub: null,
+    };
+    return [{ first, last, block }];
+  });
+}
+
+/** A row belongs to a range by its number's value, so `92.5` sits inside `92–119`. */
+function inRange(row: BoardRow, range: RangeSection): boolean {
+  const value = Number(row.number.trim());
+  return row.number.trim() !== '' && value >= range.first && value <= range.last;
+}
+
+/** A range that runs backwards, or a row two ranges claim, has no one right file. */
+function rangeProblems(ranges: RangeSection[], rows: BoardRow[]): string[] {
+  const backwards = ranges
+    .filter((range) => range.first > range.last)
+    .map((range) => `the range heading \`${range.block.heading}\` runs backwards`);
+  const claimed = rows
+    .filter((row) => ranges.filter((range) => inRange(row, range)).length > 1)
+    .map((row) => `row ${row.number.trim()} sits in two range sections`);
+  return [...backwards, ...claimed];
+}
+
+/** The range section whole, heading included, under the heading item 105 named. */
+function sharedOf(range: RangeSection): string {
+  const text = withoutTrailingRules(range.block.text);
+  return `## Shared context (rows ${range.first} to ${range.last})\n\n${text}`;
+}
+
+/**
+ * A row with no section of its own, inside a range: `# <n>. <task>`, the shared context, then
+ * the row as it stood, header and all, so the cells read as a table and not as bare pipes.
+ */
+function rangeItemOf(
+  row: BoardRow,
+  range: RangeSection,
+  task: string,
+  header: string[],
+): ItemFile {
+  const number = row.number.trim();
+  const table = [
+    `| ${header.join(' | ')} |`,
+    `|${header.map(() => '---').join('|')}|`,
+    row.text,
+  ];
+  return {
+    number,
+    name: itemFileName(number, task),
+    text: `# ${number}. ${task}\n\n${sharedOf(range)}\n## The row, as it stood at migration\n\n${table.join('\n')}\n`,
+  };
+}
+
+/** Level-2 headings below the table: prose the board keeps, which the dry run names. */
+function proseBelow(board: string): string[] {
+  const top = parseBoard(board)?.rows[0]?.line ?? 0;
+  return proseLines(board)
+    .filter(({ text, line }) => line > top && /^##\s/.test(text))
+    .map(({ text }) => text);
 }
 
 /** Every numbered item heading's number, in file order, repeats included. */
@@ -509,11 +631,12 @@ function migrateLedger(markdown: string, date: string, ledgerName: string): Ledg
     ({ text, line }) => line > last && /^#{1,6}\s/.test(text),
   );
   const end = (next?.line ?? lines.length + 1) - 1;
-  // Only blank lines come off the end: a `---` inside the log is the log's own text.
+  // Only blank lines come off the end: a `---` inside the log is the log's own text, and so are
+  // two trailing spaces on its last line, which are a markdown line break (item 105's audit).
   const text = lines
     .slice(start - 1, end)
     .join('\n')
-    .replace(/\s+$/, '');
+    .replace(/\n+$/, '');
   const log: Folded = {
     id: `1-${frozenAt}`,
     heading: lines[start - 1] ?? '',
