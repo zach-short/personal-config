@@ -7,6 +7,16 @@ The CLI. The working standard it installs is versioned separately — see
 
 ### Added
 
+- **`setup` removes the hook entries and scripts a run no longer wants.** A non-code run used to
+  leave the delete guard and the write-doc save check in `~/.claude/settings.json` for every later
+  code session, and "No hooks" removed nothing. Now a later run prunes this tool's own five
+  entries that no target wants, matched by deep equality with key order ignored, and deletes a
+  script only where no entry left in the file still runs it, by an absolute, `~`, `$HOME` or
+  `${HOME}` path. An emptied `~/.claude/hooks/personal-config/` folder goes too. An entry you
+  edited stays, and so does its script. The preview lists each removal, and `personal-config undo`
+  restores them byte for byte. The long forms for hooks, kind of work, `/write-doc`, git and
+  configuration weight describe this, and the undo section of the `/write-doc` long form no longer
+  says that `SKILL.md` and `style.md` are removed while `check.sh` and its entry stay.
 - **`/close-out` and `/handoff` are written into each folder, not `~/.claude/skills/`.** Their
   text names a folder's ledger, board and track, so one global copy was right for one folder and
   wrong for the next. `setup` now renders both from each target's own answers into
@@ -76,6 +86,12 @@ The CLI. The working standard it installs is versioned separately — see
   the harness blocks a model's Skill call to a skill that sets it and `/autopilot` loads it that
   way; its first line refuses a run that nobody typed. The `all` option of the skills question
   now names it.
+
+### Changed
+
+- **The standard is 2.1.0, and Part 4 reads the tiers from the bottom.** A writer stops at the
+  first row that fits, Default is the fallback, and an opt-in Light tier fills the new
+  `{{MODEL_LIGHT}}` placeholder or reads `not configured`. See `standard/CHANGELOG.md`.
 
 ## 0.8.0 — 2026-10-05
 

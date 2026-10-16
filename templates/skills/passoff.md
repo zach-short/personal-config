@@ -14,7 +14,13 @@ Nine parts, in this order. Skip one only when it is genuinely empty, and say so.
 1. **Title.** Imperative, naming the change, not the area. *"Drag the week grid: windows edited
    where they are drawn"*, not *"week grid work"*.
 2. **The header line.** `**Model: <tier>. Lane <X>. Waits on <what>.**` Plus the worktree
-   instruction when the item needs its own. **Important:** Never assign a model tier above the
+   instruction when the item needs its own. Pick the tier by asking four questions in order and
+   taking the tier of the first yes: does the prompt state the change and the place (Light,
+   where configured); does it have to place a clear change (Mechanical); does it have to find a
+   cause or choose a design (Default); could a wrong answer pass every gate and a person's test
+   (Deep). When two tiers fit, take the lower and name the gate or picture that catches a wrong
+   answer; if none does, take the higher. After a failed build, escalation goes up one tier and
+   never down. **Important:** Never assign a model tier above the
    repo's tier ceiling (if it has one). Check the repo's `CLAUDE.md` for its ceiling before
    writing a pass-off for it.
 3. **Orientation.** Who they are picking up, what to read first and in what order, and the

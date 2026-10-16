@@ -11,10 +11,17 @@ import {
 import { configHash, loadConfig, savedUserConfig } from '../lib/config.ts';
 import { today } from '../lib/date.ts';
 import { scanProjectsDir } from '../lib/discover.ts';
-import { removeIfEmpty } from '../lib/disk.ts';
+import { exists, readText, removeIfEmpty } from '../lib/disk.ts';
 import { githubLogin, ownsRepo } from '../lib/git.ts';
 import { type HiddenFile, hiddenByIgnore, hiddenNote } from '../lib/hidden-tracked.ts';
-import { claudeSkillsDir, configFile, contractHome, expandHome } from '../lib/paths.ts';
+import {
+  claudeHooksDir,
+  claudeSettingsFile,
+  claudeSkillsDir,
+  configFile,
+  contractHome,
+  expandHome,
+} from '../lib/paths.ts';
 import {
   clearCheckpoint,
   describeCheckpoint,
@@ -27,6 +34,7 @@ import type {
   Answers,
   Cli,
   Config,
+  GlobalFile,
   PlannedFile,
   RepoPlan,
   RepoScan,
@@ -44,7 +52,13 @@ import {
 import { askPhase } from '../phases/run.ts';
 import { type RenderContext, targetAnswers } from '../render/context.ts';
 import { globalCandidates } from '../render/global-files.ts';
-import { declinedHookHelp } from '../render/hooks.ts';
+import {
+  declinedHookHelp,
+  hookLeftovers,
+  hookScriptFiles,
+  settingsRuns,
+  withPrune,
+} from '../render/hooks.ts';
 import { renderAll } from '../render/index.ts';
 import { shadowingCopies } from '../render/skills.ts';
 import { standardVersion } from '../render/standard.ts';
@@ -287,8 +301,86 @@ export async function planEverything(
   const merged: Config = { ...config, answers, models: modelsFrom(answers, config) };
   const targets: (RepoPlan | null)[] = repos.length > 0 ? repos : [null];
   const contexts = await Promise.all(targets.map((repo) => contextFor(merged, answers, repo)));
-  const files = dedupe((await Promise.all(contexts.map(renderAll))).flat());
-  return [...(await resolvePlan(files)), ...(await leftovers(files))];
+  const rendered = (await Promise.all(contexts.map(renderAll))).flat();
+  const files = await pruneHooks(dedupe(rendered), rendered);
+  const resolved = await resolvePlan(files);
+  return [
+    ...resolved,
+    ...(await leftovers(files)),
+    ...(await scriptLeftovers(files, resolved)),
+  ];
+}
+
+/**
+ * The plan with the `settings.json` entries no target wants marked for removal
+ * (setup-hook-leftovers BD-1, BD-3). What the run wants is the union of every context's planned
+ * merge, read before `dedupe`, so an entry any target renders is kept. Decided here and not in
+ * `renderAll`, which stays a function of the answers: `doctor`'s rerender never sees a prune.
+ */
+async function pruneHooks(
+  files: PlannedFile[],
+  rendered: PlannedFile[],
+): Promise<PlannedFile[]> {
+  const merges = rendered.filter(isSettingsMerge);
+  const prune = await hookLeftovers(merges);
+  if (prune.length === 0) return files;
+  const at = files.findIndex(isSettingsMerge);
+  if (at === -1) return [...files, withPrune(undefined, prune)];
+  return files.map((file, i) => (i === at ? withPrune(file, prune) : file));
+}
+
+function isSettingsMerge(file: PlannedFile): boolean {
+  return file.path === claudeSettingsFile() && file.strategy === 'merge-json';
+}
+
+/**
+ * A removal for each hook script no target rendered and no entry still runs (BD-6, GATE 2 Q2).
+ * "Still runs" is read from the `settings.json` this run leaves: the resolved change's `after`,
+ * or the file on disk where the plan does not touch it. Never from the plan's intent, because a
+ * script removed under a kept entry fails every `Bash` call or every save. A file that does not
+ * parse removes nothing (BD-4). A script goes only where `resolveLeftover` finds this tool's
+ * stamp, not marked `adapted`, and its companions (the commit policy) go with it.
+ */
+async function scriptLeftovers(
+  files: PlannedFile[],
+  resolved: PlannedChange[],
+): Promise<PlannedChange[]> {
+  const settings = await settingsLeft(resolved);
+  if (settings === undefined) return [];
+  const rendered = new Set(files.map((file) => file.path));
+  const changes: PlannedChange[] = [];
+  for (const script of hookScriptFiles()) {
+    if (rendered.has(script.path) || settingsRuns(settings, script.path)) continue;
+    const removal = await removedLeftover(script);
+    if (removal === null) continue;
+    changes.push(removal);
+    for (const companion of script.companions.filter((c) => !rendered.has(c.path))) {
+      const paired = await removedLeftover(companion);
+      if (paired !== null) changes.push(paired);
+    }
+  }
+  return changes;
+}
+
+function removedLeftover(file: GlobalFile): Promise<PlannedChange | null> {
+  return resolveLeftover(file.path, `${file.label} (no longer installed)`);
+}
+
+/** The parsed `settings.json` the run leaves; null where there is none, undefined where it does not parse. */
+async function settingsLeft(resolved: PlannedChange[]): Promise<unknown> {
+  const change = resolved.find((c) => c.file.path === claudeSettingsFile());
+  const text =
+    change !== undefined
+      ? change.after
+      : (await exists(claudeSettingsFile()))
+        ? await readText(claudeSettingsFile())
+        : '';
+  if (text.trim() === '') return null;
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    return undefined;
+  }
 }
 
 /**
@@ -480,6 +572,7 @@ export async function finish(
   say(`\nWrote ${result.written.length - result.removed.length} file(s).`);
   if (result.removed.length > 0) {
     await removeEmptySkillFolders(result.removed);
+    await removeEmptyHooksFolder(result.removed);
     say(`Removed ${result.removed.length} file(s) this run no longer installs.`);
   }
   if (result.manifest) {
@@ -501,6 +594,17 @@ async function removeEmptySkillFolders(removed: string[]): Promise<void> {
   const folders = new Set(removed.map((path) => dirname(path)));
   for (const folder of folders) {
     if (dirname(folder) === claudeSkillsDir()) await removeIfEmpty(folder);
+  }
+}
+
+/**
+ * The hooks folder this tool owns, where this run's removals emptied it (setup-hook-leftovers
+ * BD-8, GATE 2 Q4). Only `~/.claude/hooks/personal-config/`, never `~/.claude/hooks/`, which other
+ * tools share. `undo` makes it again when it copies a script back.
+ */
+async function removeEmptyHooksFolder(removed: string[]): Promise<void> {
+  if (removed.some((path) => dirname(path) === claudeHooksDir())) {
+    await removeIfEmpty(claudeHooksDir());
   }
 }
 

@@ -11,6 +11,42 @@ this paragraph claimed that without the marker: Part 0 told the adapting session
 stamp, and an unstamped copy was invisible to that check. A copy adapted before the marker
 existed still carries no stamp and stays invisible until `doctor --fix` writes one back.
 
+## 2.1.0 — 2026-10-16
+
+A minor version, because the board and the ledger keep their shape and a 2.0.0 reading of a 2.1.0
+board is still correct. Part 4 changed in wording, and Appendix A gained one placeholder.
+
+- **A second test, in Part 4's driver table.** The silent-failure question still opens the
+  section. It is now followed by a second one: how much does the task have to find, and how much
+  does it have to decide? The table is read from the bottom, and the writer stops at the first
+  row that fits.
+- **Each row names the shape of the task.** Mechanical is the clear change that the task has to
+  place, or that spans several files, checked by the gates and by reading the output. It is no
+  longer limited to a whole phase, so a single bounded change has a row to land on. Default is
+  the task that has to find a cause or choose between designs, where a wrong answer looks right
+  until a person tests it. It is the fallback when no lower row fits, and the row no longer
+  calls it the first pick for most work. Deep adds "and a person's test" to the checks a mistake
+  passes, which separates it from the new Default row, and drops cross-cutting dispatch rewrites
+  from its examples. The escalation sentence in the Mechanical row is unchanged.
+- **Light, in prose below the table.** A setup that configures a fourth tier below Mechanical
+  names it there through `{{MODEL_LIGHT}}`: the task states the change and the place, and a
+  gate or a picture shows a wrong result at once. A setup without it fills the placeholder with
+  `not configured` and lands that work on Mechanical. The subagent section gains one sentence:
+  a Light subagent, where configured, takes the Mechanical row's read-only jobs. Part 5's budget
+  table has no Light row; Light runs under Mechanical's ceiling until a measurement says
+  otherwise.
+- **Appendix A** gains `{{MODEL_LIGHT}}`, asked at GATE 0, filled with the light tier's model
+  or with `not configured`.
+
+Re-adapting is optional but cheap: replace the three cells and the paragraph above the driver
+table, add the Light paragraph and the subagent sentence, and fill `{{MODEL_LIGHT}}`.
+
+Why it exists: the old Default row had one answer for everything whose failure is loud, and
+that answer was the expensive tier. On two boards that adopted the standard, 20 of 23 item files
+named the Default tier (counted 2026-10-16), including a row that deleted two files and one
+dependency and a row that moved copy strings into a shared package. Both are work the new
+Mechanical row describes.
+
 ## 2.0.0 — 2026-10-15
 
 A major version, because the board and the ledger change shape and a 1.x reading of a 2.0.0

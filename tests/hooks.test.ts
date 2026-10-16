@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
+import { createHash } from 'node:crypto';
 import { chmod, rm, stat } from 'node:fs/promises';
-import { basename, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { exists, readText, writeText } from '../src/lib/disk.ts';
 import { claudeHooksDir, claudeSettingsFile } from '../src/lib/paths.ts';
 import type { Answers } from '../src/lib/types.ts';
@@ -21,6 +22,9 @@ async function guard(toolInput: Record<string, unknown>): Promise<number> {
   });
   return proc.exited;
 }
+
+/** The merge's digest at `9fdf169`; see the BD-2 case at the end of this file. */
+const MERGE_DIGEST = '5aef703b9038020819a85d7c65bba391678a57d641563592a238cacec8fd88e1';
 
 const BLOCKED = 2;
 const ALLOWED = 0;
@@ -514,3 +518,49 @@ describe('the settings merge is idempotent against what a previous run wrote', (
     }
   });
 });
+
+/**
+ * setup-hook-leftovers BD-2: `settingsMerge` now builds from the `hookEntries()` catalog, and the
+ * prune matches against that same catalog. The merge must still emit, under every answer that
+ * reaches it, the bytes it emitted at `9fdf169`, or every install gains a second copy of an entry
+ * (`gateCommand`). The digest was taken from the renderer as it was before the catalog, over the
+ * 128 combinations below in this order, with the home folder written as `<HOME>`.
+ */
+describe('the catalog left the merged entries unchanged (BD-2)', () => {
+  test('passes: every combination merges the bytes it merged before the catalog', async () => {
+    const lines: string[] = [];
+    for (const combination of combinations()) {
+      const answers: Answers = {
+        ...DEFAULT_ANSWERS,
+        ...combination,
+        writeDoc: 'yes',
+        skills: 'all',
+      };
+      const merge = (await renderHooks(testContext(answers))).find(
+        (f) => f.strategy === 'merge-json',
+      );
+      lines.push(merge?.contents ?? '-');
+    }
+    const home = dirname(dirname(dirname(claudeHooksDir())));
+    const body = lines.join('\0').replaceAll(home, '<HOME>');
+    const digest = createHash('sha256').update(body).digest('hex');
+    expect(digest).toBe(MERGE_DIGEST);
+  });
+});
+
+/** Every combination of the answers the merge reads, the first key outermost. */
+function combinations(): Answers[] {
+  const axes: [string, string[]][] = [
+    ['hooks', ['none', 'commit-guard', 'banner', 'both']],
+    ['workKind', ['code', 'non-code']],
+    ['usesGit', ['yes', 'no']],
+    ['configWeight', ['full', 'light']],
+    ['outputStyle', ['check-first', 'proactive']],
+    ['writeDocCheck', ['skill', 'every']],
+  ];
+  return axes.reduce<Answers[]>(
+    (sets, [key, values]) =>
+      sets.flatMap((set) => values.map((value) => ({ ...set, [key]: value }))),
+    [{}],
+  );
+}

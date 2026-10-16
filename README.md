@@ -92,6 +92,8 @@ The wizard asks only what a person knows. It does not guess what the repo knows:
 | `.claude/settings.local.json` | repo | Written only when you cap the repo's model tier. See the tier ceiling below. |
 | ignore lines | `.gitignore` or `.git/info/exclude` | Lines that keep the personal files out of git. |
 
+The long standard this version writes is 2.1.0. Its Part 4 reads the model tiers from the bottom, so a task takes the lowest tier that fits and the Default tier is the fallback when no lower row fits.
+
 Your own `~/.claude/CLAUDE.md` is never edited. Each rule is its own file in `~/.claude/rules/`.
 
 Which hooks you get depends on the hooks answer and on your track. Answering "no hooks" writes none. Otherwise:

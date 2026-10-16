@@ -246,7 +246,20 @@ export type PlannedFile = {
    * between an installed hook and one that has never fired.
    */
   mode?: number;
+  /**
+   * Items a `merge-json` write removes after it merges `contents` (setup-hook-leftovers BD-3):
+   * each `item` is taken out of the array at path `at`, matched by `sameJson`. Only `setup`
+   * sets it, for the hook entries in `~/.claude/settings.json` that no target wants.
+   *
+   * A field and not a fifth strategy, because the file is still merged: a new strategy would need
+   * its own branch in every reader of `strategy`, and `declinedHookHelp` would lose the merge it
+   * reads. `contents` keeps holding additions only, so that help never prints a removal as an add.
+   */
+  prune?: Prune[];
 };
+
+/** One item a `merge-json` write removes, and the path to the array that holds it. */
+export type Prune = { at: string[]; item: unknown };
 
 /** A global file a renderer can write, named the way that renderer labels it in the preview. */
 export type GlobalFile = { path: string; label: string };

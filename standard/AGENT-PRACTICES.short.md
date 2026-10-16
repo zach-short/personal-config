@@ -7,7 +7,7 @@ what "done" means here, and the writing habits that keep the record honest. It i
 start of every session, so it is kept short on purpose — a longer document would cost more to
 read than most of the work it governs.
 
-**Standard version: 2.0.0**
+**Standard version: 2.1.0**
 
 **Pre-filled by `personal-config` on {{DATE}}.** Every name below is this project's own, and
 nothing in this file is left for a later session to fill in. Read `{{ROUTER_FILE}}` first — the

@@ -139,7 +139,9 @@ describe('a later run removes what it no longer renders (D1)', () => {
     }
   });
 
-  test('non-code then code: write-doc/SKILL.md and style.md go, check.sh stays (BD-3)', async () => {
+  // check.sh used to stay here (BD-3). It now goes with its entry (setup-hook-leftovers BD-7),
+  // and `tests/hook-leftovers.test.ts` holds the cases for the script and the entry.
+  test('non-code then code: write-doc/SKILL.md, style.md and check.sh go, with the folder', async () => {
     const home = await freshHome();
     try {
       await setup(home, NON_CODE);
@@ -151,7 +153,8 @@ describe('a later run removes what it no longer renders (D1)', () => {
       expect(run.stdout).toContain(`skill — /write-doc style ${GONE}`);
       expect(await exists(join(dir, 'SKILL.md'))).toBe(false);
       expect(await exists(join(dir, 'style.md'))).toBe(false);
-      expect(await exists(join(dir, 'check.sh'))).toBe(true);
+      expect(await exists(join(dir, 'check.sh'))).toBe(false);
+      expect(await skillFolders(home)).not.toContain('write-doc');
     } finally {
       await cleanup(home);
     }

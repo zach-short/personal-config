@@ -3,7 +3,7 @@ import { backupFiles, type Manifest } from './backup.ts';
 import { diffSummary } from './diff.ts';
 import { exists, modeOf, readText, setMode, writeText } from './disk.ts';
 import { isOurs, markAdapted, readStamp, sameButForStampDate } from './stamp.ts';
-import type { PlannedFile } from './types.ts';
+import type { PlannedFile, Prune } from './types.ts';
 
 export type PlannedChange = {
   file: PlannedFile;
@@ -161,7 +161,10 @@ function applyStrategy(file: PlannedFile, before: string): string {
   if (file.strategy === 'overwrite') return file.contents;
   if (file.strategy === 'append-lines') return appendMissingLines(before, file.contents);
   if (file.strategy === 'mark-adapted') return markAdapted(before, adaptedLine(file));
-  return mergeJson(before, file.contents);
+  const merged = mergeJson(before, file.contents);
+  return file.prune === undefined || file.prune.length === 0
+    ? merged
+    : pruneJson(merged, file.prune);
 }
 
 /**
@@ -215,6 +218,77 @@ function mergeArrays(base: unknown[], next: unknown[]): unknown[] {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * The second step of a pruning `merge-json` write (setup-hook-leftovers BD-4, BD-5). It runs on
+ * the merged text, so `mergeJson` stays the add-only merge the ceiling's `settings.local.json`
+ * also uses. Each item goes from the array at its path wherever `sameJson` matches it, and a
+ * container this prune emptied goes with it. An array that was empty before stays: no item can
+ * match in it, so nothing here touches it.
+ */
+function pruneJson(merged: string, prune: Prune[]): string {
+  const root: unknown = JSON.parse(merged);
+  for (const { at, item } of prune) pruneOne(root, at, item);
+  return `${JSON.stringify(root, null, 2)}\n`;
+}
+
+function pruneOne(root: unknown, at: string[], item: unknown): void {
+  const chain = containersAlong(root, at);
+  const parent = chain.at(-1);
+  const key = at.at(-1);
+  if (parent === undefined || key === undefined) return;
+  const list = parent[key];
+  if (!Array.isArray(list)) return;
+  const kept = list.filter((entry) => !sameJson(entry, item));
+  if (kept.length === list.length) return;
+  parent[key] = kept;
+  dropEmptied(chain, at);
+}
+
+/** The records along `at`, from the root to the one holding the last key; short where one is missing. */
+function containersAlong(root: unknown, at: string[]): Record<string, unknown>[] {
+  const chain: Record<string, unknown>[] = [];
+  let node = root;
+  for (const key of at) {
+    if (!isRecord(node)) return [];
+    chain.push(node);
+    node = node[key];
+  }
+  return chain;
+}
+
+/** Deletes each emptied value, from the array up, stopping at the first that is not empty. */
+function dropEmptied(chain: Record<string, unknown>[], at: string[]): void {
+  for (let depth = chain.length - 1; depth >= 0; depth--) {
+    const holder = chain[depth];
+    const key = at[depth];
+    if (holder === undefined || key === undefined) return;
+    const value = holder[key];
+    const empty = Array.isArray(value)
+      ? value.length === 0
+      : isRecord(value) && Object.keys(value).length === 0;
+    if (!empty) return;
+    delete holder[key];
+  }
+}
+
+/**
+ * Deep equality for parsed JSON, with the order of an object's keys ignored and the order of an
+ * array kept (setup-hook-leftovers D2). An entry a person or another tool rewrote with its keys in
+ * another order is the same entry, where `JSON.stringify` equality would miss it.
+ */
+export function sameJson(a: unknown, b: unknown): boolean {
+  return canonical(a) === canonical(b);
+}
+
+function canonical(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`;
+  if (isRecord(value)) {
+    const keys = Object.keys(value).sort();
+    return `{${keys.map((k) => `${JSON.stringify(k)}:${canonical(value[k])}`).join(',')}}`;
+  }
+  return JSON.stringify(value) ?? 'null';
 }
 
 /** `written` includes every removed path; `removed` names those alone. */
