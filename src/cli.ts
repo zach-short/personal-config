@@ -4,6 +4,7 @@ import { runCatalog } from './commands/catalog.ts';
 import { runContext } from './commands/context.ts';
 import { runFold } from './commands/fold.ts';
 import { runHandoff } from './commands/handoff.ts';
+import { runHome } from './commands/home.ts';
 import { runInit } from './commands/init.ts';
 import { runPassoff } from './commands/passoff.ts';
 import { runSetup } from './commands/setup.ts';
@@ -11,7 +12,9 @@ import { runUndo } from './commands/undo.ts';
 import { runUpgrade } from './commands/upgrade.ts';
 import { runWorktree } from './commands/worktree.ts';
 import { runDoctor } from './doctor/index.ts';
-import { checkUsage, parseCli } from './lib/args.ts';
+import { bareRoute, checkUsage, parseCli } from './lib/args.ts';
+import { exists } from './lib/disk.ts';
+import { configFile } from './lib/paths.ts';
 import type { Cli } from './lib/types.ts';
 import { version } from './lib/version.ts';
 
@@ -74,7 +77,24 @@ const DISPATCH: Record<string, (cli: Cli) => Promise<number>> = {
 
 async function main(): Promise<number> {
   const argv = process.argv.slice(2);
+  if (argv.length === 0) {
+    const route = bareRoute(interactive(), await exists(configFile()));
+    if (route === 'home') return runHome(runArgv);
+    if (route === 'guided') return runSetup(parseCli(argv));
+  }
+  return runArgv(argv);
+}
 
+/**
+ * Both ends, as `wk` checks them (bare-command-home BD-1): a person may type at a terminal and
+ * still pipe the output away, and that run wants the help text, not a frame drawn into a file.
+ */
+function interactive(): boolean {
+  return process.stdin.isTTY === true && process.stdout.isTTY === true;
+}
+
+/** One command line, from the usage check to its runner. The home menu reaches commands here. */
+async function runArgv(argv: string[]): Promise<number> {
   // A mistyped command used to print help and exit 0, so a typo was indistinguishable from a
   // successful run — in a script, `personal-config doctorr` passed. Errors go to stderr so a
   // redirected stdout does not swallow them.

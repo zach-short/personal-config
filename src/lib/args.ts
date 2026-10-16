@@ -152,6 +152,19 @@ function isCommand(value: string): value is Command {
   return (COMMANDS as readonly string[]).includes(value);
 }
 
+export type BareRoute = 'help' | 'guided' | 'home';
+
+/**
+ * Where `personal-config` with nothing after it goes (bare-command-home D4). Both facts are
+ * passed in, so this stays pure: whether the two ends are a terminal, and whether
+ * `config.json` exists, which is the one marker `init` already reads (`src/commands/init.ts`).
+ * A pipe or a script gets the help text, as it did before the frame existed.
+ */
+export function bareRoute(interactive: boolean, hasConfig: boolean): BareRoute {
+  if (!interactive) return 'help';
+  return hasConfig ? 'home' : 'guided';
+}
+
 function resolveCommand(first: string | undefined, help: boolean, version: boolean): string {
   if (version) return 'version';
   if (help || first === undefined) return 'help';

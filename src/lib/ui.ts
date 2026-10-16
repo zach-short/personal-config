@@ -8,6 +8,14 @@ export function say(line = ''): void {
   console.log(line);
 }
 
+/**
+ * Erase the screen and put the cursor top left, so a frame draws from the top (bare-command-home
+ * BD-8). Not the alternate screen: the last frame stays in the scrollback when the run ends.
+ */
+export function clearScreen(): void {
+  process.stdout.write('\x1b[2J\x1b[H');
+}
+
 export function short(path: string): string {
   return contractHome(path);
 }
