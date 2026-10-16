@@ -40,7 +40,9 @@ import type { Doc } from '../scan.ts';
  *
  * Built per root, like `ledger-fold-ceiling`, because a 2.0.0 board's `DONE — <date>` is checked
  * against the archive and its `DONE — <LEDGER> n` against the frozen log, and both are read from
- * the repo's config rather than from the one doc a rule is handed.
+ * the repo's config rather than from the one doc a rule is handed. `doctor` reads that config
+ * from the board's own folder, so a nested board is not judged by the root's archive or log
+ * (`boardContexts` in `../index.ts`).
  */
 export function boardStatusRule(context: ItemContext) {
   return {

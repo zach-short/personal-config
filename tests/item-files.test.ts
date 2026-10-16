@@ -1,9 +1,11 @@
 import { describe, expect, test } from 'bun:test';
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
+import { runDoctorOn } from '../src/doctor/index.ts';
 import { itemFiles } from '../src/doctor/rules/item-files.ts';
 import type { Doc } from '../src/doctor/scan.ts';
 import { loadItemContext, nextFreeItem } from '../src/lib/items.ts';
+import { testConfig } from './helpers.ts';
 import { FIXTURE_BOARD, FIXTURE_ITEMS, type ItemRepo, makeItemRepo } from './item-fixture.ts';
 
 /** The fixture's board without item 15's left-behind section, so the clean case is clean. */
@@ -123,5 +125,65 @@ describe('D16 — a number is never reused', () => {
     expect(nextFreeItem(['1', '1.5', '15'], live, archived)).toBe(42);
     expect(nextFreeItem(['2.5'], [], [])).toBe(3);
     expect(nextFreeItem([], [], [])).toBe(1);
+  });
+});
+
+/**
+ * A board below the root is checked against the archive beside it, not the root's. This is
+ * `examples/PASSOFF.md` under `.` on 2026-10-16: the fold put items 1 to 91 in this repo's
+ * archive, and rows 1 to 5 of the fictional board were reported as reused.
+ */
+describe('D16 — a nested board is checked against its own archive', () => {
+  /** A fictional repo inside the fixture repo, with item 7 open: 7 is in the outer archive. */
+  async function nestedBoard(repo: ItemRepo): Promise<string> {
+    const dir = join(repo.dir, 'examples');
+    await Bun.write(
+      join(dir, 'PASSOFF.md'),
+      '# Board\n\n| # | Task | Status | Model | Lane | Waits on | Files it owns |\n|---|---|---|---|---|---|---|\n| 7 | A fictional item | `OPEN` | Opus 5.5 | A | nothing | `src/x.ts` |\n',
+    );
+    await Bun.write(join(dir, 'passoff', '7-a-fictional-item.md'), '# 7. A fictional item\n');
+    return dir;
+  }
+
+  async function reuseFindings(repo: ItemRepo): Promise<string[]> {
+    const report = await runDoctorOn(repo.dir, {
+      standardVersion: '1.0.0',
+      config: testConfig(),
+    });
+    return report.findings
+      .filter((f) => f.rule === 'item-files' && f.message.includes('already in the archive'))
+      .map((f) => `${f.file.slice(repo.dir.length + 1)}: ${f.message}`);
+  }
+
+  test('passes: its number is in the outer root’s archive and not its own', async () => {
+    await withRepo(async (repo) => {
+      await nestedBoard(repo);
+      expect(await reuseFindings(repo)).toEqual([]);
+    });
+  });
+
+  test('violates: its number is in the archive its own config names', async () => {
+    await withRepo(async (repo) => {
+      const dir = await nestedBoard(repo);
+      const archive = join(dir, 'archive');
+      await Bun.write(
+        join(dir, '.personal-config.json'),
+        `${JSON.stringify({ archiveHome: archive })}\n`,
+      );
+      await Bun.write(join(archive, 'passoff', '7-an-older-item.md'), '# 7. An older item\n');
+      expect(await reuseFindings(repo)).toEqual([
+        'examples/PASSOFF.md: item 7 is already in the archive — a number is never reused (D16)',
+      ]);
+    });
+  });
+
+  test('violates: the root’s own board, in the same tree, still reads the root’s archive', async () => {
+    await withRepo(async (repo) => {
+      await nestedBoard(repo);
+      await Bun.write(join(repo.archiveItems, '10-an-older-item.md'), '# 10. An older item\n');
+      expect(await reuseFindings(repo)).toEqual([
+        'PASSOFF.md: item 10 is already in the archive — a number is never reused (D16)',
+      ]);
+    });
   });
 });

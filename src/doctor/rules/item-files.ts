@@ -21,7 +21,14 @@ import type { Doc } from '../scan.ts';
  *
  * Applied to the board, because the board is the one doc that names the folder beside it, and
  * only where that folder exists: a 1.x repo has none, and every rule reads it as it did (D12,
- * BD-5). Built per root because D16's check reads the archive's items folder.
+ * BD-5). Built per board folder because D16's check reads the archive's items folder.
+ *
+ * The archive a board is checked against is the one named by the config beside that board,
+ * which is also where its items folder is (`collectDocs`). It is not the archive of whatever
+ * root the walk started from. A nested board, such as the fictional `examples/PASSOFF.md` under
+ * `.`, has its own numbering and its own archive, and the root's archive says nothing about
+ * which of its numbers were taken; `doctor` hands it its own folder's context, so it gets the
+ * findings it gets as a root of its own (`boardContexts` in `../index.ts`, 2026-10-16).
  */
 export function itemFiles(context: ItemContext) {
   return {

@@ -1,10 +1,10 @@
 import { readdir } from 'node:fs/promises';
-import { basename, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { loadConfig } from '../lib/config.ts';
 import { today } from '../lib/date.ts';
 import { exists, readText } from '../lib/disk.ts';
 import { isGitRepo } from '../lib/git.ts';
-import { loadItemContext } from '../lib/items.ts';
+import { type ItemContext, loadItemContext } from '../lib/items.ts';
 import { expandHome } from '../lib/paths.ts';
 import { readDocNames } from '../lib/repo-config.ts';
 import type { Cli, Config, Finding, PlannedFile } from '../lib/types.ts';
@@ -59,23 +59,27 @@ export async function runDoctorOn(
   const docs = await collectDocs(root);
   const itemsName = basename((await readDocNames(root)).items);
   const items = await loadItemContext(root, itemsName);
+  const boards = await boardContexts(docs, itemsName);
   // Built per root: a ceiling is an answer and answers are saved per repo, and the board rules
   // read the repo's archive and frozen log (per-item-board `DESIGN.md` D2, D5).
   const answers = expectation.config.answers;
-  const docRules = [
+  const rulesWith = (context: ItemContext) => [
     ...DOC_RULES,
-    boardStatusRule(items),
-    unfoldedRule(items),
-    itemFiles(items),
+    boardStatusRule(context),
+    unfoldedRule(context),
+    itemFiles(context),
     ledgerFoldCeiling(answers['doctor.ledgerCharCeiling']),
     rowCellCeiling(answers['doctor.rowCellCeiling']),
   ];
+  const docRules = rulesWith(items);
 
   const fromDocs = docs
     .filter((doc) => !doc.isTemplate)
-    .flatMap((doc) =>
-      docRules.filter((rule) => rule.appliesTo(doc)).flatMap((rule) => rule.check(doc)),
-    );
+    .flatMap((doc) => {
+      const board = doc.kind === 'board' ? boards.get(dirname(doc.path)) : undefined;
+      const rules = board === undefined ? docRules : rulesWith(board);
+      return rules.filter((rule) => rule.appliesTo(doc)).flatMap((rule) => rule.check(doc));
+    });
 
   const fromArchive = (
     await Promise.all(docs.filter(archiveIndex.appliesTo).map((doc) => archiveIndex.check(doc)))
@@ -144,6 +148,27 @@ async function stampFindings(
  */
 function keptOnRerun(file: PlannedFile, text: string): boolean {
   return recordGuard(file, text, () => file.contents) !== 'none';
+}
+
+/**
+ * Each board's archive and frozen log, read from the folder the board sits in, the same folder
+ * `collectDocs` resolves its items from. The root's own board sits beside the root's config, so
+ * it reads what it always read. A board below the root, such as `examples/PASSOFF.md` walked
+ * from `.`, is a fictional repo's board with its own archive, and was checked against this
+ * repo's until 2026-10-16: the fold put items 1 to 91 in this repo's archive, and rows 1 to 5 of
+ * that board became "already in the archive" (D16). Now it reads its own folder's config, so it
+ * gets the findings its own root would give it, and none from the root it happens to sit in.
+ */
+async function boardContexts(
+  docs: Doc[],
+  itemsName: string,
+): Promise<Map<string, ItemContext>> {
+  const dirs = [...new Set(docs.filter((d) => d.kind === 'board').map((d) => dirname(d.path)))];
+  return new Map(
+    await Promise.all(
+      dirs.map(async (dir) => [dir, await loadItemContext(dir, itemsName)] as const),
+    ),
+  );
 }
 
 /**
