@@ -246,6 +246,17 @@ running in a terminal.
   `terminalIo()` and `runHome()`), and a model tier saved as `''` is left out of the home summary.
   The same walk of this build reached the done screen with "Wrote 8 file(s)." and found nothing
   else. Gates in the worktree: `bun test` 1,886 pass, 0 fail; `doctor . examples` nothing failing.
+- **The 0-column fix above was wrong, 2026-10-16 (R5).** `sizeOf()` (in `45f1bb7`) draws the frame
+  at 80, but `@clack/core` wraps every frame at `process.stdout.columns` itself
+  (`node_modules/@clack/core/dist/index.mjs:321`), so a `script` walk with `stty cols 0` still put
+  one character on each line. The fix that holds: `interactive()` in `src/cli.ts` also needs
+  `process.stdout.columns > 0`, so a terminal with no width gets `HELP`, as a pipe does. The same
+  walk then printed the help text, and a walk at `stty cols 100` still drew the frame.
+- **The frame tests depended on the terminal they ran in, 2026-10-16.** In Zach's 80-column
+  terminal, `bun test` failed 3 of them, because clack wrapped their 100-column screens at 80; off
+  a terminal (the harness, CI) `columns` is undefined and they passed. `tests/preload.ts` now sets
+  `process.stdout.columns` and `rows` to undefined for every run. Proof: `tests/frame-prompter`
+  and `tests/guided-run` under `script` with `stty cols 80`, 18 pass, 0 fail.
 
 ### Phase 3. README, CHANGELOG, board row
 

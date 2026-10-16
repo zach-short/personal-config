@@ -13,6 +13,12 @@ const sandbox = mkdtempSync(join(tmpdir(), 'pc-home-'));
 process.env.HOME = sandbox;
 process.env.PERSONAL_CONFIG_TEST_HOME = sandbox;
 
+// A run in a terminal must draw what CI draws. `@clack/core` wraps each frame at
+// `process.stdout.columns`, which is undefined off a terminal; in an 80-column terminal it wrapped
+// the frame tests' 100-column screens and three of them failed (2026-10-16).
+Object.defineProperty(process.stdout, 'columns', { value: undefined, configurable: true });
+Object.defineProperty(process.stdout, 'rows', { value: undefined, configurable: true });
+
 // Nine files spawn the real bin or git; Bun's 5s default test timeout can fire on any of them
 // under memory pressure alone, with no bug in the spawned process (board item 49, HANDOFF 53).
 // A preload-scoped call applies process-wide, unlike setDefaultTimeout called from inside a

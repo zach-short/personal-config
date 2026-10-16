@@ -121,9 +121,9 @@ function pieces(word: string, width: number): string[] {
 }
 
 /**
- * The size to draw at, from what the terminal reports. `||`, not `??`: a pseudo-terminal opened
- * with no size reports 0 columns, and a frame drawn at 0 puts every character on its own line
- * (found 2026-10-16 by a `script` walk of the bare command).
+ * The size to draw at, from what the terminal reports, with 0 read as unknown. This alone does
+ * not make a 0-column terminal usable: `@clack/core` still wraps at the reported 0. The bare
+ * command does not draw the frame there at all (`interactive()` in `src/cli.ts`).
  */
 export function sizeOf(columns?: number, rows?: number): { columns: number; rows: number } {
   return { columns: columns || 80, rows: rows || 24 };

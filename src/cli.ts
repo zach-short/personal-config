@@ -92,9 +92,14 @@ async function main(): Promise<number> {
 /**
  * Both ends, as `wk` checks them (bare-command-home BD-1): a person may type at a terminal and
  * still pipe the output away, and that run wants the help text, not a frame drawn into a file.
+ *
+ * A terminal that reports no width is not one the frame can use either. `@clack/core` wraps
+ * every frame at `process.stdout.columns` itself, so at 0 it puts each character on its own line
+ * whatever width the frame was drawn at (a `script` walk with `stty cols 0`, 2026-10-16).
  */
 function interactive(): boolean {
-  return process.stdin.isTTY === true && process.stdout.isTTY === true;
+  const ends = process.stdin.isTTY === true && process.stdout.isTTY === true;
+  return ends && (process.stdout.columns ?? 0) > 0;
 }
 
 /** One command line, from the usage check to its runner. The home menu reaches commands here. */
