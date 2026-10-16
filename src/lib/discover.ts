@@ -5,7 +5,13 @@ import { exists as isFile } from './disk.ts';
 import { isGitRepo, ownerFromRemote, remoteUrl, worktreeCount } from './git.ts';
 import { hasItemsFolder } from './items.ts';
 import { expandHome } from './paths.ts';
-import { type DocNames, readDocNames, readLedgerFrozenAt } from './repo-config.ts';
+import {
+  type DocNames,
+  readArchiveHome,
+  readDocNames,
+  readGateCommand,
+  readLedgerFrozenAt,
+} from './repo-config.ts';
 import type { RepoScan, TargetKind, WorkProfile } from './types.ts';
 
 /** Marker file → language. First match per language wins; a repo can report several. */
@@ -123,6 +129,8 @@ export async function scanRepo(path: string, kind: TargetKind = 'git'): Promise<
     worktrees,
     owner,
     ledgerFrozenAt,
+    gateCommand,
+    archiveHome,
   ] = await Promise.all([
     detectLanguages(path),
     detectPackageManager(path),
@@ -133,6 +141,8 @@ export async function scanRepo(path: string, kind: TargetKind = 'git'): Promise<
     git ? worktreeCount(path) : 0,
     git ? remoteUrl(path).then(ownerFromRemote) : null,
     readLedgerFrozenAt(path),
+    readGateCommand(path),
+    readArchiveHome(path),
   ]);
 
   const adopted = adoptedDocs(names, existingDocs);
@@ -148,6 +158,8 @@ export async function scanRepo(path: string, kind: TargetKind = 'git'): Promise<
     ...adopted,
     itemsDoc: hasItemsFolder(join(path, names.items)) ? names.items : null,
     ledgerFrozenAt,
+    gateCommand,
+    archiveHome,
     conventionsDocs,
     worktrees,
     remoteOwner: owner,

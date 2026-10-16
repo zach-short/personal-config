@@ -97,6 +97,8 @@ export function testScan(overrides: Partial<RepoScan> = {}): RepoScan {
     boardDoc: null,
     itemsDoc: null,
     ledgerFrozenAt: null,
+    gateCommand: null,
+    archiveHome: null,
     conventionsDocs: {},
     worktrees: 1,
     remoteOwner: 'owner',

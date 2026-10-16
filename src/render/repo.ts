@@ -441,12 +441,13 @@ function renderRepoConfig(ctx: RenderContext): PlannedFile {
       ledgerFrozenAt: shape === 'folders' ? undefined : ledgerFrozenAt(ctx),
       standardPath: standardPath(ctx),
       archiveHome: ctx.repo?.archiveHome ?? '',
-      // The completion-gate hook's command, and the one key here nothing asks for. It is
-      // written empty on purpose: no question knows a repo's gate command — only Part 0's
+      // The completion-gate hook's command, and the one key here nothing asks for. A first run
+      // writes it empty on purpose: no question knows a repo's gate command — only Part 0's
       // adaptation session does, after running every gate once — and guessing one from the
       // package manager would have the hook running a command nobody chose. Empty means the
-      // gate skips that check, which is the direction a hook has to fail in.
-      gateCommand: '',
+      // gate skips that check, which is the direction a hook has to fail in. A re-run keeps
+      // whatever was set since, because blanking it turns the gate off silently (2026-10-16).
+      gateCommand: ctx.repo?.scan.gateCommand ?? '',
       models: ctx.config.models,
       answers: hashedAnswers(ctx.config.answers),
     },

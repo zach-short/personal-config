@@ -116,6 +116,13 @@ export type RepoScan = {
   /** `ledgerFrozenAt` from the repo's config, which a re-run of `setup` must carry over (D5). */
   ledgerFrozenAt: number | null;
   /**
+   * `gateCommand` and `archiveHome` from the repo's config, for the same reason: a re-run has no
+   * answer for the first and may have an empty one for the second, and writing `""` over either
+   * loses a value a person set by hand.
+   */
+  gateCommand: string | null;
+  archiveHome: string | null;
+  /**
    * The code standard this repo already keeps per language, as a repo-relative path, under
    * whatever name — `{ typescript: 'docs/conventions-ts.md' }` (standard §0.2). A language absent
    * here gets the default name.
