@@ -34,14 +34,13 @@ export async function renderWriteDoc(ctx: RenderContext): Promise<PlannedFile[]>
     ),
     planned(ctx, join(dir, 'style.md'), STYLE_LABEL, style),
     // `sh` is what makes it executable (`planned()`), and the skill runs it by bare path.
-    planned(ctx, join(dir, 'check.sh'), 'skill — /write-doc check script', check, {
-      extension: 'sh',
-    }),
+    planned(ctx, join(dir, 'check.sh'), CHECK_LABEL, check, { extension: 'sh' }),
   ];
 }
 
 const SKILL_LABEL = 'skill — /write-doc';
 const STYLE_LABEL = 'skill — /write-doc style';
+const CHECK_LABEL = 'skill — /write-doc check script';
 
 function writeDocDir(): string {
   return join(claudeSkillsDir(), 'write-doc');
@@ -49,9 +48,9 @@ function writeDocDir(): string {
 
 /**
  * The `/write-doc` files a later run may stop rendering and so remove (setup-global-leftovers
- * DIAL-1). `check.sh` stays out (BD-3): under `writeDocCheck: every` a `settings.json` entry runs
- * it, `merge-json` cannot remove that entry, and a removed script under a kept entry fails on
- * every save. Board item 109 owns the script with its entry.
+ * DIAL-1). `check.sh` is not here: under `writeDocCheck: every` a `settings.json` entry runs it,
+ * and a removed script under a kept entry fails on every save. It goes with the hook scripts
+ * instead (setup-hook-leftovers BD-7), only where no entry the run leaves still runs it.
  */
 export function writeDocFiles(): GlobalFile[] {
   return [
@@ -96,6 +95,11 @@ export function wantsWriteDocHook(ctx: RenderContext): boolean {
 /** One path for the script the skill's last step runs and the hook entry runs. */
 export function writeDocCheckScript(): string {
   return join(writeDocDir(), 'check.sh');
+}
+
+/** `check.sh` as a script the run may remove (setup-hook-leftovers BD-7), labelled as rendered. */
+export function writeDocCheckFile(): GlobalFile {
+  return { path: writeDocCheckScript(), label: CHECK_LABEL };
 }
 
 /**

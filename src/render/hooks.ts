@@ -1,9 +1,11 @@
 import { dirname, join } from 'node:path';
+import { exists, readText } from '../lib/disk.ts';
 import { claudeHooksDir, claudeSettingsFile, contractHome } from '../lib/paths.ts';
 import { template } from '../lib/template.ts';
-import type { PlannedFile } from '../lib/types.ts';
+import type { GlobalFile, PlannedFile, Prune } from '../lib/types.ts';
+import { sameJson } from '../lib/write-plan.ts';
 import { answer, planned, type RenderContext, trackOf } from './context.ts';
-import { wantsWriteDocHook, writeDocCheckScript } from './write-doc.ts';
+import { wantsWriteDocHook, writeDocCheckFile, writeDocCheckScript } from './write-doc.ts';
 
 /**
  * Which of the four hook scripts a run installs. `guard` is the *commit* guard, keyed on git;
@@ -32,18 +34,25 @@ export async function renderHooks(ctx: RenderContext): Promise<PlannedFile[]> {
 
   const files: PlannedFile[] = [];
   if (want.guard) {
-    files.push(await scriptFile(ctx, 'commit-guard.sh', 'hook — blocks git commit/push'));
+    files.push(await scriptFile(ctx, 'commit-guard.sh'));
     files.push(commitPolicyFile(ctx));
   }
-  if (want.deleteGuard)
-    files.push(await scriptFile(ctx, 'delete-guard.sh', 'hook — blocks rm/rmdir/unlink'));
-  if (want.banner)
-    files.push(await scriptFile(ctx, 'session-banner.sh', 'hook — session start banner'));
-  if (want.gate)
-    files.push(await scriptFile(ctx, 'completion-gate.sh', 'hook — completion gate on Stop'));
+  if (want.deleteGuard) files.push(await scriptFile(ctx, 'delete-guard.sh'));
+  if (want.banner) files.push(await scriptFile(ctx, 'session-banner.sh'));
+  if (want.gate) files.push(await scriptFile(ctx, 'completion-gate.sh'));
   files.push(settingsMerge(ctx, want, style, docCheck));
   return files;
 }
+
+/** The preview label of each script in the hooks folder, one place for the render and the removal. */
+const SCRIPT_LABELS: Record<string, string> = {
+  'commit-guard.sh': 'hook — blocks git commit/push',
+  'delete-guard.sh': 'hook — blocks rm/rmdir/unlink',
+  'session-banner.sh': 'hook — session start banner',
+  'completion-gate.sh': 'hook — completion gate on Stop',
+};
+
+const COMMIT_POLICY_LABEL = 'hook — commit policy';
 
 /**
  * The completion gate is written on **every track** (setup-tracks `DESIGN.md` D16), which
@@ -111,14 +120,11 @@ function outputStyleFor(ctx: RenderContext): string | null {
   return answer(ctx, 'outputStyle', 'check-first') === 'proactive' ? 'Proactive' : null;
 }
 
-async function scriptFile(
-  ctx: RenderContext,
-  name: string,
-  label: string,
-): Promise<PlannedFile> {
+async function scriptFile(ctx: RenderContext, name: string): Promise<PlannedFile> {
   // `template()` rather than a bare read: a missing file names itself, where `readText` would
   // surface a raw ENOENT and a long absolute path through the CLI's error line.
   const source = await template(join('hooks', name));
+  const label = SCRIPT_LABELS[name] ?? `hook — ${name}`;
   return planned(ctx, join(claudeHooksDir(), name), label, source, { extension: 'sh' });
 }
 
@@ -148,9 +154,11 @@ function commitPolicyFile(ctx: RenderContext): PlannedFile {
     policy,
     '',
   ].join('\n');
-  return planned(ctx, join(claudeHooksDir(), 'commit-policy'), 'hook — commit policy', body, {
-    extension: 'conf',
-  });
+  return planned(ctx, commitPolicyPath(), COMMIT_POLICY_LABEL, body, { extension: 'conf' });
+}
+
+function commitPolicyPath(): string {
+  return join(claudeHooksDir(), 'commit-policy');
 }
 
 /**
@@ -207,21 +215,62 @@ function writeDocCheckEntry(): Record<string, unknown> {
   };
 }
 
-function settingsMerge(
-  ctx: RenderContext,
-  want: HookSet,
-  style: string | null,
-  docCheck: boolean,
-): PlannedFile {
-  const hooks: Record<string, unknown[]> = {};
-  const guards: Record<string, unknown>[] = [];
-  if (want.guard) guards.push(bashGuardEntry('commit-guard.sh'));
-  if (want.deleteGuard) guards.push(bashGuardEntry('delete-guard.sh'));
-  if (guards.length > 0) hooks.PreToolUse = guards;
-  if (docCheck) hooks.PostToolUse = [writeDocCheckEntry()];
-  if (want.banner) {
-    hooks.SessionStart = [
-      {
+/** The five entries, by the name `settingsMerge` and the prune both use. */
+type HookName =
+  | 'commit-guard'
+  | 'delete-guard'
+  | 'write-doc-check'
+  | 'session-banner'
+  | 'completion-gate';
+
+/**
+ * One entry this tool can merge into `settings.json`, with the scripts its command runs.
+ * `companions` are the files that go when the script goes: the commit policy beside the guard.
+ */
+export type HookEntry = {
+  name: HookName;
+  event: string;
+  entry: Record<string, unknown>;
+  scripts: HookScript[];
+};
+
+export type HookScript = GlobalFile & { companions: GlobalFile[] };
+
+/**
+ * Every entry this tool writes, in the order `settingsMerge` has always emitted them
+ * (setup-hook-leftovers BD-2). The merge filters this list and the prune matches against it, so
+ * the string one writes and the string the other looks for are the same value: two lists would
+ * drift the first time an entry changed, and the prune would stop finding the entry it must take
+ * out. `tests/hooks.test.ts` pins that the merge's bytes did not move.
+ */
+export function hookEntries(): HookEntry[] {
+  return [
+    {
+      name: 'commit-guard',
+      event: 'PreToolUse',
+      entry: bashGuardEntry('commit-guard.sh'),
+      scripts: [
+        hookScript('commit-guard.sh', [
+          { path: commitPolicyPath(), label: COMMIT_POLICY_LABEL },
+        ]),
+      ],
+    },
+    {
+      name: 'delete-guard',
+      event: 'PreToolUse',
+      entry: bashGuardEntry('delete-guard.sh'),
+      scripts: [hookScript('delete-guard.sh')],
+    },
+    {
+      name: 'write-doc-check',
+      event: 'PostToolUse',
+      entry: writeDocCheckEntry(),
+      scripts: [{ ...writeDocCheckFile(), companions: [] }],
+    },
+    {
+      name: 'session-banner',
+      event: 'SessionStart',
+      entry: {
         matcher: 'startup|resume',
         hooks: [
           {
@@ -231,13 +280,46 @@ function settingsMerge(
           },
         ],
       },
-    ];
-  }
-  if (want.gate) {
-    // No matcher: `Stop` has no tool or source to match on. The timeout is generous because the
-    // entry runs the repo's own gate command, and a hook killed at the timeout does not block —
-    // a suite slower than this is a gate that quietly never fires.
-    hooks.Stop = [{ hooks: [{ type: 'command', command: gateCommand(), timeout: 120 }] }];
+      scripts: [hookScript('session-banner.sh')],
+    },
+    {
+      // No matcher: `Stop` has no tool or source to match on. The timeout is generous because the
+      // entry runs the repo's own gate command, and a hook killed at the timeout does not block —
+      // a suite slower than this is a gate that quietly never fires.
+      name: 'completion-gate',
+      event: 'Stop',
+      entry: { hooks: [{ type: 'command', command: gateCommand(), timeout: 120 }] },
+      scripts: [hookScript('completion-gate.sh')],
+    },
+  ];
+}
+
+function hookScript(name: string, companions: GlobalFile[] = []): HookScript {
+  return { path: join(claudeHooksDir(), name), label: SCRIPT_LABELS[name] ?? name, companions };
+}
+
+/** Every script an entry runs, each once: the candidates a run may remove (BD-6). */
+export function hookScriptFiles(): HookScript[] {
+  return hookEntries().flatMap((entry) => entry.scripts);
+}
+
+function settingsMerge(
+  ctx: RenderContext,
+  want: HookSet,
+  style: string | null,
+  docCheck: boolean,
+): PlannedFile {
+  const wanted: Record<HookName, boolean> = {
+    'commit-guard': want.guard,
+    'delete-guard': want.deleteGuard,
+    'write-doc-check': docCheck,
+    'session-banner': want.banner,
+    'completion-gate': want.gate,
+  };
+  const hooks: Record<string, unknown[]> = {};
+  for (const { name, event, entry } of hookEntries()) {
+    if (!wanted[name]) continue;
+    hooks[event] = [...(hooks[event] ?? []), entry];
   }
 
   const body: Record<string, unknown> = {};
@@ -260,6 +342,91 @@ function settingsLabel(hasHooks: boolean, hasStyle: boolean): string {
   if (hasHooks && hasStyle) return 'settings.json — hook entries and output style merged in';
   if (hasStyle) return 'settings.json — output style merged in';
   return 'settings.json — hook entries merged in';
+}
+
+/**
+ * The label of a `settings.json` write that prunes (BD-9, GATE 2 Q3, the plain form): the count
+ * goes at the end, so a person who reads only labels sees the removal. Where the run merges no
+ * entry, the count names what it counts.
+ */
+function pruningLabel(contents: string, removed: number): string {
+  const body: unknown = JSON.parse(contents);
+  const hasHooks = isRecord(body) && isRecord(body.hooks) && Object.keys(body.hooks).length > 0;
+  const hasStyle = isRecord(body) && body.outputStyle !== undefined;
+  const entries = `${removed} hook ${removed === 1 ? 'entry' : 'entries'} removed`;
+  if (hasHooks) return `${settingsLabel(true, hasStyle)}, ${removed} removed`;
+  if (hasStyle) return `${settingsLabel(false, true)}, ${entries}`;
+  return `settings.json — ${entries}`;
+}
+
+/**
+ * The entries of this tool's catalog that are in `~/.claude/settings.json` and that no planned
+ * merge in `wanted` holds (setup-hook-leftovers BD-1, BD-4). Matched by `sameJson` under the
+ * entry's own event key, so an entry a person edited by one byte is theirs and stays. A missing
+ * file, or one that does not parse, gives nothing to prune: the merge then reports its own parse
+ * error as it always has.
+ */
+export async function hookLeftovers(wanted: PlannedFile[]): Promise<Prune[]> {
+  const onDisk = await settingsOnDisk();
+  if (onDisk === null) return [];
+  const installed = isRecord(onDisk.hooks) ? onDisk.hooks : {};
+  const kept = wanted.flatMap((file) => {
+    const hooks = plannedHooks([file]);
+    return hooks === null
+      ? []
+      : Object.entries(hooks).flatMap(([event, entries]) =>
+          (Array.isArray(entries) ? entries : []).map((entry: unknown) => ({ event, entry })),
+        );
+  });
+  return hookEntries()
+    .filter(
+      ({ event, entry }) => !kept.some((k) => k.event === event && sameJson(k.entry, entry)),
+    )
+    .filter(({ event, entry }) => {
+      const list = installed[event];
+      return Array.isArray(list) && list.some((item) => sameJson(item, entry));
+    })
+    .map(({ event, entry }) => ({ at: ['hooks', event], item: entry }));
+}
+
+async function settingsOnDisk(): Promise<Record<string, unknown> | null> {
+  if (!(await exists(claudeSettingsFile()))) return null;
+  try {
+    const body: unknown = JSON.parse(await readText(claudeSettingsFile()));
+    return isRecord(body) ? body : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The `settings.json` file the plan writes once it carries `prune` (BD-3). Where a target
+ * rendered the file, the prune rides on it; where none did (under "No hooks" with no output
+ * style), a merge of `{}` carries it, so the plan still holds one file for the path (H13).
+ */
+export function withPrune(file: PlannedFile | undefined, prune: Prune[]): PlannedFile {
+  const base: PlannedFile = file ?? {
+    path: claudeSettingsFile(),
+    contents: '{}\n',
+    label: '',
+    strategy: 'merge-json',
+  };
+  return { ...base, prune, label: pruningLabel(base.contents, prune.length) };
+}
+
+/**
+ * Whether a command in this parsed `settings.json` runs `path`, in any of the spellings a person
+ * might give it: absolute, under `~`, or under `$HOME`. A script that any entry still runs is
+ * never removed (BD-6), so a false "runs it" keeps a file and a false "does not" breaks a hook.
+ */
+export function settingsRuns(settings: unknown, path: string): boolean {
+  const hooks = isRecord(settings) && isRecord(settings.hooks) ? settings.hooks : {};
+  const tilde = contractHome(path);
+  const rest = tilde.slice(1);
+  const spellings = tilde.startsWith('~')
+    ? [path, tilde, `$HOME${rest}`, `\${HOME}${rest}`]
+    : [path];
+  return commandsIn(hooks).some((command) => spellings.some((s) => command.includes(s)));
 }
 
 /**

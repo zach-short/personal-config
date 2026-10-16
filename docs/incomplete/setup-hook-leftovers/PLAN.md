@@ -100,7 +100,17 @@ full`, `usesGit: yes`, `skills: all`, `writeDoc: yes`, `writeDocCheck: every`, a
 
 ### Phase 1. Prune the entries and remove their scripts
 
-**Status.** `PLANNED` 2026-10-16.
+**Status.** `BUILT` 2026-10-16, Opus 5.5, uncommitted in the main checkout. `typecheck` and
+`lint` are clean with no warnings. `bun test` gave 1838 pass and 3 fail; the 3 are
+`tests/tracks.test.ts` §3.1 row 1, whose snapshot differs in `AGENT-PRACTICES`, `model-routing.md`,
+`/audit` and `/passoff` only, all from another session's uncommitted standard v2.1.0 edits, and
+not in `settings.json`. `doctor . examples` gave 13 findings, none in a file this phase touched.
+The proof runs (§1 runs 1, 2 and 4, and F5's pair) were repeated with the real bin in temp homes
+and matched the plan; after `undo`, `diff -rq` showed only the files the second run created new.
+CI's Linux job was not run. Two things the build found: `exists` in `src/lib/disk.ts` answers
+for files only, so the folder checks use `stat`; and `settingsRuns` also matches a command that
+names a script by `~`, `$HOME` or `${HOME}`, so a person's own entry in any of those spellings
+keeps its script.
 
 **Scope.**
 
