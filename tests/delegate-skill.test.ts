@@ -278,6 +278,8 @@ describe('what /delegate says', () => {
     'where its opening round chose audits by tier, a Mechanical or Light item lands on its gates with no auditor unless a trigger fires',
     "a diffstat above `/autopilot`'s audit trigger, or a decider's load-bearing mark.",
     '"not audited: <tier>, no trigger"',
+    // Row 113 fix round, item 5: a report the triggers cannot be read from is audited.
+    'A report that lacks the diffstat or the file list is itself a trigger.',
   ];
 
   test('passes: under agent-pushes on a board, step 3 carries the audit dial', async () => {

@@ -45,11 +45,21 @@ describe('/autopilot commits its own run at the end under agent-pushes', () => {
     expect(step).toContain('STATE.md and RUNDOWN.md');
   });
 
+  // Row 113 fix round, item 9: `/clean-up` already committed its moves, so naming them again
+  // would make the commit fail with nothing to commit.
+  const STILL_UNCOMMITTED = 'moved, removed or changed that is still uncommitted>';
+
+  test('passes: step 4 names only the fold files still uncommitted', async () => {
+    const step = stepFour(await skill('autopilot', 'agent-pushes'));
+    expect(step.replace(/\s+/g, ' ')).toContain(STILL_UNCOMMITTED);
+  });
+
   test('violates: agent-commits renders no end-of-run commit', async () => {
     const text = await skill('autopilot', 'agent-commits');
     expect(text).toContain('4. Add one line at the end of the log');
     expect(text).not.toContain('autopilot run <date>');
     expect(text).not.toContain('Untracked records');
+    expect(text.replace(/\s+/g, ' ')).not.toContain(STILL_UNCOMMITTED);
   });
 
   test('every git add in the skill names files: no -A, no --all and no bare dot', async () => {

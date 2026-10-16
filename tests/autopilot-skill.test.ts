@@ -11,7 +11,7 @@ import { repoRoot } from '../src/lib/paths.ts';
 import { leftoverTokens } from '../src/lib/template.ts';
 import type { Answers, PlannedFile, WorkProfile } from '../src/lib/types.ts';
 import { renderSkills } from '../src/render/skills.ts';
-import { DEFAULT_ANSWERS, testContext, testRepoPlan } from './helpers.ts';
+import { DEFAULT_ANSWERS, testContext, testRepoPlan, testScan } from './helpers.ts';
 
 const CODE_FULL_GIT = { workKind: 'code', configWeight: 'full', usesGit: 'yes' } as const;
 
@@ -337,7 +337,7 @@ describe('the Autonomy call and what it governs', () => {
     'scoped: <path>',
     'or its item file carries a dated note that a run scoped it and its gate was answered (section 5).',
     'a row whose prompt says to scope first is runnable for scoping',
-    'is `DONE` there, or absent from both that table and the items folder beside it',
+    "is `DONE` there, or absent from both that board's table and the folder beside it",
   ];
   const DEFAULTS = [
     'More than 300 lines changed, or more than 8 files',
@@ -379,6 +379,49 @@ describe('the Autonomy call and what it governs', () => {
         'Which Deep rows to lift. Several may be chosen; none is the default.',
       );
     }
+  });
+
+  /** Row 113 fix round, items 1 to 4 and 6 to 8: each closes a way the run built or ran on wrongly. */
+  const FIX_ROUND = [
+    // 1: an unreadable board is an unmet wait, never an absent item; the example uses the tokens.
+    '(`PASSOFF.md` gives `passoff/`; no file there starts with `<n>-`). Read that board by path on every wake.',
+    'Where the board file cannot be read, the wait is unmet, and the row goes under **Held** with the path.',
+    // 2: every decider can hold, and an added file joins the row's ownership.
+    "Any decider that finds the question is the owner's returns that instead, and the row is held.",
+    'Where it adds a file to the row, it also writes that file into the row\'s "Files it owns".',
+    // 3
+    'Where the tier ceiling forbids a Deep decider, the row is held.',
+    // 4
+    "writes **owner's call** before a question only the owner can answer, as `/passoff` says",
+    // 6
+    'runnable for scoping when every other condition in section 2 holds',
+    // 7
+    'at least one open wait on another board, on a row that would otherwise be runnable, holds',
+    // 8
+    '**Autonomy call, always, after the second call where it is asked. Four questions.**',
+  ];
+
+  test('passes: under agent-pushes the fix round renders', async () => {
+    const text = (await autopilot({ commitPolicy: 'agent-pushes' })).replace(/\s+/g, ' ');
+    for (const phrase of FIX_ROUND) expect(text, phrase).toContain(phrase);
+    expect(text).not.toContain('absent from both that table and the items folder');
+  });
+
+  test("passes: the cross-board example names this repo's own board and folder", async () => {
+    const answers: Answers = {
+      ...DEFAULT_ANSWERS,
+      skills: 'all',
+      ...CODE_FULL_GIT,
+      commitPolicy: 'agent-pushes',
+    };
+    const plan = testRepoPlan({ scan: testScan({ boardDoc: 'BOARD.md', itemsDoc: 'tasks' }) });
+    const text = skill(await renderSkills(testContext(answers, plan)), 'autopilot');
+    expect(text.replace(/\s+/g, ' ')).toContain('(`BOARD.md` gives `tasks/`;');
+  });
+
+  test('violates: under agent-commits none of the fix round renders', async () => {
+    const text = (await autopilot({ commitPolicy: 'agent-commits' })).replace(/\s+/g, ' ');
+    for (const phrase of FIX_ROUND) expect(text, phrase).not.toContain(phrase);
   });
 
   test("the owner's-call mark is on at least two lines under agent-pushes, none under agent-commits", async () => {
