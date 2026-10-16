@@ -1,7 +1,8 @@
 # 108. Shared global skills flip to the track of the last `setup` run
 
 *Opened 2026-10-16*, split from item 101 at its GATE 1. Zach answered Q2 of
-`docs/incomplete/setup-global-leftovers/SCOPE.md` the same day: finding G6 is not fixed inside item 101,
+`~/Projects/archive/personal-config/setup-global-leftovers/DESIGN.md` (then `SCOPE.md` under
+`docs/incomplete/`, archived 2026-10-16; the answer is its decision D2) the same day: finding G6 is not fixed inside item 101,
 it gets its own item that scopes it, with options O4 and O5 as the candidates.
 
 **Model: Opus 5.5. Lane J. Waits on nothing to scope. A build that edits `src/render/skills.ts` waits
@@ -11,7 +12,7 @@ do not pick one before GATE 1.
 You are picking up personal-config, a Bun and TypeScript CLI that installs documents, hooks and skills
 for other people. Read `CLAUDE.md`, `docs/conventions-ts.md`, and `standard/AGENT-PRACTICES.boilerplate.md`
 Parts 1 and 2 in full. Then read `HANDOFF.md` (untracked, main checkout only) and
-`docs/incomplete/setup-global-leftovers/SCOPE.md`: rows G6, G12 and G13 of its table, options O4 and O5
+`~/Projects/archive/personal-config/setup-global-leftovers/DESIGN.md`: rows G6, G12 and G13 of its table, options O4 and O5
 in section 3, and section 6 Q2 with its answer. Rules that hold for you: never run `git commit` or
 `git push`; never write outside a temp directory in a test; every question needs a long form; nothing is
 written without a preview and a stamp. End with the two copyable git blocks.
@@ -44,10 +45,10 @@ because the file is wanted by both tracks and only its body is wrong.
 
 ## Do these, in order
 
-1. Re-run G1 and G3 from SCOPE.md at the current commit in a temp `$HOME`, and `diff` all four skills
+1. Re-run G1 and G3 from the leftovers DESIGN.md at the current commit in a temp `$HOME`, and `diff` all four skills
    (`close-out`, `handoff`, `scope`, `passoff`), not only the two the table names. A skill that does
    not change is out of the problem.
-2. Verify the one fact SCOPE.md left open: whether Claude Code loads `<repo>/.claude/skills/` and
+2. Verify the one fact the leftovers DESIGN.md left open: whether Claude Code loads `<repo>/.claude/skills/` and
    `<repo>/.claude/rules/`, and which wins over `~/.claude` on a name clash. Cite the docs through
    Context7, or say it could not be checked. O5 depends on it.
 3. Scope with `/scope` into `docs/incomplete/<slug>/SCOPE.md`. Carry O4 and O5, and add any option step 1
