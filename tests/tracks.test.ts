@@ -242,6 +242,12 @@ const COMMIT_PARAGRAPH = '**Commits are the owner’s.**';
  * writes each row's prompt as its own item file, `passoff/<n>-<slug>.md`, numbered by `passoff
  * next`, with the 1.x sentence for a board that has no items folder. The same bytes in all three
  * variants. 83 still, and no other key moved.
+ *
+ * **Two skills moved per variant on 2026-10-15, board row 95.** `/delegate` and `/autopilot` work
+ * inside worktree isolation: the auditor reproduces from a patch the builder writes, the merge
+ * preflight is one plain command, untracked documents go into the brief by absolute path, and
+ * each report updates `STATE.md` before it is routed. The same bytes in all three variants. 83
+ * still, and no other key moved.
  */
 describe('§3.1 row 1 — code + full + git is the 0.3.0 output, byte for byte bar one skill', () => {
   const FULL = answersFor(CODE_FULL_GIT);

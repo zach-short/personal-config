@@ -206,17 +206,53 @@ function delegateVars(ctx: RenderContext, shape: SkillShape): Record<string, str
       ? [
           'Commit on your own worktree branch, naming the exact files in both the `git add` and',
           '  the commit. Never push and never merge. If a hook blocks the commit, print the two',
-          '  commit blocks and do not work around it.',
+          '  commit blocks, do not work around it, and make the patch the auditor works from:',
+          `  ${MAKE_PATCH} List in your report every file the change adds.`,
         ].join('\n')
-      : 'Do not commit. Leave the change in the worktree, and list every untracked file it adds.',
-    AUDIT_SOURCE: commits
-      ? "Take it from the builder's branch."
       : [
-          "Take it from the builder's diff against `HEAD` (`git -C <builder's",
-          '  worktree> diff HEAD`) and the untracked files the builder listed.',
+          'Do not commit. Leave the change in the worktree. When it is done, make the patch the',
+          `  auditor works from: ${MAKE_PATCH} List in your report every file the change adds.`,
+        ].join('\n'),
+    // Item 95 audit, N1: the auditor's branch now holds the builder's commits, so step 6 keeps it.
+    AUDIT_KEPT: commits
+      ? [
+          '',
+          "The auditor's branch now holds the builder's commits, so step 6 keeps the auditor's",
+          "worktree until the builder's branch is merged. Expect that.",
+        ].join('\n')
+      : '',
+    AUDIT_SOURCE: commits
+      ? [
+          "Take it from the builder's branch: from your worktree's own directory, run",
+          "  `git merge --ff-only <the builder's branch>` as one plain command. Where the builder",
+          '  reports that a hook blocked its commit, do not merge:',
+          `  ${APPLY_PATCH}.`,
+        ].join('\n')
+      : [
+          "Take it from the builder's patch: from your worktree's own directory,",
+          `  ${APPLY_PATCH}. The`,
+          "  `git add -N` puts the new files in your diffstat, so it can match the builder's.",
         ].join('\n'),
   };
 }
+
+/**
+ * Item 95, finding 1: worktree isolation refuses `git -C` on another worktree, so the auditor
+ * reproduces the build from a patch the builder writes outside the repo. `git add -N` puts the
+ * new files into `git diff HEAD`, and `--binary` keeps a binary file appliable. Seen working six
+ * times in six on the 2026-10-15 `/delegate` run, without `--binary`.
+ */
+const MAKE_PATCH =
+  'run `git add -N` on each file the change adds, then\n  `git diff --binary HEAD > <patch>`.';
+
+/**
+ * The auditor applies the patch plainly, then marks the builder's listed new files intent-to-add
+ * so its diffstat counts them. Never `git apply -N`: on git 2.49.0 it replaced the auditor's whole
+ * index with the patch's new files (307 entries to 2), so every diffstat failed to match (item 95
+ * audit, finding B1, reproduced twice).
+ */
+const APPLY_PATCH =
+  'run `git apply <patch>`, then `git add -N` on each file the builder listed as added';
 
 /**
  * The tier table as `tierTable` in `rules.ts` renders it (`<unset>` for an empty name, the Light

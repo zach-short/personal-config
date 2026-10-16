@@ -117,9 +117,62 @@ describe('what /delegate says', () => {
     const text =
       find(await render({ commitPolicy: 'print-blocks' }), 'delegate/SKILL.md') ?? '';
     expect(text).toContain('- Do not commit.');
-    expect(text).toContain('diff HEAD');
+    expect(text).toContain('`git diff --binary HEAD > <patch>`');
+    expect(text.replace(/\s+/g, ' ')).toContain(
+      "Take it from the builder's patch: from your worktree's own directory, run `git apply <patch>`, then `git add -N` on each file the builder listed as added.",
+    );
     expect(text).toContain('"not yet committed"');
     expect(text).not.toContain('Commit on your own worktree branch');
+  });
+
+  /**
+   * Item 95, from the supervised `/autopilot` run of 2026-10-15 (RUNTIME-PASS Phase 2 entry 3).
+   * Worktree isolation refused `git -C` on another worktree (finding 1), the preflight merge
+   * passed only as a plain command (finding 2), and a worktree held none of the owner's untracked
+   * documents (finding 3).
+   */
+  test('item 95: it works inside worktree isolation', async () => {
+    for (const policy of ['print-blocks', 'agent-commits'])
+      for (const profile of ['ledger', 'folders'] as const) {
+        const text = (
+          find(await render({ commitPolicy: policy }, profile), 'delegate/SKILL.md') ?? ''
+        ).replace(/\s+/g, ' ');
+        const where = `${policy} on ${profile}`;
+        for (const phrase of [
+          // 1: the auditor reproduces from a patch or a branch, never through the builder's worktree.
+          'run `git add -N` on each file the change adds, then `git diff --binary HEAD > <patch>`.',
+          'Pick the patch path: an absolute path outside the repo',
+          "Never run `git -C` on the builder's worktree: worktree isolation refuses it.",
+          'never copy files across by hand',
+          // 2: the preflight merge is one plain command from the worktree's own directory.
+          "from your worktree's own directory, run `git merge --ff-only <base>` as one plain command, with the branch name written out, never through a shell variable or `git -C`.",
+          "run from your worktree's own directory as one plain command",
+          // 3: untracked documents go into the brief by absolute path, read-only.
+          'that git does not track here. Give its absolute path in this checkout, to be read and never written',
+          'read it there, and never write there.',
+          'the absolute paths of the documents step 2 found untracked',
+          // Audit B1: the builder lists its added files, and the auditor marks them itself.
+          'List in your report every file the change adds.',
+          'the patch path and every file the change adds, which the auditor needs to reproduce it',
+          'run `git apply <patch>`, then `git add -N` on each file the builder listed as added',
+        ])
+          expect(text, `${where}: ${phrase}`).toContain(phrase);
+        expect(text, where).not.toContain("git -C <builder's");
+        // Audit B1: `git apply -N` replaced the auditor's whole index on git 2.49.0.
+        expect(text, where).not.toContain('git apply -N');
+      }
+  });
+
+  /** Item 95 audit, N1: only a fast-forwarded auditor branch holds the builder's commits. */
+  test("item 95: under agent-commits step 6 keeps the auditor's worktree, and says so", async () => {
+    const kept = "step 6 keeps the auditor's worktree until the builder's branch is merged";
+    const render95 = async (policy: string) =>
+      (find(await render({ commitPolicy: policy }), 'delegate/SKILL.md') ?? '').replace(
+        /\s+/g,
+        ' ',
+      );
+    expect(await render95('agent-commits')).toContain(kept);
+    expect(await render95('print-blocks')).not.toContain(kept);
   });
 
   test('under agent-commits the builder commits on its branch and never pushes', async () => {
@@ -128,6 +181,9 @@ describe('what /delegate says', () => {
     expect(text).toContain('Commit on your own worktree branch');
     expect(text).toContain('Never push and never merge.');
     expect(text).toContain("from the builder's branch");
+    expect(text.replace(/\s+/g, ' ')).toContain(
+      "run `git merge --ff-only <the builder's branch>` as one plain command. Where the builder reports that a hook blocked its commit, do not merge: run `git apply <patch>`, then `git add -N` on each file the builder listed as added.",
+    );
     expect(text).not.toContain('- Do not commit.');
   });
 

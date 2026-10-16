@@ -43,16 +43,32 @@ once, whatever their lanes say.
 
 ## 2. Build, in a subagent
 
-Spawn one Agent with `model` from the tiers above and `isolation: "worktree"`. Its brief is the
-item's own prompt in full, then the relay contract below, then these rules:
+Spawn one Agent with `model` from the tiers above and `isolation: "worktree"`. A worktree holds
+only the files git tracks, and an agent in one cannot run git on another worktree. So before you
+write the brief:
+
+- Find each document the brief sends the builder to read, such as the working standard and the
+  documents the item cites, that git does not track here. Give its absolute path in this
+  checkout, to be read and never written, or carry the lines the builder needs in the brief.
+- Pick the patch path: an absolute path outside the repo, such as a file in this session's
+  scratch or temp directory. The auditor in step 3 reproduces the build from it.
+- Write the base branch's name and the patch path where the rules below say `<base>` and
+  `<patch>`.
+
+Its brief is the item's own prompt in full, then the relay contract below, then these rules:
 
 - Do not edit {{RECORD_FILES_OBJECT}}. Only this session writes them.{{ITEM_FILE_RULE}}
+- Where the brief gives a document by an absolute path outside your worktree, read it there,
+  and never write there.
 - {{COMMIT_RULE}}
 - Before the first gate, run the fresh-checkout recipe in the repo's working standard, and bring
-  the worktree to the base branch with `git merge --ff-only <base>`. A worktree can start from a
-  stale base, and its gates then report on old code.
+  the worktree to the base branch: from your worktree's own directory, run
+  `git merge --ff-only <base>` as one plain command, with the branch name written out, never
+  through a shell variable or `git -C`. A worktree can start from a stale base, and its gates then
+  report on old code.
 - Never retry a call that was denied. Report it.
-- Report: the gates as run, with their output; the diffstat; what changed; what is left; any
+- Report: the gates as run, with their output; the diffstat; the patch path and every file the
+  change adds, which the auditor needs to reproduce it; what changed; what is left; any
   number claimed, such as a migration or a step; any build-level call, with its reversal; and any
   question for the owner.
 
@@ -83,18 +99,22 @@ for a Deep item and for an item the owner named load-bearing. Where the repo's t
 below Deep, an item that needs a Deep review is held, never reviewed on a lower tier.
 
 Its brief: the item's done-when (the gate commands, and the proof a green gate cannot give), its
-"What is fixed" and "Not in scope", the builder's worktree path and branch, and these rules:
+"What is fixed" and "Not in scope", the builder's worktree path and branch, the patch path, the
+base branch's name, the absolute paths of the documents step 2 found untracked, and these rules:
 
 - Do not edit {{RECORD_FILES_OBJECT}}, and never write the builder's worktree.
-- Bring your own worktree to the base branch with `git merge --ff-only <base>`, then reproduce the
-  change there. {{AUDIT_SOURCE}}
+- Bring your own worktree to the base branch with `git merge --ff-only <base>`, run from your
+  worktree's own directory as one plain command, then reproduce the change there.
+  {{AUDIT_SOURCE}}
+  Never run `git -C` on the builder's worktree: worktree isolation refuses it. Where the change
+  does not apply, report the command's output, and never copy files across by hand.
 - Re-run every gate yourself. Report each command with its output, and the diffstat of your
   worktree after the change is reproduced.
 - Return one of: clean, non-blocking findings, or blocking findings, each with a citation.
 
 When it returns, check that its diffstat matches the builder's and that its verdict carries the
 gate output. A verdict without them is not a reproduction: audit again with a fresh auditor,
-once. A second verdict without them holds the item.
+once. A second verdict without them holds the item.{{AUDIT_KEPT}}
 
 ## 4. Sign off
 

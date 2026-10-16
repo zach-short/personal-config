@@ -129,12 +129,13 @@ the next free number. `STATE.md` in it has these sections:
   and whether the step is done or in progress.
 - **Standing orders**: the lifted rows, the load-bearing rows, the rows left out, and the answers
   to the row questions.
-- **Rows**: one line for each row: number, tier, status, agent ids, worktree path, branch, relay
-  passes, review rounds, verdict.
+- **Rows**: one line for each row: number, tier, status, agent ids, worktree path, branch, patch
+  path, relay passes, review rounds, verdict.
 - **Queue**: the runnable rows not yet launched, in launch order.
 - **Readings**: one line for each wake: the time, the usage reading or "not measured", and this
   session's context.
-- **Reports**: for each row, what its builder and its auditor reported that the rundown needs:
+- **Reports**: for each row, one entry for each report, the builder's and every auditor's, headed
+  with the row, the agent and the absolute time the report arrived. Each holds what the rundown needs:
   the gates seen and their result, any number claimed, the files changed and the untracked files
   added, the commit state, the close-out text where the item's file is untracked, questions and
   build-level calls, what was not verified, warnings, and the hand-back blocks. Write it when the report arrives: after a compaction the report is gone,
@@ -142,8 +143,8 @@ the next free number. `STATE.md` in it has these sections:
 - **Judgment calls**: each with its reversal.
 - **Held**: each held row, and what it waits on.
 
-Write every time as an absolute time with its zone, such as `2026-10-03 01:20 EDT`, and never a
-relative date word, because `doctor` scans this folder.
+Write every time as an absolute time with its zone, such as `2026-10-03 01:20 EDT`, read from
+`date`. Never write a relative date word or an estimate, because `doctor` scans this folder.
 
 ## 5. Launch
 
@@ -167,10 +168,14 @@ On every wake, and whenever a background agent returns:
    automatic compaction, it is all you have.
 2. **Record a reading**: the time from `date`, the usage figure or "not measured", and this session's context
    from `personal-config context --sentinel "<the sentinel>"`.
-3. **Route each returned agent by `/delegate`'s steps**: a builder's report to an auditor, a relay
-   to a fresh builder, a verdict to sign-off, a fix round or a hold. Record each sign-off as
-   `/delegate`'s step 4 says: the item's close-out, a log line and the board. Write what the
-   rundown needs into **Reports** in `STATE.md`, the hand-back blocks among it, not into the chat. Route each returned audit agent by `/audit`'s
+3. **Handle each returned row agent (a builder, a relayed pass or an auditor), one at a time, in
+   this order.** First, read the time from `date`. Then bring its row's line under **Rows** up to date: the status, the worktree path, the
+   branch, the patch path, the relay passes, the review rounds and the verdict, so no field still
+   reads `pending` once the report answers it. Then write its **Reports** entry with that time,
+   the hand-back blocks among it, not into the chat. Only then route it by `/delegate`'s steps: a
+   builder's report to an auditor, a relay to a fresh builder, a verdict to sign-off, a fix round
+   or a hold. Record each sign-off as `/delegate`'s step 4 says: the item's close-out, a log line
+   and the board. Route each returned audit agent by `/audit`'s
    sections 4 to 6, and record its step under **Audit**; its next step launches in step 6, never
    here. When `/audit` has written its rows, read the board again before step 6.
 4. **A question a builder reports for the owner** is answered here, never by asking. Where it only
@@ -252,7 +257,9 @@ file that holds the row's open findings.
 These hold for this session, and each builder's brief carries them after `/delegate`'s rules,
 because a builder never sees this skill.
 
-- Use `git -C <path>` and absolute paths. Never `cd`: it moves this session's working directory.
+- This session uses `git -C <path>` and absolute paths. Never `cd`: it moves this session's
+  working directory. An agent in a worktree does the opposite: it runs git as plain commands from
+  its own worktree's directory, and never `git -C` on another worktree, which isolation refuses.
 - A builder that needs an ignored file it cannot copy, such as an env file, stops and reports.
   Never retry a call that was denied.
 - Do not start, stop or restart services outside this repo.

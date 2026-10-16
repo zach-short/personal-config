@@ -677,6 +677,26 @@ guard twice, when the worktree path was a shell variable (`git -C $W merge --ff-
 literal-path form passed. And step 2's brief sends the builder to the ledger and the standard, which
 a worktree does not hold when the owner's git ignore keeps them untracked.
 
+**As built, 2026-10-15 (board row 95).** Four departures fix those findings and one more from
+the same run. Step 2 now starts with what this session does before the brief: it gives the
+absolute path in the primary checkout of each document the brief sends the builder to read that
+git does not track, read-only, and it picks a patch path outside the repo. The builder's
+preflight merge is one plain command from its own worktree's directory, never through a shell
+variable or `git -C`. Under `print-blocks` the builder makes the patch with `git add -N` on its new
+files and `git diff --binary HEAD > <patch>`, and reports the files it added. The auditor applies
+the patch with plain `git apply` in its own worktree, then runs `git add -N` on the files the
+builder listed, so its diffstat counts them. It never runs `git apply -N`: on git 2.49.0 that
+replaced the auditor's whole index with the patch's new files, 307 entries to 2 (the row 95 audit,
+reproduced twice). Under `agent-commits` the auditor fast-forwards to the builder's branch from
+its own directory, or applies the patch where a hook blocked the commit, and step 6 then keeps
+the auditor's worktree until the builder's branch is merged. The auditor never runs `git -C` on
+the builder's worktree and never copies files by hand. In `/autopilot` (§4.2), the standing order
+to use `git -C` now binds this session only, and each report from a row's builder, relayed pass
+or auditor updates that row's **Rows** line and writes its **Reports** entry, with the time read
+from `date`, before it is routed. The commit guard's parsing is unchanged. `--binary` is a
+build-level call: the run that proved the patch path used plain `git diff HEAD`, and dropping the
+flag reverses it.
+
 ### 4.2 `/autopilot`
 
 **Frontmatter.** `name: autopilot`, D16's description, `disable-model-invocation: true`.

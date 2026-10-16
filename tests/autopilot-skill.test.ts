@@ -189,6 +189,28 @@ describe('what /autopilot says', () => {
       expect(text, phrase).toContain(phrase);
   });
 
+  /**
+   * Item 95, from the supervised run of 2026-10-15: the standing order to use `git -C` reached the
+   * builders, whose isolation refuses it on another worktree (findings 1 and 2), and `STATE.md`
+   * kept `pending` worktrees, lost an auditor's report and held `~08:2x` times (finding 4).
+   */
+  test('item 95: agents run git from their own worktree, and each report updates STATE.md', async () => {
+    const text = (await autopilot()).replace(/\s+/g, ' ');
+    for (const phrase of [
+      "An agent in a worktree does the opposite: it runs git as plain commands from its own worktree's directory, and never `git -C` on another worktree, which isolation refuses.",
+      "for each row, one entry for each report, the builder's and every auditor's, headed with the row, the agent and the absolute time the report arrived.",
+      '3. **Handle each returned row agent (a builder, a relayed pass or an auditor), one at a time, in this order.** First, read the time from `date`.',
+      'so no field still reads `pending` once the report answers it.',
+      "Only then route it by `/delegate`'s steps",
+      'Never write a relative date word or an estimate',
+      'branch, patch path, relay passes',
+    ])
+      expect(text, phrase).toContain(phrase);
+    expect(text.indexOf('write its **Reports** entry')).toBeLessThan(
+      text.indexOf("Only then route it by `/delegate`'s steps"),
+    );
+  });
+
   for (const policy of ['print-blocks', 'agent-commits', 'no-rule'])
     test(`${policy} leaves no token unfilled, with the stamp below the frontmatter`, async () => {
       const text = await autopilot({ commitPolicy: policy });
