@@ -2,8 +2,9 @@
 
 Design: `DESIGN.md`, `RATIFIED` 2026-10-16 (D1 to D6). This plan turns it into two phases.
 
-**Status.** `PLANNED` 2026-10-16, Opus 5.5 (board item 108). Approved at GATE 2 the same day:
-Zach chose every recommended answer, recorded in §7.
+**Status.** Both phases `BUILT` 2026-10-16, committed as `228b1d3` (board item 108). Approved at
+GATE 2 the same day: Zach chose every recommended answer, recorded in §7. Zach reported the
+runtime pass done 2026-10-16.
 
 ## 0. Facts verified 2026-10-16 (supersede the design where they differ)
 
@@ -63,7 +64,7 @@ so the code they ran is the code a build starts from.
 
 ### Phase 1. Render the two skills per target
 
-**Status.** `BUILT` 2026-10-16, Opus 5.5, gates green, not yet committed (the owner commits).
+**Status.** `BUILT` 2026-10-16, Opus 5.5, committed as `228b1d3`.
 Board item 108.
 
 *As built.* As scoped, with four deviations, each a consequence the plan did not see:
@@ -90,6 +91,7 @@ The BD-3 line reads: "N skill file(s) in your home folder were kept because you 
 or wrote them yourself. Each one hides the copy this run writes into every folder. Move it aside
 to use the folder's own:" and then one path per line. The owner has not chosen this wording
 (R7); the hand-back asks.
+*Amended 2026-10-16:* Zach chose this plain wording over a terse and a warm variant (R7).
 
 *Proof, 2026-10-16.* A temp home under the session scratchpad, with repos `a` (holding
 `docs/incomplete/`, so `folders`) and `b` (holding `HANDOFF.md`, so `ledger`), and a stamped
@@ -156,7 +158,7 @@ renames two keys per variant, and no hash in it may change.
 ### Phase 2. Long form and changelog
 
 **Status.** `BUILT` 2026-10-16, a Sonnet 5.5 subagent in the main checkout, reviewed by the Opus
-5.5 lead; not yet committed. Board item 108.
+5.5 lead; committed as `228b1d3`. Board item 108.
 
 *As built.* `docs/choices/skills.md` names the per-folder paths, the ignore lines per mode, why
 the global copies go, the BD-3 line, and an undo that says `undo` keeps a file the run created

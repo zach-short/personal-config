@@ -78,3 +78,50 @@ Gates: `bun run typecheck && bun run lint && bun test && bun run doctor . exampl
 checkout. A scope item changes no `src/`. Tell Zach the file path of the scope and the questions, then
 print the two copyable blocks: `git add <exact files>` and `git commit <the same files> -m "<short,
 lowercase>"`. Add no attribution trailer.
+
+## Close-out, 2026-10-16
+
+Closed 2026-10-16 on Opus 5.5, on `main`. Scope `5c03fd8`, GATE 1 answers `05fb906`, design
+and plan `6826972`, build `228b1d3`. Record in `docs/incomplete/shared-skills-track/`
+(`DESIGN.md` D1 to D6, `PLAN.md` §0 P1 to P13, BD-1 to BD-6, both phases `BUILT`).
+
+**What changed.** `/close-out` and `/handoff` render into each target at
+`<target>/.claude/skills/<name>/SKILL.md`, from that target's context, by a second renderer
+`renderTargetSkills` in `src/render/skills.ts` (`TRACK_SKILLS`). The `~/.claude/skills/` copies
+leave through item 101's `leftovers`, because `skillFiles()` still names them. A run with no
+target writes neither skill (D4). Each git target with `usesGit` gets
+`/.claude/skills/close-out/` and `/.claude/skills/handoff/` in `.gitignore` (tracked) or
+`.git/info/exclude` (untracked). `init` writes both into its folder. A global copy with no stamp
+or an `adapted` one is kept and named after the preview (BD-3). `dedupe`'s false comment is
+corrected (D6). `src/lib/hidden-tracked.ts` reads an ignore line ending in `/` as covering the
+folder. `docs/choices/skills.md`, `catalog.json` and `CHANGELOG.md` describe it.
+
+**Why.** One global body carried the last run's track, or the first target's work record
+(`DESIGN.md` F3, F4, F7), so a code repo could read the non-code `/close-out`.
+
+**What is now fixed.** Each folder reads a body rendered from its own answers, in both
+directions and inside one run. `tests/shared-skills-track.test.ts` (14 cases) holds it,
+including D2's guard: a skill outside the two that starts to differ between tracks fails.
+
+**Questions answered.** GATE 1, 2026-10-16, "all recs": build; O5 with DIAL-1 to DIAL-3 at
+their defaults; the setup-tracks layer split superseded for these two skills; F2 and F6 left to
+leftovers D1; F8's comment fixed with the build. GATE 2, 2026-10-16, "all recs": two phases;
+`.gitignore` in tracked mode; print the BD-3 line. R7, 2026-10-16: Zach kept the plain wording of
+the BD-3 line.
+
+**Verified.** Gates green on `228b1d3`'s files: typecheck, lint with no warnings, `bun test`
+1820 pass in 102 files, `doctor . examples` 11 findings (the same 11 as at `81ce644`, all in
+`PASSOFF.md`), also in a `git archive HEAD` copy holding only this item's files. A temp-home
+proof run (two repos, `folders` and `ledger`) showed a different `/close-out` in each and the
+old global copy removed. The runtime pass inside Claude Code is Zach's: he reported it done on
+2026-10-16 and gave no detail, so whether a worktree session was tried is not recorded.
+
+**Left owed.**
+
+- A repo later dropped from `--projects-dir` keeps a stale per-target copy that no run updates
+  (`PLAN.md` §4).
+- Whether a non-git folder loads its project skill was read from the docs, not seen (P8).
+- F2 and F6 stay as leftovers D1 decided (D5).
+- `docs/incomplete/shared-skills-track/` waits for `/clean-up` to archive it.
+- Nothing is released: the change reaches npm only through a "Cut 0.x.y" item.
+
