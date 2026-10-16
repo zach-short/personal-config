@@ -2,7 +2,8 @@
 
 Design: `DESIGN.md`, `RATIFIED` 2026-10-16 (D1 to D4). This plan turns it into two phases.
 
-**Status.** `PLANNED` 2026-10-16, Opus 5.5 (board item 109). Waiting on GATE 2 (§7).
+**Status.** `PLANNED` 2026-10-16, Opus 5.5 (board item 109). Approved at GATE 2 the same day:
+Zach chose every recommended answer, recorded in §7 with the questions as asked.
 
 ## 0. Facts verified 2026-10-16 (supersede the design where they differ)
 
@@ -251,3 +252,16 @@ Asked 2026-10-16 in chat, in one batch:
 
   Under "No hooks" the plain form reads `2 hook entries removed`.
 - **Q4.** BD-8: remove an emptied `~/.claude/hooks/personal-config/` folder? Recommended: yes.
+
+### Answers, 2026-10-16
+
+Zach answered all four in one batch, in chat, the same day the plan was finished.
+
+- **Q1: approve.** Two phases, in this order: Phase 1 on Opus 5.5, Phase 2 on Sonnet 5.5.
+- **Q2: yes.** BD-6 stands: a script goes wherever no entry in the `settings.json` the run leaves
+  runs it, so an unused `check.sh` is removed with its empty folder.
+- **Q3: plain.** BD-9's label is `hook entries merged in, <n> removed` after the existing prefix
+  and separator, and `<n> hook entries removed` where nothing is merged.
+- **Q4: delete it.** BD-8 stands: an emptied `~/.claude/hooks/personal-config/` is removed.
+
+The plan now authorizes the whole run. The phases do not each need approval again.
