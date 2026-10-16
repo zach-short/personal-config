@@ -254,7 +254,8 @@ describe('fold migrate, end to end', () => {
         const { code } = await run(repo.dir, ['fold', 'migrate', '--force'], repo.home);
         expect(code).toBe(0);
 
-        expect(await readdir(join(repo.dir, 'passoff'))).toEqual([
+        // `readdir` order is the filesystem's: sorted on macOS, not on Linux (CI).
+        expect((await readdir(join(repo.dir, 'passoff'))).sort()).toEqual([
           '1.5-patch-the-first-thing.md',
           '5-build-the-scoped-thing.md',
         ]);

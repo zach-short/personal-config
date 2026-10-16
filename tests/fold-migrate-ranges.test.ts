@@ -190,7 +190,8 @@ describe('fold migrate, end to end, with a range heading', () => {
 
         const { code } = await run(dir, ['fold', 'migrate', '--force'], home);
         expect(code).toBe(0);
-        expect(await readdir(join(dir, 'passoff'))).toEqual([
+        // `readdir` order is the filesystem's: sorted on macOS, not on Linux (CI).
+        expect((await readdir(join(dir, 'passoff'))).sort()).toEqual([
           '4-fix-the-second-break.md',
           '5-fix-the-third-break.md',
           '9-build-the-scoped-thing.md',
