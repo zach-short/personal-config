@@ -310,7 +310,7 @@ export const DISCOVER_QUESTIONS: Question[] = [
     ask: 'Which Mechanical model ID?',
     configKey: 'modelIds.mechanical',
     readMore: 'model-ids',
-    placeholder: 'e.g. claude-sonnet-5',
+    placeholder: 'e.g. claude-sonnet-5-5',
     when: {
       all: [...CAPPED.all, { key: 'modelIds.mechanical', is: 'other' }],
     },
@@ -342,7 +342,7 @@ export const DISCOVER_QUESTIONS: Question[] = [
     ask: 'Which Light model ID?',
     configKey: 'modelIds.light',
     readMore: 'model-ids',
-    placeholder: 'e.g. claude-haiku-4-5',
+    placeholder: 'e.g. claude-haiku-5-5',
     when: {
       all: [
         ...CAPPED.all,
