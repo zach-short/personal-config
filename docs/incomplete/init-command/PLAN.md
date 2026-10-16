@@ -40,7 +40,7 @@ order. Rows F1 to F10 are new, and F2, F3, F4 and F10 change how the build is do
 | F7 | `renderUserConfig` writes `~/.config/personal-config/config.json` on every run | It is in `renderAll`'s output, so a plan filtered to `~/.claude` alone would still overwrite the saved config | `src/render/index.ts:34`; `src/render/user-config.ts:22-28` |
 | F8 | No command is named `init` | Holds | `src/lib/args.ts:6-20` |
 | F9 | The tier ceiling is a file inside the target | `renderCeiling` writes `<repo>/.claude/settings.local.json`, so the path filter in BD-1 keeps it | `src/render/ceiling.ts:57` |
-| F10 | `setup`'s `finish` deletes the resume checkpoint | `finish` ends through `endRun`, which calls `clearCheckpoint()` for `written`, `dry-run` and `already-current`. An `init` that reused `finish` as it stands would discard an unfinished `setup` run. BD-4 | `src/commands/setup.ts:358-418` |
+| F10 | `setup`'s `finish` deletes the resume checkpoint | `finish` ends through `endRun`, which calls `clearCheckpoint()` for `written`, `dry-run` and `already-current`. An `init` that reused `finish` as it stands would discard an unfinished `setup` run. BD-4. *Corrected 2026-10-16 by board item 102 (R5):* `dry-run` does not retire it; only `written` and `already-current` do (`retiresCheckpoint`, `src/lib/resume.ts:82-84`). The finding stands for those two | `src/commands/setup.ts:358-418` |
 
 ## 1. Decisions taken since ratification
 
@@ -83,6 +83,13 @@ Build-level calls that implement a ratified decision (R12). Each names its rever
   `planRepo`, `finish` and a newly exported `planEverything` from `src/commands/setup.ts`, the way
   `tests/folder-targets.test.ts` already imports `planRepo`. *Reverse:* move the three into a
   shared module under `src/commands/`.
+- **BD-10. The D10 key is `globalAnswers`, and it holds every `you` answer present.** Written by
+  `renderUserConfig` beside `models` and `answers`: each key that is a `you` question's
+  `configKey` (`YOU_QUESTIONS`), sorted. The person's answers are in it as well as the track and
+  the four F3 answers, so the record reads whole on its own. `asConfigLayer` narrows it like
+  `answers` and `ConfigLayer` carries it; `mergeLayer` builds `Config` field by field and never
+  reads it, so it is outside the merge and `configHash`. Phase 2 reads it through
+  `savedUserConfig()`. *Reverse:* record only the seven keys `init` reads.
 - **BD-9. The `--help` line follows the shape of the lines around it.**
   `personal-config init [path]                 set up one project with your saved answers`. The
   copy is settled by the existing help block (`src/cli.ts:19`), lowercase with no full stop.
@@ -103,7 +110,20 @@ files against a 500-line `setup.ts`; if it runs long, its refusal tests move to 
 
 ### Phase 1. Seams in `setup`, behaviour unchanged
 
-**Status:** `PLANNED`.
+**Status:** `BUILT` 2026-10-16 by board item 102, on `d4c6702`; Zach commits, so the hash is the
+commit that takes `tests/setup-seams.test.ts`. Gates: `typecheck` and `lint` exit 0. `bun test`
+ran 1738 tests, 1728 pass; the 10 failures are 5-second timeouts in `tests/commit-policy.test.ts`
+and `tests/upgrade.test.ts` under a load average of 421, and the same two files at `d4c6702` in a
+scratch worktree failed 13. `doctor . examples` exits 1 on 20 findings, none in a file this phase
+touched (`PASSOFF.md`, `passoff/105-…`, `docs/incomplete/worktree-sweep/SCOPE.md`, and the
+standard's v1.2.0 stamps that item 94 owns). In `git diff tests/golden/` only the three
+`config.json` entries moved, to one hash; the rendered file was read by hand, and with
+`globalAnswers` removed it hashes to the old entry.
+
+*As built:* `finish` returns its `RunOutcome` and `runSetup` passes it to `endRun`. The decline
+tests now assert the outcome, which is stronger than the `0` they read before.
+`tests/setup-tracks.test.ts`'s no-change test now expects `config.json` to differ, in
+`globalAnswers` only, because four of the five answers it adds are `you` answers.
 
 **Scope**
 

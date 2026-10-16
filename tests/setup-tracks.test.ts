@@ -105,6 +105,10 @@ describe('the no-change promise', () => {
    * report drift against a repo configured at 0.2.6, because `loadConfig` rebuilds the
    * expectation from that repo's own `.personal-config.json`, the user config and
    * `profiles/starter.json`, and none of the three carries a track key.
+   *
+   * **`config.json` changes too, since 2026-10-16 (init-command D10).** Its `globalAnswers`
+   * records the `you` answers the global files were rendered from, and four of the five are
+   * `you` answers. Its `answers` half, the one the merge reads, does not move.
    */
   test('the five new answers change no rendered byte but the answers record', async () => {
     const dir = await tempDir();
@@ -130,7 +134,14 @@ describe('the no-change promise', () => {
       }
       expect(differing.map((path) => path.split('/').at(-1))).toEqual([
         '.personal-config.json',
+        'config.json',
       ]);
+      const saved = before.findIndex((f) => f.path.endsWith('/config.json'));
+      const { globalAnswers: _was, ...savedBefore } = JSON.parse(
+        before[saved]?.contents ?? '{}',
+      );
+      const { globalAnswers: _is, ...savedAfter } = JSON.parse(after[saved]?.contents ?? '{}');
+      expect(savedAfter).toEqual(savedBefore);
 
       const record = before.findIndex((f) => f.path.endsWith('.personal-config.json'));
       const was = JSON.parse(before[record]?.contents ?? '{}') as { answers: Answers };

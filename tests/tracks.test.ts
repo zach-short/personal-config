@@ -248,6 +248,11 @@ const COMMIT_PARAGRAPH = '**Commits are the owner’s.**';
  * preflight is one plain command, untracked documents go into the brief by absolute path, and
  * each report updates `STATE.md` before it is routed. The same bytes in all three variants. 83
  * still, and no other key moved.
+ *
+ * **`config.json` moved per variant on 2026-10-16, init-command D10 (board row 102).** It gained
+ * `globalAnswers`, the `you` answers the global files were rendered from, beside `answers`. Read
+ * by hand: with that key removed the file hashes to the old entry, so nothing else in it moved.
+ * The same bytes in all three variants. 83 still, and no other key moved.
  */
 describe('§3.1 row 1 — code + full + git is the 0.3.0 output, byte for byte bar one skill', () => {
   const FULL = answersFor(CODE_FULL_GIT);

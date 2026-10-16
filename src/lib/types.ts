@@ -188,6 +188,12 @@ export type ConfigLayer = {
   answers?: Answers;
   projectsDir?: string;
   archiveHome?: string;
+  /**
+   * `config.json` only: the `you` answers the global files were last rendered from (init-command
+   * D10). A record, not a layer: `mergeLayer` never reads it, so it is never a default and never
+   * reaches `configHash`. Absent from a file written before 2026-10-16.
+   */
+  globalAnswers?: Answers;
 };
 
 export type Cli = {

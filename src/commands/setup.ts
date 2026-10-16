@@ -59,7 +59,7 @@ export async function runSetup(cli: Cli): Promise<number> {
   // prompter: under `--yes` that is `defaultsPrompter`, which would answer it `true` without a
   // person ever seeing it — a confirm in name only. `confirmBatch` returns early where there is
   // no TTY, so this is never asked of a terminal that is not there.
-  return finish(cli, changes, clackPrompter(), hidden);
+  return endRun(await finish(cli, changes, clackPrompter(), hidden));
 }
 
 /**
@@ -252,7 +252,11 @@ function archiveFor(answers: Answers, repoName: string): string {
   return raw.replaceAll('<repo>', repoName);
 }
 
-async function planEverything(
+/**
+ * Every target's context, rendered and resolved into one plan. Exported for `init` (init-command
+ * BD-8), its second caller, which hands it the one folder it plans; `runSetup` is the first.
+ */
+export async function planEverything(
   config: Config,
   answers: Answers,
   repos: RepoPlan[],
@@ -314,19 +318,6 @@ function modelsFrom(answers: Answers, config: Config): Config['models'] {
 }
 
 /**
- * The end of a run: preview, confirm, write — or decline and write nothing. The decline is the
- * one path that must never reach `commitPlan`, and it was the one path nothing drove end to end,
- * because a terminal run cannot be driven from a test: clack reads raw key input that a pipe
- * does not satisfy.
- *
- * So this carries an `export` it has no production caller for. It is an internal seam, not API —
- * the bin in `src/cli.ts` is this package's only public surface and nothing here widens it. No
- * restructuring was needed to open it: every input the decline depends on is already a
- * parameter, including the prompter, and the one thing it reads from the world outside them is
- * `process.stdin.isTTY`, which a test can define over. `tests/decline-seam.test.ts` is the
- * caller, and what it pins is that the confirm happens at all — see `confirmBatch` below.
- */
-/**
  * Check if any repo has a tier ceiling that would be overridden by global availableModels.
  * Warns the user but does not edit the global file — that is the person's call (F2, F4).
  */
@@ -355,12 +346,30 @@ async function checkTierCeilingOverrides(changes: PlannedChange[]): Promise<stri
   ].join('\n');
 }
 
+/**
+ * The end of a run: preview, confirm, write — or decline and write nothing. The decline is the
+ * one path that must never reach `commitPlan`, and it was the one path nothing drove end to end,
+ * because a terminal run cannot be driven from a test: clack reads raw key input that a pipe
+ * does not satisfy.
+ *
+ * So this carries an `export` it has no production caller for. It is an internal seam, not API —
+ * the bin in `src/cli.ts` is this package's only public surface and nothing here widens it. No
+ * restructuring was needed to open it: every input the decline depends on is already a
+ * parameter, including the prompter, and the one thing it reads from the world outside them is
+ * `process.stdin.isTTY`, which a test can define over. `tests/decline-seam.test.ts` is the
+ * caller, and what it pins is that the confirm happens at all — see `confirmBatch` below.
+ *
+ * It returns how the run ended and does not end it. Whether that ending retires `setup`'s
+ * checkpoint is its caller's decision (init-command BD-4): `runSetup` passes the outcome to
+ * `endRun`, and `init`, which keeps no checkpoint, must not discard an unfinished `setup` run
+ * by reaching its own end (init-command F10).
+ */
 export async function finish(
   cli: Cli,
   changes: PlannedChange[],
   prompter: Prompter,
   hidden: HiddenFile[] = [],
-): Promise<number> {
+): Promise<RunOutcome> {
   // `willWrite`, not a contents comparison of its own: a hook whose bytes are already current
   // but whose executable bit is missing is a file to write, and a local filter here would have
   // reported it as current and returned before `commitPlan` could repair it.
@@ -381,11 +390,11 @@ export async function finish(
 
   if (cli.dryRun) {
     say('\n--dry-run: nothing was written.');
-    return endRun('dry-run');
+    return 'dry-run';
   }
   if (real.length === 0) {
     say(guarded.length > 0 ? '\nNothing left to write.' : '\nEverything is already current.');
-    return endRun('already-current');
+    return 'already-current';
   }
 
   // Declining the preview keeps the checkpoint on purpose, so say so rather than implying the
@@ -394,7 +403,7 @@ export async function finish(
     say(cancelMessage());
     const hookHelp = declinedHookHelp(changes.map((c) => c.file));
     if (hookHelp !== null) say(hookHelp);
-    return endRun('declined');
+    return 'declined';
   }
 
   const result = await commitPlan(changes);
@@ -405,7 +414,7 @@ export async function finish(
     );
   }
   await copyPart0(changes);
-  return endRun('written');
+  return 'written';
 }
 
 /**

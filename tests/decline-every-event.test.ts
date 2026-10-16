@@ -15,6 +15,7 @@ import {
   claudeSkillsDir,
   contractHome,
 } from '../src/lib/paths.ts';
+import type { RunOutcome } from '../src/lib/resume.ts';
 import type { Answers, PlannedFile } from '../src/lib/types.ts';
 import { resolvePlan } from '../src/lib/write-plan.ts';
 import { declinedHookHelp } from '../src/render/hooks.ts';
@@ -164,14 +165,16 @@ describe('a declined run hands over every event the planned merge holds', () => 
   });
 });
 
-async function captured(run: () => Promise<number>): Promise<{ code: number; out: string }> {
+async function captured(
+  run: () => Promise<RunOutcome>,
+): Promise<{ ended: RunOutcome; out: string }> {
   const lines: string[] = [];
   const original = console.log;
   console.log = (...args: unknown[]) => {
     lines.push(args.map(String).join(' '));
   };
   try {
-    return { code: await run(), out: lines.join('\n') };
+    return { ended: await run(), out: lines.join('\n') };
   } finally {
     console.log = original;
   }
@@ -188,11 +191,11 @@ describe("through setup's own decline", () => {
       const repo = testRepoPlan({ scan: testScan({ path: dir, kind: 'folder' }) });
       const changes = await resolvePlan(await renderAll(testContext(EVERY, repo)));
       const { prompter } = recordingPrompter([false, false]);
-      const { code, out } = await captured(() =>
+      const { ended, out } = await captured(() =>
         withTty(true, () => finish(parseCli(['setup']), changes, prompter)),
       );
 
-      expect(code).toBe(0);
+      expect(ended).toBe('declined');
       expect(out).toContain(cancelMessage());
       expect(out).toContain('  "PreToolUse": [');
       expect(out).toContain('  "PostToolUse": [');

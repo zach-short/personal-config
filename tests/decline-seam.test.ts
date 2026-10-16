@@ -6,6 +6,7 @@ import { finish } from '../src/commands/setup.ts';
 import { parseCli } from '../src/lib/args.ts';
 import { cancelMessage } from '../src/lib/ask.ts';
 import { claudeHooksDir, claudeSettingsFile } from '../src/lib/paths.ts';
+import type { RunOutcome } from '../src/lib/resume.ts';
 import type { PlannedChange } from '../src/lib/write-plan.ts';
 import { declinedHookHelp } from '../src/render/hooks.ts';
 import { cleanup, recordingPrompter, tempDir, withTty } from './helpers.ts';
@@ -51,14 +52,16 @@ async function settingsNow(): Promise<string | null> {
  * to read what a declined run told the person — and what it said is half the contract. The other
  * half is that no file appeared, which is the assertion that actually protects someone's repo.
  */
-async function captured(run: () => Promise<number>): Promise<{ code: number; out: string }> {
+async function captured(
+  run: () => Promise<RunOutcome>,
+): Promise<{ ended: RunOutcome; out: string }> {
   const lines: string[] = [];
   const original = console.log;
   console.log = (...args: unknown[]) => {
     lines.push(args.map(String).join(' '));
   };
   try {
-    return { code: await run(), out: lines.join('\n') };
+    return { ended: await run(), out: lines.join('\n') };
   } finally {
     console.log = original;
   }
@@ -85,12 +88,12 @@ describe('the decline path, through the seam that makes it drivable', () => {
     const settings = await settingsNow();
     try {
       const { prompter, asked } = recordingPrompter([false, false]);
-      const { code, out } = await captured(() =>
+      const { ended, out } = await captured(() =>
         withTty(true, () => finish(parseCli(['setup']), plan, prompter)),
       );
       const help = declinedHookHelp(plan.map((c) => c.file)) ?? '';
 
-      expect(code).toBe(0);
+      expect(ended).toBe('declined');
       expect(asked.map((a) => a.message)).toEqual([
         'Show the per-file diff first?',
         'Write these 3 file(s)?',
@@ -121,11 +124,11 @@ describe('the decline path, through the seam that makes it drivable', () => {
     const plan = [newFile(doc, 'generated\n'), newFile(GUARD, '#!/bin/sh\n')];
     try {
       const { prompter } = recordingPrompter([false, true]);
-      const { code, out } = await captured(() =>
+      const { ended, out } = await captured(() =>
         withTty(true, () => finish(parseCli(['setup']), plan, prompter)),
       );
 
-      expect(code).toBe(0);
+      expect(ended).toBe('written');
       expect(out).toContain('Wrote 2 file(s).');
       expect(out).not.toContain(cancelMessage());
       expect(existsSync(doc)).toBe(true);
@@ -150,11 +153,11 @@ describe('the decline path, through the seam that makes it drivable', () => {
     const plan = [newFile(doc, 'generated\n')];
     try {
       const { prompter, asked } = recordingPrompter([false, false]);
-      const { code, out } = await captured(() =>
+      const { ended, out } = await captured(() =>
         withTty(true, () => finish(parseCli(['setup', '--yes']), plan, prompter)),
       );
 
-      expect(code).toBe(0);
+      expect(ended).toBe('declined');
       expect(asked).toHaveLength(2);
       expect(out).toContain(cancelMessage());
       expect(out).not.toContain('Wrote 1 file(s).');

@@ -27,6 +27,11 @@ export function asConfigLayer(parsed: unknown, from: string): ConfigLayer {
   if (parsed.archiveHome !== undefined) {
     layer.archiveHome = asString(parsed.archiveHome, 'archiveHome', from);
   }
+  // Narrowed like `answers`, so a hand-edited record is refused by field rather than trusted.
+  // `mergeLayer` leaves it out of `Config`, which is what keeps it out of the merge and the hash.
+  if (parsed.globalAnswers !== undefined) {
+    layer.globalAnswers = asAnswers(parsed.globalAnswers, from, 'globalAnswers');
+  }
   return layer;
 }
 
@@ -83,12 +88,12 @@ function asModels(value: unknown, from: string): Partial<ModelTiers> {
   return models;
 }
 
-function asAnswers(value: unknown, from: string): Answers {
-  if (!isRecord(value)) throw new Error(problem(from, 'answers', 'an object'));
+function asAnswers(value: unknown, from: string, field = 'answers'): Answers {
+  if (!isRecord(value)) throw new Error(problem(from, field, 'an object'));
   const answers: Answers = {};
   for (const [key, answer] of Object.entries(value)) {
     if (!isAnswerValue(answer)) {
-      throw new Error(problem(from, `answers.${key}`, 'a string, boolean or list of strings'));
+      throw new Error(problem(from, `${field}.${key}`, 'a string, boolean or list of strings'));
     }
     answers[key] = answer;
   }
