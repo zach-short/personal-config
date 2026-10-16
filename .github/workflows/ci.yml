@@ -107,6 +107,26 @@ jobs:
           # Written as an explicit failure, not `grep -qv`: that succeeds whenever any one line
           # lacks the word, which is every multi-line output, and so asserts nothing.
           if grep -q 'TypeError' cmd.txt flag.txt; then echo "a stack trace reached the user"; exit 1; fi
+      # `init` must write one folder's files and leave the global ones alone (init-command D2).
+      # `bun test` proves that for the TypeScript under bun; only the installed bundle under Node
+      # proves it for the copy a person runs. `setup` runs for real first, because `init` refuses
+      # without the config.json it saves (D3). The checksums cover every file under ~/.claude and
+      # config.json, so a write there that changed nothing on screen still fails the step.
+      - name: setup, then init and doctor in a scratch folder
+        run: |
+          set -eo pipefail
+          mkdir -p probe/empty-projects
+          personal-config setup --profile starter --yes --projects-dir probe/empty-projects
+          test -f "$HOME/.config/personal-config/config.json"
+          find "$HOME/.claude" "$HOME/.config/personal-config/config.json" -type f -exec sha256sum {} + | sort > before.txt
+          mkdir scratch
+          (cd scratch && personal-config init --yes)
+          for f in CLAUDE.md HANDOFF.md PASSOFF.md .personal-config.json docs/AGENT-PRACTICES.md; do
+            test -f "scratch/$f" || { echo "init did not write $f"; exit 1; }
+          done
+          find "$HOME/.claude" "$HOME/.config/personal-config/config.json" -type f -exec sha256sum {} + | sort > after.txt
+          diff before.txt after.txt || { echo "init changed a file under ~/.claude or config.json"; exit 1; }
+          cd scratch && personal-config doctor .
 
   # CLAUDE.md's own rule for `standard/`: "byte-for-byte except its version line." Nothing before
   # this enforced it — a content edit that forgot to bump `standard/VERSION` and note itself in

@@ -1,6 +1,8 @@
 # PLAN: `personal-config init`
 
-**Status:** `PLANNED` 2026-10-16. GATE 2 answered the same day, every recommendation taken (§7).
+**Status:** `BUILT` 2026-10-16: all three phases, by board items 102, 103 and 104. Phase 3's CI
+step is written, not seen running (R10). `PLANNED` 2026-10-16, GATE 2 answered the same day,
+every recommendation taken (§7).
 Written by board item 86 at `0214402`. Design: `DESIGN.md`, `RATIFIED` 2026-10-05 (`D1` to `D9`),
 amended at GATE 2 (`D10`, `D11`). This plan authorizes the three phases below without a further
 approval each. They are board items 102, 103 and 104.
@@ -218,7 +220,27 @@ or the no-write check passes while the real `~/.claude` is the one written.
 
 ### Phase 3. Documentation, the global-install proof, CI
 
-**Status:** `PLANNED`.
+**Status:** `BUILT` 2026-10-16 by board item 104, on `4581e81`; Zach commits, so the hash is the
+commit that takes this phase's `README.md`, `CHANGELOG.md` and `.github/workflows/ci.yml`. Gates,
+load average 3.39: `typecheck` exit 0; `lint` 191 files, exit 0; `bun test` 1772 pass, 0 fail, 96
+files, exit 0. `doctor . examples` exits 1 on the same 20 findings items 102 and 103 recorded, none
+in a file this phase touched. The hand-run proof in scope item 4 passes, and item 104's close-out
+quotes it. CI step written, not seen running (R10): Zach pushes.
+
+*As built:* the proof's `PATH` is `<temp>/prefix/bin:<temp>/nodebin:/usr/bin:/bin`, where
+`<temp>/nodebin` holds one symlink to `node`. On this machine `node` and `bun` are both in
+`/opt/homebrew/bin` (`which -a node bun`), so the `PATH` scope item 4 names finds no `node`, and
+adding that directory would put `bun` back. Each command ran under `env -i`, so `PATH` and `HOME`
+were the only variables set; `src/lib/paths.ts:11` reads `HOME` and no other. The CI step does
+more than scope item 3 names: it takes a checksum of every file under `~/.claude` and of
+`config.json` before and after `init` and fails on any difference, and it checks that five of the
+files `init` writes exist, because the job's own comment asks for assertions on what ran and not
+on the exit code alone. It passes `--projects-dir probe/empty-projects`, the folder an earlier step
+of the job creates. Run locally as written (`env -i`, a fresh home, macOS bash 3.2, Node 26.12.0)
+it exits 0, and with a `touch` under `~/.claude` planted after `init` it exits 1. The README's
+`init` section has five paragraphs where scope item 1 asks for one, because the folder layer, the
+track notice and the refusals each change what a person sees. The CHANGELOG entry also records
+D10's `globalAnswers` key, which item 102 shipped with no entry.
 
 **Scope**
 
@@ -268,6 +290,12 @@ DIAL-2 and DIAL-3 refusals and the DIAL-4 notice is `DESIGN.md` D11.
 
 - **CI has not run since 2026-10-05.** `origin/main` is `c334832`, 19 commits behind `HEAD`
   (S2). Phase 3's CI proof waits on a push of everything before it.
+  *Found 2026-10-16 by board item 104:* the pushed run's `gates` job will fail on both runners
+  whatever this effort does. `docs/incomplete/worktree-sweep/SCOPE.md`, tracked since `f378ab4`,
+  holds three `relative-dates` findings (`:62`, `:101`, `:122`), and a copy of `git ls-files` with
+  this phase's three files laid over it reports exactly those three from `doctor . examples`. The
+  `node-install` job needs only `pack`, so it still runs and can pass. No board item owns that
+  file. `origin/main` is 25 commits behind `HEAD` at `4581e81`.
 - **The golden file pins `setup`'s output.** `tests/golden/full-track.json` changes only for
   `config.json` (D10); any other moved entry is a defect.
 - **`finish` is shared** and is the confirm gate pinned by `tests/decline-seam.test.ts` (F10).

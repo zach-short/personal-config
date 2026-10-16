@@ -7,6 +7,30 @@ The CLI. The working standard it installs is versioned separately — see
 
 ### Added
 
+- **`personal-config init [path]`, which sets up one project with the answers `setup` saved.**
+  It configures the current directory, or the one folder you name, and writes only inside it:
+  the router, the standard, the ledger and the board or the project folders, the conventions
+  documents, the tier ceiling, `.personal-config.json`, the ignore lines and the Part 0 prompt.
+  It never writes `~/.claude` or `config.json`. A file it overwrites in the folder is backed up
+  as usual, so `undo` works. It asks the three track questions (code or other work, the whole
+  method or the lighter setup, git or not), the discover questions for that folder and the
+  practices questions, and takes every other answer from `~/.config/personal-config/config.json`.
+  In a folder set up before, the folder's `.personal-config.json` gives the defaults, and your
+  saved answers about yourself outrank its copy of them. A folder set up by `init` and the same
+  folder set up by `setup` are the same bytes, stamps included, which
+  `tests/init-parity.test.ts` pins for a git repo and a plain folder. It refuses before the
+  first question without a saved config, in the home directory, in a folder holding two or more
+  git repos one level down (and names the `setup` command for it), with more than one path, with
+  a path that is not a directory, and with `--from` or `--projects-dir`. When the folder's track
+  differs from the one the global files were written for, it says so in one line and changes
+  nothing. It looks up the GitHub login only for a folder that is a git repo, so the program
+  still makes two network calls and no others. For that line, `setup` now records the `you`
+  answers it rendered the global files from in `config.json`, under `globalAnswers`, beside
+  `answers`. No merge and no stamp hash reads it, so every other file `setup` writes is
+  unchanged. A `config.json` written by 0.8.0 or earlier has no `globalAnswers`, and `init` then
+  prints no notice. The README now shows `npm install -g personal-config`, and the CI job that
+  installs the packed tarball on Node with no Bun on `PATH` now runs a real `setup`, then
+  `init --yes` and `doctor .` in a scratch folder.
 - **`/audit`, an eighth workflow skill, and an "audit first" option in `/autopilot`.** `/audit`
   runs the lanes a repo names in its own `docs/audit-lanes.md`, one lane at a time: a sweep, a
   triage that drops known false positives and anything an earlier audit already found, and a

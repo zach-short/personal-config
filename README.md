@@ -18,7 +18,13 @@ The hook scripts are bash, so on Windows they need WSL or Git Bash. The two guar
 npx personal-config setup
 ```
 
-`bunx personal-config setup` works the same way. To run from a clone, which is also how you run this repo's own tests, install [Bun](https://bun.sh) 1.2.9 or newer:
+`bunx personal-config setup` works the same way. To install it once and run it by name in any folder, install it globally with npm:
+
+```bash
+npm install -g personal-config
+```
+
+To run from a clone, which is also how you run this repo's own tests, install [Bun](https://bun.sh) 1.2.9 or newer:
 
 ```bash
 git clone https://github.com/zach-short/personal-config
@@ -27,11 +33,12 @@ bun install
 bun run setup
 ```
 
-The rest of this file writes commands as `personal-config <command>`. Without a global install, put `npx` in front, or from a clone run `bun run src/cli.ts <command>`. The commands that act on one repo read the current directory. `doctor` and `upgrade` also accept paths. `personal-config --help` lists every command and flag, and `personal-config --version` prints the installed version.
+The rest of this file writes commands as `personal-config <command>`, which is how a global install runs them. Without a global install, put `npx` in front, or from a clone run `bun run src/cli.ts <command>`. The commands that act on one repo read the current directory. `doctor` and `upgrade` also accept paths, and `init` accepts one. `personal-config --help` lists every command and flag, and `personal-config --version` prints the installed version.
 
 | Command | What it does |
 |---|---|
 | `setup` | Asks, previews, then writes |
+| `init [path]` | Sets up one project with the answers `setup` saved |
 | `doctor` | Checks what the documents claim against what is there |
 | `upgrade` | Lists what changed in the standard since a repo adapted its copy |
 | `undo` | Restores the files the last run overwrote |
@@ -109,7 +116,7 @@ See [`examples/`](examples) for a filled ledger, board, archive index and Part 0
 - A wrong answer is fixable in place. `← back` re-asks the previous question instead of making you finish the run and start another, and the correction replaces the answer it corrects, so an interrupted run resumes with the answer you meant.
 - An interrupted run is picked up, not retyped. Each answer is written to `~/.config/personal-config/run.json` as you give it, so `Ctrl+C` on question twenty costs that one question. The next `setup` offers to resume and says how many answers it found and when. Decline and the file is deleted. A run that writes files, or finds nothing to write, deletes it too. A dry run or a declined preview keeps it, so a second run does not make you retype. A checkpoint from a different version is discarded. It is a scratch file and not your saved config, and nothing in it becomes a default until a run completes.
 - Re-running replaces what the tool wrote and touches nothing else. Every generated file carries a stamp that names the version, the date, a hash of your answers and the standard version. A file at one of those paths without that stamp, or with one marked `adapted`, is left alone and named in the run's report.
-- The program makes two network calls and no others. The first is `gh api user`, to find your GitHub login. It runs only while `setup` is choosing projects, only if `gh` is installed, and not at all when the profile already names a login. The second is the fetch behind `setup --from <url|id>`, which happens only when you pass that flag and sends nothing but the request. Your answers are never uploaded by this tool.
+- The program makes two network calls and no others. The first is `gh api user`, to find your GitHub login. It runs only while `setup` is choosing projects or `init` is setting up a folder that is a git repo, only if `gh` is installed, and not at all when the profile already names a login. The second is the fetch behind `setup --from <url|id>`, which happens only when you pass that flag and sends nothing but the request. Your answers are never uploaded by this tool.
 
 A stamp looks like this:
 
@@ -153,6 +160,25 @@ Known limitation: Claude Code concatenates and deduplicates `availableModels` ac
 Known bug in 0.7.0: a ceiling chosen at the prompt is recorded on the repo's plan but is not passed to the renderers, so steps 2 to 4 above do not happen. The ceiling is applied when `tierCeiling` is already an answer in a profile or a `--from` file. With `{ "answers": { "tierCeiling": "default" } }` in that file, `setup --yes --dry-run` lists `settings.local.json` in its preview.
 
 See [`docs/choices/tier-ceiling.md`](docs/choices/tier-ceiling.md) for the full options and their trade-offs.
+
+## `init`
+
+```bash
+personal-config setup               # once on a machine: your answers and the global files
+cd ~/code/new-app
+personal-config init                # then once in each new project
+personal-config init ~/code/other   # or give it the folder
+```
+
+`setup` and `init` differ in what they write. `setup` asks every question, writes the files in `~/.claude` that every project shares, saves your answers to `~/.config/personal-config/config.json`, and sets up the projects it finds one level below a projects directory. `init` sets up one folder, the current directory or the one path you give it, and writes only inside that folder. Run `setup` the first time you use the tool on a machine, and again when you want to change an answer about yourself, such as who runs `git commit` or your model tiers. Run `init` in each project you start or clone after that.
+
+`init` asks the three questions that belong to the folder: code or other work, the whole method or the lighter setup, and whether the work is kept in git. Then it asks the discover questions for that one folder, without the projects directory, and the practices questions. Your answers about yourself come from the saved config and are not asked again. In a folder that was set up before, its `.personal-config.json` supplies the defaults, so running `init` again is how you change one of the folder's answers. Your saved answers about yourself still outrank the copy of them in that file, which may be older.
+
+It writes the folder's own files from the table above, and nothing in `~/.claude` or `config.json`. Its one write outside the folder is the backup of any file it overwrites, under `~/.config/personal-config/backups/`, which is what lets `personal-config undo` put that file back. The preview, the confirm, `--yes`, `--dry-run` and the Part 0 prompt on the clipboard work as they do in `setup`.
+
+Because `init` leaves the global files alone, a folder can sit on a different track from them. A folder of documents on a machine set up for code work gets the short standard, while `~/.claude` keeps the code rules and skills. When the folder's three answers differ from the ones your global files were written from, `init` says so in one line and changes nothing. Run `setup` to rewrite the global files for another track. A `config.json` saved by 0.8.0 or earlier holds no record of those answers, so `init` prints no such line until `setup` runs again with a later version.
+
+`init` stops before its first question, with one line saying why, when there is no saved config yet, when the target is your home directory, and when the target holds two or more git repos one level down. That last one is a projects directory, which is `setup`'s job, and the line names the `setup` command to run. It also stops when it is given more than one path, a path that is not a directory, or `--from` or `--projects-dir`, which are `setup`'s flags.
 
 ## `doctor`
 

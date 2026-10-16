@@ -2,7 +2,9 @@
 
 **Status:** `RATIFIED` 2026-10-05: GATE 1 answered the same day, every recommendation taken (§9).
 Opened 2026-10-05 as `SCOPE.md` (`SCOPING`), committed at `c334832`, and renamed to `DESIGN.md` on
-2026-10-16 by board item 86, which wrote the answers in as `D1` to `D9` and the GATE 2 amendments `D10` and `D11` (§3). Owner: Zach. One
+2026-10-16 by board item 86, which wrote the answers in as `D1` to `D9` and the GATE 2 amendments `D10` and `D11` (§3).
+Built 2026-10-16 by board items 102, 103 and 104 (`PLAN.md` §2); the CI step is written, not seen
+running. Owner: Zach. One
 repo, `personal-config`. The scope was written at `8bdf8bb` (`cut 0.8.0`); the plan re-verifies it
 at `0214402` (`PLAN.md` §0).
 
@@ -111,6 +113,12 @@ under `~/.config/personal-config/backups/`, which is what lets `undo` restore it
 always has one: `git init` writes a default `.git/info/exclude`, and an untracked target edits it.
 `~/.claude` and `config.json` are unchanged, and `tests/init-parity.test.ts` pins both halves.
 
+*As built, 2026-10-16 (board item 104):* the packed bundle under Node keeps D2 as well. Installed
+with `npm install -g --prefix` into a temp prefix and run with only `PATH` and `HOME` set, `init
+--yes` wrote seven files in a scratch folder, and the eight files under the temp home had the same
+`shasum -a 256` before and after it. The `node-install` CI job checks the same on Node 20, 22 and
+24 (`PLAN.md` Phase 3).
+
 **D3. Without `~/.config/personal-config/config.json`, `init` stops before it asks anything.** It
 prints the copy settled at GATE 1 (Q5, plain register):
 
@@ -181,6 +189,13 @@ mitigation. *Supersedes:* nothing. *Date:* 2026-10-05.
 command the README does not mention answers it for nobody. *Source:* §2. *Supersedes:* nothing.
 *Date:* 2026-10-05.
 
+*As built, 2026-10-16 (board items 103 and 104):* the `--help` line is BD-9's (item 103).
+`README.md` shows `npm install -g personal-config` under the `npx` line (`:24`), lists
+`init [path]` in the command table (`:41`), says `init` accepts one path, and has an `init`
+section (`:164`) on when to run `setup` and when `init`, what `init` asks and writes, the track
+notice and the refusals. It names the cases the refusals cover and quotes none of them.
+`CHANGELOG.md` has one entry under Unreleased, which also records D10's `globalAnswers` key.
+
 ### Amendments, GATE 2, 2026-10-16
 
 **D10. `setup` records the `you` answers it rendered the global files from.** They go under one
@@ -211,6 +226,13 @@ global files stay the same; its `config.json` gains the one key, and the `config
 *Defense.* R7: the owner picks user-facing copy, and the warm and terse variants are in
 `PLAN.md` §7. *Supersedes:* nothing. *Date:* 2026-10-16.
 
+*As built, 2026-10-16 (board item 104):* the other three refusals, which BD-2 runs first and no
+decision gave words, keep the copy item 103 wrote in the shape of `checkUsage`
+(`src/lib/args.ts`): "personal-config: init does not take --{flag}. It sets up one folder with your
+saved answers.", "personal-config: init sets up one folder, and was given {n} paths." and
+"personal-config: {path} is not a directory." Zach chose to keep them on 2026-10-16 (R7), over a
+variant in this decision's shape with a next step in each, and a terse one.
+
 ## 4. Rules that survive unchanged
 
 The build changes none of these. A phase that finds it must change one stops and asks (R12).
@@ -236,7 +258,10 @@ The build changes none of these. A phase that finds it must change one stops and
 - **The merge order of `loadConfig`** for every command that already calls it.
 - **`doctor`, `upgrade` and `undo`.** They work on a folder `init` set up exactly as on one
   `setup` set up, with no change to their code.
-- **The two network calls** listed at `README.md:112`, and no third.
+- **The two network calls** listed at `README.md:112`, and no third. *As built, 2026-10-16 (board
+  item 104):* the sentence, now at `README.md:119`, names `init`: the login lookup runs while
+  `setup` is choosing projects or `init` is setting up a folder that is a git repo (BD-5). It still
+  names two calls.
 
 ## 5. Options
 
