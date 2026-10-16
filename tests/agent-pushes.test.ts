@@ -30,7 +30,10 @@ const CODE_FULL_GIT: Answers = {
   skills: 'all',
 };
 
-const MAY_PUSH = 'Claude may run `git add`, `git commit` and `git push`.';
+const MAY_PUSH =
+  'Claude may run any git command, including `git add`, `git commit`, `git merge` and `git push`.';
+/** The line before the owner's statement of 2026-10-16 that git is Claude's to run in full. */
+const THREE_VERBS = 'Claude may run `git add`, `git commit` and `git push`.';
 const BAN = 'Never run `git commit`';
 
 async function render(overrides: Answers): Promise<PlannedFile[]> {
@@ -84,6 +87,18 @@ describe('agent-pushes writes a permission, not a ban', () => {
     const standard = files.find((f) => f.contents.includes('# Part 11 — Owner policy'));
     expect(standard?.contents).toContain('**The agent may commit and push.**');
     expect(standard?.contents).not.toContain('**Commits are the owner’s.**');
+  });
+
+  test('violates the three-verb line: every rendered copy names any git command', async () => {
+    const files = await render({ commitPolicy: 'agent-pushes' });
+    const rendered = files.map((f) => f.contents).join('\n');
+    expect(rendered).not.toContain(THREE_VERBS);
+    const carriers = files
+      .filter((f) => f.contents.includes(MAY_PUSH))
+      .map((f) => basename(f.path));
+    expect(carriers).toEqual(expect.arrayContaining(['commits.md', 'CLAUDE.md']));
+    const standard = files.find((f) => f.contents.includes('# Part 11 — Owner policy'));
+    expect(standard?.contents).toContain(MAY_PUSH);
   });
 });
 

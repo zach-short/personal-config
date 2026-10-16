@@ -84,7 +84,8 @@ function commitBody(policy: string): string {
  * One line and no ban (the owner's answer of 2026-10-16). It writes no commit guard either
  * (`wantedHooks` in `hooks.ts`), so nothing enforces the cautions the other two bodies carry.
  */
-const AGENT_PUSHES = 'Claude may run `git add`, `git commit` and `git push`.\n';
+const AGENT_PUSHES =
+  'Claude may run any git command, including `git add`, `git commit`, `git merge` and `git push`.\n';
 
 const PRINT_BLOCKS = `**Never run \`git commit\` or \`git push\`.** I commit myself.
 

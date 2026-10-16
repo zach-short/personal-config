@@ -192,7 +192,7 @@ export function targetAnswers(answers: Answers, repo: RepoPlan | null): Answers 
 export function commitRuleLine(answers: Answers): string {
   const policy = answers.commitPolicy;
   if (policy === 'agent-pushes')
-    return 'Claude may run `git add`, `git commit` and `git push`.';
+    return 'Claude may run any git command, including `git add`, `git commit`, `git merge` and `git push`.';
   if (policy === 'agent-commits')
     return 'Commit in small slices; never `git push`, never `git add -A`.';
   if (policy === 'no-rule') return '';

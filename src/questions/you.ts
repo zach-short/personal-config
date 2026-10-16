@@ -113,7 +113,7 @@ export const YOU_QUESTIONS: Question[] = [
         value: 'agent-pushes',
         label: 'The agent may commit and push',
         example:
-          'Agent runs `git add`, `git commit` and `git push`; no commit guard is installed',
+          'Agent runs any git command, push and merge included; no commit guard is installed',
         recommended: false,
       },
       {

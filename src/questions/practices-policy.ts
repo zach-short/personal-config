@@ -145,7 +145,7 @@ const COMMIT_POLICY: PracticeArea = {
   policy: (value) => {
     if (value === 'no-rule' || value === 'none') return null;
     if (value === 'agent-pushes') {
-      return '**The agent may commit and push.** Claude may run `git add`, `git commit` and `git push`.';
+      return '**The agent may commit and push.** Claude may run any git command, including `git add`, `git commit`, `git merge` and `git push`.';
     }
     if (value === 'agent-commits') {
       return '**The agent may commit, never push.** Commit early, in small slices — after each leg lands, not once at the end. Never `git add -A`, never `git add .`: it sweeps up another session’s in-flight work. `git add -N` first for any file git has never seen — `--only` silently drops untracked paths, and the commit still typechecks. After a split commit, build HEAD in isolation before it is pushed: gates run against the working tree, so a partial commit can leave the branch unbuildable while the tree is green. Pushing is the owner’s.';

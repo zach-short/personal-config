@@ -12,8 +12,9 @@ The CLI. The working standard it installs is versioned separately — see
   allows one commit shape and blocks every push. There was no answer that let the agent commit
   and push, so a person who removed the guard and the rule by hand had both written back by the
   next `setup` run. Under `agent-pushes`, `~/.claude/rules/commits.md` holds one line, that the
-  agent may run `git add`, `git commit` and `git push`, plus the attribution rule your
-  attribution answer controls. Each repo's router and Part 11 of its standard say the same.
+  agent may run any git command, including `git add`, `git commit`, `git merge` and `git push`,
+  plus the attribution rule your attribution answer controls. Each repo's router and Part 11 of
+  its standard say the same.
   No commit guard and no `commit-policy` file are installed, whatever the hooks answer, so the
   discard commands the guard blocks under every other policy (`git stash`, `git restore`,
   `git reset --hard` and the rest) are not blocked either. A run with this answer removes a

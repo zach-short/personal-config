@@ -30,8 +30,9 @@ without you, so the blast radius is one `git reset`.
 wrong file is just as destructive whether an agent or a person runs it. And a rewritten history
 is a worse recovery than a missing commit.
 
-**The agent may commit and push.** The rule file holds one line: the agent may run `git add`,
-`git commit` and `git push`. No commit guard is installed, whatever you answer to `hooks`.
+**The agent may commit and push.** The rule file holds one line: the agent may run any git
+command, including `git add`, `git commit`, `git merge` and `git push`. No commit guard is
+installed, whatever you answer to `hooks`.
 
 *The defense.* Some people work in one session per checkout, review on the remote, and want the
 agent to finish the job. Under the other answers that person removes the guard by hand and
@@ -104,7 +105,8 @@ is written, even if you chose the hook. If an earlier run installed them, this r
 `commit-guard.sh`, `commit-policy` and the guard's `PreToolUse` entry in `settings.json`, and
 lists each removal in the preview. Other hooks you chose (the banner, the completion gate, the
 delete guard for non-code work) are written as before. In each repo's router and standard the
-commit line says the agent may run `git add`, `git commit` and `git push`.
+commit line says the agent may run any git command, including `git add`, `git commit`,
+`git merge` and `git push`.
 
 **A later run removes the rule.** Answering "no rule" on a later run plans the removal of
 `~/.claude/rules/commits.md`. A removal only touches a file this tool stamped and you have not marked `adapted`; a file with no stamp, or an adapted one, is left alone and not listed. The hook script and its `settings.json` entry stay, because
