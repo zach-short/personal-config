@@ -56,8 +56,18 @@ function placeholders(ctx: RenderContext, mode: string): Record<string, string> 
     MODEL_DEEP: ctx.config.models.deep || 'unset',
     MODEL_DEFAULT: ctx.config.models.default || 'unset',
     MODEL_FAST: ctx.config.models.fast || 'unset',
+    MODEL_LIGHT: lightModel(ctx),
     DATE_MEASURED: '2026-08-16',
   };
+}
+
+/**
+ * Light is opt-in, so its absence is a setup choice and not a gap: `not configured`, where the
+ * three required tiers say `unset`. Part 4 names it in prose, so the sentence reads either way.
+ */
+function lightModel(ctx: RenderContext): string {
+  const name = ctx.config.models.light;
+  return answer(ctx, 'modelLightEnabled') === 'yes' && name ? name : 'not configured';
 }
 
 /** Part 11 is the one part the standard marks as editable preference — so we write it. */

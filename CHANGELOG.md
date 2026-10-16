@@ -77,6 +77,12 @@ The CLI. The working standard it installs is versioned separately — see
   way; its first line refuses a run that nobody typed. The `all` option of the skills question
   now names it.
 
+### Changed
+
+- **The standard is 2.1.0, and Part 4 reads the tiers from the bottom.** A writer stops at the
+  first row that fits, Default is the fallback, and an opt-in Light tier fills the new
+  `{{MODEL_LIGHT}}` placeholder or reads `not configured`. See `standard/CHANGELOG.md`.
+
 ## 0.8.0 — 2026-10-05
 
 ### Added

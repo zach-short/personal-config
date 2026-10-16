@@ -76,6 +76,26 @@ describe('renderers', () => {
     }
   });
 
+  test('the adapted standard names the Light model in Part 4 only when Light is on', async () => {
+    const dir = await tempDir();
+    try {
+      const partFour = async (modelLightEnabled: string) => {
+        const files = await planInto(dir, { ...DEFAULT_ANSWERS, modelLightEnabled });
+        const standard = files.find((f) => f.path.endsWith('AGENT-PRACTICES.md'));
+        expect(standard).toBeDefined();
+        return standard?.contents.split('# Part 4')[1]?.split('# Part 5')[0] ?? '';
+      };
+
+      expect(await partFour('yes')).toContain('**Light** (`Light Model`)');
+
+      const off = await partFour('no');
+      expect(off).toContain('**Light** (`not configured`)');
+      expect(off).not.toContain('{{MODEL_LIGHT}}');
+    } finally {
+      await cleanup(dir);
+    }
+  });
+
   test('solo mode cuts Part 12 and team mode keeps it', async () => {
     const dir = await tempDir();
     try {

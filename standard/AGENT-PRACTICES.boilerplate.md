@@ -20,7 +20,7 @@ here, and the adapted copy is built on the answer. If an installer put this file
 left a prompt saying which of Part 0's steps are already done; follow that prompt rather than
 this paragraph.
 
-**Standard version: 2.0.0**
+**Standard version: 2.1.0**
 
 **Adapted: not yet — run Part 0.**
 
@@ -516,14 +516,19 @@ pull-request step Part 11 specifies>.
 
 ## The driver — the model the session runs on
 
-**The discriminator is: can the failure be silent?** Not how big or how scary the work feels.
-Sizing by fear over-assigns the expensive tier.
+**The discriminator is: can the failure be silent?** Then: how much does the task have to find,
+and how much does it have to decide? Read the table from the bottom and stop at the first row
+that fits. Sizing by fear over-assigns the expensive tier.
 
 | Driver | Use for |
 |---|---|
-| **Deep** (`{{MODEL_DEEP}}`) | Only where a mistake compiles, passes every gate, and is wrong in production: money paths, cross-cutting dispatch rewrites, sync and merge rules, a notification that must never send. Prefer **one narrow Deep review of a short load-bearing path** over a whole Deep phase — and that review can be a subagent (below). |
-| **Default** (`{{MODEL_DEFAULT}}`) | The default and the right answer for most work. Anything where failure is loud — a build break, a red gate, a wrong screen — because the gates do that reasoning for you. Also fully-specified migrations: high stakes, low reasoning. |
-| **Mechanical** (`{{MODEL_FAST}}`) | Whole phases only when genuinely mechanical: close-out sweeps, ratchet edits, doc reconciliation, a bounded rename. Escalate to Default the moment a gate fails for a non-obvious reason. |
+| **Deep** (`{{MODEL_DEEP}}`) | Only where a mistake compiles, passes every gate and a person's test, and is wrong in production: money paths, sync and merge rules, a notification that must never send. Prefer **one narrow Deep review of a short load-bearing path** over a whole Deep phase. That review can be a subagent (below). |
+| **Default** (`{{MODEL_DEFAULT}}`) | The task has to find a cause or choose between designs, and a wrong answer would look right until a person tests it: a stale cache, a flow or auth change, a new shared primitive, a scope or design document, the lead of a multi-lane row. The fallback when no lower row fits, never the first pick. |
+| **Mechanical** (`{{MODEL_FAST}}`) | The change is clear but the task has to place it, or it spans several files, and the whole check is the gates and reading the output: the same fix on two platforms, a removal a grep proves safe, a copy move into a shared module, a sweep, a ratchet edit, doc reconciliation. Escalate to Default the moment a gate fails for a non-obvious reason. |
+
+**Light** (`{{MODEL_LIGHT}}`), where configured, sits below Mechanical: the task states the
+change and the place, nothing is found or chosen, and a gate or a picture shows a wrong result
+at once. A setup without it lands that work on Mechanical.
 
 Every phase or board item states its driver, and the close-out repeats it (Part 7, Block C) so
 the owner can set the model before opening the next session.
@@ -548,6 +553,8 @@ survives the boundary. The driver table is not the subagent table: Deep drives a
 the reasoning has to persist across edits, and reviews as a subagent when a verdict is all
 that is wanted. The same discriminator applies as above — a Deep subagent is warranted only
 where its subject's failure would be silent.
+
+A Light subagent, where configured, takes the Mechanical row's read-only jobs.
 
 Two rules from getting this wrong:
 
@@ -1185,6 +1192,7 @@ Three things that exist only in a team:
 | `{{MODEL_DEEP}}` | The deep-reasoning tier | Ask at GATE 0; it changes with releases |
 | `{{MODEL_DEFAULT}}` | The default tier | Ask at GATE 0 |
 | `{{MODEL_FAST}}` | The mechanical tier | Ask at GATE 0 |
+| `{{MODEL_LIGHT}}` | The light tier, or `not configured` | Ask at GATE 0 |
 | `{{DATE_MEASURED}}` | The date Part 5's budgets were set | `2026-08-16` if you inherit them; the date you revised them if a tier's model changed |
 | `{{WORKTREE_SETUP}}` | Fresh-checkout recipe | `.gitignore` + what the toolchain generates + install |
 | `{{BUILD_CMD}}` | Build, for the HEAD-isolation check | From the gates you verified in 0.1 |
