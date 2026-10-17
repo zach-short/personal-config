@@ -260,7 +260,9 @@ running in a terminal.
 
 ### Phase 3. README, CHANGELOG, board row
 
-**Status.** `PLANNED` 2026-10-16. Waits on Phase 2 being committed. The wait on the main checkout's
+**Status.** `BUILT` 2026-10-17. Wrote one paragraph in `README.md` after the `npx personal-config setup` block and one bullet under `## Unreleased`, `### Added` in `CHANGELOG.md`, both in the owner's words. The board row is the orchestrating session's. Facts checked against `src/cli.ts`, `src/lib/args.ts` and `src/commands/home.ts`. No version cut.
+
+Was: `PLANNED` 2026-10-16. Waits on Phase 2 being committed. The wait on the main checkout's
 edits to `README.md` and `CHANGELOG.md` is over: Zach said on 2026-10-16 that the main checkout no
 longer holds another session's edits to tracked files.
 

@@ -29,6 +29,14 @@ export function say(line = ''): void {
 }
 
 /**
+ * A line for stderr, past any sink. A command whose stdout is data (`passoff next --json`) sends
+ * its refusals here, so a reader that parses stdout never parses a sentence.
+ */
+export function sayError(line: string): void {
+  console.error(line);
+}
+
+/**
  * A titled block, as `p.note` draws it in a terminal. Behind a sink it is the title, then the
  * body, as two lines: the frame draws its own box, and clack's would sit inside it (BD-5).
  */

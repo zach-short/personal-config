@@ -7,6 +7,7 @@ The CLI. The working standard it installs is versioned separately — see
 
 ### Added
 
+- **A bare `personal-config` now opens a guided setup or a home screen.** In a terminal with no saved config, it runs setup inside a full-screen frame with a side rail of steps. With a saved config, it shows a summary and a short menu. A pipe or a script still gets the help text, and `personal-config setup` typed in full is unchanged. To skip the frame, type the command you want, such as `personal-config setup` or `personal-config help`.
 - **A fourth commit policy, "The agent may commit and push" (`agent-pushes`).** The other three
   answers all block something: only you and no rule block every commit, and the agent may commit
   allows one commit shape and blocks every push. There was no answer that let the agent commit
