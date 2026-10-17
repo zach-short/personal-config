@@ -223,6 +223,29 @@ describe('every track that installs hooks installs the gate', () => {
   });
 });
 
+/**
+ * Two numbers in two files that only work as a pair (board row 127). A hook the harness kills at
+ * the entry's `timeout` does not block, so the script's own limit has to run out first, with room
+ * for the scan and the kill. And the limit has to fit a real gate: on 2026-10-17 this repo's
+ * whole suite took 69 to 131 seconds on a green tree, the old limit of 100 timed out on every
+ * stop, and after 8 blocks the harness overrides the hook, so it checked nothing.
+ */
+describe('the gate runs out before the harness does, and fits a real suite', () => {
+  test('passes: the script blocks at its limit before the entry times out', async () => {
+    const script = await Bun.file(HOOK).text();
+    const fallback = [...script.matchAll(/LIMIT=(\d+)/g)].map((m) => Number(m[1]));
+    const limit = Number(/PERSONAL_CONFIG_GATE_TIMEOUT:-(\d+)/.exec(script)?.[1]);
+    const files = await renderHooks(testContext({ ...DEFAULT_ANSWERS, hooks: 'both' }));
+    const hooks = settings(files).hooks as Record<string, { hooks: { timeout: number }[] }[]>;
+    const timeout = hooks.Stop?.[0]?.hooks[0]?.timeout ?? 0;
+
+    expect(fallback.length).toBe(2);
+    expect(fallback.every((value) => value === limit)).toBe(true);
+    expect(timeout - limit).toBeGreaterThanOrEqual(20);
+    expect(limit).toBeGreaterThanOrEqual(2 * 131);
+  });
+});
+
 describe('the output-style answer reaches settings.json by the one merge', () => {
   test('violates the default: answering "act" writes the documented style name', async () => {
     const files = await renderHooks(

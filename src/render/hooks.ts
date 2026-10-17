@@ -300,11 +300,31 @@ export function hookEntries(): HookEntry[] {
     {
       // No matcher: `Stop` has no tool or source to match on. The timeout is generous because the
       // entry runs the repo's own gate command, and a hook killed at the timeout does not block —
-      // a suite slower than this is a gate that quietly never fires.
+      // a suite slower than this is a gate that quietly never fires. It sits 30 seconds above the
+      // script's own 300-second limit, so the script stops the gate and blocks before the harness
+      // kills it; `tests/hooks.test.ts` holds the two apart.
       name: 'completion-gate',
       event: 'Stop',
-      entry: { hooks: [{ type: 'command', command: gateCommand(), timeout: 120 }] },
+      entry: { hooks: [{ type: 'command', command: gateCommand(), timeout: 330 }] },
       scripts: [hookScript('completion-gate.sh')],
+    },
+  ];
+}
+
+/**
+ * Entries an earlier release wrote and no release writes now. The merge de-duplicates by exact
+ * JSON, so a changed entry lands beside its old copy, not over it; and Claude Code de-duplicates
+ * command hooks by their command string, so with both installed, which `timeout` applies is not
+ * documented. A run takes the old copy out, matched byte for byte like every leftover, so an
+ * entry a person edited stays theirs.
+ */
+function retiredEntries(): { event: string; entry: Record<string, unknown> }[] {
+  return [
+    // The completion gate's entry until 2026-10-17 (board row 127): 120 seconds, which a suite
+    // of 2039 tests did not fit.
+    {
+      event: 'Stop',
+      entry: { hooks: [{ type: 'command', command: gateCommand(), timeout: 120 }] },
     },
   ];
 }
@@ -377,9 +397,10 @@ function pruningLabel(contents: string, removed: number): string {
 /**
  * The entries of this tool's catalog that are in `~/.claude/settings.json` and that no planned
  * merge in `wanted` holds (setup-hook-leftovers BD-1, BD-4). Matched by `sameJson` under the
- * entry's own event key, so an entry a person edited by one byte is theirs and stays. A missing
- * file, or one that does not parse, gives nothing to prune: the merge then reports its own parse
- * error as it always has.
+ * entry's own event key, so an entry a person edited by one byte is theirs and stays. An entry
+ * an earlier release wrote (`retiredEntries`) is never wanted, so an exact copy of it always
+ * goes. A missing file, or one that does not parse, gives nothing to prune: the merge then
+ * reports its own parse error as it always has.
  */
 export async function hookLeftovers(wanted: PlannedFile[]): Promise<Prune[]> {
   const onDisk = await settingsOnDisk();
@@ -393,7 +414,7 @@ export async function hookLeftovers(wanted: PlannedFile[]): Promise<Prune[]> {
           (Array.isArray(entries) ? entries : []).map((entry: unknown) => ({ event, entry })),
         );
   });
-  return hookEntries()
+  return [...hookEntries(), ...retiredEntries()]
     .filter(
       ({ event, entry }) => !kept.some((k) => k.event === event && sameJson(k.entry, entry)),
     )

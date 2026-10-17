@@ -227,13 +227,16 @@ if [ -z "$gate" ]; then
   exit 0
 fi
 
-# Under the 120-second timeout `settings.json` gives this hook, because a hook the harness kills
+# Under the 330-second timeout `settings.json` gives this hook, because a hook the harness kills
 # does not block: the turn just ends, which is the open direction. So the gate gets less than
 # that, and running out is a block that says so. `PERSONAL_CONFIG_GATE_TIMEOUT` (seconds) moves it.
-LIMIT="${PERSONAL_CONFIG_GATE_TIMEOUT:-100}"
+# It was 100 until 2026-10-17, when one repo's whole suite took 69 to 131 seconds on a green tree:
+# every stop there timed out, and after 8 blocks the harness overrides the hook, which then checks
+# nothing. A limit a real gate cannot meet is a gate that is switched off.
+LIMIT="${PERSONAL_CONFIG_GATE_TIMEOUT:-300}"
 # A limit of 0 would block every stop before the gate could finish, so it is read as unset.
-case "$LIMIT" in "" | *[!0-9]*) LIMIT=100 ;; esac
-[ "$LIMIT" -gt 0 ] || LIMIT=100
+case "$LIMIT" in "" | *[!0-9]*) LIMIT=300 ;; esac
+[ "$LIMIT" -gt 0 ] || LIMIT=300
 
 # `eval`, because the value is a command line — `bun test`, `make check`, `npm run verify` — and
 # it comes from a file in the person's own repo, at the same trust level as the command they

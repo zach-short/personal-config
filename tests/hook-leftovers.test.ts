@@ -224,6 +224,56 @@ describe('a later run prunes the entries it no longer wants (D1)', () => {
   });
 });
 
+/**
+ * An entry an earlier release wrote, and no release writes now (board row 127). The merge keys on
+ * exact JSON, so the gate's new `timeout` would land beside the old one; Claude Code then keeps one
+ * of the two commands, and which timeout it keeps is not documented.
+ */
+describe('a later run retires the entries an earlier release wrote', () => {
+  function gateEntry(home: string, timeout: number): Record<string, unknown> {
+    return {
+      hooks: [
+        { type: 'command', command: `bash "${hook(home, 'completion-gate.sh')}"`, timeout },
+      ],
+    };
+  }
+
+  test('the completion gate at 120 seconds goes, and the entry at 330 is the only Stop entry', async () => {
+    const home = await freshHome();
+    try {
+      await setup(home, CODE);
+      const body = await settings(home);
+      body.hooks = { ...body.hooks, Stop: [gateEntry(home, 120)] };
+      await writeSettings(home, body);
+
+      const run = await setup(home, CODE);
+      expect(run.stdout).toContain('settings.json — hook entries merged in, 1 removed');
+      expect((await settings(home)).hooks?.Stop).toEqual([gateEntry(home, 330)]);
+      expect(await exists(hook(home, 'completion-gate.sh'))).toBe(true);
+    } finally {
+      await cleanup(home);
+    }
+  });
+
+  test('a timeout of your own is yours: it stays beside the one setup writes', async () => {
+    const home = await freshHome();
+    try {
+      await setup(home, CODE);
+      const body = await settings(home);
+      body.hooks = { ...body.hooks, Stop: [gateEntry(home, 600)] };
+      await writeSettings(home, body);
+
+      await setup(home, CODE);
+      expect((await settings(home)).hooks?.Stop).toEqual([
+        gateEntry(home, 600),
+        gateEntry(home, 330),
+      ]);
+    } finally {
+      await cleanup(home);
+    }
+  });
+});
+
 describe('what the prune leaves alone', () => {
   test('an entry with one changed byte is yours: it stays, and so does its script', async () => {
     const home = await freshHome();

@@ -145,6 +145,15 @@ The CLI. The working standard it installs is versioned separately — see
   drift finding on an edited router or standard says that a re-run leaves the file alone,
   where it used to say "re-run it". Files already replaced are in
   `~/.config/personal-config/backups/`; `personal-config undo` restores the latest run.
+- **The completion gate gives your gate command 300 seconds, not 100.** One repo's whole test
+  suite took 69 to 131 seconds on a green tree, so every stop there timed out and was blocked,
+  and after 8 blocks in a row Claude Code overrides the hook, which then checked nothing. The
+  hook's `Stop` entry in `~/.claude/settings.json` now has a 330-second timeout, up from 120, so
+  the script still stops the gate and blocks before the harness kills it.
+  `PERSONAL_CONFIG_GATE_TIMEOUT` still moves the limit; keep it under 330. Run `setup` again to
+  take both: it writes the new script and entry together and removes the exact 120-second
+  entry an earlier run wrote. An entry whose timeout you changed yourself stays. The hooks long
+  form describes it.
 
 ## 0.8.0 — 2026-10-05
 
