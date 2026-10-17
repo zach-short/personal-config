@@ -79,7 +79,7 @@ Built on Opus 5.5 in the worktree `dl/row-132-build`, from `main` at d453fe8.
 **What changed, by step.**
 
 1. `Landing` in `src/render/skills.ts` is now `'none' | 'step' | 'direct' | 'wk'`. `landingOf` returns `'wk'` for a board with git under `agent-pushes` whose profile sets `landStep: "wk"`. Project folders, a target without git, and any other key value keep the result `main` gives. The git condition is a fact found during the build: without it, `/close-out` for a no-git board rendered a wk commit step about a commit that cannot exist.
-2. `/delegate` under `'wk'`. Five passages of `templates/skills/delegate.md` moved into tokens (`BUILD_SPAWN`, `BRIEF_NAMES`, `BASE_RULE`, `AUDIT_SPAWN`, `AUDIT_REPRO`), and `AUDIT_SOURCE` became the helper `auditSource()` inside `AUDIT_REPRO`, so `'wk'` can replace them while every other landing renders the old text. Step 2: the lead runs `wk new <n>` in the primary checkout, passes the printed path, and spawns with no `isolation`, with the one-sentence reason. The builder works only in `<workspace>` with `git -C` and subshells. The builder rule: commit on `wk/<n>`; never merge, never push, never `wk submit`. Step 3: the lead makes the auditor's worktree with `git worktree add --detach <path> <the builder's branch>`. Step 4: the builder commits the sign-off lines in the workspace, and the log line, the row and the blocks wait for the base to hold the landing commit. Step 6, "Submit it to wk's queue": `wk submit -m "<message>" --row <n>` in a subshell in the workspace, the id kept, `wk status` read on each turn or by one background wait, then the four outcomes (`landed` with a refused fast-forward, `failed`, `refused`, a start error). Step 7, "Let wk remove the workspaces this run made": `wk gc`, then `wk gc --apply`, with no `git worktree remove` by hand. The claim commit in step 1 has its own wk sentence.
+2. `/delegate` under `'wk'`. Five passages of `templates/skills/delegate.md` moved into tokens (`BUILD_SPAWN`, `BRIEF_NAMES`, `BASE_RULE`, `AUDIT_SPAWN`, `AUDIT_REPRO`), and `AUDIT_SOURCE` became the helper `auditSource()` inside `AUDIT_REPRO`, so `'wk'` can replace them while every other landing renders the old text. Step 2: the lead runs `wk new <n>` in the primary checkout, passes the printed path, and spawns with no `isolation`, with the one-sentence reason. The builder works only in `<workspace>` with `git -C` and subshells. The builder rule: commit on `wk/<n>`; never merge, never push, never `wk submit`. Step 3: the lead makes the auditor's worktree with `git worktree add --detach <path> <the builder's branch>`. Step 4: the builder commits the sign-off lines in the workspace, and the log line, the row and the blocks wait for the base to hold the landing commit. Step 6, "Submit it to wk's queue": `wk submit -m "<message>" --row <n>` in a subshell in the workspace, the id kept, `wk status` read on each turn or by one background wait, then each outcome (`landed`, with a fast-forward a dirty main checkout refuses; `failed`; `refused`; and, after review finding 4a, a worker that stopped with the changeset still `submitted`). Step 7, "Let wk remove the workspaces this run made": `wk gc`, then `wk gc --apply`, with no `git worktree remove` by hand. The claim commit in step 1 has its own wk sentence.
 3. `/close-out` under `'wk'` gets a record step that names the landing commit from `wk status`, and its worktree step is the same `wk gc` step (section 4). `/clean-up`'s fold step says the base must hold each close-out, that `wk status` prints each landed commit, and that finished workspaces are wk's to remove.
 4. `docs/choices/commit-policy.md` has a paragraph on `"landStep": "wk"` (what it renders, the `~/.wk/<repo>.toml` it needs with `[landing] enabled = true` and a gate list) and a paragraph on undoing it. `CHANGELOG.md` has the entry under Unreleased.
 5. Tests: `tests/wk-land-step.test.ts` (new, nine tests), `WK_LAND_STEP` in `tests/helpers.ts`, and two cases in `tests/land-step-key.test.ts`.
@@ -97,6 +97,7 @@ Built on Opus 5.5 in the worktree `dl/row-132-build`, from `main` at d453fe8.
 
 **Each test with its fix turned off** (each mutation made in `src/render/skills.ts`, then the file restored and checked with `cmp`):
 
+- The step 6 stop cases from review finding 4a removed (and "Never a wait with no limit" reworded): "the lead makes, submits and removes through wk" fails.
 - `landingOf` never returns `'wk'`: the three `/delegate` tests and both `/close-out` and `/clean-up` tests fail (5 fail).
 - `/close-out`'s two `'wk'` branches off: "/close-out names `wk status` and `wk gc`" fails.
 - `/clean-up`'s `'wk'` fold timing off: "/clean-up names `wk status` and `wk gc`" fails.
@@ -104,9 +105,35 @@ Built on Opus 5.5 in the worktree `dl/row-132-build`, from `main` at d453fe8.
 - One word of a moved passage changed ("old code" to "stale code"): "/delegate holds every moved passage" fails.
 - Any non-empty key lands through wk: "a value the engine does not know renders as the key absent" fails.
 
+**Review (step 7).** One Opus 5.5 subagent, in a detached worktree at 9528890, told to edit nothing. It rendered the three skills for an `agent-pushes`, `landStep: "wk"` profile with the test helpers and read them against wk's README and source. `git status --porcelain` of its worktree was empty afterwards, and the worktree is removed. Findings and outcomes:
+
+- 4a, blocking: the wait for `landed`, `failed` or `refused` never ends when the worker stops (a start error, every gate skipped, a diverged landing ref), because the changeset stays `submitted`. Fixed: the wait has a limit, with a bounded background loop as the example, and "Still `submitted` when the wait ends" gives the next action for each stop. A test covers it.
+- 1a and 1b: `/clean-up` commits on the base with no wk guard. Fixed: its fold step says each commit on the base waits until `wk status` shows the landing ref `at <base>; nothing to land` or `behind <base>`. `/close-out`'s own commit has no such guard yet (left owed).
+- 1c: the claim commit. No change needed.
+- 2a: the claim guard named no `wk status` line and no landing ref. Fixed with wk's own note strings and a definition.
+- 2b: no wk precondition. Fixed: step 2 checks `wk config show` for `enabled = true` under `[landing]` and a `[[gates.run]]` before `wk new`.
+- 2c: the background wait gave no command. Fixed, as 4a.
+- 2d: `<repo>` undefined. Fixed: the name of the primary checkout's folder (wk's `filepath.Base` of it).
+- 2e: "landing tip" undefined, and the conflict resolution's audit unclear. Fixed: defined, and the builder reports the resolution as a fix round does, with wk's gates on the result, as the prose land step has it.
+- 2f: the scheduled cleanup's command unnamed. Fixed: `wk gc schedule install`.
+- 2g: `/close-out`'s heading says the record goes in the code's commit, which is false under wk. Not fixed: the heading is shared with every policy (left owed).
+- 3a: wk's README says an agent never commits in a workspace. Fixed: the builder rule says why it commits anyway (the auditor reproduces from the branch, and `wk gc` removes only a workspace with no changed path).
+- 3b: the land step stated wk's fast-forward and push as unconditional. Fixed: it names the config they depend on.
+- 3c: the landing message is lowercased. Fixed.
+- 3d: the gates run three times (builder, auditor, wk). Not fixed: changing who gates is outside this row (left owed).
+- 3e: claims checked against wk's source. No change.
+- 3f: wk's README says only P1 is built. Outside this repository; for the owner.
+- 4b: a hook-blocked commit still lands, from the working tree. Fixed: the record says "submitted uncommitted", and step 7 says `wk gc` keeps that workspace and the owner removes it.
+- 4c: a fix round after `failed` would append the record twice. Fixed: it replaces the lines.
+- 4d: `wk/<n>` stays, so a second `wk new <n>` refuses. Partly fixed: step 7 says so. What to do with the branch is left owed.
+- 4e: auditor worktrees of earlier rounds may be kept for good. Not fixed (left owed).
+- 4f: with wk's leases on, `wk claim` is needed. Not fixed: conditional on a setting no profile uses yet (left owed).
+
 **Left owed.**
 
 - A `doctor` rule that checks a `landStep: "wk"` repository has `~/.wk/<repo>.toml` with landing on and a gate list (out of scope here).
 - `/autopilot` under `'wk'` keeps the `direct` text: its `LAND_ROUTE` is empty and its record follows `/delegate`. Its own landing text is out of scope.
-- `/clean-up` and `/close-out` under `'wk'` still commit and push on the base from the primary checkout, as `direct` does. A commit there while wk's landing ref is ahead of the base stops wk's worker; the claim commit says so, and these two do not.
+- `/close-out` under `'wk'` still commits on the base with no `wk status` guard (review 1a), and its heading says the record goes in the code's commit (2g).
+- Who gates under wk: the builder and the auditor still run every gate that wk's worker runs again (review 3d).
+- A landed `wk/<n>` branch stays, so a re-run of the same row needs it gone first (4d); auditor worktrees of earlier rounds may be kept for good (4e); `wk claim` where wk's leases are on (4f).
 - The wk text names wk's defaults (the 60-minute quiet window, `~/.wk/<repo>/landing.log`); a repository that changes them in its wk config reads its own values.

@@ -46,7 +46,12 @@ describe('/delegate under landStep "wk"', () => {
     expect(text).toContain('`wk gc --apply`');
     expect(text).toContain("## 6. Submit it to wk's queue");
     expect(text).toContain('## 7. Let wk remove the workspaces this run made');
-    expect(text).toContain('never a sleep loop');
+    // Review finding 4a: a stopped worker leaves the changeset `submitted`, so the wait has a limit
+    // and the stop has its own next actions.
+    expect(text).toContain('Never a wait with no limit');
+    expect(text).toContain('**Still `submitted` when the wait ends**');
+    expect(text).toContain('`every gate skipped`');
+    expect(text).toContain('`diverged from <base>`');
     expect(text).toContain('`wk land --loop`');
   });
 
