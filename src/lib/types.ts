@@ -223,6 +223,8 @@ export type Cli = {
   from: string | null;
   /** `context` only: the phrase that proves a transcript is this conversation. */
   sentinel: string | null;
+  /** `passoff next` and `passoff show` only: print one JSON object and nothing else on stdout. */
+  json: boolean;
   paths: string[];
 };
 

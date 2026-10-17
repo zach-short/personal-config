@@ -11,7 +11,8 @@ const HOOK = join(repoRoot(), 'templates', 'hooks', 'completion-gate.sh');
 const BOARD_ROW_1 = /^\| 1 \|[^\n]*`IN FLIGHT`/m;
 const ITEM_1 = join('passoff', '1-give-the-click-sweep-backpressure.md');
 
-type Ran = { code: number; out: string };
+/** `out` is both streams, as a person reads them; `stdout` alone is what `--json` answers for. */
+type Ran = { code: number; out: string; stdout: string };
 
 async function run(
   cwd: string,
@@ -29,7 +30,7 @@ async function run(
     new Response(proc.stdout).text(),
     new Response(proc.stderr).text(),
   ]);
-  return { code: await proc.exited, out: out + err };
+  return { code: await proc.exited, out: out + err, stdout: out };
 }
 
 async function git(cwd: string, ...args: string[]): Promise<void> {
@@ -138,6 +139,18 @@ describe('passoff from a linked worktree', () => {
     expect(out).toContain('Give the click sweep backpressure');
   });
 
+  /** Row 123: the JSON reads the board `next` and `claim` read, so a reader sees the same rows. */
+  test('next --json and show --json read the main checkout board and name its item file', async () => {
+    const next = await run(fx.worktree, ['bun', 'run', CLI, 'passoff', 'next', '--json']);
+    expect(next.code).toBe(0);
+    const row = JSON.parse(next.stdout);
+    expect(row.number).toBe('1');
+    expect(row.itemFile).toBe(join(fx.main, ITEM_1));
+
+    const shown = await run(fx.worktree, ['bun', 'run', CLI, 'passoff', 'show', '2', '--json']);
+    expect(JSON.parse(shown.stdout).task).toBe('Custom short codes, reserved-word list');
+  });
+
   /** Before row 122 this refused: the worktree has no `PASSOFF.md`, untracked as it is. */
   test('claim marks the main checkout board and item file, writes nothing in the worktree, and undo from the worktree restores it', async () => {
     const before = await readFile(join(fx.main, 'PASSOFF.md'), 'utf8');
@@ -197,7 +210,7 @@ async function stop(cwd: string, env: Record<string, string> = {}): Promise<Ran>
     new Response(proc.stdout).text(),
     new Response(proc.stderr).text(),
   ]);
-  return { code: await proc.exited, out: out + err };
+  return { code: await proc.exited, out: out + err, stdout: out };
 }
 
 async function withGate(command: string): Promise<void> {
@@ -325,6 +338,11 @@ describe('what the review found', () => {
     expect(await readFile(join(lane, 'PASSOFF.md'), 'utf8')).toMatch(BOARD_ROW_1);
     expect(await readFile(join(lane, ITEM_1), 'utf8')).toContain('Claimed `IN FLIGHT`');
     expect(await readFile(join(main, 'PASSOFF.md'), 'utf8')).toBe(before);
+
+    const shown = await run(lane, ['bun', 'run', CLI, 'passoff', 'show', '1', '--json']);
+    const row = JSON.parse(shown.stdout);
+    expect(row.status).toBe('IN FLIGHT');
+    expect(row.itemFile).toBe(join(lane, ITEM_1));
   });
 
   test('a config with two gateCommand lines runs the first and still blocks or passes', async () => {

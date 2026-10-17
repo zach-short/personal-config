@@ -28,6 +28,7 @@ const HELP = `personal-config — set up an agent-driven working style in your r
   personal-config upgrade [path…]             what changed in the standard since a repo adapted it
   personal-config undo                         restore the files the last run overwrote
   personal-config passoff next                 the next OPEN board item, with its prompt
+  personal-config passoff show <n>             board item <n>, with its prompt
   personal-config passoff claim <n>            mark item <n> IN FLIGHT, dated
   personal-config handoff step                 the next free ledger step number
   personal-config archive <slug>               plan Part 7's archiving steps for closed work
@@ -51,6 +52,7 @@ Options
   --keep <n>           fold only: ledger steps left whole, newest first  (default: 20)
   --log-days <n>       fold only: log lines older than this leave the ledger  (default: 90)
   --sentinel <phrase>  context only: a phrase unique to this conversation  (required)
+  --json               passoff next and show only: one JSON object on stdout, refusals on stderr
   --help, --version
 
 Nothing leaves your machine — --from <url|id> is the one exception, and it only fetches the

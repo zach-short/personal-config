@@ -39,6 +39,7 @@ const OPTIONS = {
   'projects-dir': { type: 'string' },
   from: { type: 'string' },
   sentinel: { type: 'string' },
+  json: { type: 'boolean', default: false },
   help: { type: 'boolean', default: false },
   version: { type: 'boolean', default: false },
 } as const;
@@ -65,6 +66,7 @@ export function parseCli(argv: string[]): Cli {
     projectsDir: values['projects-dir'] ?? null,
     from: values.from ?? null,
     sentinel: values.sentinel ?? null,
+    json: values.json === true,
     paths: rest,
   };
 }
