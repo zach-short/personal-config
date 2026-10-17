@@ -125,6 +125,14 @@ same suite took 537 seconds. A longer limit costs time only when a gate hangs; a
 switches a real gate off. A `setup` re-run writes the new script and the new entry together, and
 removes the exact entries earlier releases wrote (timeouts of 120 and 330).
 
+A gate that runs out has not passed, and its block says so. It asks the agent to run the gate
+command itself, in the background if it is slow, and to stop again once the command passes. It
+does not offer "say why this is a false alarm", as the other blocks do, because the stop after a
+block goes through unchecked: under load, a red tree and a green one would both have ended the
+turn on that reply. No limit removes this case, since the time a gate takes grows with the
+machine's load: this repo's green suite took 134 seconds at a load average of 12, 351 at 28,
+and 424 at 26 rising to 36, on 10 cores.
+
 **From a linked worktree**, the config is read from the main checkout. `.personal-config.json`
 is usually untracked, so a worktree has no copy of it, and until 2026-10-16 the gate found
 nothing there and ran nothing. The hook asks git for the common git directory, takes the main

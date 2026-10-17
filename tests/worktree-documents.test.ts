@@ -262,6 +262,28 @@ describe('the completion gate from a linked worktree', () => {
     expect((await gateLog()).at(-1)).toContain('result=timeout');
   });
 
+  /**
+   * Board row 129. The next stop after a block goes through (`stop_hook_active`), so a timeout
+   * that invited "say why this is a false alarm" let a red tree under load end the turn unchecked.
+   */
+  test('a gate that ran out asks for the run, not for a false alarm', async () => {
+    await withGate('sleep 20');
+    const { code, out } = await stop(fx.worktree, { PERSONAL_CONFIG_GATE_TIMEOUT: '1' });
+    expect(code).toBe(2);
+    expect(out).toContain('so it has not passed');
+    expect(out).toContain('$ sleep 20');
+    expect(out).toContain('Run it yourself, in the background if it is slow');
+    expect(out).not.toContain('say why this is a false alarm');
+  });
+
+  test('a gate that failed still offers the false alarm', async () => {
+    await withGate('exit 3');
+    const { code, out } = await stop(fx.worktree);
+    expect(code).toBe(2);
+    expect(out).toContain('say why this is a false alarm');
+    expect(out).not.toContain('Run it yourself');
+  });
+
   test('a failing gate blocks and the log records the exit', async () => {
     await withGate('exit 3');
     const { code } = await stop(fx.worktree);

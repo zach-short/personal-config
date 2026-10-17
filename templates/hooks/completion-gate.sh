@@ -47,12 +47,13 @@ if [ "$active" = yes ]; then exit 0; fi
 
 # Blocking is one function so every reason has the same shape: what failed, the evidence, and
 # what to do about it — including the fact that saying so and stopping again is allowed, since a
-# scan of text cannot tell an unfinished edit from a sentence that reads like one.
+# scan of text cannot tell an unfinished edit from a sentence that reads like one. A third
+# argument replaces that last line where a false alarm is not the answer.
 block() {
   printf 'Blocked: %s\n\n%s\n\n%s\n' \
     "$1" \
     "$2" \
-    "Fix it, or say why this is a false alarm and stop again — this gate is overridden after 8 consecutive blocks." >&2
+    "${3:-Fix it, or say why this is a false alarm and stop again — this gate is overridden after 8 consecutive blocks.}" >&2
   exit 2
 }
 
@@ -257,13 +258,18 @@ set +m
 # 2026-10-17, and a count that drifts with the load can drift past the harness's timeout. `SECONDS`
 # is bash's count of whole seconds since this script started, so the scan and the config lookup
 # above are inside the limit too, and the margin under the harness is the same at any load.
+#
+# A gate that ran out has not passed, and its block says so in place of the usual last line. With
+# "say why this is a false alarm", a slow machine read as one: the next stop arrives with
+# `stop_hook_active` set and goes through, so a red tree under load ended the turn as quietly as a
+# green one (board row 129). Asking for the run keeps the verdict in the turn at any limit.
 while kill -0 "$pid" 2>/dev/null; do
   if [ "$SECONDS" -ge "$LIMIT" ]; then
     kill -TERM -- "-$pid" 2>/dev/null || kill -TERM "$pid" 2>/dev/null || true
     log "config=$config gate=$gate result=timeout after ${LIMIT}s"
-    block "this repo's gate command did not finish in ${LIMIT} seconds." "  \$ $gate
+    block "this repo's gate command did not finish in ${LIMIT} seconds, so it has not passed." "  \$ $gate
 
-$(tail -20 "$output_file")"
+$(tail -20 "$output_file")" "Run it yourself, in the background if it is slow, and stop again once it passes. A slow machine is not a false alarm: the gate stopped before it could fail."
   fi
   sleep 0.2
 done

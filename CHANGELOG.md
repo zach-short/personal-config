@@ -155,7 +155,9 @@ The CLI. The working standard it installs is versioned separately — see
   the gate and blocks before the harness kills it. `PERSONAL_CONFIG_GATE_TIMEOUT` still moves the
   limit; keep it under 600. Run `setup` again to take both: it writes the new script and entry
   together and removes the exact entries an earlier run wrote (timeouts of 120 and 330). An entry
-  whose timeout you changed yourself stays. The hooks long form describes it.
+  whose timeout you changed yourself stays. A gate that runs out now says it has not passed and
+  asks the agent to run it, where it used to invite a reply that the block was a false alarm,
+  and the stop after that reply went through unchecked. The hooks long form describes it.
 
 ## 0.8.0 — 2026-10-05
 
