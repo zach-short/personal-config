@@ -161,6 +161,10 @@ The CLI. The working standard it installs is versioned separately — see
 
 ### Fixed
 
+- **`setup` writes the project folders' `docs/incomplete/README.md` once.** A person grows it
+  with a list of the open efforts, and a later run replaced it with the 24-line template while
+  `doctor` advised the re-run. It is now a record, as the ledger, the board and the archive index
+  are: a run keeps it once it has bytes in it, and `doctor` no longer compares it.
 - **`setup` and `init` no longer replace your ledger, board or filled-in router with a fresh
   template.** A stamp is written once and survives every later edit, so a re-run read a ledger
   with thousands of lines of steps as its own output and replaced it. On 2026-10-16 one

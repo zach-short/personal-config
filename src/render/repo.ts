@@ -428,12 +428,15 @@ async function renderFolders(ctx: RenderContext): Promise<PlannedFile[]> {
     ARCHIVE_HOME: ctx.repo?.archiveHome || 'the archive',
     STANDARD_PATH: standardPath(ctx),
   });
+  // A record once written, like the ledger (record-overwrite): a person grows it with a list of
+  // the open efforts, and a re-run put the 24-line template back over a 39-line one (2026-10-16).
   return [
     planned(
       ctx,
       join(repoPath, 'docs', 'incomplete', 'README.md'),
       'project-folder scaffold',
       body,
+      AS_RECORD,
     ),
   ];
 }
