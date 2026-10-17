@@ -7,6 +7,27 @@ The CLI. The working standard it installs is versioned separately — see
 
 ### Added
 
+- **A board status word, `COMMITTED`, and standard 2.2.0.** `DONE, <record>` now means built and
+  recorded but not yet in a commit, and `COMMITTED, <record>, <short hash>` means the commit
+  exists. `doctor`'s `board-status` accepts both on a 1.x board (`<record>` a ledger step) and a
+  2.0.0 one (`<record>` a date), still accepts every older `DONE — HANDOFF n` and `DONE - <date>`
+  row, and asks git whether a `COMMITTED` hash names a commit in the repo (one
+  `git cat-file --batch-check` per board; a directory git cannot read is not checked).
+  `unfolded` reports only `COMMITTED` items, and `personal-config fold` moves only `COMMITTED`
+  items: a `DONE` item keeps its prompt or file, the only copy of work that is not committed. A
+  closed row with no item file, which a 1.x board left behind, still gets its archive file, since
+  there is no file to keep. `fold migrate` writes a `DONE` item's section to its own file. The
+  close-out, clean-up, autopilot, delegate and land-worktrees skills write `DONE` before the
+  commit, and move a row to `COMMITTED` once git has its commit; under `agent-pushes`,
+  `/autopilot` writes `COMMITTED, <date>, <hash>` when a row's fast-forward lands. Under every
+  policy `/autopilot` and `/clean-up` look an older `DONE` row up in git and move it when they
+  find its commit.
+- **`DONE` folds where there is no git.** A folder without git can never write a hash, so its
+  rows would stop at `DONE` and `personal-config fold` would never move them. `fold`,
+  `fold migrate` and `doctor`'s `unfolded` fold a `DONE` item where no `.git` sits at or above the
+  root, read from the filesystem rather than `git rev-parse`, which also fails where git is not
+  installed. The board a folder target gets says so, and the no-git close-out and clean-up skills
+  fold `DONE` items in place of `COMMITTED` ones.
 - **A bare `personal-config` now opens a guided setup or a home screen.** In a terminal with no saved config, it runs setup inside a full-screen frame with a side rail of steps. With a saved config, it shows a summary and a short menu. A pipe or a script still gets the help text, and `personal-config setup` typed in full is unchanged. To skip the frame, type the command you want, such as `personal-config setup` or `personal-config help`.
 - **A fourth commit policy, "The agent may commit and push" (`agent-pushes`).** The other three
   answers all block something: only you and no rule block every commit, and the agent may commit

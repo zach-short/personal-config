@@ -11,6 +11,7 @@ import {
   listItemsSync,
 } from '../../lib/items.ts';
 import { numberedSection } from '../../lib/markdown.ts';
+import { isClosed } from '../../lib/status.ts';
 import type { Finding } from '../../lib/types.ts';
 import type { Doc } from '../scan.ts';
 
@@ -111,7 +112,7 @@ function rowFindings(
   if (row.number.trim() === '') return [];
   const file = findItem(live, row.number);
   const section = numberedSection(doc.text, row.number);
-  const done = row.status.startsWith('DONE');
+  const done = isClosed(row.status);
   return [
     ...(file === null && section === null && !done
       ? [finding(doc.path, row.line, `item ${row.number} has no file and no section`)]
@@ -131,7 +132,7 @@ function leftBehind(doc: Doc, row: BoardRow, file: ItemEntry, line: number): Fin
 }
 
 /**
- * D16's hazard is a new row taking a number whose row left the table at a fold. A `DONE` row
+ * D16's hazard is a new row taking a number whose row left the table at a fold. A closed row
  * whose file is archived is the record itself, which `board-status` accepts (D2), not a reuse,
  * so the caller asks this of open rows only.
  */

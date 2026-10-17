@@ -286,11 +286,19 @@ const COMMIT_PARAGRAPH = '**Commits are the owner’s.**';
  *
  * **Two skills moved per variant on 2026-10-17, board row 127, after row 120.** This is the
  * owner-attention item, a second use of the number; the gate-limit item above is the first.
- * `/autopilot` records the owner's attention: an **Owner** section in `STATE.md`, the clock reads at the start
- * and around each opening-round call, a rule for a message between wakes, and a **Budget** line
- * in the rundown with what it does not measure. `/delegate` times the owner's messages in step 0
+ * `/autopilot` records the owner's attention: an **Owner** section in `STATE.md`, the clock reads
+ * at the start and around each opening-round call, a rule for a message between wakes, and a
+ * **Budget** line in the rundown with what it does not measure. `/delegate` times the owner's messages in step 0
  * and ends its record with an **Owner** line. The `/autopilot` hash holds row 120's lines too.
  * The same bytes in all three variants. 83 still, and no other key moved.
+ *
+ * **Eight files moved per variant on 2026-10-17, standard 2.2.0 (`COMMITTED`).** The adapted
+ * standard, `PASSOFF.md`, the first item file, and the `/handoff`, `/close-out`, `/clean-up`,
+ * `/delegate` and `/autopilot` skills now say that a row is `DONE, <date>` before its commit and
+ * `COMMITTED, <date>, <hash>` after it, and that only a `COMMITTED` item folds. The same change
+ * says `DONE` is final and folds in a folder with no git, which `/clean-up` and `/close-out` say
+ * in one clause each; `PASSOFF.md`'s no-git note is written only for a folder target. First
+ * drafted as 2.1.0 and 2.1.1 on 2026-10-15. 83 still, and no other key moved.
  */
 describe('§3.1 row 1 — code + full + git is the 0.3.0 output, byte for byte bar one skill', () => {
   const FULL = answersFor(CODE_FULL_GIT);

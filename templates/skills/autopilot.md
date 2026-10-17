@@ -58,10 +58,10 @@ the rest of this skill names them.
 
 A row is runnable when all of these hold:
 
-- It is `OPEN`, and every row before it in its lane is finished (`DONE`, `SUPERSEDED` or
-  `SETTLED AS NO`), because the items in a lane run in order. A `HELD` or `IN FLIGHT` row ahead of
-  it holds it back.
-- Every item its "Waits on" names is `DONE`, or has left the table at a fold.
+- It is `OPEN`, and every row before it in its lane is finished (`COMMITTED`, `SUPERSEDED` or
+  `SETTLED AS NO`), because the items in a lane run in order. A `HELD`, `IN FLIGHT` or `DONE` row
+  ahead of it holds it back.
+- Every item its "Waits on" names is `COMMITTED`, or has left the table at a fold.
 {{CROSS_BOARD}}
 {{AFTER_UNCOMMITTED}}
 {{SCOPE_FIRST}}
@@ -295,10 +295,11 @@ file that holds the row's open findings.
 1. End the timer: `ScheduleWakeup` with `stop: true`, or no new wake.
 2. **Run `/clean-up`**, with the Skill tool, as the run's last step before the rundown. The
    person's "ready" in the opening round is the yes its previews wait for: post each preview in
-   chat and go on. On a board with a `{{ITEMS_DIR}}/` folder, its fold moves each `DONE` item's
-   file and its row to the archive, and a `DONE` row with no file gets an archive file that holds
-   the row. On a 1.x board, with no `{{ITEMS_DIR}}/` folder, the fold moves `DONE` prompts and old
-   step bodies, and every row stays. A move its own rules hold, such as one that waits for a
+   chat and go on. On a board with a `{{ITEMS_DIR}}/` folder, its fold moves each `COMMITTED`
+   item's file and its row to the archive, and a closed row with no file gets an archive file that
+   holds the row. On a 1.x board, with no `{{ITEMS_DIR}}/` folder, the fold moves `COMMITTED`
+   prompts and old step bodies, and every row stays. Where no `.git` sits at or above the folder,
+   `DONE` is final and folds too. A move its own rules hold, such as one that waits for a
    commit, is not run: it goes under **Decisions waiting for the owner**. What moved goes in the
    rundown's first paragraph, {{FOLD_COMMIT}}
 3. Write `RUNDOWN.md` in the run folder from `STATE.md`, with these sections in this order. Each is present, and
@@ -315,7 +316,7 @@ file that holds the row's open findings.
    8. **Budget**: the usage readings or "not measured", agents by model, hours, this session's
       peak context, and the owner's attention from **Owner**: the messages counted, the questions
       answered with the minutes from each question to its answer and their sum, and the message
-      count and the minutes' sum each divided by the rows this run marked `DONE`, a row and its
+      count and the minutes' sum each divided by the rows this run marked `DONE` or `COMMITTED`, a row and its
       sub-rows counting as one, as against a cap on rows, or "no row done". Then this sentence,
       as written: "These figures count the messages the owner typed in this session and the
       whole minutes from each question to its answer, which include any time the owner was away;

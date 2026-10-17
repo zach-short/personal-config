@@ -8,6 +8,7 @@ import {
   parseBoard,
   stripTypography,
 } from '../../lib/board.ts';
+import { commitsAmong } from '../../lib/git.ts';
 import {
   findItem,
   hasItemsFolder,
@@ -20,12 +21,13 @@ import {
 } from '../../lib/items.ts';
 import { ledgerSteps } from '../../lib/ledger.ts';
 import { escaped } from '../../lib/markdown.ts';
+import { committedCell, doneRecord, isCommitted, isDone } from '../../lib/status.ts';
 import type { Finding } from '../../lib/types.ts';
 import type { Doc } from '../scan.ts';
 
 /**
- * §2.3 — the status words carry obligations. `DONE` points at the record, `HELD` names what
- * it waits on, `SUPERSEDED` names its replacement, and `SETTLED AS NO` carries its reason,
+ * §2.3 — the status words carry obligations. `DONE` points at the record, `COMMITTED` points
+ * at the record and at a commit git has, `HELD` names what it waits on, `SUPERSEDED` names its replacement, and `SETTLED AS NO` carries its reason,
  * because its whole job is to not be re-proposed.
  *
  * Each of those four was once checked by shape alone, and a shape-only check reads as evidence
@@ -44,7 +46,30 @@ import type { Doc } from '../scan.ts';
  * from the board's own folder, so a nested board is not judged by the root's archive or log
  * (`boardContexts` in `../index.ts`).
  */
-export function boardStatusRule(context: ItemContext) {
+/**
+ * The `COMMITTED` hashes git found for a board, gathered before the rules run by `boardCommits`,
+ * or null where git cannot say. The default answers null for every board: "cannot verify".
+ */
+export type CommitLookup = (doc: Doc) => Set<string> | null;
+
+const UNVERIFIED: CommitLookup = () => null;
+
+/** Asks git once per board, so the sync `check` below reads an answer and spawns nothing. */
+export async function boardCommits(docs: Doc[]): Promise<CommitLookup> {
+  const boards = docs.filter((doc) => doc.kind === 'board');
+  const found = new Map(
+    await Promise.all(
+      boards.map(async (doc) => {
+        const board = parseBoard(doc.text);
+        const hashes = board === null ? [] : committedHashes(board);
+        return [doc.path, await commitsAmong(dirname(doc.path), hashes)] as const;
+      }),
+    ),
+  );
+  return (doc) => found.get(doc.path) ?? null;
+}
+
+export function boardStatusRule(context: ItemContext, commits: CommitLookup = UNVERIFIED) {
   return {
     id: 'board-status',
     standardId: '§2.3',
@@ -52,7 +77,7 @@ export function boardStatusRule(context: ItemContext) {
     check(doc: Doc): Finding[] {
       const board = parseBoard(doc.text);
       if (!board) return [];
-      const view = boardView(doc, context);
+      const view = boardView(doc, context, commits(doc));
       return board.rows.flatMap((row) => checkRow(view, board, row));
     },
   };
@@ -70,9 +95,11 @@ type BoardView = {
   archived: ItemEntry[] | null;
   frozenAt: number | null;
   steps: Set<number> | null;
+  /** The `COMMITTED` rows' hashes that name a commit here, or null where git cannot say. */
+  commits: Set<string> | null;
 };
 
-function boardView(doc: Doc, context: ItemContext): BoardView {
+function boardView(doc: Doc, context: ItemContext, commits: Set<string> | null): BoardView {
   const migrated = doc.itemsDir !== undefined && hasItemsFolder(doc.itemsDir);
   return {
     doc,
@@ -82,10 +109,18 @@ function boardView(doc: Doc, context: ItemContext): BoardView {
     frozenAt: context.ledgerFrozenAt,
     // D5: a frozen log is in the archive, so there is nothing beside the board to read.
     steps: context.ledgerFrozenAt === null ? ledgerNumbers(doc) : null,
+    commits,
   };
 }
 
-/** §2.3 — "these words and no others". Only `DONE` carries a tail, and it must. */
+function committedHashes(board: Board): string[] {
+  return board.rows.flatMap((row) => {
+    const cell = committedCell(row.status);
+    return cell === null ? [] : [cell.hash];
+  });
+}
+
+/** §2.3 — "these words and no others". Only `DONE` and `COMMITTED` carry a tail, and must. */
 const STANDALONE = new Set(['OPEN', 'IN FLIGHT', 'HELD', 'SETTLED AS NO', 'SUPERSEDED']);
 
 function checkRow(view: BoardView, board: Board, row: BoardRow): Finding[] {
@@ -95,7 +130,8 @@ function checkRow(view: BoardView, board: Board, row: BoardRow): Finding[] {
 
 function rowProblem(view: BoardView, board: Board, row: BoardRow): string | null {
   const status = row.status;
-  if (status.startsWith('DONE')) return doneProblem(view, row);
+  if (isDone(status)) return doneProblem(view, row);
+  if (isCommitted(status)) return committedProblem(view, row);
   if (!STANDALONE.has(status)) return unknownMessage(status, view.migrated);
   if (status === 'HELD') return heldProblem(board, row);
   if (status === 'SUPERSEDED') return supersededProblem(view, board, row);
@@ -106,8 +142,8 @@ function rowProblem(view: BoardView, board: Board, row: BoardRow): string | null
 function unknownMessage(status: string, migrated: boolean): string {
   const seen =
     status === '' ? 'this row carries no status' : `\`${status}\` is not a status word`;
-  const done = migrated ? 'DONE — <date>' : 'DONE — <ledger step>';
-  return `${seen} — §2.3 allows OPEN, IN FLIGHT, ${done}, HELD, SETTLED AS NO, SUPERSEDED, and no others`;
+  const record = migrated ? '<date>' : '<ledger step>';
+  return `${seen} — §2.3 allows OPEN, IN FLIGHT, DONE, ${record}, COMMITTED, ${record}, <hash>, HELD, SETTLED AS NO, SUPERSEDED, and no others`;
 }
 
 /**
@@ -115,38 +151,71 @@ function unknownMessage(status: string, migrated: boolean): string {
  * at nothing while reading exactly like one that does. The shape is checked first, then the
  * number against the log itself.
  *
- * A 2.0.0 board has a second shape, `DONE — <date>`, whose record is the item's own file (D2).
+ * A 2.0.0 board has a second shape, `DONE, <date>`, whose record is the item's own file (D2).
  * It is accepted only where the items folder exists, so a 1.x board reads exactly as it did
- * (D12): ezhomesteading carries `DONE 2026-10-13: …`, a finding before and after (G53).
+ * (D12): ezhomesteading carries `DONE 2026-10-13: …`, a finding before and after (G53). The
+ * em-dash spelling, `DONE — HANDOFF 24`, is what every row before 2026-10-15 carries, and still
+ * reads.
  */
 function doneProblem(view: BoardView, row: BoardRow): string | null {
-  const stem = view.doc.ledgerStem;
-  const cited = citedStep(row.status, stem);
-  if (cited !== null) return stepProblem(view, cited);
-  const date = closedOn(row.status);
-  if (date !== null && view.migrated) return dateProblem(view, row, date);
+  const problem = recordProblem(view, row, 'DONE', doneRecord(row.status) ?? row.status);
+  if (problem !== 'missing') return problem;
   return view.migrated
-    ? `\`DONE\` must point at the record — write \`DONE — <date>\`, the day the item closed`
-    : `\`DONE\` must point at the ledger step — write \`DONE — ${stem} <n>\``;
+    ? '`DONE` must point at the record — write `DONE, <date>`, the day the item closed'
+    : `\`DONE\` must point at the ledger step — write \`DONE, ${view.doc.ledgerStem} <n>\``;
 }
 
-function stepProblem(view: BoardView, cited: Citation): string | null {
+/**
+ * `COMMITTED` is `DONE` plus the commit, so it carries the same record and then a hash, and the
+ * hash is checked against git: a hash copied from the wrong repo, or typed from memory, reads
+ * exactly like a real one. A repo git cannot read is "cannot verify", and the row passes.
+ */
+function committedProblem(view: BoardView, row: BoardRow): string | null {
+  const cell = committedCell(row.status);
+  if (cell === null) return committedShape(view);
+  const problem = recordProblem(view, row, 'COMMITTED', cell.record);
+  if (problem === 'missing') return committedShape(view);
+  if (problem !== null) return problem;
+  if (view.commits === null || view.commits.has(cell.hash)) return null;
+  return `\`${cell.hash}\` is not a commit in this repo — \`COMMITTED\` carries the short hash of the commit that holds the item's code`;
+}
+
+function committedShape(view: BoardView): string {
+  const record = view.migrated ? '<date>' : `${view.doc.ledgerStem} <n>`;
+  return `\`COMMITTED\` must carry the record and the commit — write \`COMMITTED, ${record}, <short hash>\``;
+}
+
+/** The record either word points at: a ledger step, or on a 2.0.0 board a date. */
+function recordProblem(
+  view: BoardView,
+  row: BoardRow,
+  word: string,
+  record: string,
+): string | null | 'missing' {
+  const cited = citedStep(record, view.doc.ledgerStem);
+  if (cited !== null) return stepProblem(view, word, cited);
+  const date = closedOn(record);
+  if (date !== null && view.migrated) return dateProblem(view, row, word, date);
+  return 'missing';
+}
+
+function stepProblem(view: BoardView, word: string, cited: Citation): string | null {
   const { doc, frozenAt, steps } = view;
   if (!cited.ours) return null;
   // D5: every step up to the freeze is in the archive's log now, so it is taken as read.
   if (frozenAt !== null) {
     return cited.step <= frozenAt
       ? null
-      : `\`DONE — ${doc.ledgerStem} ${cited.step}\` cites a step after the log froze at ${frozenAt} — a closed item now reads \`DONE — <date>\``;
+      : `\`${word}, ${doc.ledgerStem} ${cited.step}\` cites a step after the log froze at ${frozenAt} — a closed item now reads \`${word}, <date>\``;
   }
   if (steps === null || steps.size === 0 || steps.has(cited.step)) return null;
   const highest = Math.max(...steps);
-  return `\`DONE — ${doc.ledgerStem} ${cited.step}\` cites a step the ledger does not have — its log ends at ${highest}`;
+  return `\`${word}, ${doc.ledgerStem} ${cited.step}\` cites a step the ledger does not have — its log ends at ${highest}`;
 }
 
-/** The whole cell, so `DONE 2026-10-13: P0 to P6 committed` is not mistaken for the new shape. */
-function closedOn(status: string): string | null {
-  return status.match(/^DONE\s*[—-]\s*(\d{4}-\d{2}-\d{2})$/)?.[1] ?? null;
+/** The whole record, so `DONE 2026-10-13: P0 to P6 committed` is not mistaken for the new shape. */
+function closedOn(record: string): string | null {
+  return record.match(/^(\d{4}-\d{2}-\d{2})$/)?.[1] ?? null;
 }
 
 /**
@@ -154,12 +223,17 @@ function closedOn(status: string): string | null {
  * archive. An archive this machine cannot read is "cannot verify", so the row passes on a live
  * file or on nothing at all, the way a missing ledger leaves a step citation alone.
  */
-function dateProblem(view: BoardView, row: BoardRow, date: string): string | null {
+function dateProblem(
+  view: BoardView,
+  row: BoardRow,
+  word: string,
+  date: string,
+): string | null {
   if (!isIsoDate(date))
-    return `\`DONE — ${date}\` is not a date — write the day the item closed`;
+    return `\`${word}, ${date}\` is not a date — write the day the item closed`;
   if (findItem(view.live, row.number) !== null) return null;
   if (view.archived === null || findItem(view.archived, row.number) !== null) return null;
-  return `\`DONE — ${date}\` points at item ${row.number}'s file, and there is none, live or in the archive`;
+  return `\`${word}, ${date}\` points at item ${row.number}'s file, and there is none, live or in the archive`;
 }
 
 function isIsoDate(date: string): boolean {
@@ -244,7 +318,10 @@ function explains(body: string): boolean {
   const prose = body
     .replaceAll(/`[^`]*`/g, ' ')
     .replaceAll(/\d{4}-\d{2}-\d{2}/g, ' ')
-    .replaceAll(/\b(SETTLED AS NO|SUPERSEDED|IN FLIGHT|OPEN|HELD|DONE|item|row)\b/gi, ' ')
+    .replaceAll(
+      /\b(SETTLED AS NO|SUPERSEDED|IN FLIGHT|OPEN|HELD|DONE|COMMITTED|item|row)\b/gi,
+      ' ',
+    )
     .replaceAll(/[^A-Za-z]+/g, ' ');
   return prose.split(' ').filter((word) => word.length > 2).length >= REASON_WORDS;
 }

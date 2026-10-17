@@ -419,11 +419,11 @@ describe('what /delegate says', () => {
       'Otherwise put that text in your report.',
       "add these to the close-out section the builder wrote, in the builder's worktree",
       'Where it is untracked, write the whole section at the end of `passoff/<n>-<slug>.md` here',
-      'add `- <date> · closed item <n>` at the end of the log in `HANDOFF.md`, mark the row `DONE - <date>`',
+      'add `- <date> · closed item <n>` at the end of the log in `HANDOFF.md`, mark the row `DONE, <date>` (never wait for the hash',
       'On a 1.x board, with no `passoff/` folder beside it, the record is one step in `HANDOFF.md`',
-      'the row becomes `DONE - HANDOFF <n>`',
+      'the row becomes `DONE, HANDOFF <n>`',
       "the item's file gets a dated note",
-      'names `DONE` or gone from the table at a fold',
+      'names `COMMITTED` or gone from the table at a fold (a `DONE` item is built but not yet committed',
     ])
       expect(text, phrase).toContain(phrase);
   });

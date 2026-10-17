@@ -25,8 +25,8 @@ const BOARD = [
   '',
   '| # | Task | Status | Model | Lane | Waits on | Files it owns |',
   '|---|------|--------|-------|------|----------|---------------|',
-  '| 1 | Build the thing | `DONE — HANDOFF 2` | Opus 5.5 | A | — | `src/a.ts` |',
-  '| 2 | Scope the other thing | `DONE — HANDOFF 3` | Opus 5.5 | A | — | `src/b.ts` |',
+  '| 1 | Build the thing | `COMMITTED, HANDOFF 2, a1b2c3d` | Opus 5.5 | A | — | `src/a.ts` |',
+  '| 2 | Scope the other thing | `COMMITTED — HANDOFF 3, b2c3d4e` | Opus 5.5 | A | — | `src/b.ts` |',
   '| 3 | Park the third | `SETTLED AS NO` | Opus 5.5 | A | — | none |',
   '| 4 | The replaced one | `SUPERSEDED` | Opus 5.5 | A | — | none |',
   '| 5 | Still to do | `OPEN` | Opus 5.5 | A | — | `src/e.ts` |',
@@ -90,12 +90,28 @@ function ledgerOf(steps: number, bodyLines = 4): string {
 }
 
 describe('the board half folds only what is genuinely dead', () => {
-  test('a DONE prompt goes; the board keeps every row', () => {
+  test('a COMMITTED prompt goes; the board keeps every row', () => {
     const fold = boardFold(BOARD);
     expect(fold.folded.map((block) => block.id)).toEqual(['1', '2']);
     expect(parseBoard(fold.trimmed)?.rows).toHaveLength(5);
-    expect(fold.trimmed).toContain('| 1 | Build the thing | `DONE — HANDOFF 2` |');
+    expect(fold.trimmed).toContain('| 1 | Build the thing | `COMMITTED, HANDOFF 2, a1b2c3d` |');
   });
+
+  /**
+   * §2.3: a `DONE` item's code is not in a commit yet, and its prompt is the only way to rebuild
+   * the work if it is lost before the owner commits. The em-dash spelling every row before
+   * 2026-10-15 carries is held the same way.
+   */
+  test.each(['DONE, HANDOFF 2', 'DONE — HANDOFF 2'])(
+    'a `%s` prompt stays until its commit exists',
+    (status) => {
+      const board = BOARD.replace('`COMMITTED, HANDOFF 2, a1b2c3d`', `\`${status}\``);
+      const fold = boardFold(board);
+      expect(fold.folded.map((block) => block.id)).toEqual(['2']);
+      expect(fold.trimmed).toContain('### 1. Build the thing');
+      expect(fold.trimmed).toContain('A long prompt that has already been executed.');
+    },
+  );
 
   /**
    * Not a preference: `doctor`'s §2.3 rule reads both sections — `supersededProblem` for what
@@ -207,6 +223,14 @@ describe('the doctor rule', () => {
     const findings = unfolded.check(doc('ledger', ledgerOf(DEFAULT_KEEP + 120)));
     expect(findings).toHaveLength(1);
     expect(findings[0]?.message).toContain(`older than the newest ${DEFAULT_KEEP}`);
+  });
+
+  test('says nothing about a long DONE prompt, which waits for its commit', () => {
+    const big = BOARD.replace('`COMMITTED, HANDOFF 2, a1b2c3d`', '`DONE, HANDOFF 2`').replace(
+      'A long prompt that has already been executed.',
+      'filler\n'.repeat(500),
+    );
+    expect(unfolded.check(doc('board', big))).toEqual([]);
   });
 
   test('says nothing about a board and a log that are already small', () => {

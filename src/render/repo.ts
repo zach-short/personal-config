@@ -323,6 +323,7 @@ async function renderLedgerAndBoard(ctx: RenderContext): Promise<PlannedFile[]> 
     STANDARD_PATH: standardPath(ctx),
     MODEL_DEFAULT: ctx.config.models.default || 'Default',
     CONVENTIONS_NOTE: conventionsNote(ctx),
+    NO_GIT_FOLD: noGitFold(ctx),
   };
 
   const ledger = isShortTrack(ctx)
@@ -347,6 +348,20 @@ async function renderLedgerAndBoard(ctx: RenderContext): Promise<PlannedFile[]> 
     ),
     ...(startsBoard(ctx) ? [await renderFirstItem(ctx, vars)] : []),
   ];
+}
+
+/**
+ * Standard 2.2.0: in a folder no commit will ever exist, so `DONE` is final and `fold` moves it
+ * (`isFoldable`). Keyed on the target's kind, never on the person's `usesGit`, because `fold`
+ * reads the filesystem: a repo whose owner answered `no` still has a `.git`, and there `DONE` stays.
+ */
+function noGitFold(ctx: RenderContext): string {
+  if (ctx.repo?.scan.kind !== 'folder') return '';
+  return [
+    '',
+    "This folder has no git, so no commit will follow: `DONE` is final here, and a `DONE` item's",
+    'file and row move at the fold as a `COMMITTED` one does.',
+  ].join('\n');
 }
 
 /**

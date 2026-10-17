@@ -157,6 +157,15 @@ describe('what /autopilot says', () => {
     expect(text).not.toContain("builds from that row's worktree branch");
   });
 
+  /** Standard 2.2.0: a row behind a `DONE` one asks git before it is held, under either policy. */
+  for (const policy of ['print-blocks', 'agent-commits'])
+    test(`${policy}: a row written as DONE is checked against git before a row is held behind it`, async () => {
+      const text = (await autopilot({ commitPolicy: policy })).replace(/\s+/g, ' ');
+      expect(text).toContain('Before you hold a row behind a `DONE` row, check git');
+      expect(text).toContain("git log --all --format='%h %d %s' -E --grep='row <n>([^0-9]|$)'");
+      expect(text).toContain('move the row to `COMMITTED, <date>, <hash>`');
+    });
+
   test('under agent-commits it builds from the predecessor branch instead (D24)', async () => {
     const text = (await autopilot({ commitPolicy: 'agent-commits' })).replace(/\s+/g, ' ');
     expect(text).toContain("builds from that row's worktree branch");
@@ -170,7 +179,7 @@ describe('what /autopilot says', () => {
   const LANDED = [
     "was signed off in this run is runnable once that row has landed (`/delegate`'s step 6): it builds from the base, which now holds the predecessor.",
     'A predecessor whose landing is held holds it.',
-    "When `/audit` has written its rows, read the board again before step 6. Under this policy the record follows the landing: route a signed-off row to `/delegate`'s step 6, and write the log line and `DONE` when its fast-forward lands.",
+    "When `/audit` has written its rows, read the board again before step 6. Under this policy the record follows the landing: route a signed-off row to `/delegate`'s step 6, and write the log line and `COMMITTED, <date>, <hash>` when its fast-forward lands.",
     '11. **Landed**: for each row, its branch, the merge commit or fast-forward, and whether the push went; the rows landed and not pushed, with how far ahead the base is; and the exact files step 4 commits.',
   ];
 
@@ -246,7 +255,8 @@ describe('what /autopilot says', () => {
       "On a 1.x board, with no `passoff/` folder, write the run's own ledger step instead",
       'Builders take no ledger number and write no log line.',
       "Record each sign-off as `/delegate`'s step 4 says: the item's close-out, a log line and the board.",
-      'Every item its "Waits on" names is `DONE`, or has left the table at a fold.',
+      'Every item its "Waits on" names is `COMMITTED`, or has left the table at a fold.',
+      'A `HELD`, `IN FLIGHT` or `DONE` row ahead of it holds it back.',
       "the close-out text where the item's file is untracked",
       // /delegate lets a builder write its own close-out; the files rule must not stop it there.
       'Its own item file, where `/delegate` lets it write the close-out, is the one exception.',
@@ -555,7 +565,7 @@ describe("the owner's attention", () => {
     },
     {
       name: 'the Budget line',
-      text: 'and the owner\'s attention from **Owner**: the messages counted, the questions answered with the minutes from each question to its answer and their sum, and the message count and the minutes\' sum each divided by the rows this run marked `DONE`, a row and its sub-rows counting as one, as against a cap on rows, or "no row done".',
+      text: 'and the owner\'s attention from **Owner**: the messages counted, the questions answered with the minutes from each question to its answer and their sum, and the message count and the minutes\' sum each divided by the rows this run marked `DONE` or `COMMITTED`, a row and its sub-rows counting as one, as against a cap on rows, or "no row done".',
       ...BUDGET,
     },
     {

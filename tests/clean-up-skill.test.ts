@@ -54,12 +54,12 @@ describe('/clean-up under agent-pushes', () => {
   const PUSHES = [
     "Uncommitted changes block it too: commit the folder's final state yourself, naming its files, then `personal-config archive <slug> --move --dry-run`, then again without `--dry-run`.",
     'Then commit everything the sweep changed, naming the exact files, and push. **The archive may be its own repository**: its commit is rooted there and names its own files, exactly as the command printed it.',
-    "Run it only once every `DONE` item's tracked close-out is on the base, which the land step did.",
+    "Run it only once every `COMMITTED` item's tracked close-out is on the base, which the land step did.",
   ];
   const OWNERS = [
     "**the commit is the owner's**",
     'Then the commit blocks for everything the sweep changed.',
-    "Run it only once every `DONE` item's close-out is committed",
+    "Run it only once every `COMMITTED` item's close-out is committed",
   ];
 
   test('passes: the three sentences render, and the owner commits nothing', async () => {
@@ -110,31 +110,50 @@ describe('what /clean-up tells each shape', () => {
       'personal-config archive <slug>',
       '--move --dry-run',
       "the commit is the\n   owner's",
-      '`DONE - <date>`',
+      '`COMMITTED, <date>, <hash>`',
       'Report, never mark.',
-      'a `DONE` row, a ledger step',
+      'a `DONE` or `COMMITTED` row, a ledger step',
       '**The archive may be its own repository**',
     ])
       expect(text, phrase).toContain(phrase);
   });
 
   /**
-   * Per-item-board Phase 6 (D6, D16): the fold moves a `DONE` item's file with its row, and a 1.x
-   * board, which the same installed skill still meets, keeps every row and step number.
+   * Per-item-board Phase 6 (D6, D16): the fold moves a `COMMITTED` item's file with its row, and a
+   * 1.x board, which the same installed skill still meets, keeps every row and step number.
+   * Standard 2.2.0: a `DONE` item stays, and a `DONE` row git shows committed is moved, not marked.
    */
   test('a ledger folds item files with their rows, log lines by age, and a 1.x board as before', async () => {
     const text = (await cleanUp(CODE_FULL_GIT)).replace(/\s+/g, ' ');
     for (const phrase of [
       'closed item files and their rows, old log lines, finished design folders',
-      "Each `DONE` item's file is written to the archive, read back, given an index line",
+      "Each `COMMITTED` item's file is written to the archive, read back, given an index line",
       'only then removed with its row',
       'Log lines older than 90 days go to the archive log.',
-      "Run it only once every `DONE` item's close-out is committed",
+      'A `DONE` item stays: its commit does not exist yet, except in a folder with no `.git`',
+      'A row at `DONE` is built but not committed: it is not finished',
+      'A `DONE` row whose code commit you can find is really `COMMITTED`',
+      "git log --all --format='%h %d %s' -E --grep='row <n>([^0-9]|$)'",
+      'Moving a `DONE` row to `COMMITTED` is not marking: it is a fact read from git.',
       'On a 1.x board, with no `passoff/` folder beside it, every row and every step number stays',
       'a close-out section, a log line',
     ])
       expect(text, phrase).toContain(phrase);
-    expect(await cleanUp(CODE_FULL_NO_GIT)).not.toContain('close-out is committed');
+    expect(await cleanUp(CODE_FULL_NO_GIT)).not.toContain('git log --all');
+    expect(await cleanUp(CODE_FULL_NO_GIT)).not.toContain('git cat-file');
+  });
+
+  test('without git, `DONE` is final: it is finished and it folds (standard 2.2.0)', async () => {
+    const text = (await cleanUp(CODE_FULL_NO_GIT)).replace(/\s+/g, ' ');
+    for (const phrase of [
+      'A board row** is finished when it says `DONE, <date>` and its item file holds a close-out',
+      "Each `DONE` item's file is written to the archive, read back",
+      'With no git, no commit will follow, so `DONE` is final.',
+      'a row is finished when it says `DONE, <step>` and that step is in the ledger.',
+    ])
+      expect(text, phrase).toContain(phrase);
+    expect(text).not.toContain('A row at `DONE` is built but not committed');
+    expect(text).not.toContain('`COMMITTED, <step>, <hash>`');
   });
 
   test('project folders are never told to fold a ledger or board they do not keep', async () => {
@@ -174,5 +193,31 @@ describe('what /clean-up tells each shape', () => {
   test('the stamp sits below the frontmatter, where the harness can read it', async () => {
     const text = await cleanUp(CODE_FULL_GIT);
     expect(text.startsWith('---\nname: clean-up\n')).toBe(true);
+  });
+});
+
+describe('what /close-out folds, by git (standard 2.2.0)', () => {
+  async function closeOut(shape: Shape): Promise<string> {
+    const files = await render(shape);
+    const text = files.find((f) => f.path.endsWith('close-out/SKILL.md'))?.contents ?? '';
+    return text.replace(/\s+/g, ' ');
+  }
+
+  test('without git, the item just closed folds now, and no row waits for a hash', async () => {
+    const text = await closeOut(CODE_FULL_NO_GIT);
+    expect(text).toContain(
+      "`personal-config fold` moves each `DONE` item's file to the archive",
+    );
+    expect(text).toContain("`DONE` is final: this item's file moves at this fold.");
+    expect(text).not.toContain('COMMITTED, HANDOFF <n>, <hash>');
+  });
+
+  test('with git, it waits for `COMMITTED`, and names the folder case in one clause', async () => {
+    const text = await closeOut(CODE_FULL_GIT);
+    expect(text).toContain(
+      "`personal-config fold` moves each `COMMITTED` item's file to the archive",
+    );
+    expect(text).toContain("so this item's file waits for the next close-out");
+    expect(text).toContain('In a folder with no `.git`, `DONE` is final and folds too.');
   });
 });

@@ -157,7 +157,7 @@ describe('standard 2.0.0: the record is the item file and a log line', () => {
       for (const phrase of [
         "section at the end of the item's own file**, `passoff/<n>-<slug>.md`",
         '`- <date> · closed item <n>`',
-        '**The row becomes `DONE - <date>`**',
+        '**The row becomes `DONE, <date>`**',
         '## Recording work',
         'read only your own item',
         'On a 1.x board, with no `passoff/` folder beside it',
@@ -189,11 +189,22 @@ describe('standard 2.0.0: the record is the item file and a log line', () => {
     expect(short).not.toContain('code map');
   });
 
-  test('in git the item just closed is folded later, after the owner commits its close-out', async () => {
-    expect(await both(CODE_FULL_GIT)).toContain(
-      'Fold an item only once the owner has committed its close-out',
-    );
-    expect(await both(CODE_FULL_NO_GIT)).not.toContain('committed its close-out');
+  test('in git the item just closed is folded later, once its row says COMMITTED', async () => {
+    const text = (await both(CODE_FULL_GIT)).replace(/\s+/g, ' ');
+    expect(text).toContain("A `DONE` item's file stays until its row says `COMMITTED`");
+    expect(text).toContain("moves each `COMMITTED` item's file to the archive");
+    expect(await both(CODE_FULL_NO_GIT)).not.toContain("`DONE` item's file stays");
+  });
+
+  /** Standard 2.2.0: the hash is unknowable before the owner commits, so `DONE` comes first. */
+  test('in git the row is DONE before the hand-back blocks, and COMMITTED once git has the commit', async () => {
+    const text = (await both(CODE_FULL_GIT)).replace(/\s+/g, ' ');
+    expect(text).toContain('now, before the hand-back blocks');
+    expect(text).toContain('Do not wait for the hash');
+    expect(text).toContain('the row becomes `COMMITTED, <date>, <hash>`');
+    expect(text).toContain("git log --all --format='%h %d %s' -E --grep='row <n>([^0-9]|$)'");
+    expect(text).toContain('`COMMITTED, HANDOFF <n>, <hash>`');
+    expect(await both(CODE_FULL_NO_GIT)).not.toContain('Do not wait for the hash');
   });
 
   test('/passoff puts the prompt in its own file on a board, and says nothing of one in folders', async () => {
@@ -214,7 +225,7 @@ describe('standard 2.0.0: the record is the item file and a log line', () => {
     const text = `${skill(files, 'close-out')}\n${skill(files, 'handoff')}`;
     expect(text).toContain('`tasks/<n>-<slug>.md`');
     expect(text).toContain('the log in `NOTES.md`');
-    expect(text).toContain('`DONE - NOTES <n>`');
+    expect(text).toContain('`DONE, NOTES <n>`');
     expect(text).toContain("the archive's `NOTES-log.md`");
     expect(text).not.toContain('passoff/');
   });
