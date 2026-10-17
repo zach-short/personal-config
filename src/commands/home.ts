@@ -2,6 +2,7 @@ import { join, resolve } from 'node:path';
 import { isCancel, SelectPrompt } from '@clack/core';
 import { savedUserConfig } from '../lib/config.ts';
 import { exists } from '../lib/disk.ts';
+import { documentRoot } from '../lib/git.ts';
 import { configFile, expandHome } from '../lib/paths.ts';
 import { readDocNames, readStandardPath } from '../lib/repo-config.ts';
 import { type HomeView, homeScreen, painter, sizeOf, toneFor } from '../lib/screens.ts';
@@ -70,7 +71,8 @@ async function loadSaved(): Promise<{ layer: ConfigLayer } | { error: string }> 
   }
 }
 
-async function folderFacts(cwd: string): Promise<Omit<HomeFacts, 'configLoads'>> {
+async function folderFacts(dir: string): Promise<Omit<HomeFacts, 'configLoads'>> {
+  const cwd = await documentRoot(dir);
   const names = await readDocNames(cwd);
   const standard = await readStandardPath(cwd);
   return {

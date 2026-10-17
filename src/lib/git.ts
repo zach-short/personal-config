@@ -1,5 +1,6 @@
 import { execFile } from 'node:child_process';
-import { join, resolve } from 'node:path';
+import { realpath } from 'node:fs/promises';
+import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
 import { promisify } from 'node:util';
 import { exists } from './disk.ts';
 
@@ -20,6 +21,69 @@ async function git(cwd: string, args: string[]): Promise<string | null> {
   } catch {
     return null;
   }
+}
+
+/**
+ * Where the board, the ledger and `.personal-config.json` for `dir` live. They are untracked, so
+ * a linked worktree has none of them: from a worktree this is the same path in the main
+ * checkout, found through `git rev-parse --git-common-dir`. Everywhere else, `dir` itself,
+ * unchanged — a subdirectory is not walked up to the top, because a folder target or a worked
+ * example inside a repository keeps documents of its own there.
+ *
+ * Answering with another repository's folder is the failure this guards against, since it
+ * passes every gate: a claim lands on the wrong board. So a guess is never returned. The main
+ * checkout is read off the common directory and then confirmed by asking git about it in turn;
+ * anything that does not round-trip (a bare main, a moved checkout, a git too old for
+ * `--path-format`) answers `dir`, where the documents are missing and every reader says so.
+ * A submodule or a nested repository is its own repository: its git dir is its common dir, so
+ * it is never mapped.
+ */
+export async function documentRoot(dir: string): Promise<string> {
+  const out = await git(dir, [
+    'rev-parse',
+    '--path-format=absolute',
+    '--git-dir',
+    '--git-common-dir',
+    '--show-prefix',
+  ]);
+  const [gitDir, commonDir, prefix = ''] = (out ?? '').split('\n');
+  if (!gitDir || !commonDir || !isAbsolute(gitDir) || !isAbsolute(commonDir)) return dir;
+  if (gitDir === commonDir) return dir;
+  const main = await mainCheckout(commonDir);
+  return main === null ? dir : resolve(main, prefix);
+}
+
+/**
+ * The checkout whose git dir is `commonDir`, or null. `git worktree list` is not asked: for a
+ * submodule's worktrees it names `.git/modules/<name>`, the git dir, as the main worktree
+ * (git 2.49.0). The candidate is the folder holding a `.git` common dir, or `core.worktree`
+ * where one is set, and it counts only if git, asked from there, names the same git dir and the
+ * candidate as its own top level.
+ */
+async function mainCheckout(commonDir: string): Promise<string | null> {
+  const candidate =
+    basename(commonDir) === '.git' ? dirname(commonDir) : await configuredWorktree(commonDir);
+  if (candidate === null) return null;
+  const out = await git(candidate, [
+    'rev-parse',
+    '--path-format=absolute',
+    '--git-dir',
+    '--show-toplevel',
+  ]);
+  const [gitDir, top] = (out ?? '').split('\n');
+  return gitDir === commonDir && top === candidate ? candidate : null;
+}
+
+/** `core.worktree`, resolved from the git dir it is relative to; null where none is set. */
+async function configuredWorktree(commonDir: string): Promise<string | null> {
+  const value = await git(commonDir, [
+    'config',
+    '--file',
+    join(commonDir, 'config'),
+    'core.worktree',
+  ]);
+  if (!value) return null;
+  return realpath(resolve(commonDir, value)).catch(() => null);
 }
 
 /** A worktree's `.git` is a file rather than a directory, so both spellings count. */

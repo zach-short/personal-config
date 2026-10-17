@@ -14,6 +14,7 @@ import {
 } from '../lib/board.ts';
 import { today } from '../lib/date.ts';
 import { exists, readText } from '../lib/disk.ts';
+import { documentRoot } from '../lib/git.ts';
 import {
   hasItemsFolder,
   type ItemEntry,
@@ -62,7 +63,9 @@ export async function runPassoff(cli: Cli): Promise<number> {
   const [sub, argument] = cli.paths;
   if (sub !== 'next' && sub !== 'claim') return refuse(USAGE);
 
-  const root = process.cwd();
+  // From a linked worktree this is the main checkout: the board is untracked, so the worktree
+  // has no copy, and a claim has to mark the one board every session reads.
+  const root = await documentRoot(process.cwd());
   if (sub === 'next') {
     const loaded = await loadBoard(root);
     return typeof loaded === 'string' ? refuse(loaded) : printNext(loaded);

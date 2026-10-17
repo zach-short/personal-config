@@ -5,6 +5,7 @@ import { confirmWrite } from '../lib/ask.ts';
 import { today } from '../lib/date.ts';
 import { readText } from '../lib/disk.ts';
 import {
+  documentRoot,
   gitMove,
   isGitRepo,
   lastCommit,
@@ -78,7 +79,9 @@ export async function runArchive(cli: Cli): Promise<number> {
 }
 
 async function prepare(root: string, slug: string): Promise<Plan | string> {
-  const home = await readArchiveHome(root);
+  // Only the archive home comes from the document root: `.personal-config.json` is untracked, so
+  // a worktree has none, while the folder being archived is tracked and is this checkout's.
+  const home = await readArchiveHome(await documentRoot(root));
   if (home === null) return noArchiveHome(root);
 
   const archiveHome = expandHome(home);

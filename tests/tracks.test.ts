@@ -265,6 +265,11 @@ const COMMIT_PARAGRAPH = '**Commits are the owner’s.**';
  * gained a four-line comment saying it never reads that word from setup, and reads it as
  * `print-blocks` if a hand edit writes it. No code line changed. Every variant here answers
  * `print-blocks`, so nothing else moved: the same three keys, 83 still.
+ *
+ * **`completion-gate.sh` moved per variant on 2026-10-16, board row 122.** It reads the config
+ * through the git common directory so a linked worktree finds the main checkout's, logs each
+ * gate run, and blocks on an unreadable command or a gate past its limit. The same three keys,
+ * 83 still.
  */
 describe('§3.1 row 1 — code + full + git is the 0.3.0 output, byte for byte bar one skill', () => {
   const FULL = answersFor(CODE_FULL_GIT);

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { writeFile } from 'node:fs/promises';
+import { realpath, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { exists, readText } from '../src/lib/disk.ts';
 import { repoRoot } from '../src/lib/paths.ts';
@@ -167,7 +167,13 @@ describe('doctor --fix', () => {
       );
 
       const result = await run(lane, ['doctor', '.', '--fix']);
-      expect(result.code).toBe(0);
+      const main = await realpath(dir);
+      expect(result.stdout).toContain(`fixed 2 — ${join(main, '.git', 'info', 'exclude')}`);
+      expect(await excludeText(dir)).toContain('/.personal-config.json');
+      // From a worktree the main checkout is checked too (row 122), and this one committed its
+      // personal files in the seed above: a finding of its own, so the exit is 1, not this fix's.
+      expect(result.stdout).toContain(`\n${main} — `);
+      expect(result.code).toBe(1);
       // A worktree's `.git` is a file: the spelled-out path cannot be created there at all.
       expect(await exists(join(lane, '.git', 'info', 'exclude'))).toBe(false);
     } finally {

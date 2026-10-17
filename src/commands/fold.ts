@@ -20,6 +20,7 @@ import {
   boardFold as sectionFold,
   withoutRows,
 } from '../lib/fold.ts';
+import { documentRoot } from '../lib/git.ts';
 import { hasItemsFolder, isItemFor, listItems } from '../lib/items.ts';
 import { LOG_DAYS } from '../lib/log.ts';
 import { expandHome } from '../lib/paths.ts';
@@ -135,7 +136,8 @@ export async function runFold(cli: Cli): Promise<number> {
   const targets = cli.paths[0] === 'migrate' ? [] : which(cli.paths[0]);
   if (targets === null) return refuse(USAGE);
 
-  const root = process.cwd();
+  // Board, ledger, items and config are all untracked: from a worktree they are the main checkout's.
+  const root = await documentRoot(process.cwd());
   const home = await readArchiveHome(root);
   if (home === null) return refuse(noArchiveHome(root));
 

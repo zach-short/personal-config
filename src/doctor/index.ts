@@ -1,9 +1,9 @@
 import { readdir } from 'node:fs/promises';
-import { basename, dirname, join } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { loadConfig } from '../lib/config.ts';
 import { today } from '../lib/date.ts';
 import { exists, readText } from '../lib/disk.ts';
-import { isGitRepo } from '../lib/git.ts';
+import { documentRoot, isGitRepo } from '../lib/git.ts';
 import { type ItemContext, loadItemContext } from '../lib/items.ts';
 import { expandHome } from '../lib/paths.ts';
 import { readDocNames } from '../lib/repo-config.ts';
@@ -203,7 +203,8 @@ function sort(findings: Finding[]): Finding[] {
 }
 
 export async function runDoctor(cli: Cli): Promise<number> {
-  const roots = cli.paths.length > 0 ? cli.paths.map(expandHome) : [process.cwd()];
+  const given = cli.paths.length > 0 ? cli.paths.map(expandHome) : [process.cwd()];
+  const roots = await withDocumentRoots(given);
   const standard = await standardVersion();
 
   let failing = 0;
@@ -297,6 +298,23 @@ async function fixPlan(root: string, fixable: Finding[]): Promise<Fix[]> {
 function describeFix(fix: Fix): string {
   const what = fix.file.strategy === 'mark-adapted' ? 'adapted stamp' : 'ignore lines';
   return `${fix.file.path} (${what})`;
+}
+
+/**
+ * Each root, then, for a root inside a linked worktree, the same folder in the main checkout. The
+ * worktree is checked as given, because its tracked files are the branch's work; its board,
+ * ledger and `.personal-config.json` are untracked and exist only in the main checkout, so a
+ * worktree-only run found 3 of the main checkout's 16 findings (this repo, 2026-10-16).
+ */
+async function withDocumentRoots(given: string[]): Promise<string[]> {
+  const roots: string[] = [];
+  for (const root of given) {
+    const documents = await documentRoot(root);
+    for (const each of [root, documents]) {
+      if (!roots.some((seen) => resolve(seen) === resolve(each))) roots.push(each);
+    }
+  }
+  return roots;
 }
 
 function printReport(root: string, report: DoctorReport): void {

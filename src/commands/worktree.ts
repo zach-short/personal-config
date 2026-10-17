@@ -1,6 +1,6 @@
 import { basename, resolve } from 'node:path';
 import { readText } from '../lib/disk.ts';
-import { isGitRepo } from '../lib/git.ts';
+import { documentRoot, isGitRepo } from '../lib/git.ts';
 import { fillWorktree, recipeBlocks, UNFILLED } from '../lib/recipe.ts';
 import { readStandardPath, readWorktreePath } from '../lib/repo-config.ts';
 import type { Cli } from '../lib/types.ts';
@@ -22,7 +22,9 @@ type Found = { ok: true; standard: Standard } | { ok: false; reason: string };
  * cannot reach a worktree. The `git worktree add` line is not the part anyone forgets.
  */
 export async function runWorktree(cli: Cli): Promise<number> {
-  const root = process.cwd();
+  // The main checkout from a worktree: the config and the adapted standard are untracked, and a
+  // new lane's path is planned beside the main checkout, not inside another lane.
+  const root = await documentRoot(process.cwd());
   const lane = cli.paths[0];
   if (lane === undefined) return refuse('usage: personal-config worktree <lane>');
   if (!(await isGitRepo(root))) return refuse(`${short(root)} is not a git repository.`);

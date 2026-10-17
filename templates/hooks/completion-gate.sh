@@ -130,32 +130,126 @@ while IFS= read -r file; do
   fi
 done <<<"$(candidates)"
 
+# Where `.personal-config.json` is. It is untracked, so a linked worktree has none, and reading
+# `./.personal-config.json` there found nothing and ran nothing, silently. The same path in the
+# main checkout is the answer, found the way `documentRoot` in `src/lib/git.ts` finds it: the
+# common git dir names the main checkout, and git, asked from there, has to agree before it is
+# used. Anything that does not round-trip — a bare main, a moved checkout, a git older than
+# `--path-format` (2.31) — keeps the current folder, where the file is missing and the log says so.
+# A submodule or a nested repository has its git dir as its common dir and is never mapped.
+config_dir() {
+  local git_dir common main prefix
+  git_dir="$(git rev-parse --path-format=absolute --git-dir 2>/dev/null)" || { pwd; return; }
+  common="$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" || { pwd; return; }
+  case "$git_dir" in /*) ;; *) pwd; return ;; esac
+  case "$common" in /*) ;; *) pwd; return ;; esac
+  if [ "$git_dir" = "$common" ]; then pwd; return; fi
+
+  case "$common" in
+    */.git) main="${common%/.git}" ;;
+    *)
+      main="$(git config --file "$common/config" core.worktree 2>/dev/null || true)"
+      [ -n "$main" ] && main="$(cd "$common" && cd "$main" 2>/dev/null && pwd -P || true)"
+      ;;
+  esac
+  if [ -z "$main" ] ||
+    [ "$(git -C "$main" rev-parse --path-format=absolute --git-dir 2>/dev/null)" != "$common" ] ||
+    [ "$(git -C "$main" rev-parse --show-toplevel 2>/dev/null)" != "$main" ]; then
+    pwd
+    return
+  fi
+  prefix="$(git rev-parse --show-prefix 2>/dev/null || true)"
+  printf '%s\n' "$main${prefix:+/${prefix%/}}"
+}
+
+# One line per stop that reaches the gate, appended where `personal-config` keeps its own state,
+# so "did the gate run in that worktree, and what did it run" has an answer after the fact. A
+# Stop hook's output on a pass is shown to nobody, so the file is the record. Kept to its last
+# 500 lines; a log that cannot be written is skipped, never a reason to block.
+LOG="${HOME:-}/.config/personal-config/completion-gate.log"
+log() {
+  [ -n "${HOME:-}" ] || return 0
+  {
+    mkdir -p "$(dirname "$LOG")" &&
+      printf '%s cwd=%s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$PWD" "$1" >>"$LOG" &&
+      if [ "$(wc -l <"$LOG")" -gt 1000 ]; then
+        tail -n 500 "$LOG" >"$LOG.tmp" && mv "$LOG.tmp" "$LOG"
+      fi
+  } 2>/dev/null || true
+}
+
 # The gate command comes from the repo, never from a constant — the same rule `session-banner.sh`
 # follows, and for the same reason: one hook has to serve every repo, and `bun test` is one
-# repo's answer. Read with `sed` rather than `jq` so a missing `jq` costs nothing here; a command
-# containing an escaped quote is beyond that and would be read short, which is why the long form
-# says to keep it to a single plain command.
-config=".personal-config.json"
-gate=""
+# repo's answer. Read with `sed` rather than `jq` so a missing `jq` costs nothing here.
+config="$(config_dir)/.personal-config.json"
+raw=""
 if [ -f "$config" ]; then
-  gate="$(sed -n 's/.*"gateCommand"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$config")"
+  raw="$(sed -n 's/.*"gateCommand"[[:space:]]*:[[:space:]]*"\(.*\)".*/\1/p' "$config" | head -1)"
 fi
+
+# The value ends at its first quote. One with a backslash before that — an escaped quote above
+# all — is beyond a `sed` read: until 2026-10-16 `"bun test -t \"x\""` was read as
+# `bun test -t \`, which ran something else and could pass. So it is refused by name, and
+# refusing is the closed direction: the turn does not end on a gate command nobody ran.
+gate="${raw%%\"*}"
+case "$gate" in
+  *\\*)
+    log "config=$config gate=unreadable"
+    block "this repo's gate command could not be read." "  $config holds a gateCommand with a backslash or a quote in it, which this hook reads with sed and cannot unescape.
+
+Make it one plain command with no quotes, or put the command in a script and name the script."
+    ;;
+esac
 
 # No gate command configured is not a failure, and must never be treated as one. A repo that has
 # not recorded a command has nothing to prove here — that covers every folder target, every
 # non-code track, and every repo set up before this key existed. The alternative, blocking until
 # somebody configures one, is a hook that refuses eight times in a row on the first run in a repo
 # it was never told about; nobody keeps that installed long enough to benefit from it.
-if [ -z "$gate" ]; then exit 0; fi
+if [ -z "$gate" ]; then
+  if [ -f "$config" ]; then log "config=$config gate=none"; else log "config=none looked=$config"; fi
+  exit 0
+fi
+
+# Under the 120-second timeout `settings.json` gives this hook, because a hook the harness kills
+# does not block: the turn just ends, which is the open direction. So the gate gets less than
+# that, and running out is a block that says so. `PERSONAL_CONFIG_GATE_TIMEOUT` (seconds) moves it.
+LIMIT="${PERSONAL_CONFIG_GATE_TIMEOUT:-100}"
+case "$LIMIT" in "" | *[!0-9]*) LIMIT=100 ;; esac
 
 # `eval`, because the value is a command line — `bun test`, `make check`, `npm run verify` — and
 # it comes from a file in the person's own repo, at the same trust level as the command they
-# would have typed. Output is captured so a failure can quote it; a pass prints nothing, because
-# a Stop hook's stdout is noise on every successful turn.
-if ! output="$(eval "$gate" 2>&1)"; then
+# would have typed. It runs here, in the checkout being stopped in, which in a worktree is the
+# worktree: the config comes from the main checkout, the work being proven does not. Output is
+# captured so a failure can quote it; a pass prints nothing, because a Stop hook's stdout is
+# noise on every successful turn. `set -m` gives the gate its own process group, so a timeout
+# stops the whole tree it started and not only the shell around it.
+output_file="$(mktemp "${TMPDIR:-/tmp}/completion-gate.XXXXXX")"
+trap 'rm -f "$output_file"' EXIT
+set -m
+(eval "$gate") </dev/null >"$output_file" 2>&1 &
+pid=$!
+set +m
+ticks=0
+while kill -0 "$pid" 2>/dev/null; do
+  if [ "$ticks" -ge "$((LIMIT * 5))" ]; then
+    kill -TERM -- "-$pid" 2>/dev/null || kill -TERM "$pid" 2>/dev/null || true
+    log "config=$config gate=$gate result=timeout after ${LIMIT}s"
+    block "this repo's gate command did not finish in ${LIMIT} seconds." "  \$ $gate
+
+$(tail -20 "$output_file")"
+  fi
+  sleep 0.2
+  ticks=$((ticks + 1))
+done
+if wait "$pid"; then status=0; else status=$?; fi
+
+if [ "$status" -ne 0 ]; then
+  log "config=$config gate=$gate result=fail exit=$status"
   block "this repo's gate command did not pass." "  \$ $gate
 
-$(printf '%s' "$output" | tail -20)"
+$(tail -20 "$output_file")"
 fi
 
+log "config=$config gate=$gate result=pass"
 exit 0

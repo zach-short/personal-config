@@ -2,7 +2,7 @@ import { stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { today } from '../lib/date.ts';
 import { exists, readText } from '../lib/disk.ts';
-import { currentBranch } from '../lib/git.ts';
+import { currentBranch, documentRoot } from '../lib/git.ts';
 import {
   duplicateSteps,
   type LedgerStep,
@@ -29,18 +29,21 @@ const USAGE = 'usage: personal-config handoff step';
 export async function runHandoff(cli: Cli): Promise<number> {
   if (cli.paths[0] !== 'step') return refuse(USAGE);
 
-  const root = process.cwd();
+  // The ledger is read where the documents are, the main checkout from a worktree; the branch a
+  // scaffold names is the one this runs in, which is the worktree's.
+  const here = process.cwd();
+  const root = await documentRoot(here);
   const { ledger } = await readDocNames(root);
   const path = join(root, ledger);
   const frozenAt = await readLedgerFrozenAt(root);
   if (frozenAt !== null) {
-    say(await frozen(root, ledger, frozenAt));
+    say(await frozen(here, ledger, frozenAt));
     return 0;
   }
   if (!(await exists(path))) return refuse(noLedger(path));
 
   const steps = ledgerSteps(await readText(path));
-  await report(root, path, steps);
+  await report(here, path, steps);
   return 0;
 }
 
@@ -52,7 +55,7 @@ function noLedger(path: string): string {
   ].join('\n');
 }
 
-async function report(root: string, path: string, steps: LedgerStep[]): Promise<void> {
+async function report(checkout: string, path: string, steps: LedgerStep[]): Promise<void> {
   const next = nextFreeStep(steps);
   const modified = (await stat(path)).mtime.toISOString();
 
@@ -60,7 +63,7 @@ async function report(root: string, path: string, steps: LedgerStep[]): Promise<
   say(`\nThe next free number is ${next}.`);
   say(caveat(next));
   for (const line of anomalies(steps)) say(line);
-  say(`\n${await scaffold(root, next, steps)}`);
+  say(`\n${await scaffold(checkout, next, steps)}`);
 }
 
 /**
@@ -92,8 +95,8 @@ function anomalies(steps: LedgerStep[]): string[] {
 }
 
 /** §2.1's own list of what a step names, as a line to fill rather than a paragraph to recall. */
-async function scaffold(root: string, next: number, steps: LedgerStep[]): Promise<string> {
-  const branch = (await currentBranch(root)) ?? '<branch>';
+async function scaffold(checkout: string, next: number, steps: LedgerStep[]): Promise<string> {
+  const branch = (await currentBranch(checkout)) ?? '<branch>';
   const previous = steps.at(-1);
   return [
     'Scaffold — what §2.1 says a step names:',
@@ -114,8 +117,8 @@ async function scaffold(root: string, next: number, steps: LedgerStep[]): Promis
  * It exits 0 and prints both shapes rather than refusing (BD-4), because sessions run this by
  * habit and a refusal reads as a broken tool. It still writes nothing.
  */
-async function frozen(root: string, ledger: string, frozenAt: number): Promise<string> {
-  const branch = (await currentBranch(root)) ?? '<branch>';
+async function frozen(checkout: string, ledger: string, frozenAt: number): Promise<string> {
+  const branch = (await currentBranch(checkout)) ?? '<branch>';
   const date = today();
   return [
     `${ledger}'s step log froze at step ${frozenAt}; those steps are in the archive's ${docStem(ledger)}-log.md.`,

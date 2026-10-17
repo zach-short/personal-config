@@ -105,9 +105,25 @@ repo into that key. **An empty value means the gate runs nothing** and never blo
 is the deliberate direction: a hook that refused every stop because it could not find a command
 is a hook you would uninstall before it ever caught anything.
 
-Keep it to one plain command with no quotes inside it — it is read with `sed`, not a JSON
-parser. And a suite slower than the hook's 120-second timeout never blocks at all: a killed hook
-is a failed hook, not a refusal.
+Keep it to one plain command with no quotes inside it. It is read with `sed`, not a JSON
+parser, so a value with an escaped quote or a backslash cannot be read whole; the gate blocks on
+it with a message that names the file, rather than running the part it could read. A suite that
+needs quotes belongs in a script, and the script's name goes in the key.
+
+The gate gets 100 seconds, under the 120 the hook entry is given, and a gate still running then
+is stopped and the stop is blocked with a message. A hook the harness kills at its own timeout
+does not block, so the limit sits below it. `PERSONAL_CONFIG_GATE_TIMEOUT` (seconds) moves it.
+
+**From a linked worktree**, the config is read from the main checkout. `.personal-config.json`
+is usually untracked, so a worktree has no copy of it, and until 2026-10-16 the gate found
+nothing there and ran nothing. The hook asks git for the common git directory, takes the main
+checkout from it, and uses it only if git, asked from there, agrees; a submodule or a nested
+repository is its own repository and is not mapped. The command still runs in the worktree,
+because the worktree holds the work being proven.
+
+**Every gate run is logged**, one line each, in `~/.config/personal-config/completion-gate.log`:
+the folder, the config file it read (or the path it looked at and did not find), the command,
+and whether it passed, failed or timed out. Past 1000 lines the file is cut back to its last 500.
 
 ## What the guard catches, and what it does not
 

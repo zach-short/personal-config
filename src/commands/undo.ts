@@ -24,6 +24,9 @@ export async function runUndo(
   prompter: Prompter = clackPrompter(),
   options: UndoOptions = {},
 ): Promise<number> {
+  // Not mapped to the main checkout from a worktree (`documentRoot`): the manifest records the
+  // folder a run started in, so a claim made here is found from here although it wrote the main
+  // checkout's board, and mapping would also admit every other lane's run nested under it.
   const root = options.root ?? process.cwd();
   const backup = await latestBackup(root);
   if (!backup || backup.manifest.entries.length === 0) {
