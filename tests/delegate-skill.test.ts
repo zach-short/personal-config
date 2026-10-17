@@ -197,9 +197,9 @@ describe('what /delegate says', () => {
     '## 6. Land it',
     "After step 4 signs an item off, land it: the base takes the builder's branch, gated on the tree that lands, and the push follows.",
     "1. Where the item's file is tracked, append these sign-off lines to its close-out section",
-    "2. From your worktree's own directory, run `git merge --no-edit <base>` as one plain command",
+    "2. From your worktree's own directory, run `git rev-parse HEAD` and keep the hash. Then run `git merge --no-edit <base>` as one plain command",
     '3. On a conflict in a file your item\'s "Files it owns" lists, resolve it',
-    "4. Run the fresh-checkout recipe's install line again, then every gate below",
+    "run the fresh-checkout recipe's install line again, then every gate below",
     '5. Report: the merge result with `git rev-parse HEAD`',
     "from the primary checkout, `git worktree add <a fresh path> <the builder's branch>`",
     'Never `--force`, and never a rebase: the auditor reproduced the commits that land.',
@@ -271,6 +271,55 @@ describe('what /delegate says', () => {
     const text = (await delegateUnder('agent-commits')).replace(/\s+/g, ' ');
     for (const phrase of LAND_FIXES) expect(text, phrase).not.toContain(phrase);
     expect(text).not.toContain('claim item <n>');
+  });
+
+  /**
+   * D1 As built, 2026-10-16: the land step runs the gates again only where the merge changed
+   * HEAD. The skip needs both witnesses (the hash and git's "already up to date"), names the one
+   * ungated commit it lands (step 1's), and sends a builder that committed after its last gate
+   * run back to the gates. Its sentences are absent under every other policy and on folders.
+   */
+  const UNMOVED = [
+    "4. Run `git rev-parse HEAD` again. When it prints step 2's hash and the merge reported the branch already up to date, the base has not moved",
+    "with step 1's commit on top where it was made: skip the install line and the gates, and report `base unmoved, gates not re-run` with the hash your gates passed on.",
+    "Otherwise, or where any commit but step 1's came after your last gate run, run the fresh-checkout recipe's install line again",
+    'each gate with its output or the `base unmoved` line',
+    'A report of `base unmoved, gates not re-run` lands on the gates the builder already reported; the fast-forward is what checks that the base still has not moved, and it is refused where it has.',
+    'and step 6 runs its gates again where the base moved.',
+  ];
+
+  test('passes: under agent-pushes on a board, step 4 skips the gates only on an unmoved base', async () => {
+    const raw = await delegateUnder('agent-pushes');
+    const text = raw.replace(/\s+/g, ' ');
+    for (const phrase of UNMOVED) expect(text, phrase).toContain(phrase);
+    // The hash is kept before the merge, compared after step 3, and the gates follow the decision.
+    const keep = text.indexOf(
+      'run `git rev-parse HEAD` and keep the hash. Then run `git merge',
+    );
+    const resolve = text.indexOf('run `git commit --no-edit`, and say which file and how.');
+    const again = text.indexOf('4. Run `git rev-parse HEAD` again.');
+    const gates = text.indexOf(
+      "Otherwise, or where any commit but step 1's came after your last gate run",
+    );
+    expect(keep).toBeGreaterThan(0);
+    expect(resolve).toBeGreaterThan(keep);
+    expect(again).toBeGreaterThan(resolve);
+    expect(gates).toBeGreaterThan(again);
+    expect(text).not.toContain('step 6 runs its gates again on the tree that lands');
+  });
+
+  test('violates: under agent-commits, print-blocks and on folders no gate skip renders', async () => {
+    const renders: Array<[string, WorkProfile]> = [
+      ['agent-commits', 'ledger'],
+      ['print-blocks', 'ledger'],
+      ['no-rule', 'ledger'],
+      ['agent-pushes', 'folders'],
+    ];
+    for (const [policy, profile] of renders) {
+      const text = (await delegateUnder(policy, profile)).replace(/\s+/g, ' ');
+      for (const phrase of UNMOVED) expect(text, `${policy} ${profile}`).not.toContain(phrase);
+      expect(text, `${policy} ${profile}`).not.toContain('base unmoved');
+    }
   });
 
   /** Autonomous-autopilot Phase 2 (design D4, 4.1 step 3): the audit dial, on a board only. */

@@ -393,9 +393,9 @@ function builderRule(commits: boolean, landing: Landing): string {
 }
 
 /**
- * Design D4, step 3: an unaudited row still has its gates run twice, by the builder and again by
- * the land step on the tree that lands. The diffstat numbers stay in `/autopilot`'s defaults
- * table, whose test pins each value written once.
+ * Design D4, step 3: an unaudited row lands on the builder's gates, which the land step runs again
+ * only where the merge changed the tree (D1 As built, 2026-10-16). The diffstat numbers stay in
+ * `/autopilot`'s defaults table, whose test pins each value written once.
  */
 function auditDial(): string {
   return [
@@ -409,7 +409,7 @@ function auditDial(): string {
     // Without those two the triggers cannot be read, and an unread trigger must not land unaudited.
     'that lacks the diffstat or the file list is itself a trigger. With no trigger, step 4 signs it',
     "off on the builder's report, with the verdict",
-    '"not audited: <tier>, no trigger", and step 6 runs its gates again on the tree that lands.',
+    '"not audited: <tier>, no trigger", and step 6 runs its gates again where the base moved.',
   ].join('\n');
 }
 
@@ -430,17 +430,26 @@ function landStep(): string {
     '',
     "1. Where the item's file is tracked, append these sign-off lines to its close-out section:",
     '   <the lines step 4 wrote>. Commit that file alone, naming it.',
-    "2. From your worktree's own directory, run `git merge --no-edit <base>` as one plain command,",
-    '   with the branch name written out. A fast-forward and a merge commit are both right.',
+    "2. From your worktree's own directory, run `git rev-parse HEAD` and keep the hash. Then run",
+    '   `git merge --no-edit <base>` as one plain command, with the branch name written out. A',
+    '   fast-forward and a merge commit are both right.',
     '3. On a conflict in a file your item\'s "Files it owns" lists, resolve it, `git add` that file,',
     '   run `git commit --no-edit`, and say which file and how. On a conflict in any other file, run',
     '   `git merge --abort` and report the file list: that is an undeclared overlap, and the row is',
     '   held.',
-    "4. Run the fresh-checkout recipe's install line again, then every gate below: <the item's",
-    "   done-when gates, and the repo's gate command where it has one>. A gate that cannot run here",
-    '   is reported as skipped, with the reason.',
-    '5. Report: the merge result with `git rev-parse HEAD`, each gate with its output, and',
-    '   `git status --porcelain`, which must print nothing.',
+    // Step 1's commit is the one ungated commit the skip lands: one file, the item's own. A
+    // blocked merge commit and an aborted merge leave HEAD unchanged too, so git's own "already
+    // up to date" is the second witness, and step 3's resolved conflict moves HEAD before step 4.
+    "4. Run `git rev-parse HEAD` again. When it prints step 2's hash and the merge reported the",
+    '   branch already up to date, the base has not moved, and the tree that lands is the one your',
+    "   gates passed on, with step 1's commit on top where it was made: skip the install line and",
+    '   the gates, and report `base unmoved, gates not re-run` with the hash your gates passed on.',
+    "   Otherwise, or where any commit but step 1's came after your last gate run, run the",
+    "   fresh-checkout recipe's install line again, then every gate below: <the item's done-when",
+    "   gates, and the repo's gate command where it has one>. A gate that cannot run here is",
+    '   reported as skipped, with the reason.',
+    '5. Report: the merge result with `git rev-parse HEAD`, each gate with its output or the',
+    '   `base unmoved` line, and `git status --porcelain`, which must print nothing.',
     '',
     'A builder that returns a pass-off instead of this report is at its budget. Land the row from a',
     "worktree of your own: from the primary checkout, `git worktree add <a fresh path> <the builder's",
@@ -456,14 +465,16 @@ function landStep(): string {
     'git push',
     '```',
     '',
-    'Never `--force`, and never a rebase: the auditor reproduced the commits that land. A refused',
-    "fast-forward holds the row with git's output as its reason; where the base moved while the",
+    'Never `--force`, and never a rebase: the auditor reproduced the commits that land. A report of',
+    '`base unmoved, gates not re-run` lands on the gates the builder already reported; the',
+    'fast-forward is what checks that the base still has not moved, and it is refused where it has.',
+    "A refused fast-forward holds the row with git's output as its reason; where the base moved",
     // Deep review of row 113, finding 2: a second step 1 would append the sign-off lines twice.
-    'builder was gating, send the message once more first, and the second send skips step 1, whose',
-    'lines are committed already. A refused push lands the row, stops every later push in this',
-    'session, and the rundown says how far ahead the base is. A red gate goes back to the builder as',
-    "a blocking finding, through step 4's fix round. A gate that could not run here is listed under",
-    '**Not verified**.',
+    'while the builder was gating, send the message once more first, and the second send skips',
+    'step 1, whose lines are committed already. A refused push lands the row, stops every later push',
+    'in this session, and the rundown says how far ahead the base is. A red gate goes back to the',
+    "builder as a blocking finding, through step 4's fix round. A gate that could not run here is",
+    'listed under **Not verified**.',
     '',
     'Only now write the record: the log line and `DONE - <date>` on the board, as step 4 says. Under',
     "this policy a row is `DONE` when its commits are on the base. Then step 7 removes the row's",
