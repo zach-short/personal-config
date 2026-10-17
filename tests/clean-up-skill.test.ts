@@ -7,7 +7,13 @@
 import { describe, expect, test } from 'bun:test';
 import { leftoverTokens } from '../src/lib/template.ts';
 import type { Answers, PlannedFile, RepoPlan, WorkProfile } from '../src/lib/types.ts';
-import { DEFAULT_ANSWERS, everySkill, testContext, testRepoPlan } from './helpers.ts';
+import {
+  DEFAULT_ANSWERS,
+  everySkill,
+  PROSE_LAND_STEP,
+  testContext,
+  testRepoPlan,
+} from './helpers.ts';
 
 type Shape = {
   workKind: 'code' | 'non-code';
@@ -23,7 +29,13 @@ async function render(
   workProfile: WorkProfile = 'ledger',
   commitPolicy = 'print-blocks',
 ): Promise<PlannedFile[]> {
-  const answers: Answers = { ...DEFAULT_ANSWERS, skills: 'all', ...shape, commitPolicy };
+  const answers: Answers = {
+    ...DEFAULT_ANSWERS,
+    ...PROSE_LAND_STEP,
+    skills: 'all',
+    ...shape,
+    commitPolicy,
+  };
   const plan: RepoPlan = testRepoPlan({ workProfile });
   return everySkill(testContext(answers, plan));
 }

@@ -303,10 +303,10 @@ export type Finding = {
   fixable: boolean;
   /**
    * Present and true is the whole signal, the way `PlannedFile.mode` is: this finding is
-   * reported and does not fail the run (stamp-provenance `DESIGN.md` D4). Only a standard-version
-   * lag in an adapted file carries it — work to schedule rather than a defect in the repo, and
-   * the one finding most likely to sit for weeks — and every other finding keeps its non-zero
-   * exit by leaving it out.
+   * reported and does not fail the run (stamp-provenance `DESIGN.md` D4). Two findings carry
+   * it: a standard-version lag in an adapted file, which is work to schedule rather than a defect
+   * in the repo, and a `files-grammar` token, which breaks no rule the frozen standard states
+   * (row 124, owner decision 17). Every other finding keeps its non-zero exit by leaving it out.
    */
   advisory?: boolean;
 };

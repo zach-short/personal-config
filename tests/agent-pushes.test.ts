@@ -19,7 +19,14 @@ import { claudeRulesDir, repoRoot } from '../src/lib/paths.ts';
 import type { Answers, PlannedFile } from '../src/lib/types.ts';
 import { declinedHookHelp, renderHooks } from '../src/render/hooks.ts';
 import { renderAll } from '../src/render/index.ts';
-import { cleanup, DEFAULT_ANSWERS, tempDir, testContext, testRepoPlan } from './helpers.ts';
+import {
+  cleanup,
+  DEFAULT_ANSWERS,
+  PROSE_LAND_STEP,
+  tempDir,
+  testContext,
+  testRepoPlan,
+} from './helpers.ts';
 
 const CODE_FULL_GIT: Answers = {
   ...DEFAULT_ANSWERS,
@@ -161,7 +168,7 @@ describe('the skills land a row under agent-pushes, and only there', () => {
   const LANDS: Record<string, string> = { delegate: '## 6. Land it', autopilot: '**Landed**' };
 
   const read = async (skill: string, policy: string) =>
-    (await render({ commitPolicy: policy })).find((f) =>
+    (await render({ commitPolicy: policy, ...PROSE_LAND_STEP })).find((f) =>
       f.path.endsWith(join(skill, 'SKILL.md')),
     )?.contents ?? '';
 

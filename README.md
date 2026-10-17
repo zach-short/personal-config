@@ -307,6 +307,8 @@ starter  →  --profile <name>  →  ~/.config/personal-config/config.json  → 
 
 A profile is a default provider, which is why `--profile` sits below the files: an answer you have already saved outranks the profile that suggested it.
 
+A profile may also set a key that no question asks. One exists today: `"landStep": "prose"` in `answers`. Under the agent may commit and push, with a board, it gives `/delegate` its section 6, "Land it", where the builder merges the base into its branch and runs the gates again before the session fast-forwards and pushes. Without it, `/delegate` signs the item off, and its worktree step fast-forwards the base to the branch and pushes. Only `zach` sets it.
+
 ### Starting from answers you already have
 
 ```bash

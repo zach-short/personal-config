@@ -249,7 +249,7 @@ function variables(
   }
   if (name === 'handoff') return handoffVars(shape, namesOf(ctx));
   if (name === 'passoff') return passoffVars(shape, namesOf(ctx), ownersCall(ctx));
-  if (name === 'clean-up') return cleanUpVars(shape, namesOf(ctx), agentPushes(ctx));
+  if (name === 'clean-up') return cleanUpVars(shape, namesOf(ctx), landing);
   if (name === 'delegate') return delegateVars(ctx, shape, landing);
   if (name === 'autopilot') return autopilotVars(ctx);
   if (name === 'audit') return auditVars(ctx);
@@ -289,16 +289,25 @@ function agentPushes(ctx: RenderContext): boolean {
 
 /**
  * Who lands a signed-off branch. `none`: the run merges nothing (every policy but `agent-pushes`).
- * `step`: a board's land step (D1). `direct`: project folders under `agent-pushes`, where the land
- * step's record (a log line, a `DONE` row, a tracked item file the builder commits its sign-off
- * into) does not exist, so the builder rule and the worktree step say the session fast-forwards
- * and pushes, and nothing in the text reserves git for the owner (D6 As built, 2026-10-16).
+ * `step`: a board's land step (D1), where the profile sets `landStep`. `direct`: everywhere else
+ * under `agent-pushes`, project folders among them, where the builder rule and the worktree step
+ * say the session fast-forwards and pushes, and nothing in the text reserves git for the owner
+ * (D6 As built, 2026-10-16).
  */
 type Landing = 'none' | 'step' | 'direct';
 
 function landingOf(ctx: RenderContext, shape: SkillShape): Landing {
   if (!agentPushes(ctx)) return 'none';
-  return shape.folders ? 'direct' : 'step';
+  return !shape.folders && proseLandStep(ctx) ? 'step' : 'direct';
+}
+
+/**
+ * Owner decision 13, 2026-10-16: the prose land step renders only for a profile that sets
+ * `landStep: "prose"`. It is a profile key and not a question, so the shipped default creates no
+ * user who depends on a step a landing engine replaces once it moves `main` in each repo.
+ */
+function proseLandStep(ctx: RenderContext): boolean {
+  return answer(ctx, 'landStep') === 'prose';
 }
 
 /**
@@ -317,7 +326,7 @@ function delegateVars(
   const commits = agentCommits(ctx);
   const vars = shape.folders
     ? delegateFolderVars()
-    : delegateBoardVars(ctx, namesOf(ctx), commits, lands);
+    : delegateBoardVars(ctx, namesOf(ctx), commits, landing);
   // The land step takes section 6, so the worktree step moves to 7 under it.
   const removal = lands ? 7 : 6;
   return {
@@ -335,7 +344,8 @@ function delegateVars(
       landing,
     ),
     COMMIT_RULE: builderRule(commits, landing),
-    AUDIT_DIAL: lands ? auditDial() : '',
+    // `/autopilot`, which the dial is for, renders on a board alone.
+    AUDIT_DIAL: !shape.folders && landing !== 'none' ? auditDial(lands) : '',
     // Item 95 audit, N1: the auditor's branch now holds the builder's commits, so the worktree
     // step keeps it.
     AUDIT_KEPT: commits
@@ -362,7 +372,7 @@ function delegateVars(
 
 /** G40: under `agent-pushes` the merge and the push are not banned, they wait for step 6 (4.1). */
 function builderRule(commits: boolean, landing: Landing): string {
-  // Folders have no step 6, so the rule names who lands as a fact; the rest is `agent-commits`'.
+  // Without the land step the rule names who lands as a fact; the rest is `agent-commits`'.
   if (landing === 'direct')
     return [
       'Commit on your own worktree branch, naming the exact files in both the `git add` and',
@@ -397,7 +407,7 @@ function builderRule(commits: boolean, landing: Landing): string {
  * only where the merge changed the tree (D1 As built, 2026-10-16). The diffstat numbers stay in
  * `/autopilot`'s defaults table, whose test pins each value written once.
  */
-function auditDial(): string {
+function auditDial(lands: boolean): string {
   return [
     '',
     '',
@@ -409,7 +419,11 @@ function auditDial(): string {
     // Without those two the triggers cannot be read, and an unread trigger must not land unaudited.
     'that lacks the diffstat or the file list is itself a trigger. With no trigger, step 4 signs it',
     "off on the builder's report, with the verdict",
-    '"not audited: <tier>, no trigger", and step 6 runs its gates again where the base moved.',
+    // Without the land step, step 6's `--ff-only` is refused where the base moved, so the tree that
+    // lands is always the one the builder's gates ran on.
+    lands
+      ? '"not audited: <tier>, no trigger", and step 6 runs its gates again where the base moved.'
+      : '"not audited: <tier>, no trigger".',
   ].join('\n');
 }
 
@@ -530,11 +544,12 @@ function tierTable(ctx: RenderContext, indent: string): string {
 function autopilotVars(ctx: RenderContext): Record<string, string | null> {
   const commits = agentCommits(ctx);
   const autonomy = agentPushes(ctx) ? autopilotAutonomy(ctx) : autopilotSupervised();
-  // `/autopilot` renders only on a board, so `agentPushes()` alone decides its land step.
+  // `/autopilot` renders only on a board, so `agentPushes()` decides that it lands, and the
+  // profile's `landStep` whether through the land step.
   if (agentPushes(ctx))
     return {
       ...autopilotNames(ctx),
-      ...autopilotLanding(),
+      ...autopilotLanding(proseLandStep(ctx)),
       ...autonomy,
       END_COMMIT: endCommit(),
     };
@@ -582,19 +597,23 @@ function autopilotNames(ctx: RenderContext): Record<string, string> {
 /**
  * Design 4.2 under `agent-pushes`: a successor builds from the base once its predecessor has
  * landed, the record waits for the fast-forward, and the rundown reports what landed and pushed.
+ * Without the land step `/delegate`'s step 4 writes the record and its step 6 lands, so the route
+ * adds nothing.
  */
-function autopilotLanding(): Record<string, string> {
+function autopilotLanding(lands: boolean): Record<string, string> {
   return {
     AFTER_UNCOMMITTED: [
       '- A row whose predecessor in its lane, or an item its "Waits on" names, was signed off in',
       "  this run is runnable once that row has landed (`/delegate`'s step 6): it builds from the",
       '  base, which now holds the predecessor. A predecessor whose landing is held holds it.',
     ].join('\n'),
-    LAND_ROUTE: [
-      '',
-      '   Under this policy the record follows the landing: route a signed-off row to',
-      "   `/delegate`'s step 6, and write the log line and `DONE` when its fast-forward lands.",
-    ].join('\n'),
+    LAND_ROUTE: lands
+      ? [
+          '',
+          '   Under this policy the record follows the landing: route a signed-off row to',
+          "   `/delegate`'s step 6, and write the log line and `DONE` when its fast-forward lands.",
+        ].join('\n')
+      : '',
     // Deep review of row 113, finding 5: the fold prints no blocks here, step 4 commits its files.
     FOLD_COMMIT: "and its commit is step 4's.",
     COMMIT_BLOCKS: [
@@ -791,10 +810,11 @@ function delegateBoardVars(
   ctx: RenderContext,
   names: RecordNames,
   commits: boolean,
-  lands: boolean,
+  landing: Landing,
 ): Record<string, string> {
   const { ledger, items } = names;
   const board = boardFile(ctx);
+  const lands = landing === 'step';
   return {
     GATE_CLEARED: [
       `On the board (\`${board}\`): an \`OPEN\` row with a model and a written prompt, every item`,
@@ -819,7 +839,7 @@ function delegateBoardVars(
       "session sees the claim. Then find whether the item's file is tracked: it is when",
       `\`git ls-files --error-unmatch ${items}/<n>-<slug>.md\` succeeds here. Only a tracked file is`,
       "in a builder's worktree. Say which it is in the builder's brief.",
-      ...(lands ? claimCommit(items) : []),
+      ...(landing === 'none' ? [] : claimCommit(items, lands ? 'The land step' : 'Step 6')),
     ].join('\n'),
     ITEM_FILE_RULE: [
       '',
@@ -827,7 +847,7 @@ function delegateBoardVars(
       '  there: what changed and why, what is now fixed, which questions it answered, and what is',
       '  left owed. Otherwise put that text in your report. It is the one record you write.',
     ].join('\n'),
-    RECORD: lands ? landedRecord(names) : delegateRecord(names, commits),
+    RECORD: boardRecord(names, commits, landing),
     HELD: [
       'After that the row is `HELD`: its "Waits on" names the file the open findings are written in,',
       `  and the item's file gets a dated note of what is done and what is left.`,
@@ -837,14 +857,14 @@ function delegateBoardVars(
 
 /**
  * Deep review of row 113, finding 1: `passoff claim` writes the claim line into the item file
- * here, uncommitted, and the builder's branch commits the same file, so the land step's
- * `--ff-only` is refused until the claim is committed. A tracked file is never new, so a plain
+ * here, uncommitted, and the builder's branch commits the same file, so the `--ff-only` that lands
+ * it is refused until the claim is committed. A tracked file is never new, so a plain
  * `git commit <path>` takes it with no `git add`.
  */
-function claimCommit(items: string): string[] {
+function claimCommit(items: string, lander: string): string[] {
   return [
     'Where it is tracked, commit the claim before step 2, naming the file:',
-    `\`git commit ${items}/<n>-<slug>.md -m "claim item <n>"\`. The land step fast-forwards the`,
+    `\`git commit ${items}/<n>-<slug>.md -m "claim item <n>"\`. ${lander} fast-forwards the`,
     'primary checkout, and git refuses a fast-forward that would overwrite an uncommitted edit to',
     'that file.',
   ];
@@ -856,6 +876,12 @@ function claimCommit(items: string): string[] {
  * builder's worktree, so the whole record lands in the builder's commit and the primary checkout
  * holds no edit to a file the builder's branch also changes.
  */
+function boardRecord(names: RecordNames, commits: boolean, landing: Landing): string {
+  if (landing === 'step') return landedRecord(names);
+  if (landing === 'direct') return directRecord(names);
+  return delegateRecord(names, commits);
+}
+
 function delegateRecord(names: RecordNames, commits: boolean): string {
   const { ledger, ledgerStem, items } = names;
   // Finding 4 of the Deep review: a hook can still block an agent's commit, and the record must
@@ -896,6 +922,33 @@ function landedRecord(names: RecordNames): string {
     `  chat, or into the run's state file under \`/autopilot\`. ${legacyBoard(names)}, the record`,
     `  is one step in \`${ledger}\` at the next free number, read from the file now, with the same`,
     `  lines, and the row becomes \`DONE - ${ledgerStem} <n>\`.`,
+  ].join('\n');
+}
+
+/** The sentence that closes `/delegate`'s sign-off where no land step renders (decision 13). */
+const LEAD_LANDS =
+  'This session, the lead, then lands the branch in step 6, by fast-forward and push.';
+
+/**
+ * Decision 13 without the land step: the builder commits the sign-off lines, as the land step's
+ * own step 1 has it, because a line this session left uncommitted in the builder's worktree would
+ * stay out of the fast-forward. The close is the sign-off, and its last sentence says who lands.
+ */
+function directRecord(names: RecordNames): string {
+  const { ledger, ledgerStem, items } = names;
+  return [
+    "Write the record: the builder's and the auditor's models, the worktree, the branch, the",
+    '  commit state (committed on its branch, which step 6 lands, or "not committed" where a hook',
+    '  blocked it), the relay passes, the verdict, each finding as `open`, and a Deep lift as the',
+    "  person's call. Where the item's file is tracked, send these lines to the builder with",
+    '  `SendMessage`, to append to its close-out section and commit, naming the file. Where it is',
+    `  untracked, write the whole section at the end of \`${items}/<n>-<slug>.md\` here, from the`,
+    `  builder's report. Then add \`- <date> · closed item <n>\` at the end of the log in`,
+    `  \`${ledger}\`, mark the row \`DONE - <date>\`, and post the \`/close-out\` hand-back blocks: in`,
+    `  chat, or into the run's state file under \`/autopilot\`. ${legacyBoard(names)}, the record`,
+    `  is one step in \`${ledger}\` at the next free number, read from the file now, with the same`,
+    `  lines, and the row becomes \`DONE - ${ledgerStem} <n>\`.`,
+    `  ${LEAD_LANDS}`,
   ].join('\n');
 }
 
@@ -941,14 +994,18 @@ function delegateFolderVars(): Record<string, string> {
 function cleanUpVars(
   shape: SkillShape,
   names: RecordNames,
-  pushes: boolean,
+  landing: Landing,
 ): Record<string, string> {
+  const pushes = landing !== 'none';
   return {
     WHAT_MOVES: shape.folders
       ? 'closed project folders'
       : 'closed item files and their rows, old log lines, finished design folders',
     FINISHED: shape.folders ? finishedFolders() : finishedItems(names),
-    MOVE_STEPS: [shape.folders ? '' : foldMove(shape, names, pushes), folderMove(shape, pushes)]
+    MOVE_STEPS: [
+      shape.folders ? '' : foldMove(shape, names, landing),
+      folderMove(shape, pushes),
+    ]
       .filter((step) => step !== '')
       .join('\n'),
     GREP_WHERE: shape.folders
@@ -1006,18 +1063,20 @@ function finishedFolders(): string {
  * removes the file and its row. In git it waits for the owner's commit, because a file folded
  * before that commit takes its close-out out of the history the commit was meant to hold.
  */
-function foldMove(shape: SkillShape, names: RecordNames, pushes: boolean): string {
-  return [...foldMoveBody(names), ...foldMoveTiming(shape, pushes)].join('\n');
+function foldMove(shape: SkillShape, names: RecordNames, landing: Landing): string {
+  return [...foldMoveBody(names), ...foldMoveTiming(shape, landing)].join('\n');
 }
 
 /** Design 4.3: under `agent-pushes` the land step, not the owner, committed each close-out. */
-function foldMoveTiming(shape: SkillShape, pushes: boolean): string[] {
+function foldMoveTiming(shape: SkillShape, landing: Landing): string[] {
   if (!shape.git) return [];
-  if (pushes)
+  if (landing === 'step')
     return [
       "   Run it only once every `DONE` item's tracked close-out is on the base, which the land step",
       '   did.',
     ];
+  if (landing === 'direct')
+    return ["   Run it only once every `DONE` item's tracked close-out is on the base."];
   return [
     "   Run it only once every `DONE` item's close-out is committed: a fold takes the file out",
     '   of the tree.',
@@ -1085,7 +1144,8 @@ function closeOutVars(
     RECORD_WHERE: recordWhere(shape),
     RECORD_STEPS: [
       recordStep(shape, names),
-      foldStep(shape, landing === 'step'),
+      // Under `direct` too the close-out reaches the base with the branch, not by the owner's commit.
+      foldStep(shape, landing !== 'none'),
       landedEarly(shape),
     ]
       .filter((step) => step !== '')
@@ -1232,7 +1292,7 @@ function itemFoldStep(shape: SkillShape, lands: boolean): string {
   return [...itemFoldBody(), ...foldTiming(shape, lands)].join('\n');
 }
 
-/** Design 4.3: under `agent-pushes` the land step, not the owner, put the close-out on the base. */
+/** Design 4.3: under `agent-pushes` the session, not the owner, put the close-out on the base. */
 function foldTiming(shape: SkillShape, lands: boolean): string[] {
   if (!shape.git) return [];
   if (lands)
@@ -1414,8 +1474,8 @@ function landedLimits(): string[] {
 }
 
 /**
- * Project folders under `agent-pushes` have no land step, so this step is where the session lands
- * (D6 As built, 2026-10-16). `--ff-only` keeps D1's guarantee that the base takes only a tree a
+ * Under `agent-pushes` without the land step (project folders always, a board unless its profile
+ * sets `landStep`), this step is where the session lands (D6 As built, 2026-10-16). `--ff-only` keeps D1's guarantee that the base takes only a tree a
  * gate ran on; a refusal leaves the branch unmerged, so the checks below keep its worktree.
  */
 function directLimits(): string[] {

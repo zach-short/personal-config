@@ -108,6 +108,9 @@ The CLI. The working standard it installs is versioned separately — see
 
 ### Changed
 
+- **`/delegate`'s land step renders only for a profile that sets `"landStep": "prose"`.** Under
+  the agent may commit and push, the default now signs an item off and lands its branch in the
+  worktree step, by fast-forward and push, and no skill names the land step.
 - **The standard is 2.1.0, and Part 4 reads the tiers from the bottom.** A writer stops at the
   first row that fits, Default is the fallback, and an opt-in Light tier fills the new
   `{{MODEL_LIGHT}}` placeholder or reads `not configured`. See `standard/CHANGELOG.md`.

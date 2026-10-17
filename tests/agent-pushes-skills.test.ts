@@ -11,7 +11,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { Answers, PlannedFile, WorkProfile } from '../src/lib/types.ts';
 import { renderAll } from '../src/render/index.ts';
-import { DEFAULT_ANSWERS, testContext, testRepoPlan } from './helpers.ts';
+import { DEFAULT_ANSWERS, PROSE_LAND_STEP, testContext, testRepoPlan } from './helpers.ts';
 
 /** Design 4.5, as written, global so `match` returns every hit. */
 const OWNERS_GIT =
@@ -24,9 +24,11 @@ const OWNERS_GIT =
 async function render(
   commitPolicy: string,
   workProfile: WorkProfile = 'ledger',
+  profileKeys: Answers = PROSE_LAND_STEP,
 ): Promise<PlannedFile[]> {
   const answers: Answers = {
     ...DEFAULT_ANSWERS,
+    ...profileKeys,
     workKind: 'code',
     configWeight: 'full',
     usesGit: 'yes',
@@ -51,6 +53,11 @@ function skillText(files: PlannedFile[], name: string): string {
 describe('the sweep leaves no owner-only git sentence under agent-pushes', () => {
   test('passes: nothing rendered under agent-pushes matches', async () => {
     expect(joined(await render('agent-pushes')).match(OWNERS_GIT)).toBeNull();
+  });
+
+  // Decision 13, 2026-10-16: the default leaves out the land step, and the lead still lands.
+  test('passes: nothing rendered on a board without the land-step key matches', async () => {
+    expect(joined(await render('agent-pushes', 'ledger', {})).match(OWNERS_GIT)).toBeNull();
   });
 
   test('passes: nothing rendered on project folders under agent-pushes matches', async () => {

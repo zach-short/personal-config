@@ -144,18 +144,98 @@ export function withStatus(row: BoardRow, columns: BoardColumns, status: string)
  * often in backticks, sometimes with a trailing clause — so a token is anything that looks like
  * a path, and the comparison is deliberately loose. A false warning costs a glance; a missed
  * collision costs two sessions editing one file.
+ *
+ * What counts as a token is `ownedTokens`'s answer, so `doctor`'s `files-grammar` rule reports
+ * against the same reading the collision check makes (row 124). Every token the old split kept
+ * whole is still kept, so a pair that collided on one before still collides.
  */
 export function ownedFiles(cell: string): string[] {
-  if (isEmptyCell(cell)) return [];
-  return cell
-    .split(/[,;]/)
-    .map((part) => stripTypography(part).trim())
-    .filter((part) => part !== '' && /[./]/.test(part));
+  return ownedTokens(cell)
+    .filter((token) => token.kind === 'path' || /[./]/.test(token.text))
+    .map((token) => token.text);
 }
 
+/**
+ * A token the collision check can compare (`path`, with a trailing `/` for a directory), one it
+ * cannot (`glob`, `prose`), and why. A path is repository-relative: no leading `/` or `~`, no
+ * `.` or `..` segment. Its characters are the ones row 124 named — letters, digits, `.`, `_`,
+ * `-`, `/` — plus the four route-folder ones, `(`, `)`, `[`, `]`, and `@` and `+`, because
+ * ezhomesteading's board names `web/app/(no-nav)/checkout/`, a real Next.js path, and an exact
+ * comparison handles them as well as any other character.
+ */
+export type OwnedToken = { text: string; kind: 'path' | 'glob' | 'prose' };
+
+const SEGMENT = /^[A-Za-z0-9._()[\]@+-]+$/;
+
+/**
+ * The cell split on `,` and `;` where they separate tokens, which is outside backticks,
+ * parentheses and braces: `{a,b}.tsx` is one glob and `(As built, P2)` is one note, and the old
+ * split cut both in two (ezhomesteading's and wk's boards, 2026-10-16). A note in parentheses
+ * after a path, set off by a space, is the board's way of saying which part of the file it means,
+ * and it is dropped: `src/lib/board.ts (\`sharedFiles\`)` owns `src/lib/board.ts`. An empty cell
+ * and `nothing` own nothing.
+ */
+export function ownedTokens(cell: string): OwnedToken[] {
+  if (isEmptyCell(cell) || /^nothing\b/i.test(stripTypography(cell))) return [];
+  return splitOutside(cell)
+    .map((part) => withoutNote(stripTypography(part)))
+    .filter((text) => text !== '')
+    .map((text) => ({ text, kind: tokenKind(text) }));
+}
+
+function splitOutside(cell: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let code = false;
+  let start = 0;
+  for (let i = 0; i < cell.length; i++) {
+    const char = cell[i] ?? '';
+    if (char === '`') code = !code;
+    if (code) continue;
+    depth = Math.max(0, depth + nesting(char));
+    if (depth === 0 && (char === ',' || char === ';')) {
+      parts.push(cell.slice(start, i));
+      start = i + 1;
+    }
+  }
+  return [...parts, cell.slice(start)];
+}
+
+function nesting(char: string): number {
+  if (char === '(' || char === '{') return 1;
+  return char === ')' || char === '}' ? -1 : 0;
+}
+
+function withoutNote(text: string): string {
+  return text.replace(/\s+\([^()]*\)$/, '').trim();
+}
+
+function tokenKind(text: string): OwnedToken['kind'] {
+  if (/\s/.test(text)) return 'prose';
+  if (/[*?{}]/.test(text) || text.split('/').includes('...')) return 'glob';
+  return isRepoPath(text) ? 'path' : 'prose';
+}
+
+function isRepoPath(text: string): boolean {
+  const segments = (text.endsWith('/') ? text.slice(0, -1) : text).split('/');
+  return segments.every((s) => s !== '.' && s !== '..' && SEGMENT.test(s));
+}
+
+/**
+ * What two cells both own. A token ending in `/` is a directory and owns everything under it, so
+ * `src/lib/` collides with `src/lib/board.ts` (row 124); every other token matches only itself,
+ * as before. The name reported for a pair is the narrower of the two, because that is what both
+ * items would edit.
+ */
 export function sharedFiles(left: string, right: string): string[] {
-  const other = new Set(ownedFiles(right));
-  return ownedFiles(left).filter((file) => other.has(file));
+  const theirs = ownedFiles(right);
+  const shared = ownedFiles(left).flatMap((mine) =>
+    theirs.flatMap((other) => {
+      if (mine === other || (mine.endsWith('/') && other.startsWith(mine))) return [other];
+      return other.endsWith('/') && mine.startsWith(other) ? [mine] : [];
+    }),
+  );
+  return [...new Set(shared)];
 }
 
 /**

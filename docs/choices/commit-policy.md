@@ -108,15 +108,18 @@ delete guard for non-code work) are written as before. In each repo's router and
 commit line says the agent may run any git command, including `git add`, `git commit`,
 `git merge` and `git push`.
 
-Under this answer the two skills that run a board also land what they build. `/delegate` gains a
-land step: after the audit, the builder merges the base into its branch from its own worktree,
-resolves a conflict only in a file its item lists, runs the gates again on the tree that lands, and
-the session fast-forwards your checkout and pushes. A row is `DONE` only once its commits are on
-the base. `/autopilot` decides the questions a builder raises, by how loud a wrong answer would be,
-and logs each with its reversal; a question the item file marks as the owner's still holds the row.
-At the end of a run it commits its own folder and what the fold moved, naming the files, and
-pushes. Under the other three answers both skills leave every branch in its worktree and every
-commit to you.
+Under this answer the two skills that run a board also land what they build. After the audit,
+`/delegate` has the builder commit the sign-off lines where the item file is tracked, and its
+worktree step fast-forwards your checkout to the branch and pushes. A fast-forward that git refuses
+leaves the branch where it is, with git's output in the report. A profile that
+sets `"landStep": "prose"` (a profile key, not a question) gives `/delegate` a land step in its place: the builder
+merges the base into its branch from its own worktree, resolves a conflict only in a file its item
+lists, runs the gates again on the tree that lands, and the session fast-forwards your checkout and
+pushes. Under the land step a row is `DONE` only once its commits are on the base. `/autopilot`
+decides the questions a builder raises, by how loud a wrong answer would be, and logs each with its
+reversal; a question the item file marks as the owner's still holds the row. At the end of a run it
+commits its own folder and what the fold moved, naming the files, and pushes. Under the other three
+answers both skills leave every branch in its worktree and every commit to you.
 
 **A later run removes the rule.** Answering "no rule" on a later run plans the removal of
 `~/.claude/rules/commits.md`. A removal only touches a file this tool stamped and you have not marked `adapted`; a file with no stamp, or an adapted one, is left alone and not listed. The hook script and its `settings.json` entry stay, because
