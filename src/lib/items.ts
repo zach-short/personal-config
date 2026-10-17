@@ -2,6 +2,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { readText } from './disk.ts';
+import { insideGit } from './git.ts';
 import { numberedSection } from './markdown.ts';
 import { expandHome } from './paths.ts';
 import { readArchiveHome, readLedgerFrozenAt } from './repo-config.ts';
@@ -170,17 +171,26 @@ export async function listItems(dir: string): Promise<ItemEntry[]> {
  * What a board's rules need beyond the board itself, read once per root because `check` is
  * handed one doc. `archived` is null where the archive cannot be read (no `archiveHome`, or a
  * home this machine does not have), and null means "cannot verify", never "the record is
- * missing" (D2).
+ * missing" (D2). `git` is whether a `.git` sits at or above the root, which decides whether a
+ * `DONE` row may fold (`isFoldable`).
  */
-export type ItemContext = { archived: ItemEntry[] | null; ledgerFrozenAt: number | null };
+export type ItemContext = {
+  archived: ItemEntry[] | null;
+  ledgerFrozenAt: number | null;
+  git: boolean;
+};
 
-/** A 1.x repo as every rule read it before item files: no archive to consult, no frozen log. */
-export const UNMIGRATED: ItemContext = { archived: null, ledgerFrozenAt: null };
+/**
+ * A 1.x repo as every rule read it before item files: no archive to consult, no frozen log. It
+ * claims git because that is the safe guess: a `DONE` item stays live until it is `COMMITTED`.
+ */
+export const UNMIGRATED: ItemContext = { archived: null, ledgerFrozenAt: null, git: true };
 
 export async function loadItemContext(root: string, itemsName: string): Promise<ItemContext> {
   const ledgerFrozenAt = await readLedgerFrozenAt(root);
+  const git = await insideGit(root);
   const home = await readArchiveHome(root);
   if (home === null || !hasItemsFolder(expandHome(home)))
-    return { archived: null, ledgerFrozenAt };
-  return { archived: await listItems(join(expandHome(home), itemsName)), ledgerFrozenAt };
+    return { archived: null, ledgerFrozenAt, git };
+  return { archived: await listItems(join(expandHome(home), itemsName)), ledgerFrozenAt, git };
 }

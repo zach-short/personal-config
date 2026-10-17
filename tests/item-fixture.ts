@@ -1,3 +1,4 @@
+import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { cleanup, tempDir } from './helpers.ts';
 
@@ -65,8 +66,15 @@ export type ItemRepo = {
   done: () => Promise<void>;
 };
 
-/** Repo and archive under one temp parent, so one cleanup removes both. */
-export async function makeItemRepo(): Promise<ItemRepo> {
+/**
+ * Repo and archive under one temp parent, so one cleanup removes both.
+ *
+ * `git` gives the repo an empty `.git` folder, which is what `insideGit` looks for, so a `DONE`
+ * item stays live as it does in a repo (standard 2.2.0). It is not a repository git can read, so
+ * `board-status` still reads a `COMMITTED` hash as "cannot verify". Without it the root is a
+ * folder with no git, where `DONE` is final and folds.
+ */
+export async function makeItemRepo({ git = true }: { git?: boolean } = {}): Promise<ItemRepo> {
   const parent = await tempDir('pc-items-');
   const dir = join(parent, 'repo');
   const archive = join(parent, 'archive');
@@ -86,6 +94,7 @@ export async function makeItemRepo(): Promise<ItemRepo> {
     `# archive — index\n\n## Closed\n\n- **passoff/${FIXTURE_ARCHIVED_ITEM.name}** ✅ - item 7, closed 2026-10-15.\n`,
   );
   await Bun.write(join(archiveItems, FIXTURE_ARCHIVED_ITEM.name), FIXTURE_ARCHIVED_ITEM.text);
+  if (git) await mkdir(join(dir, '.git'));
 
   return { dir, itemsDir, archive, archiveItems, done: () => cleanup(parent) };
 }

@@ -1,5 +1,5 @@
-import { execFile } from 'node:child_process';
-import { realpath } from 'node:fs/promises';
+import { execFile, spawn } from 'node:child_process';
+import { realpath, stat } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
 import { promisify } from 'node:util';
 import { exists } from './disk.ts';
@@ -130,9 +130,66 @@ export async function isTracked(dir: string, path: string): Promise<boolean> {
   return (await locate(dir, ['ls-files', '--error-unmatch', '--', path])) !== null;
 }
 
+/**
+ * Which of these hashes name a commit in the repo at `dir`, or null where that cannot be asked:
+ * not a repository, or no git. Null is "cannot verify", the way a missing ledger is, so a rule
+ * reading it reports nothing rather than a violation nobody can act on.
+ *
+ * One `cat-file --batch-check` for the whole board, the same lookup `cat-file -e` makes, so a
+ * board with two hundred `COMMITTED` rows costs one process and not two hundred. `^{commit}`
+ * peels a tag and refuses a tree or a blob. Async, and read before the rules run, because a
+ * `doctor` rule's `check` is sync and a node sync spawn gives the child the start-up environment
+ * (`tests/spawn-env.test.ts`, board item 130).
+ */
+export function commitsAmong(dir: string, hashes: string[]): Promise<Set<string> | null> {
+  if (hashes.length === 0) return Promise.resolve(new Set());
+  return new Promise((done) => {
+    const child = spawn('git', ['cat-file', '--batch-check=%(objecttype)'], {
+      cwd: dir,
+      env: folderOnly(),
+      stdio: ['pipe', 'pipe', 'ignore'],
+    });
+    let out = '';
+    child.stdout.setEncoding('utf8');
+    child.stdout.on('data', (chunk: string) => {
+      out += chunk;
+    });
+    // A git that exits before it reads its input closes the pipe; the exit code answers.
+    child.stdin.on('error', () => {});
+    child.on('error', () => done(null));
+    child.on('close', (code) => {
+      if (code !== 0) return done(null);
+      const types = out.split('\n');
+      done(new Set(hashes.filter((_, index) => types[index] === 'commit')));
+    });
+    child.stdin.end(hashes.map((hash) => `${hash}^{commit}\n`).join(''));
+  });
+}
+
 /** A worktree's `.git` is a file rather than a directory, so both spellings count. */
 export async function isGitRepo(dir: string): Promise<boolean> {
   return (await exists(join(dir, '.git', 'HEAD'))) || (await exists(join(dir, '.git')));
+}
+
+/**
+ * Whether git could hold a commit for anything under `dir`: a `.git` at it or at any folder above
+ * it, the same search git makes. Read from the filesystem and never from `git rev-parse`, which
+ * also fails where git is not installed, and a repo read as "no git" would fold `DONE` items
+ * whose code is in no commit yet. A stray `.git` errs the safe way: `DONE` items stay live.
+ */
+export async function insideGit(dir: string): Promise<boolean> {
+  const here = resolve(dir);
+  // Any entry counts, which `exists` would not give: it is true only for a regular file, and
+  // a checkout's `.git` is a directory. Reading it as absent would fold uncommitted work.
+  if (
+    await stat(join(here, '.git')).then(
+      () => true,
+      () => false,
+    )
+  )
+    return true;
+  const up = dirname(here);
+  return up === here ? false : insideGit(up);
 }
 
 /**

@@ -11,8 +11,8 @@ import { cleanup, tempDir } from './helpers.ts';
 import { FIXTURE_BOARD, FIXTURE_ITEMS, makeItemRepo } from './item-fixture.ts';
 
 /**
- * The fold on a migrated repo (per-item-board `DESIGN.md` D6, D14, D16, D4): a `DONE` item's file
- * and row move to the archive, and old log lines move to the archive's log. The hazard is a live
+ * The fold on a migrated repo (per-item-board `DESIGN.md` D6, D14, D16, D4): a `COMMITTED` item's
+ * file and row move to the archive, and old log lines move to the archive's log. The hazard is a live
  * file deleted whose bytes are not in the archive, or a removal `undo` cannot restore, and no
  * gate sees either in an untracked folder. So every end-to-end case below reads bytes.
  */
@@ -25,13 +25,19 @@ const ITEM_1 = FIXTURE_ITEMS['1'] ?? { name: '', text: '' };
 /** The BD-3 board with item 1 closed: its file is live, so the fold has one item to move. */
 const CLOSED_BOARD = FIXTURE_BOARD.replace(
   '| 1 | Write the first thing | `OPEN` |',
-  '| 1 | Write the first thing | `DONE` — 2026-10-14 |',
+  '| 1 | Write the first thing | `COMMITTED, 2026-10-14, a1b2c3d` |',
+);
+
+/** The same item built and recorded, and not yet in a commit (§2.3). */
+const UNCOMMITTED_BOARD = CLOSED_BOARD.replace(
+  '`COMMITTED, 2026-10-14, a1b2c3d`',
+  '`DONE, 2026-10-14`',
 );
 
 describe('itemFold', () => {
   const listing = Object.values(FIXTURE_ITEMS);
 
-  test('moves a `DONE` row with a live file, with its task cell and its date', () => {
+  test('moves a `COMMITTED` row with a live file, with its task cell and its date', () => {
     const moves = itemFold(CLOSED_BOARD, listing);
     expect(moves).toHaveLength(1);
     expect(moves[0]).toMatchObject({
@@ -48,6 +54,16 @@ describe('itemFold', () => {
     expect(moves.map((move) => move.name)).toEqual([ITEM_1.name]);
   });
 
+  test('a `DONE` row keeps its live file: the code is not in a commit yet', () => {
+    expect(itemFold(UNCOMMITTED_BOARD, listing)).toEqual([]);
+    expect(
+      itemFold(
+        CLOSED_BOARD.replace('`COMMITTED, 2026-10-14, a1b2c3d`', '`DONE` — 2026-10-14'),
+        listing,
+      ),
+    ).toEqual([]);
+  });
+
   test('a `DONE` row whose file is already archived has nothing to move', () => {
     expect(itemFold(FIXTURE_BOARD, listing)).toEqual([]);
   });
@@ -58,7 +74,7 @@ describe('itemFold', () => {
   });
 
   test('a status with no date gives a null date, for the caller to fill', () => {
-    const board = CLOSED_BOARD.replace('`DONE` — 2026-10-14', '`DONE`');
+    const board = CLOSED_BOARD.replace('`COMMITTED, 2026-10-14, a1b2c3d`', '`COMMITTED`');
     expect(itemFold(board, listing)[0]?.closed).toBeNull();
   });
 });
@@ -212,6 +228,25 @@ describe('fold board, on a migrated repo', () => {
         expect(await readFile(join(repo.itemsDir, ITEM_1.name), 'utf8')).toBe(ITEM_1.text);
         expect(await snapshot(repo.archiveItems)).toEqual(archived);
         expect(await readFile(join(repo.dir, 'PASSOFF.md'), 'utf8')).toBe(CLOSED_BOARD);
+      } finally {
+        await repo.done();
+      }
+    },
+    SPAWN_TIMEOUT,
+  );
+
+  test(
+    'a `DONE` item is left where it is: file, row and archive untouched',
+    async () => {
+      const repo = await closedRepo();
+      try {
+        await writeFile(join(repo.dir, 'PASSOFF.md'), UNCOMMITTED_BOARD);
+        const archived = await snapshot(repo.archiveItems);
+        const { code } = await run(repo.dir, ['fold', 'board', '--force'], repo.home);
+        expect(code).toBe(0);
+        expect(await readFile(join(repo.itemsDir, ITEM_1.name), 'utf8')).toBe(ITEM_1.text);
+        expect(await snapshot(repo.archiveItems)).toEqual(archived);
+        expect(await readFile(join(repo.dir, 'PASSOFF.md'), 'utf8')).toBe(UNCOMMITTED_BOARD);
       } finally {
         await repo.done();
       }

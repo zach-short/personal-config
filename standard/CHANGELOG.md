@@ -11,6 +11,36 @@ this paragraph claimed that without the marker: Part 0 told the adapting session
 stamp, and an unstamped copy was invisible to that check. A copy adapted before the marker
 existed still carries no stamp and stays invisible until `doctor --fix` writes one back.
 
+## 2.2.0 — 2026-10-17
+
+A minor version: one status word is added and every 2.1.0 row still reads. **Re-adapting is
+recommended**, because a 2.1.0 copy tells a session to fold a `DONE` item, and under 2.2.0 that
+item may hold the only copy of uncommitted work. This version carries the work first drafted as
+2.1.0 and 2.1.1 on 2026-10-15, on a branch that did not reach `main` before Part 4's 2.1.0 was cut.
+
+- **`COMMITTED, <record>, <short hash>`, in §2.1 and §2.3.** `DONE, <record>` now means built,
+  gates green and record written, with the code not yet in a commit. The session that built the
+  item writes `DONE` before it posts the commit blocks, never after, because no one can know the
+  hash before the commit exists; sessions had been leaving rows at `IN FLIGHT` until after the
+  commit. A session that commits its own work writes `COMMITTED` once its commit lands. Moving a
+  row to `COMMITTED` is a fact read from git, so any session that finds the commit makes the
+  move; §2.3 says how to find it, and that a commit on a worktree branch `main` does not hold yet
+  still counts.
+- **Only a `COMMITTED` item folds, in §2.1 and Part 7.** A `DONE` item keeps its file (or, on a
+  1.x board, its prompt), because that is the only way to rebuild work lost before the commit.
+  `fold migrate` writes a `DONE` item's section to its own file, not to the closed archive.
+- **`DONE` is final where there is no git, in §2.1, §2.3 and Part 7.** A folder without git can
+  never write a hash, and the reason `DONE` waits, that the item file is the only copy until the
+  commit exists, does not apply where no commit will follow. `personal-config fold` and `doctor`
+  read it from the filesystem: no `.git` at or above the folder means `DONE` folds as
+  `COMMITTED` does.
+- **Part 7's close-out** writes `DONE, <date>` before the hand-back blocks, and no longer asks
+  for the commit in the close-out section.
+- **The separator is a comma.** Rows written with a dash, `DONE - <date>` and
+  `DONE — <ledger> <n>`, read the same and are not rewritten. A row written as `DONE` before
+  2.2.0 may already be committed: check git before treating it as uncommitted.
+- **The short form** says the same in "What is next".
+
 ## 2.1.0 — 2026-10-16
 
 A minor version, because the board and the ledger keep their shape and a 2.0.0 reading of a 2.1.0

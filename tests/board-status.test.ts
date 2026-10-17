@@ -222,7 +222,7 @@ describe('D2, D5 — DONE on a board with item files', () => {
 
   test('violates: a DONE with neither a date nor a step names the new shape', async () => {
     await onFixture({ [SEVEN]: '| 7 | Close the old thing | `DONE` |' }, async (check) =>
-      expect(await check()).toEqual([expect.stringContaining('`DONE — <date>`')]),
+      expect(await check()).toEqual([expect.stringContaining('`DONE, <date>`')]),
     );
   });
 

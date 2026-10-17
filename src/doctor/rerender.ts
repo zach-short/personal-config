@@ -137,7 +137,7 @@ async function renderAt(
 
 /**
  * A file `setup` writes once and never again (`replace: 'never'`: the ledger, the board, the
- * archive index) is not compared either: it grows by design, and a finding that told its owner to
+ * archive index, the project folders' README) is not compared either: it grows by design, and a finding that told its owner to
  * re-run `setup` would name a run that leaves it alone (record-overwrite Q3).
  *
  * The Part 0 prompt is a snapshot of discovery at the moment `setup` ran — the docs that

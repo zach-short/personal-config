@@ -20,7 +20,8 @@ Run `personal-config doctor .` and read every finding before touching anything.
 **Report, never mark.** Something that looks finished but is not marked so, or a `DONE` whose
 pointer resolves to nothing, goes back to the owner with its evidence (the commit, the record,
 the date) and stays as it is. Marking work done is a claim about the work, and only the session
-that did it, or the owner, makes it. Carry on with what is already marked.
+that did it, or the owner, makes it. Moving a `DONE` row to `COMMITTED` is not marking: it is a
+fact read from git. Carry on with what is already marked.
 
 ## 2. Preview, ask, then move
 

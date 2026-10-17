@@ -51,15 +51,17 @@ the rest of this skill names them.
 4. **Look for the lane file**, `docs/audit-lanes.md`. Where it exists, load `/audit` once, with the
    Skill tool, and read the lane file: the audit call offers its lanes and `/audit`'s defaults.
    Where it does not exist, ask no audit call, and run the board only.
+5. **Read the time from `date`.** It is the run's start time under **Run**, and the time of the
+   `/autopilot` message, the first line under **Owner** (section 4).
 
 ## 2. Which rows can run
 
 A row is runnable when all of these hold:
 
-- It is `OPEN`, and every row before it in its lane is finished (`DONE`, `SUPERSEDED` or
-  `SETTLED AS NO`), because the items in a lane run in order. A `HELD` or `IN FLIGHT` row ahead of
-  it holds it back.
-- Every item its "Waits on" names is `DONE`, or has left the table at a fold.
+- It is `OPEN`, and every row before it in its lane is finished (`COMMITTED`, `SUPERSEDED` or
+  `SETTLED AS NO`), because the items in a lane run in order. A `HELD`, `IN FLIGHT` or `DONE` row
+  ahead of it holds it back.
+- Every item its "Waits on" names is `COMMITTED`, or has left the table at a fold.
 {{CROSS_BOARD}}
 {{AFTER_UNCOMMITTED}}
 {{SCOPE_FIRST}}
@@ -78,7 +80,9 @@ When the caps allow fewer launches than there are runnable rows, the lowest row 
 
 At most four questions in each `AskUserQuestion` call. The questions, their options and their
 defaults are fixed below. The words are yours, inside the person's chat-style rule where they
-chose one. Put the default first in each question and mark it recommended.
+chose one. Put the default first in each question and mark it recommended. Read the time from
+`date` before each call and again when it returns. The person's answers to one call are one owner
+message, and both times go with it under **Owner** (section 4).
 
 **Audit call, before the first call, only where the lane file exists. Four questions.** The
 defaults are `/audit`'s.
@@ -151,6 +155,14 @@ the next free number. `STATE.md` in it has these sections:
 - **Queue**: the runnable rows not yet launched, in launch order.
 - **Readings**: one line for each wake: the time, the usage reading or "not measured", and this
   session's context.
+- **Owner**: one line for each message the owner types in this session, from the one that typed
+  `/autopilot` to the end of the run, the opening round's answers among them: the absolute time
+  read from `date` when it arrives, and what it asked, answered or ordered, in a few words. Where
+  it answers a question this session posted, the line also holds the time the question was
+  posted and the whole minutes between the two. Only what the owner types here counts: the
+  `/loop` prompt, a wake from `ScheduleWakeup`, a hook's feedback, a background agent's report
+  and a message from another session, even one that relays the owner's words, are not the
+  owner's messages.
 - **Reports**: for each row, one entry for each report, the builder's and every auditor's, headed
   with the row, the agent and the absolute time the report arrived. Each holds what the rundown needs:
   the gates seen and their result, any number claimed, the files changed and the untracked files
@@ -211,6 +223,9 @@ longer in your context, load it again with the Skill tool. Then follow `/autopil
 procedure."
 
 ## 6. The wake procedure
+
+When the owner types a message in this session, during a wake or between two, read the time from
+`date` at once, and write its line under **Owner** (section 4) before you act on it.
 
 On every wake, and whenever a background agent returns:
 
@@ -280,10 +295,11 @@ file that holds the row's open findings.
 1. End the timer: `ScheduleWakeup` with `stop: true`, or no new wake.
 2. **Run `/clean-up`**, with the Skill tool, as the run's last step before the rundown. The
    person's "ready" in the opening round is the yes its previews wait for: post each preview in
-   chat and go on. On a board with a `{{ITEMS_DIR}}/` folder, its fold moves each `DONE` item's
-   file and its row to the archive, and a `DONE` row with no file gets an archive file that holds
-   the row. On a 1.x board, with no `{{ITEMS_DIR}}/` folder, the fold moves `DONE` prompts and old
-   step bodies, and every row stays. A move its own rules hold, such as one that waits for a
+   chat and go on. On a board with a `{{ITEMS_DIR}}/` folder, its fold moves each `COMMITTED`
+   item's file and its row to the archive, and a closed row with no file gets an archive file that
+   holds the row. On a 1.x board, with no `{{ITEMS_DIR}}/` folder, the fold moves `COMMITTED`
+   prompts and old step bodies, and every row stays. Where no `.git` sits at or above the folder,
+   `DONE` is final and folds too. A move its own rules hold, such as one that waits for a
    commit, is not run: it goes under **Decisions waiting for the owner**. What moved goes in the
    rundown's first paragraph, {{FOLD_COMMIT}}
 3. Write `RUNDOWN.md` in the run folder from `STATE.md`, with these sections in this order. Each is present, and
@@ -297,8 +313,17 @@ file that holds the row's open findings.
    5. **Collisions and merge order**, including any number two rows both claimed.
    6. **Judgment calls**, each with its reversal.
    7. {{DECISIONS_SECTION}}
-   8. **Budget**: the usage readings or "not measured", agents by model, hours, and this session's
-      peak context.
+   8. **Budget**: the usage readings or "not measured", agents by model, hours, this session's
+      peak context, and the owner's attention from **Owner**: the messages counted, the questions
+      answered with the minutes from each question to its answer and their sum, and the message
+      count and the minutes' sum each divided by the rows this run marked `DONE` or `COMMITTED`, a row and its
+      sub-rows counting as one, as against a cap on rows, or "no row done". Then this sentence,
+      as written: "These figures count the messages the owner typed in this session and the
+      whole minutes from each question to its answer, which include any time the owner was away;
+      they do not capture reading time, such as reading this rundown, a report or a diff, the
+      time spent writing a message no question asked for, a message another session relayed, or
+      the work the run leaves for the owner, such as the decisions waiting and any commit
+      blocks."
    9. **Not verified**: what no one saw running.
    10. **Warnings**, such as a tool that deletes uncommitted worktrees.
    11. {{COMMIT_BLOCKS}}

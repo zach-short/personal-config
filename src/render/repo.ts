@@ -323,6 +323,7 @@ async function renderLedgerAndBoard(ctx: RenderContext): Promise<PlannedFile[]> 
     STANDARD_PATH: standardPath(ctx),
     MODEL_DEFAULT: ctx.config.models.default || 'Default',
     CONVENTIONS_NOTE: conventionsNote(ctx),
+    NO_GIT_FOLD: noGitFold(ctx),
   };
 
   const ledger = isShortTrack(ctx)
@@ -347,6 +348,20 @@ async function renderLedgerAndBoard(ctx: RenderContext): Promise<PlannedFile[]> 
     ),
     ...(startsBoard(ctx) ? [await renderFirstItem(ctx, vars)] : []),
   ];
+}
+
+/**
+ * Standard 2.2.0: in a folder no commit will ever exist, so `DONE` is final and `fold` moves it
+ * (`isFoldable`). Keyed on the target's kind, never on the person's `usesGit`, because `fold`
+ * reads the filesystem: a repo whose owner answered `no` still has a `.git`, and there `DONE` stays.
+ */
+function noGitFold(ctx: RenderContext): string {
+  if (ctx.repo?.scan.kind !== 'folder') return '';
+  return [
+    '',
+    "This folder has no git, so no commit will follow: `DONE` is final here, and a `DONE` item's",
+    'file and row move at the fold as a `COMMITTED` one does.',
+  ].join('\n');
 }
 
 /**
@@ -413,12 +428,15 @@ async function renderFolders(ctx: RenderContext): Promise<PlannedFile[]> {
     ARCHIVE_HOME: ctx.repo?.archiveHome || 'the archive',
     STANDARD_PATH: standardPath(ctx),
   });
+  // A record once written, like the ledger (record-overwrite): a person grows it with a list of
+  // the open efforts, and a re-run put the 24-line template back over a 39-line one (2026-10-16).
   return [
     planned(
       ctx,
       join(repoPath, 'docs', 'incomplete', 'README.md'),
       'project-folder scaffold',
       body,
+      AS_RECORD,
     ),
   ];
 }

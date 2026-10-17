@@ -17,7 +17,7 @@ import { absenceEvidence } from './rules/absence-evidence.ts';
 import { alwaysOnWeight } from './rules/always-on-weight.ts';
 import { archiveIndex } from './rules/archive-index.ts';
 import { archivedCitations } from './rules/archived-citations.ts';
-import { boardStatusRule } from './rules/board-status.ts';
+import { boardCommits, boardStatusRule } from './rules/board-status.ts';
 import { filesGrammar } from './rules/files-grammar.ts';
 import { ignoredFiles, ignoreFix, ignoreTarget } from './rules/ignored.ts';
 import { itemFiles } from './rules/item-files.ts';
@@ -63,12 +63,13 @@ export async function runDoctorOn(
   const itemsName = basename((await readDocNames(root)).items);
   const items = await loadItemContext(root, itemsName);
   const boards = await boardContexts(docs, itemsName);
+  const commits = await boardCommits(docs);
   // Built per root: a ceiling is an answer and answers are saved per repo, and the board rules
   // read the repo's archive and frozen log (per-item-board `DESIGN.md` D2, D5).
   const answers = expectation.config.answers;
   const rulesWith = (context: ItemContext) => [
     ...DOC_RULES,
-    boardStatusRule(context),
+    boardStatusRule(context, commits),
     unfoldedRule(context),
     itemFiles(context),
     ledgerFoldCeiling(answers['doctor.ledgerCharCeiling']),

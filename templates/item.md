@@ -12,7 +12,8 @@
      literal gate commands, what the owner should see, and the commit step. -->
 
 <!-- At close, the session that did the work appends a "Close-out, <date>" section at level two:
-     done when, which model, on which branch, at which commit; what changed and why; what is now
+     done when, which model, on which branch; what changed and why; what is now
      fixed; which questions it answered; new files, added to the code map; and what is left owed.
      Then it adds one line to the log in {{LEDGER_FILE}}, citing this item by number only, and
-     marks the row DONE with the date. -->
+     marks the row DONE with the date before the commit blocks. Once the commit exists, the row
+     becomes COMMITTED with the date and the short hash. -->

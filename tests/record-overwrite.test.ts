@@ -78,6 +78,32 @@ describe('a seed is written once (replace: never)', () => {
     }
   });
 
+  test("violates: a grown project folders' README is kept on a re-run", async () => {
+    const dir = await tempDir('pc-record-');
+    try {
+      const scan = await scanRepo(dir, 'git');
+      const folders = testContext(
+        DEFAULT_ANSWERS,
+        testRepoPlan({ scan, workProfile: 'folders', archiveHome: join(dir, 'archive') }),
+      );
+      const ours = async () => (await renderAll(folders)).filter((f) => f.path.startsWith(dir));
+      await commitPlan(await resolvePlan(await ours()));
+      const readme = join(dir, 'docs', 'incomplete', 'README.md');
+      await writeText(
+        readme,
+        `${await readText(readme)}\n- \`docs/incomplete/billing/\`: open\n`,
+      );
+      const before = await readText(readme);
+
+      const changes = await resolvePlan(await ours());
+      expect(change(changes, readme)?.guard).toBe('kept');
+      await commitPlan(changes);
+      expect(await readText(readme)).toBe(before);
+    } finally {
+      await cleanup(dir);
+    }
+  });
+
   test('passes: an absent or empty ledger is still written from the seed', async () => {
     const dir = await tempDir('pc-record-');
     try {

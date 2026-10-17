@@ -17,12 +17,12 @@ const CLI = join(repoRoot(), 'src', 'cli.ts');
 const SPAWN_TIMEOUT = 30_000;
 const DATE = '2026-10-16';
 
-/** One range of three rows, one `DONE`; item 9 has its own section; one level-2 prose section. */
+/** One range of three rows, one `COMMITTED`; item 9 has its own section; one level-2 prose section. */
 const BOARD = `# Board
 
 | # | Task | Status | Model | Lane | Waits on | Files it owns |
 |---|------|--------|-------|------|----------|---------------|
-| 3 | Fix the first break | DONE — HANDOFF 4 | Opus | A | — | a.ts |
+| 3 | Fix the first break | COMMITTED — HANDOFF 4, a1b2c3d | Opus | A | — | a.ts |
 | 4 | Fix the second break | OPEN | Opus | A | — | b.ts |
 | 5 | Fix the third break | HELD | Opus | A | item 4 | c.ts |
 | 9 | Build the scoped thing | OPEN | Opus | B | — | d.ts |
@@ -82,9 +82,20 @@ describe('migrateFold, a range heading', () => {
     expect(migration.items.map((item) => item.number)).toEqual(['4', '5', '9']);
   });
 
-  test('a `DONE` row in the range gets no file and no closed entry of its own', () => {
+  test('a `COMMITTED` row in the range gets no file and no closed entry of its own', () => {
     expect(migration.items.some((item) => item.number === '3')).toBe(false);
     expect(migration.closed).toEqual([]);
+  });
+
+  test('a `DONE` row in the range gets a file, because its code is in no commit yet (2.2.0)', () => {
+    const done = migrateFold(
+      BOARD.replace('COMMITTED — HANDOFF 4, a1b2c3d', 'DONE — HANDOFF 4'),
+      LEDGER,
+      DATE,
+      'HANDOFF.md',
+    );
+    expect(done.items.map((item) => item.number)).toEqual(['3', '4', '5', '9']);
+    expect(done.items[0]?.text).toContain(RANGE_TEXT);
   });
 
   test('the range section goes whole to the closed archive, so no byte leaves with nowhere to go', () => {

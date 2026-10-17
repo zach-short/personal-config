@@ -1,4 +1,4 @@
-<!-- personal-config v0.8.0 · 2026-10-16 · config 11fe5083 · standard v2.1.0 -->
+<!-- personal-config v0.8.0 · 2026-10-16 · config 11fe5083 · standard v2.2.0 -->
 # Adapt the working standard to leaflet
 
 **Model: your default tier.** Run this once, in a fresh session, in `~/code/leaflet`. Do no
