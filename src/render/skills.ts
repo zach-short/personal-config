@@ -828,6 +828,12 @@ function delegateBoardVars(
       '  held.',
     ].join('\n'),
     DEEP_LIFT: ", or lifted it in\n  `/autopilot`'s opening round",
+    // A run's owner messages are not one row's, so `/autopilot`'s rundown counts them, not the row.
+    OWNER_TIMES: [
+      ' Under',
+      "  `/autopilot`, each time goes under **Owner** in the run's state file when it arrives,",
+      "  and the row's record has no **Owner** line: the run's rundown counts them.",
+    ].join('\n'),
     CONTEXT_RULE:
       " Under\n`/autopilot`, that skill's own rule on this session's context governs.",
     OWNS: 'its "Files it owns"',
@@ -961,6 +967,7 @@ function delegateFolderVars(): Record<string, string> {
     TIER_HOLD: '',
     QUESTIONS_HELD: '',
     DEEP_LIFT: '',
+    OWNER_TIMES: '',
     CONTEXT_RULE: '',
     OWNS: 'the files its phase names, where it names them,',
     OWNS_PLURAL: 'phases name files that',

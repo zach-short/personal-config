@@ -24,6 +24,11 @@ before step 2{{TIER_HOLD}}. Never guess.
   {{GATE_CLEARED}}
 - **Open owner questions are asked here**, in chat, in one batch, before step 1. A subagent cannot
   reach the owner, so a question is never handed to a builder to guess at.{{QUESTIONS_HELD}}
+- **Time the owner's attention**, from the message that typed `/delegate` to the sign-off. Read
+  the time from `date` when each owner message arrives, and before you post each question to the
+  owner. Step 4's record, or a hold's dated note, then ends with one **Owner** line: the owner's
+  messages counted, each with its time, and for each answered question the time it was posted,
+  the time of the answer and the whole minutes between them, summed.{{OWNER_TIMES}}
 - **A Deep item is held** unless the person typed `/delegate` on that item in this session{{DEEP_LIFT}}.
   That is the authorization: say so in one line, and record it in the sign-off. A `/delegate` you
   loaded on your own lifts nothing. A named Deep item gets a Deep builder, and then an

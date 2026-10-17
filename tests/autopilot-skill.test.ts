@@ -440,3 +440,80 @@ describe('the Autonomy call and what it governs', () => {
     expect(await lines('agent-commits')).toBe(0);
   });
 });
+
+/**
+ * Board row 127: the run records the owner's attention, so its rundown can state owner minutes
+ * per row done, with what the figure does and does not measure. The research report on the
+ * owner's first objective found no record of that attention; the wk run of 2026-10-16 kept one
+ * by hand. Each sentence renders under every commit policy, so its violating case is the rendered
+ * skill with that sentence moved out of its section, which the check must name.
+ */
+describe("the owner's attention", () => {
+  type Placed = { name: string; text: string; from: string; to: string };
+  const ROUND = { from: '## 3. The opening round', to: '## 4. The run folder' };
+  const STATE = { from: '## 4. The run folder', to: '## 5. Launch' };
+  const BUDGET = { from: '8. **Budget**', to: '9. **Not verified**' };
+  const OWNER: Placed[] = [
+    {
+      name: 'the opening round reads the clock',
+      text: 'Read the time from `date` before each call and again when it returns.',
+      ...ROUND,
+    },
+    {
+      name: "one call's answers are one message",
+      text: "The person's answers to one call are one owner message, and both times go with it under **Owner** (section 4).",
+      ...ROUND,
+    },
+    {
+      name: 'the Owner section',
+      text: "- **Owner**: one line for each message the owner sends in this session, from the one that typed `/autopilot` to the end of the run, the opening round's answers among them: the absolute time read from `date` when it arrives, and what it asked, answered or ordered, in a few words.",
+      ...STATE,
+    },
+    {
+      name: 'an answer carries its question',
+      text: 'Where it answers a question this session posted, the line also holds the time the question was posted and the whole minutes between the two.',
+      ...STATE,
+    },
+    {
+      name: 'a relayed message',
+      text: "A message another session relays is that session's to count.",
+      ...STATE,
+    },
+    {
+      name: 'a message between wakes',
+      text: 'When the owner sends a message, at a wake or between two, read the time from `date`, and write its line under **Owner** (section 4) before you act on it.',
+      from: '## 6. The wake procedure',
+      to: 'On every wake, and whenever a background agent returns:',
+    },
+    {
+      name: 'the Budget line',
+      text: 'and the owner\'s attention from **Owner**: the messages counted, the questions answered with the minutes from each question to its answer and their sum, and the count and the sum each divided by the rows this run marked `DONE`, counted as the cap on rows counts them, or "no row done".',
+      ...BUDGET,
+    },
+    {
+      name: 'what the figures measure',
+      text: 'Then this sentence, as written: "These figures count the owner\'s messages and the minutes from each question to its answer, which include any time the owner was away; they do not capture reading time, such as reading this rundown, a report or a diff, or the time spent writing a message no question asked for."',
+      ...BUDGET,
+    },
+  ];
+
+  /** The sentences not found between their two markers. */
+  const misplaced = (text: string) =>
+    OWNER.filter(({ text: sentence, from, to }) => {
+      const start = text.indexOf(from);
+      const at = text.indexOf(sentence, start);
+      return start < 0 || at < 0 || at > text.indexOf(to, start);
+    }).map(({ name }) => name);
+
+  for (const policy of ['print-blocks', 'agent-commits', 'agent-pushes', 'no-rule'])
+    test(`passes: under ${policy} each sentence renders in its section`, async () => {
+      const text = (await autopilot({ commitPolicy: policy })).replace(/\s+/g, ' ');
+      expect(misplaced(text)).toEqual([]);
+    });
+
+  for (const { name, text: sentence } of OWNER)
+    test(`violates: ${name}, moved out of its section, is caught`, async () => {
+      const text = (await autopilot({ commitPolicy: 'agent-pushes' })).replace(/\s+/g, ' ');
+      expect(misplaced(`${text.replace(sentence, '')} ${sentence}`)).toEqual([name]);
+    });
+});

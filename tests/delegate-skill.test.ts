@@ -485,3 +485,72 @@ describe("model-routing.md names /delegate's Deep exception only where /delegate
     ).toBeUndefined();
   });
 });
+
+/**
+ * Board row 127: a run outside `/autopilot` times the owner's messages and ends its record with an
+ * **Owner** line; under `/autopilot` the times go into the run's state file instead, a clause that
+ * renders only on a board, where that skill does (D22). A sentence that renders everywhere has as
+ * its violating case the skill with that sentence moved out of step 0, which the check must name.
+ */
+describe("/delegate times the owner's attention", () => {
+  const STEP_0 = { from: '## 0. Preconditions', to: '## 1. Read and claim' };
+  const EVERYWHERE = [
+    {
+      name: 'the timing rule',
+      text: "- **Time the owner's attention**, from the message that typed `/delegate` to the sign-off.",
+    },
+    {
+      name: 'when the clock is read',
+      text: 'Read the time from `date` when each owner message arrives, and before you post each question to the owner.',
+    },
+    {
+      name: 'the Owner line',
+      text: "Step 4's record, or a hold's dated note, then ends with one **Owner** line: the owner's messages counted, each with its time, and for each answered question the time it was posted, the time of the answer and the whole minutes between them, summed.",
+    },
+  ];
+  const UNDER_AUTOPILOT = {
+    name: 'the /autopilot clause',
+    text: "Under `/autopilot`, each time goes under **Owner** in the run's state file when it arrives, and the row's record has no **Owner** line: the run's rundown counts them.",
+  };
+
+  /** The sentences not found in step 0. */
+  const misplaced = (text: string, sentences: Array<{ name: string; text: string }>) =>
+    sentences
+      .filter(({ text: sentence }) => {
+        const start = text.indexOf(STEP_0.from);
+        const at = text.indexOf(sentence, start);
+        return start < 0 || at < 0 || at > text.indexOf(STEP_0.to, start);
+      })
+      .map(({ name }) => name);
+
+  const flat = async (policy: string, profile: WorkProfile) =>
+    (find(await render({ commitPolicy: policy }, profile), 'delegate/SKILL.md') ?? '').replace(
+      /\s+/g,
+      ' ',
+    );
+
+  for (const policy of ['print-blocks', 'agent-commits', 'agent-pushes', 'no-rule']) {
+    test(`passes: under ${policy} on a board, every sentence is in step 0`, async () => {
+      expect(misplaced(await flat(policy, 'ledger'), [...EVERYWHERE, UNDER_AUTOPILOT])).toEqual(
+        [],
+      );
+    });
+
+    test(`passes: under ${policy} on project folders, the rule is in step 0`, async () => {
+      expect(misplaced(await flat(policy, 'folders'), EVERYWHERE)).toEqual([]);
+    });
+
+    test(`violates: under ${policy} on project folders, the /autopilot clause is absent`, async () => {
+      const text = await flat(policy, 'folders');
+      expect(misplaced(text, [UNDER_AUTOPILOT])).toEqual([UNDER_AUTOPILOT.name]);
+      expect(text).not.toContain('autopilot');
+    });
+  }
+
+  for (const sentence of [...EVERYWHERE, UNDER_AUTOPILOT])
+    test(`violates: ${sentence.name}, moved out of step 0, is caught`, async () => {
+      const text = await flat('agent-pushes', 'ledger');
+      const moved = `${text.replace(sentence.text, '')} ${sentence.text}`;
+      expect(misplaced(moved, [...EVERYWHERE, UNDER_AUTOPILOT])).toEqual([sentence.name]);
+    });
+});
