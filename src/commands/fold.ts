@@ -1,9 +1,8 @@
-import { readFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { withIndexLine } from '../lib/archive-index.ts';
 import { confirmWrite } from '../lib/ask.ts';
 import { today } from '../lib/date.ts';
-import { exists, readText } from '../lib/disk.ts';
+import { exists, readBytes, readText } from '../lib/disk.ts';
 import { docRoots } from '../lib/doc-roots.ts';
 import {
   type Fold,
@@ -758,11 +757,11 @@ async function sameBytes(
 }
 
 /**
- * A file's bytes, undecoded, or null where it cannot be read. `readFile` from `node:fs/promises`
- * directly, because `disk.ts` reads text only and the read-back must compare bytes (D6).
+ * A file's bytes, undecoded, or null where it cannot be read. `readBytes` rather than `readText`,
+ * because the read-back must compare bytes (D6).
  */
 async function rawBytes(path: string): Promise<Buffer | null> {
-  return readFile(path).catch(() => null);
+  return readBytes(path).catch(() => null);
 }
 
 async function indexEdits(archiveHome: string, halves: Half[]): Promise<PlannedFile[]> {

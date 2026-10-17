@@ -1,7 +1,6 @@
-import { rm } from 'node:fs/promises';
 import { backupFiles, type Manifest } from './backup.ts';
 import { diffSummary } from './diff.ts';
-import { exists, modeOf, readText, setMode, writeText } from './disk.ts';
+import { exists, modeOf, readText, rm, setMode, writeText } from './disk.ts';
 import { isOurs, markAdapted, readStamp, sameButForStampDate } from './stamp.ts';
 import type { PlannedFile, Prune } from './types.ts';
 
@@ -400,8 +399,7 @@ async function apply(change: PlannedChange, manifest: Manifest | null): Promise<
  * would lose the only copy. So the manifest is checked here and a missing entry throws, before
  * anything is deleted.
  *
- * `rm` with `force`, from `node:fs/promises` directly: a file already gone is the removal done,
- * and `disk.ts` has no delete because nothing before D14 deleted a file.
+ * `rm` with `force`, from `disk.ts`: a file already gone is the removal done.
  */
 async function removeBackedUp(path: string, manifest: Manifest | null): Promise<void> {
   const held = manifest?.entries.some((entry) => entry.original === path) === true;

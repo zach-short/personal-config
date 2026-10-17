@@ -1,10 +1,9 @@
-import { readdir, stat } from 'node:fs/promises';
 import { join, resolve, sep } from 'node:path';
 import * as p from '@clack/prompts';
 import { clackPrompter, defaultsPrompter, type Prompter } from '../lib/ask.ts';
 import { loadConfig, personalAnswers, savedUserConfig } from '../lib/config.ts';
 import { scanRepo } from '../lib/discover.ts';
-import { exists } from '../lib/disk.ts';
+import { exists, readdir, stat } from '../lib/disk.ts';
 import { githubLogin, isGitRepo } from '../lib/git.ts';
 import { hiddenByIgnore } from '../lib/hidden-tracked.ts';
 import { claudeDir, configDir, configFile, expandHome, home } from '../lib/paths.ts';

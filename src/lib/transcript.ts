@@ -1,6 +1,5 @@
-import { readdir, stat } from 'node:fs/promises';
 import { join } from 'node:path';
-import { readText } from './disk.ts';
+import { readdir, readText, stat } from './disk.ts';
 
 /**
  * Reading the harness's own session transcripts, which is the only way an agent can learn its

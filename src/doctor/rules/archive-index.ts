@@ -1,5 +1,5 @@
-import { readdir } from 'node:fs/promises';
 import { dirname } from 'node:path';
+import { readdir } from '../../lib/disk.ts';
 import type { Finding } from '../../lib/types.ts';
 import { type Doc, proseLines } from '../scan.ts';
 

@@ -1,7 +1,6 @@
-import { stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { today } from '../lib/date.ts';
-import { exists, readText } from '../lib/disk.ts';
+import { exists, readText, stat } from '../lib/disk.ts';
 import { docRoots } from '../lib/doc-roots.ts';
 import { currentBranch } from '../lib/git.ts';
 import {

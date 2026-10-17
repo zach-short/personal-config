@@ -1,8 +1,7 @@
 import { execFile } from 'node:child_process';
-import { realpath } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
 import { promisify } from 'node:util';
-import { exists } from './disk.ts';
+import { exists, realpath } from './disk.ts';
 
 const run = promisify(execFile);
 
