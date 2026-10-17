@@ -51,17 +51,14 @@ once, whatever their lanes say.
 
 ## 2. Build, in a subagent
 
-Spawn one Agent with `model` from the tiers above and `isolation: "worktree"`. A worktree holds
-only the files git tracks, and an agent in one cannot run git on another worktree. So before you
-write the brief:
+{{BUILD_SPAWN}}
 
 - Find each document the brief sends the builder to read, such as the working standard and the
   documents the item cites, that git does not track here. Give its absolute path in this
   checkout, to be read and never written, or carry the lines the builder needs in the brief.
 - Pick the patch path: an absolute path outside the repo, such as a file in this session's
   scratch or temp directory. The auditor in step 3 reproduces the build from it.
-- Write the base branch's name and the patch path where the rules below say `<base>` and
-  `<patch>`.
+- {{BRIEF_NAMES}}
 
 Its brief is the item's own prompt in full, then the relay contract below, then these rules:
 
@@ -69,11 +66,7 @@ Its brief is the item's own prompt in full, then the relay contract below, then 
 - Where the brief gives a document by an absolute path outside your worktree, read it there,
   and never write there.
 - {{COMMIT_RULE}}
-- Before the first gate, run the fresh-checkout recipe in the repo's working standard, and bring
-  the worktree to the base branch: from your worktree's own directory, run
-  `git merge --ff-only <base>` as one plain command, with the branch name written out, never
-  through a shell variable or `git -C`. A worktree can start from a stale base, and its gates then
-  report on old code.
+- {{BASE_RULE}}
 - Never retry a call that was denied. Report it.
 - Report: the gates as run, with their output; the diffstat; the patch path and every file the
   change adds, which the auditor needs to reproduce it; what changed; what is left; any
@@ -101,8 +94,7 @@ sign-off names them.
 
 ## 3. Audit, in a second subagent
 
-Spawn a second Agent with its own `isolation: "worktree"`, never the builder's. A subagent in a
-shared worktree edits source even when it is told only to review. Use the Default tier, or Deep
+{{AUDIT_SPAWN}} Use the Default tier, or Deep
 for a Deep item and for an item the owner named load-bearing. Where the repo's tier ceiling is
 below Deep, an item that needs a Deep review is held, never reviewed on a lower tier.{{AUDIT_DIAL}}
 
@@ -111,11 +103,7 @@ Its brief: the item's done-when (the gate commands, and the proof a green gate c
 base branch's name, the absolute paths of the documents step 2 found untracked, and these rules:
 
 - Do not edit {{RECORD_FILES_OBJECT}}, and never write the builder's worktree.
-- Bring your own worktree to the base branch with `git merge --ff-only <base>`, run from your
-  worktree's own directory as one plain command, then reproduce the change there.
-  {{AUDIT_SOURCE}}
-  Never run `git -C` on the builder's worktree: worktree isolation refuses it. Where the change
-  does not apply, report the command's output, and never copy files across by hand.
+- {{AUDIT_REPRO}}
 - Re-run every gate yourself. Report each command with its output, and the diffstat of your
   worktree after the change is reproduced.
 - Return one of: clean, non-blocking findings, or blocking findings, each with a citation.

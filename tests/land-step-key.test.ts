@@ -85,6 +85,61 @@ describe('the land step renders only where the profile sets it', () => {
   });
 });
 
+/**
+ * Board row 132 moved these lines of `templates/skills/delegate.md` into tokens, so that
+ * `landStep: "wk"` can replace them. Each is the template's text on `main` at d453fe8, before the
+ * move, so a render with the key absent or set to "prose" still carries main's bytes. Item 132's
+ * close-out records the wider check: all 576 skill renders of a 96-answer grid, diffed against
+ * main's, changed only under `agent-pushes` with `landStep: "wk"`.
+ */
+const MAIN_PASSAGES = [
+  [
+    'Spawn one Agent with `model` from the tiers above and `isolation: "worktree"`. A worktree holds',
+    'only the files git tracks, and an agent in one cannot run git on another worktree. So before you',
+    'write the brief:',
+  ],
+  [
+    "- Write the base branch's name and the patch path where the rules below say `<base>` and",
+    '  `<patch>`.',
+  ],
+  [
+    "- Before the first gate, run the fresh-checkout recipe in the repo's working standard, and bring",
+    "  the worktree to the base branch: from your worktree's own directory, run",
+    '  `git merge --ff-only <base>` as one plain command, with the branch name written out, never',
+    '  through a shell variable or `git -C`. A worktree can start from a stale base, and its gates then',
+    '  report on old code.',
+  ],
+  [
+    'Spawn a second Agent with its own `isolation: "worktree"`, never the builder\'s. A subagent in a',
+    'shared worktree edits source even when it is told only to review. Use the Default tier, or Deep',
+  ],
+  [
+    '- Bring your own worktree to the base branch with `git merge --ff-only <base>`, run from your',
+    "  worktree's own directory as one plain command, then reproduce the change there.",
+    "  Take it from the builder's branch: from your worktree's own directory, run",
+  ],
+  [
+    "  Never run `git -C` on the builder's worktree: worktree isolation refuses it. Where the change",
+    "  does not apply, report the command's output, and never copy files across by hand.",
+  ],
+].map((lines) => lines.join('\n'));
+
+describe("the prose and direct renders keep main's bytes", () => {
+  test('passes: without the key and with "prose", /delegate holds every moved passage', async () => {
+    for (const keys of [{}, PROSE_LAND_STEP]) {
+      const delegate = skill(await render(keys), 'delegate');
+      for (const passage of MAIN_PASSAGES) expect(delegate).toContain(`${passage}\n`);
+    }
+  });
+
+  test('passes: a value the engine does not know renders as the key absent', async () => {
+    for (const name of ['delegate', 'autopilot', 'close-out', 'clean-up']) {
+      const without = skill(await render({}), name);
+      expect(skill(await render({ landStep: 'queue' }), name), name).toBe(without);
+    }
+  });
+});
+
 describe('only a named profile sets the key', () => {
   for (const name of ['starter', 'pro'])
     test(`passes: profiles/${name}.json leaves it out, so its default is the lead's landing`, async () => {

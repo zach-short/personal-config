@@ -22,7 +22,7 @@ Session rules, restated here because this prompt is read alone:
 
 ## Why this exists
 
-The lead of a `/delegate` run today does by hand what wk now does by machine: merge the base into the builder's branch, gate again, fast-forward, push, and remove worktrees. Each step is a place a run went wrong on 2026-10-17 (a worktree made in the wrong repository; a fast-forward refused because another session had an uncommitted edit in the main checkout). With wk, the builder works in a wk workspace, the item lands by `wk submit`, and wk's worker gates the exact tree that lands, blames or bisects a red one, moves `main` and pushes. The skill text must say that, and only that, for a profile that opted in, while every other profile renders byte for byte as today.
+On 2026-10-17 the lead of a `/delegate` run does by hand what wk now does by machine: merge the base into the builder's branch, gate again, fast-forward, push, and remove worktrees. Each step is a place a run went wrong on 2026-10-17 (a worktree made in the wrong repository; a fast-forward refused because another session had an uncommitted edit in the main checkout). With wk, the builder works in a wk workspace, the item lands by `wk submit`, and wk's worker gates the exact tree that lands, blames or bisects a red one, moves `main` and pushes. The skill text must say that, and only that, for a profile that opted in, while every other profile renders byte for byte as `main` does at d453fe8.
 
 ## What is fixed
 
@@ -35,11 +35,11 @@ Read these before changing anything; do not relitigate them.
 
 ## Do these, in order
 
-1. **A fourth landing kind.** Add `'wk'` to `Landing`: `landingOf` returns it for a board (not project folders) under `agent-pushes` whose profile sets `landStep: "wk"`. Any other value of `landStep` keeps today's result. Reason: wk moves and pushes `main`, which only `agent-pushes` allows.
+1. **A fourth landing kind.** Add `'wk'` to `Landing`: `landingOf` returns it for a board (not project folders) under `agent-pushes` whose profile sets `landStep: "wk"`. Any other value of `landStep` keeps the result `main` gives at d453fe8. Reason: wk moves and pushes `main`, which only `agent-pushes` allows.
 2. **`/delegate` under `'wk'`.** Render, in place of the prose and direct text:
    - Step 2: the lead makes the builder's workspace with `wk new <n>` in the primary checkout and passes its printed path in the brief; the Agent is spawned without `isolation`, and the brief tells the builder to work only in that path with `git -C` and subshells. Say why in one sentence (worktree isolation makes a worktree of the session's own repository).
    - The builder rule: commit on the workspace branch; never merge, never push, never run `wk submit`.
-   - Step 3: the auditor's own worktree comes from `git worktree add` of the builder's branch, made by the lead, as today's audit source text allows; keep the reproduction rules.
+   - Step 3: the auditor's own worktree comes from `git worktree add` of the builder's branch, made by the lead, as the audit source text on `main` at d453fe8 allows; keep the reproduction rules.
    - Step 6 (the land): the lead runs `wk submit -m "<message>" --row <n>` in the builder's workspace, keeps the id, and reads `wk status` until that changeset is `landed` or `failed`, without a sleep loop that outlives the session's tools (say: re-check on each turn, or run one background wait that exits when the state changes). `landed`: record the row `DONE` with the landing commit. `failed`: the reason goes back to the builder as a blocking finding, through step 4's fix round, and the fixed workspace is submitted again. A stop with a start error: the lead reads `landing.log`, fixes the cause (an environment fact, never the tree), and starts the worker again with `wk land --loop`. A fast-forward refused for a dirty main checkout: name the files and their owner, and wait; never stash or reset.
    - Step 7: the workspaces leave by `wk gc --apply`, which keeps any with work not on the base; no `git worktree remove` by hand.
 3. **The other skills.** Give every other `landing ===` branch in `skills.ts` its `'wk'` text, so `/close-out`'s record and `/clean-up`'s removal say the same thing: the record names the landing commit from `wk status`, and finished workspaces are wk's to remove.
@@ -71,3 +71,42 @@ bun run typecheck && bun run lint && bun test && bun run doctor . examples
 `bun run lint` exits 0 on warnings; read its output. `doctor .` in a worktree sees fewer files than in the main checkout, so the lead runs `bun run doctor .` again in the main checkout after landing.
 
 Done when the step 5 tests pass, each fails with its fix off, every existing test passes unchanged, and the gate exits 0 in your worktree. Hand back the gate output, the diffstat, the review's findings and their outcomes, and the close-out. Commit on your worktree branch only, with no `Co-Authored-By:` trailer and no "Generated with" line.
+
+## Close-out, 2026-10-17
+
+Built on Opus 5.5 in the worktree `dl/row-132-build`, from `main` at d453fe8.
+
+**What changed, by step.**
+
+1. `Landing` in `src/render/skills.ts` is now `'none' | 'step' | 'direct' | 'wk'`. `landingOf` returns `'wk'` for a board with git under `agent-pushes` whose profile sets `landStep: "wk"`. Project folders, a target without git, and any other key value keep the result `main` gives. The git condition is a fact found during the build: without it, `/close-out` for a no-git board rendered a wk commit step about a commit that cannot exist.
+2. `/delegate` under `'wk'`. Five passages of `templates/skills/delegate.md` moved into tokens (`BUILD_SPAWN`, `BRIEF_NAMES`, `BASE_RULE`, `AUDIT_SPAWN`, `AUDIT_REPRO`), and `AUDIT_SOURCE` became the helper `auditSource()` inside `AUDIT_REPRO`, so `'wk'` can replace them while every other landing renders the old text. Step 2: the lead runs `wk new <n>` in the primary checkout, passes the printed path, and spawns with no `isolation`, with the one-sentence reason. The builder works only in `<workspace>` with `git -C` and subshells. The builder rule: commit on `wk/<n>`; never merge, never push, never `wk submit`. Step 3: the lead makes the auditor's worktree with `git worktree add --detach <path> <the builder's branch>`. Step 4: the builder commits the sign-off lines in the workspace, and the log line, the row and the blocks wait for the base to hold the landing commit. Step 6, "Submit it to wk's queue": `wk submit -m "<message>" --row <n>` in a subshell in the workspace, the id kept, `wk status` read on each turn or by one background wait, then the four outcomes (`landed` with a refused fast-forward, `failed`, `refused`, a start error). Step 7, "Let wk remove the workspaces this run made": `wk gc`, then `wk gc --apply`, with no `git worktree remove` by hand. The claim commit in step 1 has its own wk sentence.
+3. `/close-out` under `'wk'` gets a record step that names the landing commit from `wk status`, and its worktree step is the same `wk gc` step (section 4). `/clean-up`'s fold step says the base must hold each close-out, that `wk status` prints each landed commit, and that finished workspaces are wk's to remove.
+4. `docs/choices/commit-policy.md` has a paragraph on `"landStep": "wk"` (what it renders, the `~/.wk/<repo>.toml` it needs with `[landing] enabled = true` and a gate list) and a paragraph on undoing it. `CHANGELOG.md` has the entry under Unreleased.
+5. Tests: `tests/wk-land-step.test.ts` (new, nine tests), `WK_LAND_STEP` in `tests/helpers.ts`, and two cases in `tests/land-step-key.test.ts`.
+
+**Build-level calls, each with its reversal.**
+
+- The auditor's worktree is made at the builder's branch, as step 2 of this item says, and the reproduction needs no `git merge`. The item also says to keep the reproduction rules and that `/delegate` under `'wk'` contains no `git merge`; the two meet only this way. The auditor's diffstat is `git diff --stat <base>...HEAD`, or `git diff --stat HEAD` after the patch where a hook blocked the commit. Reversal: make it at `<base>` and keep `auditSource()`'s `git merge --ff-only <the builder's branch>`, then drop the no-merge assertion.
+- The row is written `COMMITTED, <date>, <hash>` with the landing commit, not `DONE`, once the base holds it. Standard 2.2.0 says `DONE` means not yet committed, and wk has already printed the hash. Reversal: `wkRecord()` writes `DONE - <date>`.
+- `refused` is handled. wk's queue has that state (a conflict with the landing tip), and without it the lead would wait on a changeset that never moves. The builder runs `wk sync` and resolves only a file its item owns. Reversal: drop that bullet from `wkLandStep()`.
+- A refused fast-forward ends in `wk land --apply --expect <hash>`, the command `wk land` prints once the blockers are gone, because no later worker pass fast-forwards a batch that already landed. That is wk's own guarded fast-forward and push, never a git command by hand. Reversal: drop that sentence.
+- The step 6 heading is "Submit it to wk's queue". `tests/land-step-key.test.ts` reads the absence of `## 6. Land it` for `landStep: "wk"` as no prose step, and the item says existing tests pass unchanged.
+- The byte-identity case in `tests/land-step-key.test.ts` pins main's text of the six moved passages, with the key absent and with `"prose"`, and checks that an unknown key value renders as no key. It does not pin a digest of whole renders, because a digest breaks on every later edit to these skills. The wider proof was a scratch script: all 576 skill renders of a 96-answer grid (three policies, four `landStep` values, both work profiles, both track modes, git and no git), diffed against `main`'s at d453fe8. Only six changed, all under `agent-pushes` with `landStep: "wk"` on a ledger board with git: `/delegate`, `/close-out` and `/clean-up`, each tracked and local. Reversal: replace the passages with digests.
+- `catalog.json` is regenerated (`bun run catalog`), outside "Files it owns". The catalog's freshness test fails once `commit-policy.md` changes, and only its content hash and that long form's body move.
+- Five relative dates in this file's own prompt (lines 25, 38 and 42) became "2026-10-17" or "`main` at d453fe8", because `doctor`'s `relative-dates` rule failed the gate on them. The meaning is unchanged.
+
+**Each test with its fix turned off** (each mutation made in `src/render/skills.ts`, then the file restored and checked with `cmp`):
+
+- `landingOf` never returns `'wk'`: the three `/delegate` tests and both `/close-out` and `/clean-up` tests fail (5 fail).
+- `/close-out`'s two `'wk'` branches off: "/close-out names `wk status` and `wk gc`" fails.
+- `/clean-up`'s `'wk'` fold timing off: "/clean-up names `wk status` and `wk gc`" fails.
+- `landingOf` returns `'wk'` before it checks the policy: the agent-commits tests for `/delegate`, `/close-out` and `/clean-up` fail. The `/autopilot` case passes under that mutation, because `/autopilot` does not read the landing; it guards the next change that makes it.
+- One word of a moved passage changed ("old code" to "stale code"): "/delegate holds every moved passage" fails.
+- Any non-empty key lands through wk: "a value the engine does not know renders as the key absent" fails.
+
+**Left owed.**
+
+- A `doctor` rule that checks a `landStep: "wk"` repository has `~/.wk/<repo>.toml` with landing on and a gate list (out of scope here).
+- `/autopilot` under `'wk'` keeps the `direct` text: its `LAND_ROUTE` is empty and its record follows `/delegate`. Its own landing text is out of scope.
+- `/clean-up` and `/close-out` under `'wk'` still commit and push on the base from the primary checkout, as `direct` does. A commit there while wk's landing ref is ahead of the base stops wk's worker; the claim commit says so, and these two do not.
+- The wk text names wk's defaults (the 60-minute quiet window, `~/.wk/<repo>/landing.log`); a repository that changes them in its wk config reads its own values.

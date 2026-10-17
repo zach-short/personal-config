@@ -121,6 +121,21 @@ reversal; a question the item file marks as the owner's still holds the row. At 
 commits its own folder and what the fold moved, naming the files, and pushes. Under the other three
 answers both skills leave every branch in its worktree and every commit to you.
 
+A profile that sets `"landStep": "wk"` hands the landing to wk, a separate command-line tool whose
+queue gates each change and moves the base branch. It applies to a board in a repository with git;
+project folders keep the landing above. `/delegate` makes the builder's workspace with `wk new <n>`
+and spawns the builder in it without worktree isolation, because isolation would make a worktree
+of the session's own repository instead. It makes the auditor's worktree itself with
+`git worktree add`. After the sign-off it runs `wk submit` in the builder's workspace and reads
+`wk status` until the change is `landed`, `failed` or `refused`. wk's worker gates the tree that
+lands, fast-forwards your checkout and pushes, so no skill tells the session to merge or push by
+hand. The row becomes `COMMITTED` with wk's landing commit once the base holds it, and
+`/delegate`, `/close-out` and `/clean-up` leave every workspace to `wk gc --apply`, which never
+forces. The key needs a wk config for the repository at `~/.wk/<repo>.toml` with
+`[landing] enabled = true` and a `[[gates.run]]` list: with landing off `wk submit` refuses, and
+with no gates wk lands onto its own ref and never moves the base. Setup does not check for that
+file. Under the other three answers the key changes nothing.
+
 **A later run removes the rule.** Answering "no rule" on a later run plans the removal of
 `~/.claude/rules/commits.md`. A removal only touches a file this tool stamped and you have not marked `adapted`; a file with no stamp, or an adapted one, is left alone and not listed. The hook script and its `settings.json` entry stay, because
 this removal does not edit `settings.json`.
@@ -135,6 +150,11 @@ answer. With the hook chosen, that run installs the guard again. Do not edit `co
 project's `.personal-config.json` by hand: the answers are hashed, so `doctor` reports the edit
 as drift, and nothing is rewritten until setup runs. `personal-config undo` right after the run
 also restores the removed guard, its policy file and the `settings.json` entry.
+
+To undo `"landStep": "wk"`, remove the key from the profile, or set it to `"prose"`, and run
+setup again in each repository that uses the profile. Without the key `/delegate` returns to the
+session's own fast-forward and push; with `"prose"` it gets the land step. wk's config and its
+workspaces are wk's, so this changes neither.
 
 A project's router takes the new commit line only while it is still what this tool wrote. A
 router that you or a Part 0 session edited is left alone and named in the preview, so change its

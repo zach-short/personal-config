@@ -324,13 +324,18 @@ function agentPushes(ctx: RenderContext): boolean {
  * `step`: a board's land step (D1), where the profile sets `landStep`. `direct`: everywhere else
  * under `agent-pushes`, project folders among them, where the builder rule and the worktree step
  * say the session fast-forwards and pushes, and nothing in the text reserves git for the owner
- * (D6 As built, 2026-10-16).
+ * (D6 As built, 2026-10-16). `wk`: a board whose profile sets `landStep: "wk"`, where wk's
+ * queue gates the tree that lands, moves the base and pushes (board row 132). Only `agent-pushes`
+ * lets anything move the base, so under every other policy the key changes nothing.
  */
-type Landing = 'none' | 'step' | 'direct';
+type Landing = 'none' | 'step' | 'direct' | 'wk';
 
 function landingOf(ctx: RenderContext, shape: SkillShape): Landing {
   if (!agentPushes(ctx)) return 'none';
-  return !shape.folders && proseLandStep(ctx) ? 'step' : 'direct';
+  if (shape.folders) return 'direct';
+  if (proseLandStep(ctx)) return 'step';
+  // wk lands git commits, so a target without git keeps today's text.
+  return shape.git && answer(ctx, 'landStep') === 'wk' ? 'wk' : 'direct';
 }
 
 /**
@@ -359,25 +364,81 @@ function delegateVars(
   const vars = shape.folders
     ? delegateFolderVars()
     : delegateBoardVars(ctx, namesOf(ctx), commits, landing);
-  // The land step takes section 6, so the worktree step moves to 7 under it.
-  const removal = lands ? 7 : 6;
+  // A land step takes section 6, so the worktree step moves to 7 under it.
+  const removal = lands || landing === 'wk' ? 7 : 6;
   return {
     ...vars,
+    ...spawnVars(landing, commits, removal),
     TIER_TABLE: tierTable(ctx, ''),
     // `null` drops the token's line, so section 5 and the worktree step stay one blank line apart.
-    LAND_STEP: lands ? landStep() : null,
-    WORKTREE_STEP: worktreeStep(
-      removal,
-      'run',
-      [
-        'Remove each worktree that is finished: every builder, auditor and relayed pass that came',
-        'back with a worktree path and a branch. A',
-      ],
-      landing,
-    ),
+    LAND_STEP: landStepOf(landing),
+    WORKTREE_STEP:
+      landing === 'wk'
+        ? wkWorktreeStep(removal, 'run')
+        : worktreeStep(
+            removal,
+            'run',
+            [
+              'Remove each worktree that is finished: every builder, auditor and relayed pass that came',
+              'back with a worktree path and a branch. A',
+            ],
+            landing,
+          ),
     COMMIT_RULE: builderRule(commits, landing),
     // `/autopilot`, which the dial is for, renders on a board alone.
     AUDIT_DIAL: !shape.folders && landing !== 'none' ? auditDial(lands) : '',
+  };
+}
+
+function landStepOf(landing: Landing): string | null {
+  if (landing === 'step') return landStep();
+  if (landing === 'wk') return wkLandStep();
+  return null;
+}
+
+/**
+ * Board row 132: under wk's queue the lead makes each worktree itself and spawns with no
+ * `isolation`, because worktree isolation makes a worktree of the session's own repository, not
+ * the workspace `wk new` made (wk row 16's run, 2026-10-17). Every other landing keeps the
+ * isolated text, byte for byte.
+ */
+function spawnVars(
+  landing: Landing,
+  commits: boolean,
+  removal: number,
+): Record<string, string> {
+  return landing === 'wk' ? wkSpawnVars() : isolatedSpawnVars(commits, removal);
+}
+
+function isolatedSpawnVars(commits: boolean, removal: number): Record<string, string> {
+  return {
+    BUILD_SPAWN: [
+      'Spawn one Agent with `model` from the tiers above and `isolation: "worktree"`. A worktree holds',
+      'only the files git tracks, and an agent in one cannot run git on another worktree. So before you',
+      'write the brief:',
+    ].join('\n'),
+    BRIEF_NAMES: [
+      "Write the base branch's name and the patch path where the rules below say `<base>` and",
+      '  `<patch>`.',
+    ].join('\n'),
+    BASE_RULE: [
+      "Before the first gate, run the fresh-checkout recipe in the repo's working standard, and bring",
+      "  the worktree to the base branch: from your worktree's own directory, run",
+      '  `git merge --ff-only <base>` as one plain command, with the branch name written out, never',
+      '  through a shell variable or `git -C`. A worktree can start from a stale base, and its gates then',
+      '  report on old code.',
+    ].join('\n'),
+    AUDIT_SPAWN: [
+      'Spawn a second Agent with its own `isolation: "worktree"`, never the builder\'s. A subagent in a',
+      'shared worktree edits source even when it is told only to review.',
+    ].join('\n'),
+    AUDIT_REPRO: [
+      'Bring your own worktree to the base branch with `git merge --ff-only <base>`, run from your',
+      "  worktree's own directory as one plain command, then reproduce the change there.",
+      `  ${auditSource(commits)}`,
+      "  Never run `git -C` on the builder's worktree: worktree isolation refuses it. Where the change",
+      "  does not apply, report the command's output, and never copy files across by hand.",
+    ].join('\n'),
     // Item 95 audit, N1: the auditor's branch now holds the builder's commits, so the worktree
     // step keeps it.
     AUDIT_KEPT: commits
@@ -387,23 +448,81 @@ function delegateVars(
           "worktree until the builder's branch is merged. Expect that.",
         ].join('\n')
       : '',
-    AUDIT_SOURCE: commits
-      ? [
-          "Take it from the builder's branch: from your worktree's own directory, run",
-          "  `git merge --ff-only <the builder's branch>` as one plain command. Where the builder",
-          '  reports that a hook blocked its commit, do not merge:',
-          `  ${APPLY_PATCH}.`,
-        ].join('\n')
-      : [
-          "Take it from the builder's patch: from your worktree's own directory,",
-          `  ${APPLY_PATCH}. The`,
-          "  `git add -N` puts the new files in your diffstat, so it can match the builder's.",
-        ].join('\n'),
+  };
+}
+
+function auditSource(commits: boolean): string {
+  if (commits)
+    return [
+      "Take it from the builder's branch: from your worktree's own directory, run",
+      "  `git merge --ff-only <the builder's branch>` as one plain command. Where the builder",
+      '  reports that a hook blocked its commit, do not merge:',
+      `  ${APPLY_PATCH}.`,
+    ].join('\n');
+  return [
+    "Take it from the builder's patch: from your worktree's own directory,",
+    `  ${APPLY_PATCH}. The`,
+    "  `git add -N` puts the new files in your diffstat, so it can match the builder's.",
+  ].join('\n');
+}
+
+/**
+ * Row 132, step 3: the auditor's worktree is the lead's `git worktree add` of the builder's branch,
+ * detached because git checks a branch out in one worktree at a time and the builder's workspace
+ * holds it. It starts at the builder's commits, so the reproduction needs no merge, and nothing in
+ * the skill merges by hand. A hook-blocked commit leaves the branch where `wk new` cut it, where
+ * the patch applies as `APPLY_PATCH` has it.
+ */
+function wkSpawnVars(): Record<string, string> {
+  return {
+    BUILD_SPAWN: [
+      "Make the builder's workspace first. From the primary checkout, run `wk new <n>` with the item's",
+      'number: wk cuts a worktree from the base on the branch `wk/<n>` and prints only its absolute',
+      'path. Spawn one Agent with `model` from the tiers above and no `isolation` parameter, because',
+      "worktree isolation makes a new worktree of this session's own repository, never the workspace",
+      'wk made. A workspace holds only the files git tracks. So before you write the brief:',
+    ].join('\n'),
+    BRIEF_NAMES: [
+      "Write the base branch's name, the workspace's path and the patch path where the rules below",
+      '  say `<base>`, `<workspace>` and `<patch>`.',
+    ].join('\n'),
+    BASE_RULE: [
+      'Work only in `<workspace>`: run git as `git -C <workspace>`, give every path absolute, and',
+      '  where a tool needs a working directory, use a subshell, `(cd <workspace> && ...)`. Never `cd`',
+      '  at the top level of a shell call. You start in the primary checkout, so a relative path',
+      "  writes there. Before the first gate, run the fresh-checkout recipe in the repo's working",
+      '  standard in the workspace. `wk new` cut it from the base, so it needs no merge.',
+    ].join('\n'),
+    AUDIT_SPAWN: [
+      "Make the auditor's worktree yourself, from the primary checkout:",
+      "`git worktree add --detach <a fresh path> <the builder's branch>`. It is detached because git",
+      "checks a branch out in one worktree at a time, and the builder's workspace holds that one. Spawn",
+      "a second Agent with no `isolation`, and give it that path, never the builder's workspace. A",
+      'subagent in a shared worktree edits source even when it is told only to review.',
+    ].join('\n'),
+    AUDIT_REPRO: [
+      'Work only in your own worktree, with `git -C <your worktree>`, absolute paths, and a subshell,',
+      '  `(cd <your worktree> && ...)`, where a tool needs a working directory. The lead made it at',
+      "  the builder's branch, so it holds the change: your diffstat is",
+      '  `git -C <your worktree> diff --stat <base>...HEAD`. Where the builder reports that a hook',
+      '  blocked its commit, the branch is still where `wk new` cut it, so reproduce the change from',
+      '  the patch:',
+      `  ${APPLY_PATCH}.`,
+      "  Your diffstat is then `git -C <your worktree> diff --stat HEAD`. Read the builder's workspace",
+      '  only through its branch, and never write it. Where the patch does not apply, report the',
+      "  command's output, and never copy files across by hand.",
+    ].join('\n'),
+    AUDIT_KEPT: [
+      '',
+      "The auditor's worktree now holds the builder's commits, so `wk gc` keeps it until the builder's",
+      'changeset lands. Expect that.',
+    ].join('\n'),
   };
 }
 
 /** G40: under `agent-pushes` the merge and the push are not banned, they wait for step 6 (4.1). */
 function builderRule(commits: boolean, landing: Landing): string {
+  if (landing === 'wk') return wkBuilderRule();
   // Without the land step the rule names who lands as a fact; the rest is `agent-commits`'.
   if (landing === 'direct')
     return [
@@ -526,6 +645,100 @@ function landStep(): string {
     "this policy a row is `DONE` when its commits are on the base. Then step 7 removes the row's",
     'worktrees, whose branches the base now holds.',
     '',
+  ].join('\n');
+}
+
+/**
+ * Row 132: the builder commits, so the auditor reproduces from its branch, and nothing else. wk's
+ * worker writes the landing commit and moves the base, so a merge, a push or a submit from the
+ * builder would land a tree the audit never saw.
+ */
+function wkBuilderRule(): string {
+  return [
+    "Commit on the workspace's branch, `wk/<n>`, naming the exact files in both the `git add` and",
+    '  the commit. Never merge, never push, and never run `wk submit`: after the audit this session',
+    "  submits the workspace to wk's queue (step 6), and wk lands it. If a hook blocks the commit,",
+    '  print the two commit blocks, do not work around it, and make the patch the auditor works from:',
+    `  ${MAKE_PATCH} List in your report every file the change adds.`,
+  ].join('\n');
+}
+
+/**
+ * Row 132, step 2: the land through wk's queue, as wk's usage text gives its commands on
+ * 2026-10-17. `wk submit` refuses the main checkout, so it runs in the workspace. A changeset
+ * reaches `landed` on wk's landing ref, which is not yet the base where a dirty main checkout
+ * blocks the fast-forward (`Blockers` in wk's `internal/landing/ff.go`), so the record waits for
+ * the base to hold the commit. `refused` (a conflict with the landing tip) is wk's state too, and
+ * without its branch the lead would wait on a changeset that never moves again.
+ */
+function wkLandStep(): string {
+  return [
+    // Not "Land it": that heading is the prose land step's, and a test reads its absence as that.
+    "## 6. Submit it to wk's queue",
+    '',
+    "After step 4 signs an item off, hand the builder's workspace to wk's queue. wk writes the landing",
+    'commit, gates the tree that lands, fast-forwards the base and pushes it, so this session runs no',
+    'merge and no push of its own. From the primary checkout, with the path and the message written',
+    'out, run:',
+    '',
+    '```bash',
+    '(cd <the builder\'s workspace> && wk submit -m "<message>" --row <n>)',
+    '```',
+    '',
+    '`wk submit` refuses the primary checkout, so it runs in the workspace. It takes the',
+    "workspace's working tree as a changeset, prints the changeset's id as its only line on stdout,",
+    "and starts wk's landing worker. Keep the id. The landing commit's message is `row <n>: <message>`.",
+    "Where the repository's wk config sets `landing.require_review`, add",
+    '`--review "<the audit\'s verdict>"`.',
+    '',
+    'Then read `wk status` until the line for that id says `landed`, `failed` or `refused`. Run it',
+    'again on each turn, or run one background command that exits when that line changes; never a',
+    "sleep loop that outlives this session's tools.",
+    '',
+    '- **`landed`**: the `commit:` line under the id names the landing commit. The record waits until',
+    '  the base holds it, which `git merge-base --is-ancestor <commit> <base>` confirms by exiting 0.',
+    '  Where the base is behind, `wk status` says why, and `wk land` prints each dirty path in the',
+    '  primary checkout that blocks the fast-forward. Name those files and the session or person that',
+    '  owns them, and wait: never stash, reset or commit them yourself. Once `wk land` prints',
+    '  `fast-forward possible`, run the `wk land --apply --expect <hash>` command it prints.',
+    "- **`failed`**: the gate's name, its reason and the paths it named go back to the builder as a",
+    "  blocking finding, through step 4's fix round. Submit the fixed workspace again; it gets a new id.",
+    '- **`refused`**: the changeset conflicts with the landing tip in the paths listed under it. Send',
+    '  them to the builder, which runs `wk sync` in its workspace, resolves a conflict in a file its',
+    '  item\'s "Files it owns" lists, and commits. A conflict in any other file is an undeclared',
+    '  overlap, and the row is held. Otherwise submit again.',
+    '- **Still `submitted`, with a start error at the end of `~/.wk/<repo>/landing.log`**: a gate that',
+    '  cannot start, such as a missing binary or directory, stops the worker and blames no changeset.',
+    '  Fix the cause, which is a fact of this machine and never the tree, then start the worker again',
+    '  from the primary checkout with `wk land --loop`, as one background command.',
+    '',
+    'Only now write the record: the log line and the row, as step 4 says. Then step 7 hands the',
+    "row's workspaces to `wk gc`.",
+    '',
+  ].join('\n');
+}
+
+/**
+ * Row 132, step 2: `wk gc --apply` judges every worktree but the main checkout, the auditor's
+ * `git worktree add` among them, removes only one whose work the base holds, and never forces
+ * (wk's README, "Remove finished workspaces"). Its quiet window keeps a workspace that changed in
+ * the last hour, so the step expects one to stay.
+ */
+function wkWorktreeStep(n: number, maker: 'run' | 'session'): string {
+  return [
+    `## ${n}. Let wk remove the workspaces this ${maker} made`,
+    '',
+    'wk judges and removes finished worktrees, the workspaces `wk new` made and the worktrees made',
+    'with `git worktree add` among them. From the primary checkout, run `wk gc`, which prints a',
+    'verdict and its reasons for each worktree and changes nothing, then `wk gc --apply`. It removes a',
+    'worktree only when the base holds its work, it has no changed path, no process stands in it, and',
+    'nothing in it has changed for its quiet window (60 minutes by default). It never forces, and it',
+    "deletes a branch only where the base holds the branch's commits, so a landed workspace's branch",
+    'stays.',
+    '',
+    `Report each worktree this ${maker} made that \`wk gc\` kept, in one line with its verdict. One kept`,
+    "only for its quiet window goes at a later `wk gc --apply`, or by wk's scheduled cleanup where it",
+    'is installed. Never run `git worktree remove` or `git branch -d` on them yourself.',
   ].join('\n');
 }
 
@@ -869,7 +1082,6 @@ function delegateBoardVars(
 ): Record<string, string> {
   const { ledger, items } = names;
   const board = boardFile(ctx);
-  const lands = landing === 'step';
   return {
     GATE_CLEARED: [
       `On the board (\`${board}\`): an \`OPEN\` row with a model and a written prompt, every item`,
@@ -901,7 +1113,7 @@ function delegateBoardVars(
       "session sees the claim. Then find whether the item's file is tracked: it is when",
       `\`git ls-files --error-unmatch ${items}/<n>-<slug>.md\` succeeds here. Only a tracked file is`,
       "in a builder's worktree. Say which it is in the builder's brief.",
-      ...(landing === 'none' ? [] : claimCommit(items, lands ? 'The land step' : 'Step 6')),
+      ...claimLines(items, landing),
     ].join('\n'),
     ITEM_FILE_RULE: [
       '',
@@ -915,6 +1127,12 @@ function delegateBoardVars(
       `  and the item's file gets a dated note of what is done and what is left.`,
     ].join('\n'),
   };
+}
+
+function claimLines(items: string, landing: Landing): string[] {
+  if (landing === 'none') return [];
+  if (landing === 'wk') return wkClaimCommit(items);
+  return claimCommit(items, landing === 'step' ? 'The land step' : 'Step 6');
 }
 
 /**
@@ -933,6 +1151,22 @@ function claimCommit(items: string, lander: string): string[] {
 }
 
 /**
+ * Row 132: the claim is committed before `wk new`, so the workspace holds it and wk's fast-forward
+ * meets no uncommitted edit to the file. A commit on the base while the landing ref is ahead of it
+ * leaves each with a commit the other lacks, and wk's worker stops there (wk's README, "Land work
+ * through the queue").
+ */
+function wkClaimCommit(items: string): string[] {
+  return [
+    'Where it is tracked, commit the claim before step 2, naming the file:',
+    `\`git commit ${items}/<n>-<slug>.md -m "claim item <n>"\`, so the workspace \`wk new\` cuts holds`,
+    "it. wk's queue will not fast-forward the primary checkout over an uncommitted edit to a file the",
+    'landing changes. Commit it while `wk status` shows the base and the landing ref at one commit: a',
+    "commit on the base while the landing ref is ahead of it stops wk's landing worker.",
+  ];
+}
+
+/**
  * D10: the lead keeps every write to the table, and a builder writes its own close-out only where
  * the file is in its worktree. The lead's sign-off lines go into that same section in the
  * builder's worktree, so the whole record lands in the builder's commit and the primary checkout
@@ -941,6 +1175,7 @@ function claimCommit(items: string, lander: string): string[] {
 function boardRecord(names: RecordNames, commits: boolean, landing: Landing): string {
   if (landing === 'step') return landedRecord(names);
   if (landing === 'direct') return directRecord(names);
+  if (landing === 'wk') return wkRecord(names);
   return delegateRecord(names, commits);
 }
 
@@ -1023,6 +1258,31 @@ function directRecord(names: RecordNames): string {
     `  is one step in \`${ledger}\` at the next free number, read from the file now, with the same`,
     `  lines, and the row becomes \`DONE - ${ledgerStem} <n>\`.`,
     `  ${LEAD_LANDS}`,
+  ].join('\n');
+}
+
+/**
+ * Row 132: the sign-off lines are committed in the workspace, so they land with it, and the rest
+ * of the record waits for the base to hold the landing commit. That commit is known from
+ * `wk status` once it is on the base, so the row goes straight to `COMMITTED` (standard 2.2.0),
+ * where `DONE` would leave a later lookup to find a hash wk already printed.
+ */
+function wkRecord(names: RecordNames): string {
+  const { ledger, ledgerStem, items } = names;
+  return [
+    "Write the record: the builder's and the auditor's models, the workspace, the branch, the",
+    '  commit state (submitted to wk\'s queue in step 6, or "not committed" where a hook blocked the',
+    "  builder's commit), the relay passes, the verdict, each finding as `open`, and a Deep lift as the",
+    "  person's call. Where the item's file is tracked, send these lines to the builder with",
+    '  `SendMessage`, to append to its close-out section and commit, naming the file, so they land',
+    `  with the workspace. Where it is untracked, write the whole section at the end of`,
+    `  \`${items}/<n>-<slug>.md\` here, from the builder's report. The log line, the row and the`,
+    '  hand-back blocks wait for step 6: once the base holds the landing commit, add',
+    `  \`- <date> · closed item <n>\` at the end of the log in \`${ledger}\`, mark the row`,
+    '  `COMMITTED, <date>, <hash>` with the landing commit, and post the `/close-out` hand-back',
+    `  blocks: in chat, or into the run's state file under \`/autopilot\`. ${legacyBoard(names)}, the`,
+    `  record is one step in \`${ledger}\` at the next free number, read from the file now, with the`,
+    `  same lines, and the row becomes \`COMMITTED, ${ledgerStem} <n>, <hash>\`.`,
   ].join('\n');
 }
 
@@ -1181,6 +1441,13 @@ function foldMoveTiming(shape: SkillShape, landing: Landing): string[] {
     ];
   if (landing === 'direct')
     return ["   Run it only once every `COMMITTED` item's tracked close-out is on the base."];
+  // Row 132: wk's worker removes nothing and `wk gc` removes no archive, so each names its own.
+  if (landing === 'wk')
+    return [
+      "   Run it only once every `COMMITTED` item's tracked close-out is on the base: `wk status`",
+      "   prints each landed changeset's commit. Finished workspaces are wk's to remove, by `wk gc`",
+      '   and `wk gc --apply`, so this sweep removes no worktree.',
+    ];
   return [
     "   Run it only once every `COMMITTED` item's close-out is committed: a fold takes the file out",
     '   of the tree.',
@@ -1259,6 +1526,7 @@ function closeOutVars(
     RECORD_WHERE: recordWhere(shape),
     RECORD_STEPS: [
       recordStep(shape, names),
+      landing === 'wk' ? wkCommitStep() : '',
       // Under `direct` too the close-out reaches the base with the branch, not by the owner's commit.
       foldStep(shape, landing !== 'none'),
       landedEarly(shape),
@@ -1303,6 +1571,19 @@ function cleanUpBoard(names: RecordNames): string[] {
     `${legacyBoard(names)}, the fold moves \`DONE\` prompts and old`,
     'step bodies, and every row stays. Finished design folders move to the archive on both.',
   ];
+}
+
+/**
+ * Row 132: under wk's queue no session commits the item's code on the base; wk writes the landing
+ * commit, so the hash the record names is the one `wk status` prints for the changeset.
+ */
+function wkCommitStep(): string {
+  return [
+    "- **Under wk's queue, the commit is the landing commit.** wk writes it when the item's changeset",
+    '  lands, and `wk status` prints it on the `commit:` line under that changeset once it says',
+    '  `landed`. The row records that hash once the base holds it:',
+    '  `git merge-base --is-ancestor <hash> <base>` exits 0.',
+  ].join('\n');
 }
 
 function trigger(shape: SkillShape): string {
@@ -1529,15 +1810,17 @@ function proofSentence(shape: SkillShape): string {
  */
 function closeOutWorktreeStep(landing: Landing): string {
   return [
-    worktreeStep(
-      4,
-      'session',
-      [
-        'Remove each worktree that is finished: each one its subagents came back with, and each one',
-        'it added itself with `git worktree add`. A',
-      ],
-      landing,
-    ),
+    landing === 'wk'
+      ? wkWorktreeStep(4, 'session')
+      : worktreeStep(
+          4,
+          'session',
+          [
+            'Remove each worktree that is finished: each one its subagents came back with, and each one',
+            'it added itself with `git worktree add`. A',
+          ],
+          landing,
+        ),
     '',
     'Do this before you post the blocks in step 2, and put its report above them, so the model',
     'line stays last in the message. Never remove the worktree this session runs in.',

@@ -187,6 +187,12 @@ export const DEFAULT_ANSWERS: Answers = {
 export const PROSE_LAND_STEP: Answers = { landStep: 'prose' };
 
 /**
+ * The profile key that lands `/delegate`'s work through wk's queue under `agent-pushes` (board row
+ * 132). A test of that landing sets it; no shipped profile does.
+ */
+export const WK_LAND_STEP: Answers = { landStep: 'wk' };
+
+/**
  * Every skill one context writes: the global ones and the two rendered into its target
  * (shared-skills-track D1). A skill test reads a body by name, wherever it lands.
  */

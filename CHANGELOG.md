@@ -7,6 +7,15 @@ The CLI. The working standard it installs is versioned separately — see
 
 ### Added
 
+- **A wk land step, for a profile that sets `"landStep": "wk"`.** Under `agent-pushes` on a board
+  with git, `/delegate` makes the builder's workspace with `wk new <n>` and spawns the builder
+  there without worktree isolation, makes the auditor's worktree with `git worktree add`, lands a
+  signed-off item with `wk submit` in the builder's workspace, and reads `wk status` until it is
+  `landed`, `failed` or `refused`. The row becomes `COMMITTED` with wk's landing commit once the
+  base holds it, and `/delegate`, `/close-out` and `/clean-up` leave finished workspaces to
+  `wk gc --apply`. Every other profile, and every other policy with the key set, renders as
+  before, byte for byte. `docs/choices/commit-policy.md` says what the key needs (a
+  `~/.wk/<repo>.toml` with landing on and a gate list) and how to undo it.
 - **A board status word, `COMMITTED`, and standard 2.2.0.** `DONE, <record>` now means built and
   recorded but not yet in a commit, and `COMMITTED, <record>, <short hash>` means the commit
   exists. `doctor`'s `board-status` accepts both on a 1.x board (`<record>` a ledger step) and a
