@@ -12,7 +12,13 @@ import { repoRoot } from '../src/lib/paths.ts';
 import { leftoverTokens } from '../src/lib/template.ts';
 import type { Answers, PlannedFile, WorkProfile } from '../src/lib/types.ts';
 import { renderAll } from '../src/render/index.ts';
-import { DEFAULT_ANSWERS, testConfig, testContext, testRepoPlan } from './helpers.ts';
+import {
+  DEFAULT_ANSWERS,
+  PROSE_LAND_STEP,
+  testConfig,
+  testContext,
+  testRepoPlan,
+} from './helpers.ts';
 
 const CODE_FULL_GIT = { workKind: 'code', configWeight: 'full', usesGit: 'yes' } as const;
 
@@ -31,6 +37,7 @@ async function render(
 ): Promise<PlannedFile[]> {
   const answers: Answers = {
     ...DEFAULT_ANSWERS,
+    ...PROSE_LAND_STEP,
     skills: 'all',
     ...CODE_FULL_GIT,
     ...overrides,

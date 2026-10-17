@@ -181,6 +181,12 @@ export const DEFAULT_ANSWERS: Answers = {
 };
 
 /**
+ * The profile key that renders `/delegate`'s prose land step under `agent-pushes` (decision 13,
+ * 2026-10-16). A test of that step sets it; the shipped default omits it.
+ */
+export const PROSE_LAND_STEP: Answers = { landStep: 'prose' };
+
+/**
  * Every skill one context writes: the global ones and the two rendered into its target
  * (shared-skills-track D1). A skill test reads a body by name, wherever it lands.
  */

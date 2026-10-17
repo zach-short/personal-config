@@ -11,7 +11,14 @@
 import { describe, expect, test } from 'bun:test';
 import { leftoverTokens } from '../src/lib/template.ts';
 import type { Answers, PlannedFile, RepoPlan, WorkProfile } from '../src/lib/types.ts';
-import { DEFAULT_ANSWERS, everySkill, testContext, testRepoPlan, testScan } from './helpers.ts';
+import {
+  DEFAULT_ANSWERS,
+  everySkill,
+  PROSE_LAND_STEP,
+  testContext,
+  testRepoPlan,
+  testScan,
+} from './helpers.ts';
 
 type Shape = {
   workKind: 'code' | 'non-code';
@@ -277,6 +284,7 @@ describe('close-out removes the worktrees its session made', () => {
   const closeOut = async (commitPolicy: string, workProfile: WorkProfile = 'ledger') => {
     const answers: Answers = {
       ...DEFAULT_ANSWERS,
+      ...PROSE_LAND_STEP,
       skills: 'all',
       ...CODE_FULL_GIT,
       commitPolicy,

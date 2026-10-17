@@ -13,6 +13,7 @@
   },
   "answers": {
     "commitPolicy": "agent-pushes",
+    "landStep": "prose",
     "attribution": "none",
     "modelLightEnabled": "yes",
     "modelRouting": "delegate-or-stop",
