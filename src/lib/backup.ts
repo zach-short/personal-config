@@ -4,7 +4,8 @@ import { copyTo, exists, readJson, readText, writeText } from './disk.ts';
 import { backupsDir } from './paths.ts';
 
 export type BackupEntry = { original: string; stored: string };
-export type Manifest = { timestamp: string; entries: BackupEntry[] };
+/** `root` is the directory the run that took the backup was started in; manifests written before 2026-10-16 have none. */
+export type Manifest = { timestamp: string; entries: BackupEntry[]; root?: string };
 
 /** A backup on disk: where it lives, what it holds, and whether `undo` has already spent it. */
 export type Backup = { dir: string; manifest: Manifest; restoredAt: string | null };
@@ -55,7 +56,11 @@ function alreadyClaimed(error: unknown): boolean {
  * naming where each came from. `undo` reads only the manifest, so a backup with no manifest is
  * inert rather than half-restorable — which is why the manifest is written last.
  */
-export async function backupFiles(paths: string[], stamp = timestampDir()): Promise<Manifest> {
+export async function backupFiles(
+  paths: string[],
+  stamp = timestampDir(),
+  root = process.cwd(),
+): Promise<Manifest> {
   const dir = await claimDir(stamp);
   const entries: BackupEntry[] = [];
 
@@ -66,7 +71,7 @@ export async function backupFiles(paths: string[], stamp = timestampDir()): Prom
     entries.push({ original, stored });
   }
 
-  const manifest: Manifest = { timestamp: stamp, entries };
+  const manifest: Manifest = { timestamp: stamp, entries, root };
   await writeText(join(dir, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
   return manifest;
 }
@@ -101,9 +106,14 @@ async function readBackup(dir: string): Promise<Backup | null> {
   };
 }
 
-/** A backup belongs to the repository it was taken from: one of its files sits under `root`. */
+/**
+ * A backup belongs to the directory its run was started in, which the manifest records; an older
+ * manifest has no root, and then one of its files sitting under `root` is the test, which also
+ * admits a run started elsewhere that wrote into this repository.
+ */
 function touches(manifest: Manifest, root: string): boolean {
   const base = resolve(root);
+  if (manifest.root !== undefined && resolve(manifest.root) === base) return true;
   return manifest.entries.some((entry) => {
     const original = resolve(entry.original);
     return original === base || original.startsWith(base + sep);
@@ -130,7 +140,11 @@ function asManifest(parsed: unknown, path: string): Manifest {
   if (!Array.isArray(parsed.entries)) {
     throw new Error(`${path}: "entries" is not a list`);
   }
-  return { timestamp: parsed.timestamp, entries: parsed.entries.map((e) => asEntry(e, path)) };
+  return {
+    timestamp: parsed.timestamp,
+    entries: parsed.entries.map((e) => asEntry(e, path)),
+    ...(typeof parsed.root === 'string' ? { root: parsed.root } : {}),
+  };
 }
 
 function asEntry(value: unknown, path: string): BackupEntry {

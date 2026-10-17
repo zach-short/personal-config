@@ -211,9 +211,10 @@ async function claim(cli: Cli, loaded: Loaded, number: string | undefined): Prom
 
   const targets = claimed(loaded, row);
   const changes = await resolvePlan(
-    targets.map((target) =>
-      edit(target.path, `${target.label} — item ${number} claimed`, target.after),
-    ),
+    targets.map((target) => ({
+      ...edit(target.path, `${target.label} — item ${number} claimed`, target.after),
+      inPlace: true as const,
+    })),
   );
   if (changes.length === 0) return refuse('nothing to write.');
   // A guard that keeps a file the claim edited would leave the board saying one thing and the

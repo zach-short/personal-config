@@ -269,11 +269,13 @@ export type PlannedFile = {
    */
   replace?: 'never' | 'if-unedited';
   /**
-   * An in-place change to a file a person owns (`edit()`: a claim, a fold, a ledger step). The
-   * stamp guard admits it whatever stamp the file carries, because the contents are the file
-   * itself with a line or a cell changed, not a render claiming authorship. Without the mark the
-   * guard read the file's own stamp in those contents, and on a board stamped `adapted` a claim
-   * printed "Claimed", wrote the item note, and left the status cell `OPEN` (2026-10-16).
+   * A change the stamp guard admits whatever stamp the file carries. Set by `passoff claim`
+   * alone: its edit is one cell of a row it parsed and one note line, so an `adapted` board is as
+   * safe to claim on as any other. Without the mark the guard read the board's own stamp in the
+   * edited contents, and on a board stamped `adapted` a claim printed "Claimed", wrote the item
+   * note, and left the status cell `OPEN` (2026-10-16). `fold` and `archive` leave it unset on
+   * purpose: they restructure a document, and an adapted one is the repo's own to restructure
+   * (`tests/fold-items.test.ts`, "an adapted board holds the item whole").
    */
   inPlace?: true;
   /**

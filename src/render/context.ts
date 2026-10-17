@@ -75,7 +75,7 @@ function modeFor(extension: string): number | undefined {
  * backup and the same `undo` as a generated file.
  */
 export function edit(path: string, label: string, contents: string): PlannedFile {
-  return { path, label, contents, strategy: 'overwrite', inPlace: true };
+  return { path, label, contents, strategy: 'overwrite' };
 }
 
 /**

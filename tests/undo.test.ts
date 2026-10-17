@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { join } from 'node:path';
 import { runUndo } from '../src/commands/undo.ts';
+import { backupFiles, timestampDir } from '../src/lib/backup.ts';
 import type { PlannedFile } from '../src/lib/types.ts';
 import { commitPlan, resolvePlan } from '../src/lib/write-plan.ts';
 import { cleanup, recordingPrompter, tempDir, withTty } from './helpers.ts';
@@ -168,6 +169,31 @@ describe('undo is one-shot, and honest about it', () => {
       expect(code).toBe(0);
       expect(await Bun.file(mine).text()).toBe('original\n');
       expect(await Bun.file(theirs).text()).toBe('generated\n');
+    } finally {
+      await cleanup(here);
+      await cleanup(elsewhere);
+    }
+  });
+
+  /**
+   * A `setup` run writes `~/.claude` files that sit under no repository. The manifest records the
+   * directory the run was started in, and that is what `undo` matches first.
+   */
+  test('a run started here that wrote only outside this directory is still undone from here', async () => {
+    const here = await tempDir('pc-undo-here-');
+    const elsewhere = await tempDir('pc-undo-elsewhere-');
+    try {
+      const target = join(elsewhere, 'global.json');
+      await Bun.write(target, 'before\n');
+      await backupFiles([target], timestampDir(), here);
+      await Bun.write(target, 'after\n');
+
+      const { code } = await captured(() =>
+        withTty(false, () => runUndo(undefined, { root: here, yes: true })),
+      );
+
+      expect(code).toBe(0);
+      expect(await Bun.file(target).text()).toBe('before\n');
     } finally {
       await cleanup(here);
       await cleanup(elsewhere);

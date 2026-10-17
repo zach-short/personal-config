@@ -144,9 +144,10 @@ export function willWrite(change: PlannedChange): boolean {
  * differ. A merge into `settings.json`, a line appended to an ignore file and an in-place
  * `edit()` of a board all land in files a person owns — and all three read what is there and
  * keep it, so none claims authorship and none is guarded. Keying on the strategy would have
- * refused all three, and `passoff claim` would never mark a board again. The edit is told apart
- * by `inPlace`, not by its contents: those are the file itself, stamp included, so the content
- * test alone called an adapted board ours and refused the claim's one changed cell (2026-10-16).
+ * refused all three, and `passoff claim` would never mark a board again. One exception the other
+ * way: an `edit()` carries the file itself, stamp included, so on an `adapted` document the
+ * content test below keeps it. `fold` wants that (an adapted board is the repo's own to cut);
+ * the claim does not, and marks its edits `inPlace` to pass (2026-10-16).
  *
  * A *stamped* file is written even where a person has edited it. Nothing in the stamp records
  * the bytes we wrote, so an edit to a generated file leaves no trace this can read; that

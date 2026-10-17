@@ -394,7 +394,7 @@ describe('a run that prunes is previewed, repeatable and undone', () => {
       const before = await Promise.all(paths.map((path) => readText(path)));
 
       await setup(home, CODE);
-      const undone = await cli(['undo'], home);
+      const undone = await cli(['undo', '--yes'], home);
       expect(undone.code).toBe(0);
       expect(await Promise.all(paths.map((path) => readText(path)))).toEqual(before);
     } finally {

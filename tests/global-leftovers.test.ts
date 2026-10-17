@@ -131,7 +131,7 @@ describe('a later run removes what it no longer renders (D1)', () => {
       const before = await Promise.all(paths.map((path) => readText(path)));
 
       await setup(home, NON_CODE);
-      const undone = await cli(['undo'], home);
+      const undone = await cli(['undo', '--yes'], home);
       expect(undone.code).toBe(0);
       expect(await Promise.all(paths.map((path) => readText(path)))).toEqual(before);
     } finally {
