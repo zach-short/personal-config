@@ -9,7 +9,6 @@
  */
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
 import { hiddenByIgnore, hiddenNote, meantToBeTracked } from '../src/lib/hidden-tracked.ts';
 import type { PlannedFile, RepoPlan, TrackMode } from '../src/lib/types.ts';
@@ -90,7 +89,7 @@ describe('hiddenByIgnore against a temp global ignore', () => {
   async function repo(name: string): Promise<string> {
     const root = join(dir, name);
     await Bun.write(join(root, 'README.md'), 'x\n');
-    execFileSync('git', ['init', '-q'], { cwd: root });
+    expect(Bun.spawnSync(['git', 'init', '-q'], { cwd: root }).exitCode).toBe(0);
     return root;
   }
 
@@ -133,7 +132,7 @@ describe('hiddenByIgnore against a temp global ignore', () => {
   test('says nothing for a file git already tracks', async () => {
     const root = await repo('committed');
     await Bun.write(join(root, 'HANDOFF.md'), 'x\n');
-    execFileSync('git', ['add', '-f', 'HANDOFF.md'], { cwd: root });
+    expect(Bun.spawnSync(['git', 'add', '-f', 'HANDOFF.md'], { cwd: root }).exitCode).toBe(0);
     const changes = [change(file(join(root, 'HANDOFF.md')))];
     expect(await hiddenByIgnore([plan(root, 'tracked')], changes)).toEqual([]);
   });
