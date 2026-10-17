@@ -1,5 +1,7 @@
 # 132. Render a wk land step for profiles that set `landStep: "wk"`
 
+> **Claimed `IN FLIGHT` 2026-10-17.**
+
 *Opened 2026-10-17, for the rollout of wk (the owner's Go CLI for parallel agent workspaces, with a landing queue that gates and lands each change and moves `main`) to the owner's repositories. Every one of the 27 repositories under the owner's projects folder with a `.personal-config.json` renders `landStep: "prose"` on that day, so `/delegate` lands by hand: the builder merges the base, and the lead fast-forwards and pushes. Owner decision 13 (2026-10-16) says that prose step is deleted from a repository once wk moves `main` there. This row adds the step that replaces it. Sources: row 125's item file (`passoff/125-render-the-prose-land-step-only-for-profiles-that-set-it.md`, in the archive), the wk integration plan's phase D, and wk row 16's run on 2026-10-17, which found that the Agent tool's worktree isolation makes a worktree of the session's own repository, not of the repository the item is in.*
 
 **Model: Opus 5.5. Lane U. Waits on nothing. Work in your own worktree. Files it owns: `src/render/skills.ts`, `templates/skills/delegate.md`, `templates/skills/close-out.md`, `templates/skills/clean-up.md`, `tests/land-step-key.test.ts`, `tests/wk-land-step.test.ts` (new), `tests/helpers.ts`, `docs/choices/commit-policy.md`, `CHANGELOG.md`.**
