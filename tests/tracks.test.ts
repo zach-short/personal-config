@@ -283,6 +283,14 @@ const COMMIT_PARAGRAPH = '**Commits are the owner’s.**';
  *
  * **`completion-gate.sh` moved again on 2026-10-17, board row 129.** A gate that runs out asks for
  * the run instead of a false alarm. Three keys, 83 still.
+ *
+ * **Two skills moved per variant on 2026-10-17, board row 127, after row 120.** This is the
+ * owner-attention item, a second use of the number; the gate-limit item above is the first.
+ * `/autopilot` records the owner's attention: an **Owner** section in `STATE.md`, the clock reads at the start
+ * and around each opening-round call, a rule for a message between wakes, and a **Budget** line
+ * in the rundown with what it does not measure. `/delegate` times the owner's messages in step 0
+ * and ends its record with an **Owner** line. The `/autopilot` hash holds row 120's lines too.
+ * The same bytes in all three variants. 83 still, and no other key moved.
  */
 describe('§3.1 row 1 — code + full + git is the 0.3.0 output, byte for byte bar one skill', () => {
   const FULL = answersFor(CODE_FULL_GIT);

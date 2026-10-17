@@ -500,3 +500,88 @@ describe('the Autonomy call and what it governs', () => {
     expect(await lines('agent-commits')).toBe(0);
   });
 });
+
+/**
+ * Board row 127: the run records the owner's attention, so its rundown can state owner minutes
+ * per row done, with what the figure does and does not measure. The research report on the
+ * owner's first objective found no record of that attention; the wk run of 2026-10-16 kept one
+ * by hand. Each sentence renders under every commit policy, so its violating case is the rendered
+ * skill with that sentence moved out of its section, which the check must name.
+ */
+describe("the owner's attention", () => {
+  type Placed = { name: string; text: string; from: string; to: string };
+  // The clock reads come before the first call is described, so a lead reads them before it asks.
+  const ROUND = { from: '## 3. The opening round', to: '**Audit call, before the first call' };
+  const STATE = { from: '## 4. The run folder', to: '## 5. Launch' };
+  const BUDGET = { from: '8. **Budget**', to: '9. **Not verified**' };
+  const OWNER: Placed[] = [
+    {
+      name: 'the start reads the clock',
+      text: "5. **Read the time from `date`.** It is the run's start time under **Run**, and the time of the `/autopilot` message, the first line under **Owner** (section 4).",
+      from: '## 1. Before anything',
+      to: '## 2. Which rows can run',
+    },
+    {
+      name: 'the opening round reads the clock',
+      text: 'Read the time from `date` before each call and again when it returns.',
+      ...ROUND,
+    },
+    {
+      name: "one call's answers are one message",
+      text: "The person's answers to one call are one owner message, and both times go with it under **Owner** (section 4).",
+      ...ROUND,
+    },
+    {
+      name: 'the Owner section',
+      text: "- **Owner**: one line for each message the owner types in this session, from the one that typed `/autopilot` to the end of the run, the opening round's answers among them: the absolute time read from `date` when it arrives, and what it asked, answered or ordered, in a few words.",
+      ...STATE,
+    },
+    {
+      name: 'an answer carries its question',
+      text: 'Where it answers a question this session posted, the line also holds the time the question was posted and the whole minutes between the two.',
+      ...STATE,
+    },
+    {
+      // Audit finding 1: a wake prompt arrives as a user turn, and counting it adds a message per wake.
+      name: "what is not the owner's",
+      text: "Only what the owner types here counts: the `/loop` prompt, a wake from `ScheduleWakeup`, a hook's feedback, a background agent's report and a message from another session, even one that relays the owner's words, are not the owner's messages.",
+      ...STATE,
+    },
+    {
+      name: 'a message between wakes',
+      text: 'When the owner types a message in this session, during a wake or between two, read the time from `date` at once, and write its line under **Owner** (section 4) before you act on it.',
+      from: '## 6. The wake procedure',
+      to: 'On every wake, and whenever a background agent returns:',
+    },
+    {
+      name: 'the Budget line',
+      text: 'and the owner\'s attention from **Owner**: the messages counted, the questions answered with the minutes from each question to its answer and their sum, and the message count and the minutes\' sum each divided by the rows this run marked `DONE`, a row and its sub-rows counting as one, as against a cap on rows, or "no row done".',
+      ...BUDGET,
+    },
+    {
+      name: 'what the figures measure',
+      text: 'Then this sentence, as written: "These figures count the messages the owner typed in this session and the whole minutes from each question to its answer, which include any time the owner was away; they do not capture reading time, such as reading this rundown, a report or a diff, the time spent writing a message no question asked for, a message another session relayed, or the work the run leaves for the owner, such as the decisions waiting and any commit blocks."',
+      ...BUDGET,
+    },
+  ];
+
+  /** The sentences not found between their two markers. */
+  const misplaced = (text: string) =>
+    OWNER.filter(({ text: sentence, from, to }) => {
+      const start = text.indexOf(from);
+      const at = text.indexOf(sentence, start);
+      return start < 0 || at < 0 || at > text.indexOf(to, start);
+    }).map(({ name }) => name);
+
+  for (const policy of ['print-blocks', 'agent-commits', 'agent-pushes', 'no-rule'])
+    test(`passes: under ${policy} each sentence renders in its section`, async () => {
+      const text = (await autopilot({ commitPolicy: policy })).replace(/\s+/g, ' ');
+      expect(misplaced(text)).toEqual([]);
+    });
+
+  for (const { name, text: sentence } of OWNER)
+    test(`violates: ${name}, moved out of its section, is caught`, async () => {
+      const text = (await autopilot({ commitPolicy: 'agent-pushes' })).replace(/\s+/g, ' ');
+      expect(misplaced(`${text.replace(sentence, '')} ${sentence}`)).toEqual([name]);
+    });
+});

@@ -183,7 +183,10 @@ the run. Under every commit policy but **The agent may commit and push**, the bu
 in their worktrees and landing it is yours. Under that policy the run lands each signed-off row as
 it goes: the builder merges the base and runs the gates in its worktree, the session fast-forwards
 your checkout and pushes, and the row's worktrees go. The run's own folder and the fold's moves are
-committed and pushed at the end, with the files named.
+committed and pushed at the end, with the files named. `STATE.md` also holds one line for each
+message you type during the run, with its time and a few words of what it said, and the rundown
+counts those messages and the minutes each question waited for your answer. Under that policy,
+those lines are pushed with the folder.
 
 When the run splits a row, it writes each sub-row to the board at the next free number, in a lane
 of its own, with its own item file. The row keeps its number as the integration sub-row: its
