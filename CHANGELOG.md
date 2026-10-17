@@ -109,12 +109,14 @@ The CLI. The working standard it installs is versioned separately — see
 - **`/autopilot` and `/delegate` record the owner's attention.** A run kept no record of what it
   cost you in attention: no run folder said how often you were asked or how long the run waited
   for you. `/autopilot`'s `STATE.md` gains an **Owner** section, one line for each message you
-  send during the run, with its time read from `date`. The opening round reads the clock before
-  and after each call, so each answer carries the minutes since its question. The rundown's
-  **Budget** section counts the messages and the minutes from question to answer, divides both
-  by the rows the run marked `DONE`, and says what the figures do not capture: reading time, and
-  the time spent writing a message no question asked for. `/delegate` outside a run ends its
-  record with the same **Owner** line.
+  type during the run, with its time read from `date` and a few words of what it said; wakes,
+  agent reports and other sessions' messages are not counted. The opening round reads the clock
+  before and after each call, so each answer carries the minutes since its question, time away
+  included. The rundown's **Budget** section counts the messages and the minutes from question to
+  answer, divides both by the rows the run marked `DONE`, and says what the figures do not
+  capture: reading time, the time spent writing a message no question asked for, and the work the
+  run leaves for you. `/delegate` outside a run ends its record with an **Owner** line that
+  counts your messages and the minutes from each question to its answer.
 
 ### Changed
 

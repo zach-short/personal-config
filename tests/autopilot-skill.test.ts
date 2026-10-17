@@ -510,10 +510,17 @@ describe('the Autonomy call and what it governs', () => {
  */
 describe("the owner's attention", () => {
   type Placed = { name: string; text: string; from: string; to: string };
-  const ROUND = { from: '## 3. The opening round', to: '## 4. The run folder' };
+  // The clock reads come before the first call is described, so a lead reads them before it asks.
+  const ROUND = { from: '## 3. The opening round', to: '**Audit call, before the first call' };
   const STATE = { from: '## 4. The run folder', to: '## 5. Launch' };
   const BUDGET = { from: '8. **Budget**', to: '9. **Not verified**' };
   const OWNER: Placed[] = [
+    {
+      name: 'the start reads the clock',
+      text: "5. **Read the time from `date`.** It is the run's start time under **Run**, and the time of the `/autopilot` message, the first line under **Owner** (section 4).",
+      from: '## 1. Before anything',
+      to: '## 2. Which rows can run',
+    },
     {
       name: 'the opening round reads the clock',
       text: 'Read the time from `date` before each call and again when it returns.',
@@ -526,7 +533,7 @@ describe("the owner's attention", () => {
     },
     {
       name: 'the Owner section',
-      text: "- **Owner**: one line for each message the owner sends in this session, from the one that typed `/autopilot` to the end of the run, the opening round's answers among them: the absolute time read from `date` when it arrives, and what it asked, answered or ordered, in a few words.",
+      text: "- **Owner**: one line for each message the owner types in this session, from the one that typed `/autopilot` to the end of the run, the opening round's answers among them: the absolute time read from `date` when it arrives, and what it asked, answered or ordered, in a few words.",
       ...STATE,
     },
     {
@@ -535,24 +542,25 @@ describe("the owner's attention", () => {
       ...STATE,
     },
     {
-      name: 'a relayed message',
-      text: "A message another session relays is that session's to count.",
+      // Audit finding 1: a wake prompt arrives as a user turn, and counting it adds a message per wake.
+      name: "what is not the owner's",
+      text: "Only what the owner types here counts: the `/loop` prompt, a wake from `ScheduleWakeup`, a hook's feedback, a background agent's report and a message from another session, even one that relays the owner's words, are not the owner's messages.",
       ...STATE,
     },
     {
       name: 'a message between wakes',
-      text: 'When the owner sends a message, at a wake or between two, read the time from `date`, and write its line under **Owner** (section 4) before you act on it.',
+      text: 'When the owner types a message in this session, during a wake or between two, read the time from `date` at once, and write its line under **Owner** (section 4) before you act on it.',
       from: '## 6. The wake procedure',
       to: 'On every wake, and whenever a background agent returns:',
     },
     {
       name: 'the Budget line',
-      text: 'and the owner\'s attention from **Owner**: the messages counted, the questions answered with the minutes from each question to its answer and their sum, and the count and the sum each divided by the rows this run marked `DONE`, counted as the cap on rows counts them, or "no row done".',
+      text: 'and the owner\'s attention from **Owner**: the messages counted, the questions answered with the minutes from each question to its answer and their sum, and the message count and the minutes\' sum each divided by the rows this run marked `DONE`, a row and its sub-rows counting as one, as against a cap on rows, or "no row done".',
       ...BUDGET,
     },
     {
       name: 'what the figures measure',
-      text: 'Then this sentence, as written: "These figures count the owner\'s messages and the minutes from each question to its answer, which include any time the owner was away; they do not capture reading time, such as reading this rundown, a report or a diff, or the time spent writing a message no question asked for."',
+      text: 'Then this sentence, as written: "These figures count the messages the owner typed in this session and the whole minutes from each question to its answer, which include any time the owner was away; they do not capture reading time, such as reading this rundown, a report or a diff, the time spent writing a message no question asked for, a message another session relayed, or the work the run leaves for the owner, such as the decisions waiting and any commit blocks."',
       ...BUDGET,
     },
   ];

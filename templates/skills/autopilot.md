@@ -51,6 +51,8 @@ the rest of this skill names them.
 4. **Look for the lane file**, `docs/audit-lanes.md`. Where it exists, load `/audit` once, with the
    Skill tool, and read the lane file: the audit call offers its lanes and `/audit`'s defaults.
    Where it does not exist, ask no audit call, and run the board only.
+5. **Read the time from `date`.** It is the run's start time under **Run**, and the time of the
+   `/autopilot` message, the first line under **Owner** (section 4).
 
 ## 2. Which rows can run
 
@@ -78,7 +80,9 @@ When the caps allow fewer launches than there are runnable rows, the lowest row 
 
 At most four questions in each `AskUserQuestion` call. The questions, their options and their
 defaults are fixed below. The words are yours, inside the person's chat-style rule where they
-chose one. Put the default first in each question and mark it recommended.
+chose one. Put the default first in each question and mark it recommended. Read the time from
+`date` before each call and again when it returns. The person's answers to one call are one owner
+message, and both times go with it under **Owner** (section 4).
 
 **Audit call, before the first call, only where the lane file exists. Four questions.** The
 defaults are `/audit`'s.
@@ -132,8 +136,6 @@ with the row's own options, four in each call, up to the default number of calls
 shows its variants, and the person picks. A row whose questions were not reached is held.
 
 After the round, ask nothing more. Write the answers into the state file, dated, word for word.
-Read the time from `date` before each call and again when it returns. The person's answers to one
-call are one owner message, and both times go with it under **Owner** (section 4).
 
 ## 4. The run folder and the state file
 
@@ -153,12 +155,14 @@ the next free number. `STATE.md` in it has these sections:
 - **Queue**: the runnable rows not yet launched, in launch order.
 - **Readings**: one line for each wake: the time, the usage reading or "not measured", and this
   session's context.
-- **Owner**: one line for each message the owner sends in this session, from the one that typed
+- **Owner**: one line for each message the owner types in this session, from the one that typed
   `/autopilot` to the end of the run, the opening round's answers among them: the absolute time
   read from `date` when it arrives, and what it asked, answered or ordered, in a few words. Where
   it answers a question this session posted, the line also holds the time the question was
-  posted and the whole minutes between the two. A message another session relays is that
-  session's to count.
+  posted and the whole minutes between the two. Only what the owner types here counts: the
+  `/loop` prompt, a wake from `ScheduleWakeup`, a hook's feedback, a background agent's report
+  and a message from another session, even one that relays the owner's words, are not the
+  owner's messages.
 - **Reports**: for each row, one entry for each report, the builder's and every auditor's, headed
   with the row, the agent and the absolute time the report arrived. Each holds what the rundown needs:
   the gates seen and their result, any number claimed, the files changed and the untracked files
@@ -220,8 +224,8 @@ procedure."
 
 ## 6. The wake procedure
 
-When the owner sends a message, at a wake or between two, read the time from `date`, and write its
-line under **Owner** (section 4) before you act on it.
+When the owner types a message in this session, during a wake or between two, read the time from
+`date` at once, and write its line under **Owner** (section 4) before you act on it.
 
 On every wake, and whenever a background agent returns:
 
@@ -310,12 +314,15 @@ file that holds the row's open findings.
    7. {{DECISIONS_SECTION}}
    8. **Budget**: the usage readings or "not measured", agents by model, hours, this session's
       peak context, and the owner's attention from **Owner**: the messages counted, the questions
-      answered with the minutes from each question to its answer and their sum, and the count and
-      the sum each divided by the rows this run marked `DONE`, counted as the cap on rows counts
-      them, or "no row done". Then this sentence, as written: "These figures count the owner's
-      messages and the minutes from each question to its answer, which include any time the
-      owner was away; they do not capture reading time, such as reading this rundown, a report or
-      a diff, or the time spent writing a message no question asked for."
+      answered with the minutes from each question to its answer and their sum, and the message
+      count and the minutes' sum each divided by the rows this run marked `DONE`, a row and its
+      sub-rows counting as one, as against a cap on rows, or "no row done". Then this sentence,
+      as written: "These figures count the messages the owner typed in this session and the
+      whole minutes from each question to its answer, which include any time the owner was away;
+      they do not capture reading time, such as reading this rundown, a report or a diff, the
+      time spent writing a message no question asked for, a message another session relayed, or
+      the work the run leaves for the owner, such as the decisions waiting and any commit
+      blocks."
    9. **Not verified**: what no one saw running.
    10. **Warnings**, such as a tool that deletes uncommitted worktrees.
    11. {{COMMIT_BLOCKS}}

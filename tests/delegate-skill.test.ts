@@ -501,11 +501,21 @@ describe("/delegate times the owner's attention", () => {
     },
     {
       name: 'when the clock is read',
-      text: 'Read the time from `date` when each owner message arrives, and before you post each question to the owner.',
+      text: 'Read the time from `date` when each owner message arrives, and before you post each question to the owner, and write each as an absolute time with its zone.',
     },
     {
       name: 'the Owner line',
       text: "Step 4's record, or a hold's dated note, then ends with one **Owner** line: the owner's messages counted, each with its time, and for each answered question the time it was posted, the time of the answer and the whole minutes between them, summed.",
+    },
+    {
+      // Audit finding 5: the holds at steps 0, 3 and 6 write no dated note.
+      name: 'a hold with no note',
+      text: 'A hold that writes no note posts the line in chat.',
+    },
+    {
+      // Audit finding 6: several items in one session would each count the same messages.
+      name: 'several items at once',
+      text: "Where step 5 runs several items, each message goes on the line of the item it concerns, and a message about several goes on the first one's.",
     },
   ];
   const UNDER_AUTOPILOT = {
