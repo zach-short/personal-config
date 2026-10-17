@@ -243,16 +243,14 @@ function variables(
   name: string,
   shape: SkillShape,
 ): Record<string, string | null> {
-  // The land step's record is a log line and a `DONE` row (D1), which project folders keep none
-  // of, so there `agent-pushes` renders `/delegate` and `/close-out` as `agent-commits` does.
-  const lands = agentPushes(ctx) && !shape.folders;
+  const landing = landingOf(ctx, shape);
   if (name === 'close-out') {
-    return closeOutVars(shape, namesOf(ctx), wantedSkills(ctx).includes('clean-up'), lands);
+    return closeOutVars(shape, namesOf(ctx), wantedSkills(ctx).includes('clean-up'), landing);
   }
   if (name === 'handoff') return handoffVars(shape, namesOf(ctx));
   if (name === 'passoff') return passoffVars(shape, namesOf(ctx), ownersCall(ctx));
   if (name === 'clean-up') return cleanUpVars(shape, namesOf(ctx), agentPushes(ctx));
-  if (name === 'delegate') return delegateVars(ctx, shape, lands);
+  if (name === 'delegate') return delegateVars(ctx, shape, landing);
   if (name === 'autopilot') return autopilotVars(ctx);
   if (name === 'audit') return auditVars(ctx);
   return {};
@@ -290,6 +288,20 @@ function agentPushes(ctx: RenderContext): boolean {
 }
 
 /**
+ * Who lands a signed-off branch. `none`: the run merges nothing (every policy but `agent-pushes`).
+ * `step`: a board's land step (D1). `direct`: project folders under `agent-pushes`, where the land
+ * step's record (a log line, a `DONE` row, a tracked item file the builder commits its sign-off
+ * into) does not exist, so the builder rule and the worktree step say the session fast-forwards
+ * and pushes, and nothing in the text reserves git for the owner (D6 As built, 2026-10-16).
+ */
+type Landing = 'none' | 'step' | 'direct';
+
+function landingOf(ctx: RenderContext, shape: SkillShape): Landing {
+  if (!agentPushes(ctx)) return 'none';
+  return shape.folders ? 'direct' : 'step';
+}
+
+/**
  * `/delegate`. Rendered only for code + full + git (`offeredSkills`), so the two axes left are the
  * work-record shape (D22: a board, or project folders recorded through the phase header) and the
  * commit policy (D10). The tier names are the person's own, filled here so the template carries no
@@ -299,8 +311,9 @@ function agentPushes(ctx: RenderContext): boolean {
 function delegateVars(
   ctx: RenderContext,
   shape: SkillShape,
-  lands: boolean,
+  landing: Landing,
 ): Record<string, string | null> {
+  const lands = landing === 'step';
   const commits = agentCommits(ctx);
   const vars = shape.folders
     ? delegateFolderVars()
@@ -319,9 +332,9 @@ function delegateVars(
         'Remove each worktree that is finished: every builder, auditor and relayed pass that came',
         'back with a worktree path and a branch. A',
       ],
-      lands,
+      landing,
     ),
-    COMMIT_RULE: builderRule(commits, lands),
+    COMMIT_RULE: builderRule(commits, landing),
     AUDIT_DIAL: lands ? auditDial() : '',
     // Item 95 audit, N1: the auditor's branch now holds the builder's commits, so the worktree
     // step keeps it.
@@ -348,8 +361,17 @@ function delegateVars(
 }
 
 /** G40: under `agent-pushes` the merge and the push are not banned, they wait for step 6 (4.1). */
-function builderRule(commits: boolean, lands: boolean): string {
-  if (lands)
+function builderRule(commits: boolean, landing: Landing): string {
+  // Folders have no step 6, so the rule names who lands as a fact; the rest is `agent-commits`'.
+  if (landing === 'direct')
+    return [
+      'Commit on your own worktree branch, naming the exact files in both the `git add` and',
+      '  the commit. This session lands your branch once the item is signed off: it runs',
+      '  `git merge --ff-only` and `git push` on the base. If a hook blocks the commit, print the',
+      '  two commit blocks, do not work around it, and make the patch the auditor works from:',
+      `  ${MAKE_PATCH} List in your report every file the change adds.`,
+    ].join('\n');
+  if (landing === 'step')
     return [
       'Commit on your own worktree branch, naming the exact files in both the `git add` and',
       "  the commit. The merge into the base and the push are the land step's (step 6), which this",
@@ -1043,20 +1065,24 @@ function closeOutVars(
   shape: SkillShape,
   names: RecordNames,
   cleanUp: boolean,
-  lands: boolean,
+  landing: Landing,
 ): Record<string, string> {
   const blocks = handBackBlocks(shape);
   return {
     CLOSE_OUT_TRIGGER: trigger(shape),
     WORK_UNIT: workUnit(shape),
     RECORD_WHERE: recordWhere(shape),
-    RECORD_STEPS: [recordStep(shape, names), foldStep(shape, lands), landedEarly(shape)]
+    RECORD_STEPS: [
+      recordStep(shape, names),
+      foldStep(shape, landing === 'step'),
+      landedEarly(shape),
+    ]
       .filter((step) => step !== '')
       .join('\n'),
     BLOCK_COUNT: blocks.length === 3 ? 'three' : 'two',
     HAND_BACK_BLOCKS: blocks.join('\n'),
     PROOF_SENTENCE: proofSentence(shape),
-    WORKTREE_STEP: shape.git ? `\n\n${closeOutWorktreeStep(lands)}` : '',
+    WORKTREE_STEP: shape.git ? `\n\n${closeOutWorktreeStep(landing)}` : '',
     CLEAN_UP_STEP: cleanUp ? `\n\n${cleanUpStep(shape, names)}` : '',
   };
 }
@@ -1285,7 +1311,7 @@ function proofSentence(shape: SkillShape): string {
  * Its report sits above step 2's blocks because the model line is the first thing the owner acts
  * on, so it has to stay last in the message.
  */
-function closeOutWorktreeStep(lands: boolean): string {
+function closeOutWorktreeStep(landing: Landing): string {
   return [
     worktreeStep(
       4,
@@ -1294,7 +1320,7 @@ function closeOutWorktreeStep(lands: boolean): string {
         'Remove each worktree that is finished: each one its subagents came back with, and each one',
         'it added itself with `git worktree add`. A',
       ],
-      lands,
+      landing,
     ),
     '',
     'Do this before you post the blocks in step 2, and put its report above them, so the model',
@@ -1312,7 +1338,7 @@ function worktreeStep(
   n: number,
   maker: 'run' | 'session',
   which: string[],
-  lands: boolean,
+  landing: Landing,
 ): string {
   return [
     `## ${n}. Remove the worktrees this ${maker} made`,
@@ -1323,7 +1349,7 @@ function worktreeStep(
     '',
     ...worktreeCommands(),
     '',
-    ...worktreeLimits(maker, lands),
+    ...worktreeLimits(maker, landing),
   ].join('\n');
 }
 
@@ -1344,13 +1370,14 @@ function worktreeCommands(): string[] {
   ];
 }
 
-function worktreeLimits(maker: 'run' | 'session', lands: boolean): string[] {
+function worktreeLimits(maker: 'run' | 'session', landing: Landing): string[] {
   const never = [
     'Never add `--force` and never use `-D`: git refuses to remove a dirty worktree or to delete an',
     `unmerged branch, and that refusal is the check. Never remove a worktree this ${maker} did not`,
     'make, because a worktree just added for new work is clean and its branch is merged too.',
   ];
-  if (lands) return [...never, ...landedLimits()];
+  if (landing === 'step') return [...never, ...landedLimits()];
+  if (landing === 'direct') return [...never, ...directLimits()];
   return [
     ...never,
     'This step merges nothing, so it never merges into a branch the repo marks as protected, or into',
@@ -1372,6 +1399,23 @@ function landedLimits(): string[] {
     'report each one in one line with its reason: a commit the base does not hold, or uncommitted',
     'files. That worktree stays until its work is committed and merged, then goes by the same',
     'checks. Ignored files such as `node_modules` and `.env` go with a worktree when it is removed.',
+  ];
+}
+
+/**
+ * Project folders under `agent-pushes` have no land step, so this step is where the session lands
+ * (D6 As built, 2026-10-16). `--ff-only` keeps D1's guarantee that the base takes only a tree a
+ * gate ran on; a refusal leaves the branch unmerged, so the checks below keep its worktree.
+ */
+function directLimits(): string[] {
+  return [
+    'First land each branch whose work is signed off: from the primary checkout, with `git -C` and',
+    'the branch name written out, run `git merge --ff-only <branch>`, then `git push`. Never',
+    "`--force`, and never a rebase. A refused fast-forward or push leaves that branch, and git's",
+    'output goes in the report. Then this step only removes. Keep every other worktree, and report',
+    'each one in one line with its reason: a commit the base does not hold, or uncommitted files.',
+    'That worktree stays until its work is committed and merged, then goes by the same checks.',
+    'Ignored files such as `node_modules` and `.env` go with a worktree when it is removed.',
   ];
 }
 

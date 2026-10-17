@@ -202,6 +202,8 @@ entry.
 
 **Supersedes:** nothing. **Ratified** 2026-10-16, answer 6.
 
+As built, 2026-10-16: project folders under `agent-pushes` get no land step. Instead, the builder rule and the worktree step state who lands. The builder rule says the builder commits on its branch and the session lands that branch with `git merge --ff-only` and `git push` once the item is signed off. The worktree step, in `/delegate` (section 6) and in `/close-out` (section 4), opens by landing each signed-off branch from the primary checkout with `git -C`, never with `--force` or a rebase, and reports a refused fast-forward or push with git's output. A new `Landing` value in `src/render/skills.ts` (`none`, `step`, `direct`) carries the three cases, and `agentPushes()` still decides it. The land step was the first choice, but it needs more than a new record on folders. Its step 1 commits sign-off lines into a tracked item file, step 3 reads "Files it owns" and holds a row, its last paragraph writes a log line and `DONE`, and the claim commit before it exists because `passoff claim` edits the item file. A folder has none of these, and the lead's phase-header edits in the primary checkout would raise the same refused fast-forward that the claim commit fixed on a board, so the step would need its own folder rules. The two sentences carried the whole gap: they were the only folder text the 4.5 sweep matched. Under `print-blocks`, `agent-commits` and `no-rule` every render on both shapes is byte for byte as before, and a board under `agent-pushes` is unchanged.
+
 ### D7. The run commits and pushes its own folder and the fold's moves (answer 7, A)
 
 After `/clean-up`'s fold, under `agent-pushes`, the lead runs from the primary checkout, with

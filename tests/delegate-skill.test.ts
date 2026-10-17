@@ -305,11 +305,14 @@ describe('what /delegate says', () => {
     }
   });
 
-  /** Judgment call: the land step's record is a log line and a `DONE` row, which folders lack. */
-  test('passes: on project folders agent-pushes renders as agent-commits', async () => {
-    expect(await delegateUnder('agent-pushes', 'folders')).toBe(
-      await delegateUnder('agent-commits', 'folders'),
-    );
+  /**
+   * Design D6 As built, 2026-10-16: the land step's record is a log line and a `DONE` row, which
+   * folders lack, so folders get no step 6; the builder rule and step 6's removal say who lands.
+   */
+  test('passes: on project folders agent-pushes gets no land step, and step 6 removes', async () => {
+    const raw = await delegateUnder('agent-pushes', 'folders');
+    expect(raw).not.toContain('## 6. Land it');
+    expect(raw).toContain('## 6. Remove the worktrees this run made');
   });
 
   test('its last step removes only the merged, clean worktrees the run made', async () => {

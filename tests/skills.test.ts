@@ -297,11 +297,10 @@ describe('close-out removes the worktrees its session made', () => {
     for (const phrase of OWNERS) expect(text, phrase).toContain(phrase);
   });
 
-  /** Judgment call: project folders get no land step, so their close-out keeps the old sentence. */
-  test('passes: on project folders agent-pushes renders the close-out as agent-commits', async () => {
-    expect(await closeOut('agent-pushes', 'folders')).toBe(
-      await closeOut('agent-commits', 'folders'),
-    );
+  /** Design D6 As built, 2026-10-16: folders have no land step, so the worktree step lands. */
+  test('passes: on project folders agent-pushes names no land step and no owner commit', async () => {
+    const text = await closeOut('agent-pushes', 'folders');
+    for (const phrase of [...LANDED, ...OWNERS]) expect(text, phrase).not.toContain(phrase);
   });
 
   test('violates: a target without git gets no worktree step', async () => {
