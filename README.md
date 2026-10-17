@@ -18,6 +18,8 @@ The hook scripts are bash, so on Windows they need WSL or Git Bash. The two guar
 npx personal-config setup
 ```
 
+Run `npx personal-config` with nothing after it in a terminal, and it opens a guided setup in a full-screen frame, one step at a time, when you have no saved config yet. Once a config is saved, the same command opens a home screen with a summary and a short menu. In a pipe or a script it prints the help text. `personal-config setup`, typed in full, works as it did before.
+
 `bunx personal-config setup` works the same way. To install it once and run it by name in any folder, install it globally with npm:
 
 ```bash
