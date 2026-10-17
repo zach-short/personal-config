@@ -118,8 +118,8 @@ describe('a declined run hands over every event the planned merge holds', () => 
    * The `gateCommand` comment in `src/render/hooks.ts`: an entry string is fixed once a release
    * carries it. These are the lines the path-based snippet printed for the four entries it knew,
    * captured from `0b5c3a8` before the change, with the new entry in the same spacing. The `Stop`
-   * line's timeout moved from 120 to 330 on 2026-10-17 (board row 127), on purpose; a re-run
-   * prunes the old line (`retiredEntries()` in `src/render/hooks.ts`).
+   * line's timeout moved from 120 to 330 and then to 600 on 2026-10-17 (board row 127), on purpose;
+   * a re-run prunes the old lines (`retiredEntries()` in `src/render/hooks.ts`).
    */
   test('the entries that were there before print byte for byte as they did', async () => {
     const plan = await renderAll(testContext(ALL_FIVE));
@@ -137,7 +137,7 @@ describe('a declined run hands over every event the planned merge holds', () => 
         `    { "matcher": "startup|resume", "hooks": [{ "type": "command", "command": "${join(HOOKS, 'session-banner.sh')}", "timeout": 5 }] }`,
         '  ],',
         '  "Stop": [',
-        `    { "hooks": [{ "type": "command", "command": "bash \\"${join(HOOKS, 'completion-gate.sh')}\\"", "timeout": 330 }] }`,
+        `    { "hooks": [{ "type": "command", "command": "bash \\"${join(HOOKS, 'completion-gate.sh')}\\"", "timeout": 600 }] }`,
         '  ]',
         '}',
       ].join('\n'),

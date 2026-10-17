@@ -301,11 +301,12 @@ export function hookEntries(): HookEntry[] {
       // No matcher: `Stop` has no tool or source to match on. The timeout is generous because the
       // entry runs the repo's own gate command, and a hook killed at the timeout does not block —
       // a suite slower than this is a gate that quietly never fires. It sits 30 seconds above the
-      // script's own 300-second limit, so the script stops the gate and blocks before the harness
-      // kills it; `tests/hooks.test.ts` holds the two apart.
+      // script's own 570-second limit, read from the clock, so the script stops the gate and
+      // blocks before the harness kills it; `tests/completion-gate.test.ts` holds the two apart.
+      // 600 is also the documented default for a command hook.
       name: 'completion-gate',
       event: 'Stop',
-      entry: { hooks: [{ type: 'command', command: gateCommand(), timeout: 330 }] },
+      entry: { hooks: [{ type: 'command', command: gateCommand(), timeout: 600 }] },
       scripts: [hookScript('completion-gate.sh')],
     },
   ];
@@ -320,12 +321,13 @@ export function hookEntries(): HookEntry[] {
  */
 function retiredEntries(): { event: string; entry: Record<string, unknown> }[] {
   return [
-    // The completion gate's entry until 2026-10-17 (board row 127): 120 seconds, which a suite
-    // of 2039 tests did not fit.
-    {
+    // The completion gate's entries before 2026-10-17's second change (board row 127): 120
+    // seconds, which a suite of 2039 tests did not fit, then 330 for a few hours, which the same
+    // suite did not fit at a load average of 37.
+    ...[120, 330].map((timeout) => ({
       event: 'Stop',
-      entry: { hooks: [{ type: 'command', command: gateCommand(), timeout: 120 }] },
-    },
+      entry: { hooks: [{ type: 'command', command: gateCommand(), timeout }] },
+    })),
   ];
 }
 

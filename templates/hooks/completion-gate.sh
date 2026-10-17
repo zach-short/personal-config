@@ -227,16 +227,17 @@ if [ -z "$gate" ]; then
   exit 0
 fi
 
-# Under the 330-second timeout `settings.json` gives this hook, because a hook the harness kills
-# does not block: the turn just ends, which is the open direction. So the gate gets less than
-# that, and running out is a block that says so. `PERSONAL_CONFIG_GATE_TIMEOUT` (seconds) moves it.
-# It was 100 until 2026-10-17, when one repo's whole suite took 69 to 131 seconds on a green tree:
-# every stop there timed out, and after 8 blocks the harness overrides the hook, which then checks
-# nothing. A limit a real gate cannot meet is a gate that is switched off.
-LIMIT="${PERSONAL_CONFIG_GATE_TIMEOUT:-300}"
+# Under the 600-second timeout `settings.json` gives this hook, because a hook the harness kills
+# does not block: the turn just ends, which is the open direction. So the hook stops the gate at
+# 570 seconds after it started, and running out is a block that says so.
+# `PERSONAL_CONFIG_GATE_TIMEOUT` (seconds) moves it. It was 100 until 2026-10-17, when one repo's
+# whole suite took 69 to 131 seconds on a green tree, and 537 seconds at a load average of 37 on a
+# 10-core machine: every stop there timed out, and after 8 blocks the harness overrides the hook,
+# which then checks nothing. A limit a real gate cannot meet is a gate that is switched off.
+LIMIT="${PERSONAL_CONFIG_GATE_TIMEOUT:-570}"
 # A limit of 0 would block every stop before the gate could finish, so it is read as unset.
-case "$LIMIT" in "" | *[!0-9]*) LIMIT=300 ;; esac
-[ "$LIMIT" -gt 0 ] || LIMIT=300
+case "$LIMIT" in "" | *[!0-9]*) LIMIT=570 ;; esac
+[ "$LIMIT" -gt 0 ] || LIMIT=570
 
 # `eval`, because the value is a command line — `bun test`, `make check`, `npm run verify` — and
 # it comes from a file in the person's own repo, at the same trust level as the command they
@@ -251,9 +252,13 @@ set -m
 (eval "$gate") </dev/null >"$output_file" 2>&1 &
 pid=$!
 set +m
-ticks=0
+# The limit is read from the clock, never counted in sleeps. Each `sleep 0.2` is a process of its
+# own, and under load it takes longer: counted ticks let a 300-second limit run 318 seconds on
+# 2026-10-17, and a count that drifts with the load can drift past the harness's timeout. `SECONDS`
+# is bash's count of whole seconds since this script started, so the scan and the config lookup
+# above are inside the limit too, and the margin under the harness is the same at any load.
 while kill -0 "$pid" 2>/dev/null; do
-  if [ "$ticks" -ge "$((LIMIT * 5))" ]; then
+  if [ "$SECONDS" -ge "$LIMIT" ]; then
     kill -TERM -- "-$pid" 2>/dev/null || kill -TERM "$pid" 2>/dev/null || true
     log "config=$config gate=$gate result=timeout after ${LIMIT}s"
     block "this repo's gate command did not finish in ${LIMIT} seconds." "  \$ $gate
@@ -261,7 +266,6 @@ while kill -0 "$pid" 2>/dev/null; do
 $(tail -20 "$output_file")"
   fi
   sleep 0.2
-  ticks=$((ticks + 1))
 done
 if wait "$pid"; then status=0; else status=$?; fi
 

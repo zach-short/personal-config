@@ -24,7 +24,7 @@ async function guard(toolInput: Record<string, unknown>): Promise<number> {
 }
 
 /** The merge's digest at `9fdf169`, retaken at board row 127; see the BD-2 case at the end of this file. */
-const MERGE_DIGEST = '796feb971b756d66bfbd8c3eaf5596d4644c436ad5e8328b09165dc46bfe0dc2';
+const MERGE_DIGEST = 'ebd3bb83a2acd6fcb35784caed6de9032b62957705f9ca9850301db4f5e4cfaa';
 
 const BLOCKED = 2;
 const ALLOWED = 0;
@@ -526,10 +526,11 @@ describe('the settings merge is idempotent against what a previous run wrote', (
  * (`gateCommand`). The digest was taken from the renderer as it was before the catalog, over the
  * 128 combinations below in this order, with the home folder written as `<HOME>`.
  *
- * **Moved on 2026-10-17, board row 127.** The completion gate's `timeout` went from 120 to 330, a
- * change on purpose, so the digest was retaken from the renderer at that change. The second copy
- * this test exists to prevent is handled by `retiredEntries()` in `src/render/hooks.ts`: a re-run
- * prunes the exact 120 entry, which `tests/hook-leftovers.test.ts` proves.
+ * **Moved on 2026-10-17, board row 127.** The completion gate's `timeout` went from 120 to 330 and
+ * then to 600, each a change on purpose, so the digest was retaken from the renderer each time.
+ * The second copy this test exists to prevent is handled by `retiredEntries()` in
+ * `src/render/hooks.ts`: a re-run prunes the exact 120 and 330 entries, which
+ * `tests/hook-leftovers.test.ts` proves.
  */
 describe('the catalog left the merged entries unchanged (BD-2)', () => {
   test('passes: every combination merges the bytes it merged before the catalog', async () => {

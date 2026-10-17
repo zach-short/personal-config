@@ -110,15 +110,20 @@ parser, so a value with an escaped quote or a backslash cannot be read whole; th
 it with a message that names the file, rather than running the part it could read. A suite that
 needs quotes belongs in a script, and the script's name goes in the key.
 
-The gate gets 300 seconds, under the 330 the hook entry is given, and a gate still running then
-is stopped and the stop is blocked with a message. A hook the harness kills at its own timeout
-does not block, so the limit sits below it. `PERSONAL_CONFIG_GATE_TIMEOUT` (seconds) moves it,
-and a value at or above 330 lets the harness kill the hook first, so the stop goes through
-unchecked. Until 2026-10-17 the limit was 100 and the entry's timeout 120. That day one repo's
-whole suite took 69 to 131 seconds on a green tree, so every stop there timed out, and after 8
-blocks in a row Claude Code overrides the hook and it checks nothing. A longer limit costs time
-only when a gate hangs; a shorter one switches a real gate off. A `setup` re-run writes the new
-script and the new entry together.
+The hook stops the gate 570 seconds after the hook started, under the 600 the hook entry is
+given (also Claude Code's default for a command hook), and the stop is blocked with a message. A
+hook the harness kills at its own timeout does not block, so the limit sits below it. The limit
+is read from the clock: counted in short sleeps, it stretched with the machine's load, and a
+300-second limit ran 318 seconds. `PERSONAL_CONFIG_GATE_TIMEOUT` (seconds) moves it, and a value
+at or above 600 lets the harness kill the hook first, so the stop goes through unchecked.
+
+Until 2026-10-17 the limit was 100 and the entry's timeout 120. That day one repo's whole suite
+took 69 to 131 seconds on a green tree, so every stop there timed out, and after 8 blocks in a
+row Claude Code overrides the hook and it checks nothing. A first raise to 300 seconds fell short
+the same day: with other sessions building and testing (a load average of 37 on 10 cores), the
+same suite took 537 seconds. A longer limit costs time only when a gate hangs; a shorter one
+switches a real gate off. A `setup` re-run writes the new script and the new entry together, and
+removes the exact entries earlier releases wrote (timeouts of 120 and 330).
 
 **From a linked worktree**, the config is read from the main checkout. `.personal-config.json`
 is usually untracked, so a worktree has no copy of it, and until 2026-10-16 the gate found

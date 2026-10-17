@@ -277,8 +277,9 @@ const COMMIT_PARAGRAPH = '**Commits are the owner’s.**';
  * same bytes in all three variants, the same three keys, 83 still.
  *
  * **`completion-gate.sh` and `settings.json` moved per variant on 2026-10-17, board row 127.** The
- * gate's limit went from 100 to 300 seconds and the Stop entry's timeout from 120 to 330, because
- * this repo's own suite took 69 to 131 seconds and timed out on every stop. Six keys, 83 still.
+ * gate's limit went from 100 to 570 seconds, read from the clock, and the Stop entry's timeout from
+ * 120 to 600, because this repo's own suite took 69 to 131 seconds, and 537 under load, and timed
+ * out on every stop. Six keys, 83 still.
  */
 describe('§3.1 row 1 — code + full + git is the 0.3.0 output, byte for byte bar one skill', () => {
   const FULL = answersFor(CODE_FULL_GIT);

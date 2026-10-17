@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { chmod } from 'node:fs/promises';
 import { join } from 'node:path';
 import { renderHooks } from '../src/render/hooks.ts';
 import { cleanup, DEFAULT_ANSWERS, tempDir, testContext } from './helpers.ts';
@@ -226,9 +227,10 @@ describe('every track that installs hooks installs the gate', () => {
 /**
  * Two numbers in two files that only work as a pair (board row 127). A hook the harness kills at
  * the entry's `timeout` does not block, so the script's own limit has to run out first, with room
- * for the scan and the kill. And the limit has to fit a real gate: on 2026-10-17 this repo's
- * whole suite took 69 to 131 seconds on a green tree, the old limit of 100 timed out on every
- * stop, and after 8 blocks the harness overrides the hook, so it checked nothing.
+ * for the kill. And the limit has to fit a real gate: on 2026-10-17 this repo's whole suite took
+ * 69 to 131 seconds on a green tree and 537 seconds at a load average of 37, the old limit of 100
+ * timed out on every stop, and after 8 blocks the harness overrides the hook, so it checked
+ * nothing. The limit is read from the clock: counted in sleeps, it ran 318 seconds for 300.
  */
 describe('the gate runs out before the harness does, and fits a real suite', () => {
   test('passes: the script blocks at its limit before the entry times out', async () => {
@@ -242,8 +244,42 @@ describe('the gate runs out before the harness does, and fits a real suite', () 
     expect(fallback.length).toBe(2);
     expect(fallback.every((value) => value === limit)).toBe(true);
     expect(timeout - limit).toBeGreaterThanOrEqual(20);
-    expect(limit).toBeGreaterThanOrEqual(2 * 131);
+    expect(limit).toBeGreaterThan(537);
   });
+
+  test('violates the old count: a slow `sleep` does not stretch the limit', async () => {
+    const dir = await gitRepo();
+    const bin = await tempDir('pc-slow-sleep-');
+    try {
+      await withGate(dir, '/bin/sleep 30');
+      // Every `sleep` the hook calls takes a whole second, the way load stretched 0.2 of one.
+      await Bun.write(join(bin, 'sleep'), '#!/bin/sh\n/bin/sleep 1\n');
+      await chmod(join(bin, 'sleep'), 0o755);
+      const started = Date.now();
+      const proc = Bun.spawn(['bash', HOOK], {
+        cwd: dir,
+        env: {
+          ...process.env,
+          PATH: `${bin}:${process.env.PATH ?? ''}`,
+          PERSONAL_CONFIG_GATE_TIMEOUT: '2',
+        },
+        stdin: new TextEncoder().encode(payload(false)),
+        stdout: 'pipe',
+        stderr: 'pipe',
+      });
+      const [, stderr] = await Promise.all([
+        new Response(proc.stdout).text(),
+        new Response(proc.stderr).text(),
+      ]);
+      expect(await proc.exited).toBe(BLOCKED);
+      expect(stderr).toContain('did not finish in 2 seconds');
+      // Counted in ticks, a 2-second limit is 10 sleeps, and 10 seconds here.
+      expect(Date.now() - started).toBeLessThan(7000);
+    } finally {
+      await cleanup(dir);
+      await cleanup(bin);
+    }
+  }, 30_000);
 });
 
 describe('the output-style answer reaches settings.json by the one merge', () => {
