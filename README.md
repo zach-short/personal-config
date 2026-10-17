@@ -44,7 +44,7 @@ The rest of this file writes commands as `personal-config <command>`, which is h
 | `doctor` | Checks what the documents claim against what is there |
 | `upgrade` | Lists what changed in the standard since a repo adapted its copy |
 | `undo` | Restores the files the last run overwrote |
-| `passoff next`, `passoff claim <n>` | Reads the board: the next open item, and taking it |
+| `passoff next`, `passoff show <n>`, `passoff claim <n>` | Reads the board: the next open item, any item, and taking it |
 | `handoff step` | Reports the next free ledger step number |
 | `archive <slug>` | Plans the archiving steps for closed work |
 | `fold` | Moves closed prompts and old step bodies to the archive |
@@ -237,10 +237,13 @@ These four commands cover the rituals the standard asks for at the start and the
 
 ```bash
 personal-config passoff next        # the next OPEN item, with its prompt
+personal-config passoff show 5      # any item, with its prompt
 personal-config passoff claim 5     # take it: IN FLIGHT, dated
 ```
 
 `next` prints the first `OPEN` row on the board, its model and lane, and the standalone prompt written under it. It warns when an item already `IN FLIGHT` owns one of the same files, which is the collision check the "Files it owns" column exists for. `claim` marks the row `IN FLIGHT` and dates it in the item's own section, because the status cell may hold only the words the standard allows. It shows both edits, backs the file up, and refuses if the board changed while it was reading it, since nothing locks that file and every parallel session reads it.
+
+`next --json` and `show <n> --json` print one JSON object and nothing else on stdout, so a hook or another tool can read the board through this parser instead of its own; a refusal goes to stderr with exit 1. The object carries `schema`, `number` (the `#` cell as written, a string), `task`, `status` (backticks stripped), `model`, `lane`, `waitsOn` (each cell as written, `""` where the text prints a dash), `files` (the paths the collision check reads from "Files it owns"), `itemFile` (an absolute path, or `null` for a prompt kept on the board) and `prompt` (`null` when there is none). `next` adds `alsoOpen` (the other `OPEN` numbers), `nextFree` (the number a new item takes, or `null` on a board with no items folder or an archive it cannot read) and `collisions` (each `IN FLIGHT` row sharing a file, as `{ number, files }`). With nothing open, `next` keeps the same keys and its row fields are `null`. From a linked worktree both read the same board `claim` writes. `schema` is 1, the first shape; any change to a field's name, type or meaning raises it, and this paragraph says what changed.
 
 ```bash
 personal-config handoff step
