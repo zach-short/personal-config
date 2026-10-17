@@ -157,3 +157,13 @@ export function sharedFiles(left: string, right: string): string[] {
   const other = new Set(ownedFiles(right));
   return ownedFiles(left).filter((file) => other.has(file));
 }
+
+/**
+ * `IN FLIGHT` with a tail (`IN FLIGHT 2026-10-16: GATE 2 passed`) is a `board-status` finding
+ * and still an item somebody is running. The collision check and `passoff next` read it as in
+ * flight, so a board that fails `doctor` cannot hide a running item from them (owner decision
+ * 19, 2026-10-16; ezhomesteading item 200 had such a cell).
+ */
+export function inFlight(status: string): boolean {
+  return status.startsWith('IN FLIGHT');
+}

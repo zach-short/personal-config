@@ -1,9 +1,13 @@
+import { randomBytes } from 'node:crypto';
 import {
   chmod,
   copyFile,
+  lstat,
   mkdir,
   readdir,
   readFile,
+  rename,
+  rm,
   rmdir,
   stat,
   writeFile,
@@ -53,6 +57,12 @@ export async function readJson(path: string): Promise<unknown> {
  * Parent directories are created, because `Bun.write` created them (verified 2026-09-16) and
  * `catalog.ts` and `resume.ts` wrote through it without a `mkdir` of their own.
  *
+ * A regular file is written to a temp name beside it and renamed over it, so a reader sees the
+ * old bytes or the new ones and never a torn file, and two writers' last rename wins whole: two
+ * `passoff claim` runs at once lost one row's status in 30 of 30 runs on 2026-10-16 when the
+ * board was rewritten in place. A symlink is still written through, because a rename would
+ * replace the link with a file. The existing permission bits survive the rename.
+ *
  * `mode` is applied by a separate `chmod` rather than `writeFile`'s own `mode` option, which is
  * honoured only when the call *creates* the file: verified 2026-09-18 that `writeFile` with
  * `mode: 0o755` over an existing 0644 file leaves it 0644. Overwriting an already-installed
@@ -61,8 +71,33 @@ export async function readJson(path: string): Promise<unknown> {
  */
 export async function writeText(path: string, text: string, mode?: number): Promise<void> {
   await mkdir(dirname(path), { recursive: true });
-  await writeFile(path, text, 'utf8');
-  if (mode !== undefined) await chmod(path, mode);
+  const current = await lstat(path).catch(() => null);
+  if (current !== null && !current.isFile()) {
+    await writeFile(path, text, 'utf8');
+    if (mode !== undefined) await chmod(path, mode);
+    return;
+  }
+  await writeByRename(
+    path,
+    text,
+    mode ?? (current === null ? undefined : current.mode & 0o777),
+  );
+}
+
+async function writeByRename(
+  path: string,
+  text: string,
+  bits: number | undefined,
+): Promise<void> {
+  const temp = `${path}.${process.pid}.${randomBytes(4).toString('hex')}.tmp`;
+  try {
+    await writeFile(temp, text, 'utf8');
+    if (bits !== undefined) await chmod(temp, bits);
+    await rename(temp, path);
+  } catch (error) {
+    await rm(temp, { force: true });
+    throw error;
+  }
 }
 
 /** Sets permission bits on a file that already holds the right bytes — see `writeText`. */

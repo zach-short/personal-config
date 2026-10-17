@@ -269,6 +269,14 @@ export type PlannedFile = {
    */
   replace?: 'never' | 'if-unedited';
   /**
+   * An in-place change to a file a person owns (`edit()`: a claim, a fold, a ledger step). The
+   * stamp guard admits it whatever stamp the file carries, because the contents are the file
+   * itself with a line or a cell changed, not a render claiming authorship. Without the mark the
+   * guard read the file's own stamp in those contents, and on a board stamped `adapted` a claim
+   * printed "Claimed", wrote the item note, and left the status cell `OPEN` (2026-10-16).
+   */
+  inPlace?: true;
+  /**
    * A line only an unadapted copy holds, so a file that still has it as a whole line is replaced
    * whatever else differs. The standard's `{{WORKTREE_SETUP}}`, alone in its fence: Part 0 fills
    * it, so a standard that still has that line was never adapted, and an older version of it

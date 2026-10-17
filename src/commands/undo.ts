@@ -2,8 +2,12 @@ import { clackPrompter, type Prompter } from '../lib/ask.ts';
 import { type Backup, latestBackup, restore } from '../lib/backup.ts';
 import { say, short } from '../lib/ui.ts';
 
+/** `root` scopes the restore to one repository's backups; `yes` answers for a run with no terminal. */
+export type UndoOptions = { root?: string; yes?: boolean; force?: boolean };
+
 /**
- * Restores the last run's overwritten files. Files this tool created new are left in place.
+ * Restores the overwritten files of the last run that touched the directory this runs in. Files
+ * this tool created new are left in place.
  *
  * **`undo` is a one-shot, one-way restore** — decided 2026-09-17 against the alternative of
  * snapshotting the pre-`undo` state into a backup of its own, so that an `undo` could itself be
@@ -16,10 +20,16 @@ import { say, short } from '../lib/ui.ts';
  * The prompter is a defaulted parameter for the reason `finish`'s is: clack reads raw key input
  * a pipe does not satisfy, so the declined path is undrivable from a test through the real one.
  */
-export async function runUndo(prompter: Prompter = clackPrompter()): Promise<number> {
-  const backup = await latestBackup();
+export async function runUndo(
+  prompter: Prompter = clackPrompter(),
+  options: UndoOptions = {},
+): Promise<number> {
+  const root = options.root ?? process.cwd();
+  const backup = await latestBackup(root);
   if (!backup || backup.manifest.entries.length === 0) {
-    say('No backup to restore — the last run overwrote nothing.');
+    say(
+      `No backup of files under ${short(root)} to restore — the last run here overwrote nothing.`,
+    );
     return 0;
   }
   if (backup.restoredAt !== null) {
@@ -28,7 +38,12 @@ export async function runUndo(prompter: Prompter = clackPrompter()): Promise<num
   }
 
   say(preview(backup));
-  if (!(await confirmed(prompter, backup))) {
+  const answer = await confirmed(prompter, backup, options);
+  if (answer === 'refused') {
+    say(needsYes());
+    return 1;
+  }
+  if (answer === 'no') {
     say('\nNothing was restored.');
     return 0;
   }
@@ -47,13 +62,31 @@ function preview(backup: Backup): string {
 }
 
 /**
- * The same rule `confirmWrite` states for `archive` and `passoff` — with no TTY there is nobody
- * to ask, and the list printed above it is the whole contract. Spelled here rather than called
- * there because this one has to be answerable by a prompter a test hands it.
+ * Stricter than `confirmWrite`: with no terminal there is nobody to ask, and a restore is the one
+ * write here that cannot be undone, so it goes ahead unasked only when `--yes` or `--force` said
+ * so (the README has promised "asks first" since 0.7.0; the no-TTY path did not, until
+ * 2026-10-16). Spelled here rather than in `ask.ts` because this one has to be answerable by a
+ * prompter a test hands it.
  */
-async function confirmed(prompter: Prompter, backup: Backup): Promise<boolean> {
-  if (process.stdin.isTTY !== true) return true;
-  return prompter.confirm(`Restore these ${backup.manifest.entries.length} file(s)?`, true);
+async function confirmed(
+  prompter: Prompter,
+  backup: Backup,
+  options: UndoOptions,
+): Promise<'yes' | 'no' | 'refused'> {
+  if (options.force === true) return 'yes';
+  if (process.stdin.isTTY !== true) return options.yes === true ? 'yes' : 'refused';
+  const ok = await prompter.confirm(
+    `Restore these ${backup.manifest.entries.length} file(s)?`,
+    true,
+  );
+  return ok ? 'yes' : 'no';
+}
+
+function needsYes(): string {
+  return [
+    '\nNo terminal to ask in, so nothing was restored. The list above is what `--yes` would put',
+    'back: run `personal-config undo --yes` to restore it.',
+  ].join('\n');
 }
 
 /**

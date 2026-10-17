@@ -65,7 +65,9 @@ describe('undo is one-shot, and honest about it', () => {
       const target = await aRunToUndo(dir);
       const { prompter, asked } = recordingPrompter([false]);
 
-      const { code, out } = await captured(() => withTty(true, () => runUndo(prompter)));
+      const { code, out } = await captured(() =>
+        withTty(true, () => runUndo(prompter, { root: dir })),
+      );
 
       expect(asked).toHaveLength(1);
       expect(asked[0]?.message).toContain('Restore');
@@ -83,7 +85,9 @@ describe('undo is one-shot, and honest about it', () => {
       await aRunToUndo(dir);
       const { prompter } = recordingPrompter([false]);
 
-      const { out } = await captured(() => withTty(true, () => runUndo(prompter)));
+      const { out } = await captured(() =>
+        withTty(true, () => runUndo(prompter, { root: dir })),
+      );
 
       expect(out).toContain('doc.md');
       expect(out).toContain('one-way');
@@ -97,13 +101,17 @@ describe('undo is one-shot, and honest about it', () => {
     try {
       const target = await aRunToUndo(dir);
 
-      const first = await captured(() => withTty(false, () => runUndo()));
+      const first = await captured(() =>
+        withTty(false, () => runUndo(undefined, { root: dir, yes: true })),
+      );
       expect(first.code).toBe(0);
       expect(await Bun.file(target).text()).toBe('original\n');
 
       // The edit a second `undo` used to eat: made after the restore, and the only copy there is.
       await Bun.write(target, 'hand-edited after the undo\n');
-      const second = await captured(() => withTty(false, () => runUndo()));
+      const second = await captured(() =>
+        withTty(false, () => runUndo(undefined, { root: dir, yes: true })),
+      );
 
       expect(second.code).toBe(1);
       expect(second.out).toContain('already been restored');
@@ -113,19 +121,56 @@ describe('undo is one-shot, and honest about it', () => {
     }
   });
 
-  test('with no terminal there is nobody to ask, so it restores unasked', async () => {
+  /**
+   * The README has said "asks first" since 0.7.0; with no terminal the restore went ahead unasked
+   * until 2026-10-16. Now it refuses and names the flag, and `--yes` is the answer it needs.
+   */
+  test('with no terminal it refuses unless --yes answers for the person', async () => {
     const dir = await tempDir('pc-undo-');
     try {
       const target = await aRunToUndo(dir);
       const { prompter, asked } = recordingPrompter([]);
 
-      const { code } = await captured(() => withTty(false, () => runUndo(prompter)));
-
+      const refused = await captured(() =>
+        withTty(false, () => runUndo(prompter, { root: dir })),
+      );
       expect(asked).toEqual([]);
-      expect(await Bun.file(target).text()).toBe('original\n');
+      expect(refused.code).toBe(1);
+      expect(refused.out).toContain('--yes');
+      expect(await Bun.file(target).text()).toBe('generated\n');
+
+      const { code } = await captured(() =>
+        withTty(false, () => runUndo(prompter, { root: dir, yes: true })),
+      );
       expect(code).toBe(0);
+      expect(await Bun.file(target).text()).toBe('original\n');
     } finally {
       await cleanup(dir);
+    }
+  });
+
+  /**
+   * Backups from every repository share one directory, so the newest on the machine can belong
+   * to another repository's run. `undo` restores the last run that touched the directory it runs
+   * in, and leaves the other repository's files alone.
+   */
+  test('it restores the last run that touched this directory, not the newest on the machine', async () => {
+    const here = await tempDir('pc-undo-here-');
+    const elsewhere = await tempDir('pc-undo-elsewhere-');
+    try {
+      const mine = await aRunToUndo(here);
+      const theirs = await aRunToUndo(elsewhere, 'theirs\n');
+
+      const { code } = await captured(() =>
+        withTty(false, () => runUndo(undefined, { root: here, yes: true })),
+      );
+
+      expect(code).toBe(0);
+      expect(await Bun.file(mine).text()).toBe('original\n');
+      expect(await Bun.file(theirs).text()).toBe('generated\n');
+    } finally {
+      await cleanup(here);
+      await cleanup(elsewhere);
     }
   });
 
@@ -136,7 +181,7 @@ describe('undo is one-shot, and honest about it', () => {
     );
 
     expect(asked).toEqual([]);
-    expect(out).toContain('No backup to restore');
+    expect(out).toContain('No backup');
     expect(code).toBe(0);
   });
 });

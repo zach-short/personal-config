@@ -4,6 +4,7 @@ import {
   type Board,
   type BoardRow,
   cellAt,
+  inFlight,
   isEmptyCell,
   parseBoard,
   rowByNumber,
@@ -21,11 +22,12 @@ import {
   loadItemContext,
   nextFreeItem,
 } from '../lib/items.ts';
+import { withLock } from '../lib/lock.ts';
 import { numberedSection } from '../lib/markdown.ts';
 import { readDocNames } from '../lib/repo-config.ts';
 import type { Cli } from '../lib/types.ts';
 import { say, short } from '../lib/ui.ts';
-import { commitPlan, resolvePlan } from '../lib/write-plan.ts';
+import { commitPlan, resolvePlan, willWrite } from '../lib/write-plan.ts';
 import { edit } from '../render/context.ts';
 
 const USAGE = [
@@ -35,6 +37,13 @@ const USAGE = [
 
 /** The one phrase both the writer and the idempotence check look for. */
 const CLAIM_MARK = 'Claimed `IN FLIGHT`';
+
+/**
+ * The lock file a claim holds beside the board, from its read of the board to its last write.
+ * Present only while a claim runs; a crash leaves it, and the next claim reads the pid in it and
+ * takes it over when that process is gone (`src/lib/lock.ts`).
+ */
+const CLAIM_LOCK = '.personal-config.claim.lock';
 
 /**
  * The board and, on a 2.0.0 repo, the items folder beside it (per-item-board `DESIGN.md` D1).
@@ -53,10 +62,17 @@ export async function runPassoff(cli: Cli): Promise<number> {
   const [sub, argument] = cli.paths;
   if (sub !== 'next' && sub !== 'claim') return refuse(USAGE);
 
-  const loaded = await loadBoard(process.cwd());
-  if (typeof loaded === 'string') return refuse(loaded);
-
-  return sub === 'next' ? await printNext(loaded) : claim(cli, loaded, argument);
+  const root = process.cwd();
+  if (sub === 'next') {
+    const loaded = await loadBoard(root);
+    return typeof loaded === 'string' ? refuse(loaded) : printNext(loaded);
+  }
+  // The board is read inside the lock, so what a claim compares against is what it writes over.
+  // Two claims at once used to both pass every check and both write (30 of 30 runs, 2026-10-16).
+  return withLock(join(root, CLAIM_LOCK), async () => {
+    const loaded = await loadBoard(root);
+    return typeof loaded === 'string' ? refuse(loaded) : claim(cli, loaded, argument);
+  });
 }
 
 async function loadBoard(root: string): Promise<Loaded | string> {
@@ -116,7 +132,7 @@ async function nextFree({ root, board, itemsDir, items }: Loaded): Promise<strin
 }
 
 function nothingOpen(board: Board, path: string): number {
-  const flight = board.rows.filter((row) => row.status === 'IN FLIGHT');
+  const flight = board.rows.filter((row) => inFlight(row.status));
   say(`No \`OPEN\` item on ${short(path)}.`);
   if (flight.length > 0) {
     say(`In flight: ${flight.map((row) => `${row.number} (${task(board, row)})`).join(', ')}.`);
@@ -158,7 +174,7 @@ function warnings(board: Board, row: BoardRow): string[] {
 function collisions(board: Board, row: BoardRow): string[] {
   const mine = cellAt(row.cells, board.columns.files);
   return board.rows
-    .filter((other) => other.status === 'IN FLIGHT')
+    .filter((other) => inFlight(other.status))
     .flatMap((other) => {
       const shared = sharedFiles(mine, cellAt(other.cells, board.columns.files));
       return shared.length === 0
@@ -200,10 +216,18 @@ async function claim(cli: Cli, loaded: Loaded, number: string | undefined): Prom
     ),
   );
   if (changes.length === 0) return refuse('nothing to write.');
-  // The board is the one file every parallel session reads, and nothing locks it or the item
-  // file. Comparing what the plan re-read against what was parsed does not close that window —
-  // it narrows it to the milliseconds between the two reads, and turns a silent lost update into
-  // a refusal. Both files are guarded, because a claim note lost from either is the same bug.
+  // A guard that keeps a file the claim edited would leave the board saying one thing and the
+  // item file another, with "Claimed" printed over it; the refusal names the file instead.
+  const kept = targets.find((target, index) => {
+    const change = changes[index];
+    return target.edits.length > 0 && change !== undefined && !willWrite(change);
+  });
+  if (kept)
+    return refuse(`${short(kept.path)} would not be written (${guardOf(changes, kept)}).`);
+  // The lock in `runPassoff` keeps two claims from this tool apart. An editor or another tool
+  // can still write between the parse and this re-read; comparing the two turns that from a
+  // silent lost update into a refusal. Both files are guarded, because a claim note lost from
+  // either is the same bug.
   const moved = targets.find((target, index) => changes[index]?.before !== target.before);
   if (moved)
     return refuse(`${short(moved.path)} changed while this was reading it. Run it again.`);
@@ -330,6 +354,10 @@ function claimNote(lines: string[], heading: number): { lines: string[]; edits: 
     lines: [...lines.slice(0, heading), '', note, ...lines.slice(heading)],
     edits: [{ line: heading + 2, before: null, after: note }],
   };
+}
+
+function guardOf(changes: Awaited<ReturnType<typeof resolvePlan>>, target: Target): string {
+  return changes.find((change) => change.file.path === target.path)?.guard ?? 'unchanged';
 }
 
 function refuse(message: string): number {

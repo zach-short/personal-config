@@ -1,5 +1,5 @@
 import { mkdir, readdir } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, resolve, sep } from 'node:path';
 import { copyTo, exists, readJson, readText, writeText } from './disk.ts';
 import { backupsDir } from './paths.ts';
 
@@ -72,19 +72,26 @@ export async function backupFiles(paths: string[], stamp = timestampDir()): Prom
 }
 
 /**
- * The newest backup, or `null` where there is nothing to restore. A directory without a
- * `manifest.json` is not one: `backupFiles` writes the manifest after the copies, so a run
- * interrupted mid-copy leaves a directory `undo` must not treat as restorable.
+ * The newest backup that holds a file under `root`, or `null` where there is nothing to restore.
+ * Backups from every repository share one directory, so without the root the newest one on the
+ * machine could belong to another repository's run (`undo` from the wrong folder restored it,
+ * 2026-10-16). A directory without a `manifest.json` is skipped: `backupFiles` writes the
+ * manifest after the copies, so a run interrupted mid-copy wrote nothing that could be undone.
  *
- * A `manifest.json` that is not a manifest is a third case, and it is refused rather than
- * reported empty — see `asManifest`.
+ * A `manifest.json` that is not a manifest is refused rather than reported empty — see
+ * `asManifest`.
  */
-export async function latestBackup(): Promise<Backup | null> {
-  const dirs = await readdir(backupsDir()).catch(() => []);
-  const newest = dirs.sort().at(-1);
-  if (!newest) return null;
+export async function latestBackup(root?: string): Promise<Backup | null> {
+  const dirs = (await readdir(backupsDir()).catch(() => [])).sort().reverse();
+  for (const name of dirs) {
+    const backup = await readBackup(join(backupsDir(), name));
+    if (backup !== null && (root === undefined || touches(backup.manifest, root)))
+      return backup;
+  }
+  return null;
+}
 
-  const dir = join(backupsDir(), newest);
+async function readBackup(dir: string): Promise<Backup | null> {
   const path = join(dir, 'manifest.json');
   if (!(await exists(path))) return null;
   return {
@@ -92,6 +99,15 @@ export async function latestBackup(): Promise<Backup | null> {
     manifest: asManifest(await readJson(path), path),
     restoredAt: await restoredAt(dir),
   };
+}
+
+/** A backup belongs to the repository it was taken from: one of its files sits under `root`. */
+function touches(manifest: Manifest, root: string): boolean {
+  const base = resolve(root);
+  return manifest.entries.some((entry) => {
+    const original = resolve(entry.original);
+    return original === base || original.startsWith(base + sep);
+  });
 }
 
 /**

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { chmod, mkdir, stat } from 'node:fs/promises';
+import { chmod, lstat, mkdir, readdir, stat, symlink } from 'node:fs/promises';
 import { join } from 'node:path';
 import {
   copyTo,
@@ -174,5 +174,40 @@ describe('repoRoot', () => {
     expect(await exists(join(root, 'standard', 'VERSION'))).toBe(true);
     expect(await exists(join(root, 'catalog.json'))).toBe(true);
     expect(await exists(join(root, 'templates', 'PART0-PROMPT.md'))).toBe(true);
+  });
+});
+
+/**
+ * Since 2026-10-16 a regular file is written to a temp name and renamed over, so a reader never
+ * sees a torn file and two writers' last rename wins whole (the claim race, row 121).
+ */
+describe('writeText writes by rename', () => {
+  test('leaves no temp file behind, on a new file or an overwrite', async () => {
+    const dir = await tempDir();
+    try {
+      const target = join(dir, 'board.md');
+      await writeText(target, 'first\n');
+      await writeText(target, 'second\n');
+      expect(await readText(target)).toBe('second\n');
+      expect(await readdir(dir)).toEqual(['board.md']);
+    } finally {
+      await cleanup(dir);
+    }
+  });
+
+  test('a symlink is written through and stays a symlink', async () => {
+    const dir = await tempDir();
+    try {
+      const real = join(dir, 'real.json');
+      const link = join(dir, 'link.json');
+      await writeText(real, '{}\n');
+      await symlink(real, link);
+
+      await writeText(link, '{"via":"link"}\n');
+      expect((await lstat(link)).isSymbolicLink()).toBe(true);
+      expect(await readText(real)).toBe('{"via":"link"}\n');
+    } finally {
+      await cleanup(dir);
+    }
   });
 });

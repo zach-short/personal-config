@@ -13,6 +13,7 @@ import { runUpgrade } from './commands/upgrade.ts';
 import { runWorktree } from './commands/worktree.ts';
 import { runDoctor } from './doctor/index.ts';
 import { bareRoute, checkUsage, parseCli } from './lib/args.ts';
+import { clackPrompter } from './lib/ask.ts';
 import { exists } from './lib/disk.ts';
 import { framePrompters } from './lib/frame.ts';
 import { configFile } from './lib/paths.ts';
@@ -58,15 +59,16 @@ overwrites, and can be undone.`;
 
 /**
  * Which function runs a command, as a table rather than a chain of comparisons. `catalog` and
- * `undo` are wrapped because neither takes the parsed argv — `undo` takes a prompter, and
- * handing it a `Cli` would typecheck nowhere but read as if it might.
+ * `undo` are wrapped because neither takes the parsed argv — `undo` takes a prompter and the
+ * two flags it reads, and handing it a `Cli` would typecheck nowhere but read as if it might.
  */
 const DISPATCH: Record<string, (cli: Cli) => Promise<number>> = {
   setup: runSetup,
   init: runInit,
   catalog: () => runCatalog(),
   doctor: runDoctor,
-  undo: () => runUndo(),
+  undo: (cli) =>
+    runUndo(clackPrompter(), { root: process.cwd(), yes: cli.yes, force: cli.force }),
   archive: runArchive,
   fold: runFold,
   passoff: runPassoff,
