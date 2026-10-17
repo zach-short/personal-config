@@ -137,8 +137,15 @@ done <<<"$(candidates)"
 # used. Anything that does not round-trip — a bare main, a moved checkout, a git older than
 # `--path-format` (2.31) — keeps the current folder, where the file is missing and the log says so.
 # A submodule or a nested repository has its git dir as its common dir and is never mapped.
+#
+# Two more guards, each from a case that resolved to another folder in review. The function runs
+# in a `$(...)` subshell, so the `unset` drops git's location overrides for these questions only:
+# a `GIT_COMMON_DIR` in the environment named its own repository from any folder. And a git dir
+# made by `--separate-git-dir=<x>/.git` round-trips to `<x>`, which holds no checkout, so the
+# candidate must hold the files its index tracks: from `<x>` every one of them reads as deleted.
 config_dir() {
-  local git_dir common main prefix
+  local git_dir common main prefix indexed missing
+  unset GIT_DIR GIT_WORK_TREE GIT_COMMON_DIR
   git_dir="$(git rev-parse --path-format=absolute --git-dir 2>/dev/null)" || { pwd; return; }
   common="$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" || { pwd; return; }
   case "$git_dir" in /*) ;; *) pwd; return ;; esac
@@ -155,6 +162,12 @@ config_dir() {
   if [ -z "$main" ] ||
     [ "$(git -C "$main" rev-parse --path-format=absolute --git-dir 2>/dev/null)" != "$common" ] ||
     [ "$(git -C "$main" rev-parse --show-toplevel 2>/dev/null)" != "$main" ]; then
+    pwd
+    return
+  fi
+  indexed="$(git -C "$main" ls-files 2>/dev/null | wc -l)"
+  missing="$(git -C "$main" ls-files --deleted 2>/dev/null | wc -l)"
+  if [ "$indexed" -gt 0 ] && [ "$missing" -ge "$indexed" ]; then
     pwd
     return
   fi
@@ -184,8 +197,11 @@ log() {
 config="$(config_dir)/.personal-config.json"
 raw=""
 if [ -f "$config" ]; then
-  raw="$(sed -n 's/.*"gateCommand"[[:space:]]*:[[:space:]]*"\(.*\)".*/\1/p' "$config" | head -1)"
+  raw="$(sed -n 's/.*"gateCommand"[[:space:]]*:[[:space:]]*"\(.*\)".*/\1/p' "$config")"
 fi
+# The first match only. Not `| head -1`: under `pipefail` a second match makes sed write after
+# head has gone, the pipeline exits 141, and `set -e` ends the hook unblocked.
+raw="${raw%%$'\n'*}"
 
 # The value ends at its first quote. One with a backslash before that — an escaped quote above
 # all — is beyond a `sed` read: until 2026-10-16 `"bun test -t \"x\""` was read as
@@ -215,7 +231,9 @@ fi
 # does not block: the turn just ends, which is the open direction. So the gate gets less than
 # that, and running out is a block that says so. `PERSONAL_CONFIG_GATE_TIMEOUT` (seconds) moves it.
 LIMIT="${PERSONAL_CONFIG_GATE_TIMEOUT:-100}"
+# A limit of 0 would block every stop before the gate could finish, so it is read as unset.
 case "$LIMIT" in "" | *[!0-9]*) LIMIT=100 ;; esac
+[ "$LIMIT" -gt 0 ] || LIMIT=100
 
 # `eval`, because the value is a command line — `bun test`, `make check`, `npm run verify` — and
 # it comes from a file in the person's own repo, at the same trust level as the command they

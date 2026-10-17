@@ -2,7 +2,8 @@ import { stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { today } from '../lib/date.ts';
 import { exists, readText } from '../lib/disk.ts';
-import { currentBranch, documentRoot } from '../lib/git.ts';
+import { docRoots } from '../lib/doc-roots.ts';
+import { currentBranch } from '../lib/git.ts';
 import {
   duplicateSteps,
   type LedgerStep,
@@ -29,13 +30,13 @@ const USAGE = 'usage: personal-config handoff step';
 export async function runHandoff(cli: Cli): Promise<number> {
   if (cli.paths[0] !== 'step') return refuse(USAGE);
 
-  // The ledger is read where the documents are, the main checkout from a worktree; the branch a
-  // scaffold names is the one this runs in, which is the worktree's.
+  // The ledger is read where the documents are, the main checkout from a worktree unless the
+  // worktree carries its own (`doc-roots.ts`); the branch a scaffold names is the one this runs in.
   const here = process.cwd();
-  const root = await documentRoot(here);
-  const { ledger } = await readDocNames(root);
-  const path = join(root, ledger);
-  const frozenAt = await readLedgerFrozenAt(root);
+  const { config, docs } = await docRoots(here);
+  const { ledger } = await readDocNames(config);
+  const path = join(docs, ledger);
+  const frozenAt = await readLedgerFrozenAt(config);
   if (frozenAt !== null) {
     say(await frozen(here, ledger, frozenAt));
     return 0;

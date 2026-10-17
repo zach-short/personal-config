@@ -4,6 +4,7 @@ import { withIndexLine } from '../lib/archive-index.ts';
 import { confirmWrite } from '../lib/ask.ts';
 import { today } from '../lib/date.ts';
 import { exists, readText } from '../lib/disk.ts';
+import { docRoots } from '../lib/doc-roots.ts';
 import {
   type Fold,
   type Folded,
@@ -20,7 +21,6 @@ import {
   boardFold as sectionFold,
   withoutRows,
 } from '../lib/fold.ts';
-import { documentRoot } from '../lib/git.ts';
 import { hasItemsFolder, isItemFor, listItems } from '../lib/items.ts';
 import { LOG_DAYS } from '../lib/log.ts';
 import { expandHome } from '../lib/paths.ts';
@@ -136,8 +136,11 @@ export async function runFold(cli: Cli): Promise<number> {
   const targets = cli.paths[0] === 'migrate' ? [] : which(cli.paths[0]);
   if (targets === null) return refuse(USAGE);
 
-  // Board, ledger, items and config are all untracked: from a worktree they are the main checkout's.
-  const root = await documentRoot(process.cwd());
+  // Board, ledger, items and config, read and written in one folder: the main checkout's from a
+  // worktree. A worktree carrying its own committed board would split them across two folders,
+  // so it is refused rather than half-folded (`doc-roots.ts`).
+  const { config: root, docs } = await docRoots(process.cwd());
+  if (docs !== root) return refuse(ownCopies(docs, root));
   const home = await readArchiveHome(root);
   if (home === null) return refuse(noArchiveHome(root));
 
@@ -1064,5 +1067,12 @@ function itemsNotArrived(names: string[]): string {
     `\n${names.length} item file(s) did not read back: ${names.slice(0, 5).join(', ')}.`,
     'The archive holds this run’s entries, and nothing live was cut. Delete the partial item',
     'files by hand before you run this again.',
+  ].join('\n');
+}
+
+function ownCopies(docs: string, config: string): string {
+  return [
+    `${short(docs)} carries its own committed board or ledger, and its config is in ${short(config)}.`,
+    'Fold from the checkout of the branch whose copies should move: there both are in one place.',
   ].join('\n');
 }

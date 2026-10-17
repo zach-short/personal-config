@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { cp, mkdir, readFile, realpath, symlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { latestBackup } from '../src/lib/backup.ts';
 import { documentRoot } from '../src/lib/git.ts';
 import { repoRoot } from '../src/lib/paths.ts';
 import { cleanup, tempDir } from './helpers.ts';
@@ -153,8 +154,11 @@ describe('passoff from a linked worktree', () => {
     expect(await readFile(join(fx.main, 'PASSOFF.md'), 'utf8')).toMatch(BOARD_ROW_1);
     expect(await readFile(join(fx.main, ITEM_1), 'utf8')).toContain('Claimed `IN FLIGHT`');
     expect(await Bun.file(join(fx.worktree, 'PASSOFF.md')).exists()).toBe(false);
-    expect(await Bun.file(join(fx.worktree, '.personal-config.claim.lock')).exists()).toBe(
-      false,
+    // The run is recorded under the worktree it started in and names the files it wrote.
+    const backup = await latestBackup(fx.worktree);
+    expect(backup?.manifest.root).toBe(fx.worktree);
+    expect(backup?.manifest.entries.map((e) => e.original)).toContain(
+      join(fx.main, 'PASSOFF.md'),
     );
 
     const undone = await run(fx.worktree, ['bun', 'run', CLI, 'undo', '--yes']);
@@ -203,7 +207,7 @@ async function withGate(command: string): Promise<void> {
   );
 }
 
-async function gateLog(): Promise<string[]> {
+async function gateLog(cwd = fx.worktree): Promise<string[]> {
   const path = join(
     process.env.HOME ?? '',
     '.config',
@@ -211,7 +215,7 @@ async function gateLog(): Promise<string[]> {
     'completion-gate.log',
   );
   const text = await readFile(path, 'utf8').catch(() => '');
-  return text.split('\n').filter((line) => line.includes(`cwd=${fx.worktree} `));
+  return text.split('\n').filter((line) => line.includes(`cwd=${cwd} `));
 }
 
 /** Each test writes the main checkout's config, so they run one after another. */
@@ -250,5 +254,90 @@ describe('the completion gate from a linked worktree', () => {
     const { code } = await stop(fx.worktree);
     expect(code).toBe(2);
     expect((await gateLog()).at(-1)).toContain('result=fail exit=3');
+  });
+});
+
+/**
+ * The cases the row 122 review found resolving to the wrong folder, each now answering the folder
+ * it was asked about or the right main checkout.
+ */
+describe('what the review found', () => {
+  /**
+   * A git dir made by `--separate-git-dir=<x>/.git` round-trips to `<x>`, a folder holding
+   * another config and no checkout. The worktree must answer itself, in both resolvers.
+   */
+  test('a separate git dir named .git does not send a worktree to the folder holding it', async () => {
+    const elsewhere = join(fx.base, 'elsewhere');
+    const sepMain = join(fx.base, 'sep-main');
+    const sepLane = join(fx.base, 'sep-lane');
+    await mkdir(elsewhere);
+    await writeFile(join(elsewhere, '.personal-config.json'), '{ "gateCommand": "exit 9" }\n');
+    await git(fx.base, 'init', '-q', `--separate-git-dir=${join(elsewhere, '.git')}`, sepMain);
+    await writeFile(join(sepMain, 'f'), 'x\n');
+    await git(sepMain, 'add', 'f');
+    await git(sepMain, 'commit', '-qm', 'init');
+    await git(sepMain, 'worktree', 'add', '-q', sepLane);
+
+    expect(await documentRoot(sepLane)).toBe(sepLane);
+    const { code } = await stop(sepLane);
+    expect(code).toBe(0);
+    expect((await gateLog(sepLane)).at(-1)).toContain(
+      `looked=${join(sepLane, '.personal-config.json')}`,
+    );
+  });
+
+  test('GIT_COMMON_DIR in the environment does not choose the repository', async () => {
+    const other = join(fx.base, 'other');
+    await mkdir(other);
+    await git(other, 'init', '-q', '--initial-branch=main');
+    const saved = process.env.GIT_COMMON_DIR;
+    process.env.GIT_COMMON_DIR = join(other, '.git');
+    try {
+      expect(await documentRoot(fx.worktree)).toBe(fx.main);
+      expect(await documentRoot(fx.main)).toBe(fx.main);
+    } finally {
+      if (saved === undefined) delete process.env.GIT_COMMON_DIR;
+      else process.env.GIT_COMMON_DIR = saved;
+    }
+  });
+
+  /**
+   * A repository that commits its board gives every worktree its own copy, carried by the
+   * worktree's branch. The claim marks that copy; the main checkout's is left as it was.
+   */
+  test('a worktree carrying its own committed board claims on it, not on the main checkout', async () => {
+    const main = join(fx.base, 'tracked-main');
+    const lane = join(fx.base, 'tracked-lane');
+    await mkdir(main);
+    for (const name of ['PASSOFF.md', 'passoff']) {
+      await cp(join(repoRoot(), 'examples', name), join(main, name), { recursive: true });
+    }
+    await writeFile(join(main, '.gitignore'), '.personal-config.json\n');
+    await git(main, 'init', '-q', '--initial-branch=main');
+    await git(main, 'add', '.');
+    await git(main, 'commit', '-qm', 'init');
+    await writeFile(join(main, '.personal-config.json'), '{ "trackMode": "tracked" }\n');
+    await git(main, 'worktree', 'add', '-q', '-b', 'lane', lane);
+    const before = await readFile(join(main, 'PASSOFF.md'), 'utf8');
+
+    const claimed = await run(lane, ['bun', 'run', CLI, 'passoff', 'claim', '1', '--force']);
+    expect(claimed.out).toContain('Claimed item 1');
+    expect(await readFile(join(lane, 'PASSOFF.md'), 'utf8')).toMatch(BOARD_ROW_1);
+    expect(await readFile(join(lane, ITEM_1), 'utf8')).toContain('Claimed `IN FLIGHT`');
+    expect(await readFile(join(main, 'PASSOFF.md'), 'utf8')).toBe(before);
+  });
+
+  test('a config with two gateCommand lines runs the first and still blocks or passes', async () => {
+    await writeFile(
+      join(fx.main, '.personal-config.json'),
+      '{\n  "gateCommand": "exit 0",\n  "gateCommand": "exit 7"\n}\n',
+    );
+    expect((await stop(fx.worktree)).code).toBe(0);
+    expect((await gateLog()).at(-1)).toContain('gate=exit 0 result=pass');
+  });
+
+  test('a limit of 0 is read as unset, not as a block on every stop', async () => {
+    await withGate('exit 0');
+    expect((await stop(fx.worktree, { PERSONAL_CONFIG_GATE_TIMEOUT: '0' })).code).toBe(0);
   });
 });

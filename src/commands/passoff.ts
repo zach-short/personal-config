@@ -14,7 +14,7 @@ import {
 } from '../lib/board.ts';
 import { today } from '../lib/date.ts';
 import { exists, readText } from '../lib/disk.ts';
-import { documentRoot } from '../lib/git.ts';
+import { type DocRoots, docRoots } from '../lib/doc-roots.ts';
 import {
   hasItemsFolder,
   type ItemEntry,
@@ -51,7 +51,8 @@ const CLAIM_LOCK = '.personal-config.claim.lock';
  * `items` is empty on a 1.x repo, and every item is then read from its board section (D12).
  */
 type Loaded = {
-  root: string;
+  /** Where `.personal-config.json` is; the board is read from `DocRoots.docs` (`doc-roots.ts`). */
+  config: string;
   path: string;
   text: string;
   board: Board;
@@ -63,24 +64,24 @@ export async function runPassoff(cli: Cli): Promise<number> {
   const [sub, argument] = cli.paths;
   if (sub !== 'next' && sub !== 'claim') return refuse(USAGE);
 
-  // From a linked worktree this is the main checkout: the board is untracked, so the worktree
-  // has no copy, and a claim has to mark the one board every session reads.
-  const root = await documentRoot(process.cwd());
+  // From a linked worktree the board is the main checkout's, unless the repo commits its board
+  // and the worktree carries its own copy: a claim marks the board this checkout's sessions read.
+  const roots = await docRoots(process.cwd());
   if (sub === 'next') {
-    const loaded = await loadBoard(root);
+    const loaded = await loadBoard(roots);
     return typeof loaded === 'string' ? refuse(loaded) : printNext(loaded);
   }
   // The board is read inside the lock, so what a claim compares against is what it writes over.
   // Two claims at once used to both pass every check and both write (30 of 30 runs, 2026-10-16).
-  return withLock(join(root, CLAIM_LOCK), async () => {
-    const loaded = await loadBoard(root);
+  return withLock(join(roots.docs, CLAIM_LOCK), async () => {
+    const loaded = await loadBoard(roots);
     return typeof loaded === 'string' ? refuse(loaded) : claim(cli, loaded, argument);
   });
 }
 
-async function loadBoard(root: string): Promise<Loaded | string> {
-  const { board: name, items: itemsName } = await readDocNames(root);
-  const path = join(root, name);
+async function loadBoard({ config, docs }: DocRoots): Promise<Loaded | string> {
+  const { board: name, items: itemsName } = await readDocNames(config);
+  const path = join(docs, name);
   if (!(await exists(path))) {
     return `${short(path)} is not there — this repo keeps no board, or \`personal-config setup\` has not run here.`;
   }
@@ -90,8 +91,8 @@ async function loadBoard(root: string): Promise<Loaded | string> {
   if (!board || board.rows.length === 0) {
     return `${short(path)} has no board table — §2.1 opens it with a \`| # | Task | Status | … |\` header.`;
   }
-  const itemsDir = join(root, itemsName);
-  return { root, path, text, board, itemsDir, items: await listItems(itemsDir) };
+  const itemsDir = join(docs, itemsName);
+  return { config, path, text, board, itemsDir, items: await listItems(itemsDir) };
 }
 
 /**
@@ -125,8 +126,8 @@ async function printNext(loaded: Loaded): Promise<number> {
  * D16: a closed row leaves the table at the fold, so the board alone no longer knows every
  * number taken. Printed only on a 2.0.0 repo; a 1.x board's highest row is the answer, as it was.
  */
-async function nextFree({ root, board, itemsDir, items }: Loaded): Promise<string> {
-  const { archived } = await loadItemContext(root, basename(itemsDir));
+async function nextFree({ config, board, itemsDir, items }: Loaded): Promise<string> {
+  const { archived } = await loadItemContext(config, basename(itemsDir));
   const rows = board.rows.map((row) => row.number);
   const next = nextFreeItem(rows, items, archived ?? []);
   const unread =

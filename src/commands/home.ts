@@ -2,7 +2,7 @@ import { join, resolve } from 'node:path';
 import { isCancel, SelectPrompt } from '@clack/core';
 import { savedUserConfig } from '../lib/config.ts';
 import { exists } from '../lib/disk.ts';
-import { documentRoot } from '../lib/git.ts';
+import { docRoots } from '../lib/doc-roots.ts';
 import { configFile, expandHome } from '../lib/paths.ts';
 import { readDocNames, readStandardPath } from '../lib/repo-config.ts';
 import { type HomeView, homeScreen, painter, sizeOf, toneFor } from '../lib/screens.ts';
@@ -72,13 +72,13 @@ async function loadSaved(): Promise<{ layer: ConfigLayer } | { error: string }> 
 }
 
 async function folderFacts(dir: string): Promise<Omit<HomeFacts, 'configLoads'>> {
-  const cwd = await documentRoot(dir);
-  const names = await readDocNames(cwd);
-  const standard = await readStandardPath(cwd);
+  const { config, docs } = await docRoots(dir);
+  const names = await readDocNames(config);
+  const standard = await readStandardPath(config);
   return {
-    hasFolderConfig: await exists(join(cwd, '.personal-config.json')),
-    hasBoard: await exists(join(cwd, names.board)),
-    hasStandard: standard !== null && (await exists(resolve(cwd, expandHome(standard)))),
+    hasFolderConfig: await exists(join(config, '.personal-config.json')),
+    hasBoard: await exists(join(docs, names.board)),
+    hasStandard: standard !== null && (await exists(resolve(config, expandHome(standard)))),
   };
 }
 

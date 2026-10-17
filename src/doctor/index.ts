@@ -3,7 +3,8 @@ import { basename, dirname, join, resolve } from 'node:path';
 import { loadConfig } from '../lib/config.ts';
 import { today } from '../lib/date.ts';
 import { exists, readText } from '../lib/disk.ts';
-import { documentRoot, isGitRepo } from '../lib/git.ts';
+import { docRoots } from '../lib/doc-roots.ts';
+import { isGitRepo } from '../lib/git.ts';
 import { type ItemContext, loadItemContext } from '../lib/items.ts';
 import { expandHome } from '../lib/paths.ts';
 import { readDocNames } from '../lib/repo-config.ts';
@@ -306,13 +307,15 @@ function describeFix(fix: Fix): string {
  * Each root, then, for a root inside a linked worktree, the same folder in the main checkout. The
  * worktree is checked as given, because its tracked files are the branch's work; its board,
  * ledger and `.personal-config.json` are untracked and exist only in the main checkout, so a
- * worktree-only run found 3 of the main checkout's 16 findings (this repo, 2026-10-16).
+ * worktree-only run found 3 of the main checkout's 16 findings (this repo, 2026-10-16). A
+ * worktree that commits its own board and ledger is checked alone: adding the main checkout
+ * read every tracked document twice (row 122 review, finding 1).
  */
 async function withDocumentRoots(given: string[]): Promise<string[]> {
   const roots: string[] = [];
   for (const root of given) {
-    const documents = await documentRoot(root);
-    for (const each of [root, documents]) {
+    const { docs } = await docRoots(root);
+    for (const each of [root, docs]) {
       if (!roots.some((seen) => resolve(seen) === resolve(each))) roots.push(each);
     }
   }

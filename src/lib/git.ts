@@ -14,13 +14,32 @@ const run = promisify(execFile);
 const MAX_OUTPUT = 64 * 1024 * 1024;
 
 /** Every git read is best-effort: a directory that is not a repo must not crash a scan. */
-async function git(cwd: string, args: string[]): Promise<string | null> {
+async function git(
+  cwd: string,
+  args: string[],
+  env: NodeJS.ProcessEnv = process.env,
+): Promise<string | null> {
   try {
-    const { stdout } = await run('git', args, { cwd, maxBuffer: MAX_OUTPUT });
+    const { stdout } = await run('git', args, { cwd, env, maxBuffer: MAX_OUTPUT });
     return stdout.trim();
   } catch {
     return null;
   }
+}
+
+/**
+ * The environment without git's location overrides. `GIT_COMMON_DIR` set by a caller sent both
+ * resolvers below to whichever repository it named, from any folder (row 122 review, finding 3);
+ * the question they answer is about the folder, so the folder alone decides.
+ */
+function folderOnly(): NodeJS.ProcessEnv {
+  const { GIT_DIR, GIT_WORK_TREE, GIT_COMMON_DIR, ...rest } = process.env;
+  return rest;
+}
+
+/** `git` asked about the folder itself, whatever the environment points at. */
+function locate(cwd: string, args: string[]): Promise<string | null> {
+  return git(cwd, args, folderOnly());
 }
 
 /**
@@ -39,7 +58,7 @@ async function git(cwd: string, args: string[]): Promise<string | null> {
  * it is never mapped.
  */
 export async function documentRoot(dir: string): Promise<string> {
-  const out = await git(dir, [
+  const out = await locate(dir, [
     'rev-parse',
     '--path-format=absolute',
     '--git-dir',
@@ -58,25 +77,42 @@ export async function documentRoot(dir: string): Promise<string> {
  * submodule's worktrees it names `.git/modules/<name>`, the git dir, as the main worktree
  * (git 2.49.0). The candidate is the folder holding a `.git` common dir, or `core.worktree`
  * where one is set, and it counts only if git, asked from there, names the same git dir and the
- * candidate as its own top level.
+ * candidate as its own top level, and if the files its index tracks are there.
+ *
+ * That last test is for `git init --separate-git-dir=<x>/.git`: git takes any folder holding a
+ * git dir named `.git` as that git dir's work tree, so `<x>` round-trips although the checkout
+ * is elsewhere and nothing in git records where (row 122 review, finding 2). From `<x>` every
+ * tracked file reads as deleted; from the real checkout almost none do.
  */
 async function mainCheckout(commonDir: string): Promise<string | null> {
   const candidate =
     basename(commonDir) === '.git' ? dirname(commonDir) : await configuredWorktree(commonDir);
   if (candidate === null) return null;
-  const out = await git(candidate, [
+  const out = await locate(candidate, [
     'rev-parse',
     '--path-format=absolute',
     '--git-dir',
     '--show-toplevel',
   ]);
   const [gitDir, top] = (out ?? '').split('\n');
-  return gitDir === commonDir && top === candidate ? candidate : null;
+  if (gitDir !== commonDir || top !== candidate) return null;
+  return (await holdsItsFiles(candidate)) ? candidate : null;
+}
+
+/** True when the index is empty or not every file in it is missing from `dir`. */
+async function holdsItsFiles(dir: string): Promise<boolean> {
+  const [indexed, missing] = await Promise.all([
+    locate(dir, ['ls-files', '-z']),
+    locate(dir, ['ls-files', '-z', '--deleted']),
+  ]);
+  if (indexed === null || missing === null) return false;
+  const count = (list: string) => list.split('\0').filter(Boolean).length;
+  return count(indexed) === 0 || count(missing) < count(indexed);
 }
 
 /** `core.worktree`, resolved from the git dir it is relative to; null where none is set. */
 async function configuredWorktree(commonDir: string): Promise<string | null> {
-  const value = await git(commonDir, [
+  const value = await locate(commonDir, [
     'config',
     '--file',
     join(commonDir, 'config'),
@@ -84,6 +120,14 @@ async function configuredWorktree(commonDir: string): Promise<string | null> {
   ]);
   if (!value) return null;
   return realpath(resolve(commonDir, value)).catch(() => null);
+}
+
+/**
+ * Whether git tracks `path` in the checkout at `dir`. A repository that commits its board has a
+ * copy in every worktree, and that copy is the one the worktree's branch carries.
+ */
+export async function isTracked(dir: string, path: string): Promise<boolean> {
+  return (await locate(dir, ['ls-files', '--error-unmatch', '--', path])) !== null;
 }
 
 /** A worktree's `.git` is a file rather than a directory, so both spellings count. */
