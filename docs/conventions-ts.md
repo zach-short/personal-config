@@ -1,13 +1,13 @@
-# TypeScript conventions — personal-config
+# TypeScript conventions: personal-config
 
-The standard for every `.ts` file in this repo. **Self-contained** — apply it without reading
+The standard for every `.ts` file in this repo. **Self-contained**: apply it without reading
 anything else. It is the first dogfooded output of the practices catalog: these are the rules
 the wizard would write for this repo, written by hand first.
 
-Every rule has an ID, and **IDs are never renumbered** — they are how commit messages, other
+Every rule has an ID, and **IDs are never renumbered**: they are how commit messages, other
 docs and lint suppressions cite a rule. Every rule carries an enforcement tag: *lint* (Biome
 catches it) · *gate* (`bun run typecheck` catches it) · *CI* (a job catches it) · *review*
-(nothing catches it — it rots without discipline).
+(nothing catches it: it rots without discipline).
 
 Provenance labels mark which rules are choices: *[STANDARD]* canonical for the ecosystem ·
 *[COMMON]* widespread, alternatives exist · *[OURS]* a house preference, justified on its own
@@ -19,7 +19,7 @@ This file being short is not it missing rules; it is correctly scoped.
 
 ---
 
-## F1 — Files are kebab-case, named for what they contain
+## F1: Files are kebab-case, named for what they contain
 
 *lint* · **[COMMON]**
 
@@ -27,11 +27,11 @@ One concept per file. A file named for a layer (`utils.ts`, `helpers.ts`) become
 a drawer is where code goes to stop being found.
 
 ```
-// right: src/lib/write-plan.ts        — the write plan lives here and nothing else does
-// wrong: src/lib/utils.ts             — a drawer
+// right: src/lib/write-plan.ts (the write plan lives here and nothing else does)
+// wrong: src/lib/utils.ts (a drawer)
 ```
 
-## E1 — Named exports, as `export function` declarations
+## E1: Named exports, as `export function` declarations
 
 *lint* · **[COMMON]**
 
@@ -44,21 +44,21 @@ a stack trace, and is greppable by one spelling.
 // wrong: export default (input: string) => { … }
 ```
 
-## E2 — Types are imported with `import type`
+## E2: Types are imported with `import type`
 
-*lint, autofixable* · **[STANDARD]** — it is what `verbatimModuleSyntax` requires.
+*lint, autofixable* · **[STANDARD]**: it is what `verbatimModuleSyntax` requires.
 
 ```ts
 // right: import type { PlannedFile } from '../lib/types.ts';
 // wrong: import { PlannedFile } from '../lib/types.ts';
 ```
 
-## I1 — No parent-relative imports beyond one level
+## I1: No parent-relative imports beyond one level
 
 *review* · **[OURS]**
 
 `./sibling` and `../lib/x` are fine; climbing back through a directory you already left, like
-`../../src/lib/x` from inside `src/`, is not — that is reaching across a boundary that should be
+`../../src/lib/x` from inside `src/`, is not: that is reaching across a boundary that should be
 a function call. A file that is one directory deeper than most of its siblings, the way
 `src/doctor/rules/*.ts` sits under `src/doctor/`, genuinely needs `../../lib/x` to reach the same
 `lib/` everything else reaches with one `../`; that second hop is the directory's real depth, not
@@ -70,12 +70,12 @@ a boundary crossed, and is not a violation.
 // wrong: import { stampLine } from '../../src/lib/stamp.ts';
 ```
 
-## T1 — No `any`, and no escape hatch at a boundary
+## T1: No `any`, and no escape hatch at a boundary
 
 *gate* · **[OURS]**
 
 `strict` plus `noUncheckedIndexedAccess` in `tsconfig.json`, and `noExplicitAny` as an error in
-Biome. Where a value genuinely is unknown — parsed JSON, a merge — type it `unknown` and narrow
+Biome. Where a value genuinely is unknown (parsed JSON, a merge), type it `unknown` and narrow
 it with a predicate.
 
 ```ts
@@ -83,12 +83,12 @@ it with a predicate.
 // wrong: function mergeValues(base: any, next: any): any { … }
 ```
 
-## T2 — String-literal unions, never `enum`
+## T2: String-literal unions, never `enum`
 
 *review* · **[OURS]**
 
 An `enum` is a runtime value pretending to be a type, with different semantics from every other
-type-level construct here. No `enum` declaration exists in `src/` as of 2026-09-15 —
+type-level construct here. No `enum` declaration exists in `src/` as of 2026-09-15:
 `grep -rnE '^\s*(export )?enum ' src/` returns nothing. Keep it that way.
 
 ```ts
@@ -96,12 +96,12 @@ type-level construct here. No `enum` declaration exists in `src/` as of 2026-09-
 // wrong: export enum Phase { You, Discover, Practices, Render }
 ```
 
-## L1 — Functions are roughly 6–15 lines; extract for a concept
+## L1: Functions are roughly 6–15 lines; extract for a concept
 
 *review* · **[OURS]**
 
 A function that fits on a screen is reviewed at a glance and tested alone. Extract because the
-extracted thing has a name — `mergeArrays`, `appendMissingLines`, `stampAfterFrontmatter` — not
+extracted thing has a name (`mergeArrays`, `appendMissingLines`, `stampAfterFrontmatter`), not
 to move lines somewhere else. Biome's `noExcessiveCognitiveComplexity` is the backstop at 12,
 not the target.
 
@@ -110,7 +110,7 @@ not the target.
 // wrong: one resolveOne() with three inlined strategy branches
 ```
 
-## L2 — Pure logic in `src/lib`, prompts in `src/questions`, writers in `src/render`
+## L2: Pure logic in `src/lib`, prompts in `src/questions`, writers in `src/render`
 
 *review* · **[OURS]**
 
@@ -123,7 +123,7 @@ it and reading the return value.
 // wrong: export async function renderGlobalRules(ctx) { await Bun.write(…) }
 ```
 
-## L3 — Console output lives only in `src/lib/ui.ts`, `src/cli.ts` and `src/doctor/index.ts`
+## L3: Console output lives only in `src/lib/ui.ts`, `src/cli.ts` and `src/doctor/index.ts`
 
 *lint* · **[OURS]**
 
@@ -135,11 +135,11 @@ prints cannot be tested without capturing stdout, and a module that returns a st
 // wrong: console.log(previewTree(changes));    // inside a renderer
 ```
 
-## C1 — Comments say why, never what
+## C1: Comments say why, never what
 
 *review* · **[OURS]**
 
-A comment restating the line below it is banned — rename or extract instead. A comment recording
+A comment restating the line below it is banned: rename or extract instead. A comment recording
 *why* is **required** where the reason is not derivable from the code, and most of this repo's
 reasons are not: they are properties of Bun, of git, or of the harness.
 
@@ -151,7 +151,7 @@ rationale, a lint-suppression justification, or an external-constraint workaroun
 // wrong: // split the string on newlines
 ```
 
-## X1 — Every doctor rule has a fixture that violates it and one that passes
+## X1: Every doctor rule has a fixture that violates it and one that passes
 
 *CI* · **[OURS]**
 
@@ -164,21 +164,27 @@ collide in one file.
 // wrong: one test asserting the clean case only
 ```
 
-## X2 — A test never writes outside a temp directory
+## X2: A test never writes outside a temp directory
 
 *CI* · **[OURS]**
 
 `src/lib/paths.ts` reads `$HOME` itself rather than `os.homedir()`, which Bun snapshots at
 startup; `tests/preload.ts` redirects it. A test that reaches the real `~/.claude` has already
-done the damage by the time it fails — this was a live bug on 2026-09-15, caught only by
+done the damage by the time it fails. This was a live bug on 2026-09-15, caught only by
 checking the real directory afterwards.
+
+Bun 1.2.9 gives a child spawned with no `env` the environment the test process started with, real
+`$HOME` included, so the redirect does not reach it. `tests/preload.ts` therefore fills `env` in
+for `Bun.spawn` and `Bun.spawnSync`. It cannot reach node's `spawnSync`, `execFileSync` or
+`execSync`, so `tests/spawn-env.test.ts` fails on any of them in `src/` or `tests/` (board item
+130, 2026-10-17).
 
 ```ts
 // right: const dir = await tempDir(); try { … } finally { await cleanup(dir); }
 // wrong: await commitPlan(plan);   // with no HOME redirection in scope
 ```
 
-## S1 — No personal strings in `src/`, `templates/` or `standard/`
+## S1: No personal strings in `src/`, `templates/` or `standard/`
 
 *CI* · **[OURS]**
 
