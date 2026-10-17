@@ -1,8 +1,7 @@
 import { existsSync } from 'node:fs';
-import { mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { today } from './date.ts';
-import { exists, readJson, writeText } from './disk.ts';
+import { exists, mkdir, readJson, rm, writeText } from './disk.ts';
 import { configDir } from './paths.ts';
 import type { AnswerValue } from './types.ts';
 import { version } from './version.ts';

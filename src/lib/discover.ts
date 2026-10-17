@@ -1,7 +1,6 @@
-import { readdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { detectConventionsDocs } from './conventions-docs.ts';
-import { exists as isFile } from './disk.ts';
+import { exists as isFile, readdir } from './disk.ts';
 import { isGitRepo, ownerFromRemote, remoteUrl, worktreeCount } from './git.ts';
 import { hasItemsFolder } from './items.ts';
 import { expandHome } from './paths.ts';

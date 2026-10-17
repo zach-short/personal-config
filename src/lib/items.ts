@@ -1,7 +1,6 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { readdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { readText } from './disk.ts';
+import { readdir, readText } from './disk.ts';
 import { insideGit } from './git.ts';
 import { numberedSection } from './markdown.ts';
 import { expandHome } from './paths.ts';

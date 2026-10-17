@@ -1,4 +1,4 @@
-import { open, readFile, stat, unlink } from 'node:fs/promises';
+import { readText, stat, unlink, writeNew } from './disk.ts';
 import { short } from './ui.ts';
 
 /**
@@ -52,12 +52,7 @@ type Holder = { pid: number; at: number };
 
 async function create(path: string, nowMs: number): Promise<boolean> {
   try {
-    const handle = await open(path, 'wx');
-    try {
-      await handle.writeFile(`${process.pid}\n${new Date(nowMs).toISOString()}\n`);
-    } finally {
-      await handle.close();
-    }
+    await writeNew(path, `${process.pid}\n${new Date(nowMs).toISOString()}\n`);
     return true;
   } catch (error) {
     if (isCode(error, 'EEXIST')) return false;
@@ -68,7 +63,7 @@ async function create(path: string, nowMs: number): Promise<boolean> {
 /** Null when the file is gone, or when it never got its pid and is past the grace period. */
 async function readHolder(path: string): Promise<Holder | null> {
   const [text, info] = await Promise.all([
-    readFile(path, 'utf8').catch(() => null),
+    readText(path).catch(() => null),
     stat(path).catch(() => null),
   ]);
   if (text === null || info === null) return null;

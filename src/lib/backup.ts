@@ -1,6 +1,5 @@
-import { mkdir, readdir } from 'node:fs/promises';
 import { join, resolve, sep } from 'node:path';
-import { copyTo, exists, readJson, readText, writeText } from './disk.ts';
+import { copyTo, exists, mkdir, readdir, readJson, readText, writeText } from './disk.ts';
 import { backupsDir } from './paths.ts';
 
 export type BackupEntry = { original: string; stored: string };

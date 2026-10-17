@@ -1,6 +1,5 @@
-import { readdir } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
-import { readText } from '../lib/disk.ts';
+import { readdir, readText } from '../lib/disk.ts';
 import { type Line, eachLine as linesOf, proseLines as proseOf } from '../lib/markdown.ts';
 import { DEFAULT_DOC_NAMES, type DocNames, docStem, readDocNames } from '../lib/repo-config.ts';
 

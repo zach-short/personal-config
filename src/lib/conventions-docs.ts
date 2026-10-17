@@ -1,5 +1,5 @@
-import { readdir } from 'node:fs/promises';
 import { join } from 'node:path';
+import { readdir } from './disk.ts';
 
 /**
  * A `docs/conventions-<suffix>.md` suffix → the language id discovery reports, and how strongly

@@ -1,8 +1,7 @@
 import { execFile } from 'node:child_process';
-import { readdir } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { promisify } from 'node:util';
-import { exists, readText } from '../../lib/disk.ts';
+import { exists, readdir, readText } from '../../lib/disk.ts';
 import {
   claudeDir,
   claudeHooksDir,

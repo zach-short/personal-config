@@ -1,8 +1,7 @@
-import { readdir } from 'node:fs/promises';
 import { basename, dirname, join, resolve } from 'node:path';
 import { loadConfig } from '../lib/config.ts';
 import { today } from '../lib/date.ts';
-import { exists, readText } from '../lib/disk.ts';
+import { exists, readdir, readText } from '../lib/disk.ts';
 import { docRoots } from '../lib/doc-roots.ts';
 import { isGitRepo } from '../lib/git.ts';
 import { type ItemContext, loadItemContext } from '../lib/items.ts';

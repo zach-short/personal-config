@@ -1,9 +1,8 @@
-import { mkdir, readdir, rename, stat } from 'node:fs/promises';
 import { dirname, join, relative } from 'node:path';
 import { withIndexLine } from '../lib/archive-index.ts';
 import { confirmWrite } from '../lib/ask.ts';
 import { today } from '../lib/date.ts';
-import { readText } from '../lib/disk.ts';
+import { mkdir, readdir, readText, rename, stat } from '../lib/disk.ts';
 import {
   documentRoot,
   gitMove,
