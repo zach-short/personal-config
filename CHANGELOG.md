@@ -111,6 +111,17 @@ The CLI. The working standard it installs is versioned separately — see
 - **`/delegate`'s land step renders only for a profile that sets `"landStep": "prose"`.** Under
   the agent may commit and push, the default now signs an item off and lands its branch in the
   worktree step, by fast-forward and push, and no skill names the land step.
+- **`/autopilot` splits each row into parallel sub-rows, and its agents question offers more.**
+  Before a row launches, the run plans it as two to four sub-rows whose "Files it owns" cells
+  share no path, which build at once, and one integration sub-row that keeps the row's number,
+  owns the shared wiring and runs last. Each sub-row takes the next free number, a lane of its own
+  and its own item file. A row runs whole when its files do not split, when it is Deep, when its
+  prompt says so, or when the agents answer is one at a time or says to run rows whole. The
+  integration sub-row's audit reads the whole row's diff. **More** sets the agents in flight from
+  the memory free at launch: one for each whole GB, at most ten and never fewer than six, seven in
+  ten of them builders, with at most two heavy builds at once. Agents wait for a heavy build with
+  `pgrep -f '<pattern>' | wc -l` and a bracketed first letter, so their waiting loops do not count
+  each other; BSD `pgrep` has no `-c`. See the skills long form.
 - **The standard is 2.1.0, and Part 4 reads the tiers from the bottom.** A writer stops at the
   first row that fits, Default is the fallback, and an opt-in Light tier fills the new
   `{{MODEL_LIGHT}}` placeholder or reads `not configured`. See `standard/CHANGELOG.md`.

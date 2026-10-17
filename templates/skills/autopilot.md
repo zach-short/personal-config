@@ -18,14 +18,18 @@ its rows join the board, and the run builds the ones it can.
 
 ## The defaults
 
-The opening round offers these, each one first and marked recommended. They are written here once,
-and the rest of this skill names them.
+The opening round offers these, each one first and marked recommended, except where question 2
+puts more first. The rows under more are that answer's values. They are written here once, and
+the rest of this skill names them.
 
 | Default | Value |
 |---|---|
 | Weekly usage, where a usage tool exists | Spend at most 25 points of the weekly window |
 | Five-hour window, where a usage tool exists | Freeze launches at 75% of it, and resume after its reset |
 | Agents in flight | 6, of which at most 4 are builders |
+| Agents in flight under more | 1 for each whole GB of memory free at launch, at most 10 and never fewer than the default; 7 in 10 of them builders, rounded down |
+| Heavy-build cap under more | 2 at once |
+| Split | 2 to 4 sub-rows that build at once, plus 1 integration sub-row that runs last |
 | End time | 8 hours after the start |
 | Rows | No cap |
 | Fix rounds per row | 2, then the row is held |
@@ -95,7 +99,15 @@ defaults are `/audit`'s.
    usage tool exists, say that the budget will not be measured, and require an end time or a
    number of rows. Where the audit call ran, its stop is the end time: offer no other end time
    here.{{SHARED_WINDOW}}
-2. **Agents in flight.** The default; fewer; or one at a time.
+2. **Agents in flight.** The default; more; fewer; or one at a time. Before you ask, read the
+   memory free now (on macOS, `memory_pressure` prints the free percentage and `sysctl -n
+   hw.memsize` the total; on Linux, `MemAvailable` in `/proc/meminfo`), and show the agents and
+   builders the default under more gives with it. Name the repo's heavy builds too: its gate
+   commands that build the whole app or compile native code, as `pgrep` patterns, which go under
+   **Caps** with the heavy-build cap. Where the person's words before the round ask for speed, or
+   for the window spent before its reset, put more first and mark it recommended instead. Under
+   every answer but one at a time, rows split before they launch (section 5), unless the person's
+   answer says to run them whole.
 3. **Unattended.** Say what the run needs: a permission mode that does not stop on a prompt, and
    the app or the terminal left open on a machine that stays awake. Where no timer exists, say that
    the run ends when nothing is in flight, and that it cannot wait out a usage freeze. Say that the
@@ -157,8 +169,40 @@ Where the person chose audit first, launch no row yet: start `/audit`'s first la
 4) instead. The rows launch only after `/audit` has written its rows (its section 5), from a fresh
 read of the board.
 
-Otherwise, claim each runnable row, then run `/delegate`'s step 2 for each, up to the
-agents-in-flight cap, with the Agent calls in one message.
+Otherwise, split each runnable row as the next three paragraphs say, then claim each runnable row,
+then run `/delegate`'s step 2 for each, up to the agents-in-flight cap, with the Agent calls in
+one message.
+
+**Split a row before it launches**, into the default split: sub-rows whose "Files it owns" cells
+share no path, each built and tested on its own, and one integration sub-row that owns the shared
+wiring, such as an entry point, a registry, an index or the README, and runs last. Together the
+cells hold every path the row's cell held, and none twice. Plan it from the row's item file and
+its cell, not from the source. The row runs whole when its files do not split that way (one file,
+or files that each need the others to build), and also when it is Deep, when its prompt says to
+build it whole, when it is a sub-row already, when its launch is a scoping run, a relay pass or a
+fix round, or when the agents-in-flight answer was one at a time or said to run rows whole. A
+Deep row runs whole because its failure is silent, and the seam between two builders is where it
+would hide.
+
+The integration sub-row is the row itself. It keeps its number, its lane, its tier and its item
+file; its "Files it owns" narrows to the shared wiring, and its "Waits on" names each other
+sub-row, so section 2 runs it last. Each other sub-row is a new row, written in the same edit as
+its own item file, `{{ITEMS_DIR}}/<n>-<slug>.md`. Take its number from `personal-config passoff
+next`, run again before each one. Give it the row's tier and "Waits on", and a lane no open row
+uses, because a lane runs its rows in order. Its file opens with `# <n>. <Title>`, then a dated line
+naming the row it splits, then a standalone prompt: the part of the row's prompt it builds, the
+answers the row's questions got, and the names it exposes for the integration sub-row to wire.
+The slug is the title in lower case, each run of other characters one hyphen, cut at a hyphen to
+at most 48 characters. On a 1.x board, with no `{{ITEMS_DIR}}/` folder, read the next free number
+from the board file, and the prompt is a `### <n>.` section below the table.
+
+Add a dated note to the row's item file with its sub-rows, its cell before the split and the
+commit the base was at, and write the split under **Judgment calls** with its reversal: restore
+the cell from the note, and mark the sub-rows not yet launched `SUPERSEDED`. The row's line under
+**Rows** names its sub-rows. Against a cap on rows, a row and its sub-rows count as one. Where the
+integration sub-row is audited, its auditor reads the whole row, `git diff <that commit> <its tip>
+-- <the paths of the row's cell before the split>`, against the row's prompt, and a load-bearing
+row's Deep review is that audit.{{SPLIT_JOIN}}
 {{SCOPE_RUN}}
 
 Write `STATE.md`. Then start `/loop` with no interval and this prompt: "Read `<the run
@@ -188,8 +232,9 @@ On every wake, and whenever a background agent returns:
 5. **Where the five-hour window has reached its default share**, freeze launches and hold on the
    holding wake. After its reset, resume the stopped agents with `SendMessage`.
 6. **Launch.** Unless a cap is reached or launches are frozen, read the board fresh and launch the
-   next runnable rows, up to the agents-in-flight cap. Check the end time against `date` and the
-   caps against this wake's reading here, before any launch: the last check may be a wake old.
+   next runnable rows, each split as section 5 says, up to the agents-in-flight cap. Check the end
+   time against `date` and the caps against this wake's reading here, before any launch: the last
+   check may be a wake old.
    While the audit runs, launch its next step instead, and no row.
 7. **Check the stop rules** (section 7). If the run ends, go to section 8.
 8. **Schedule the next wake** with `ScheduleWakeup`: the wake while agents run, or the wake while
@@ -280,3 +325,8 @@ because a builder never sees this skill.
   reported, and two rows that claim one number go under Collisions in the rundown.
 - A builder that must touch a file its row does not list in "Files it owns" stops and reports.
   Its own item file, where `/delegate` lets it write the close-out, is the one exception.
+- Under more, an agent waits before a heavy build (a pattern under **Caps**) while the heavy-build
+  cap is reached: `until [ "$(pgrep -f '<pattern>' | wc -l)" -lt <the cap> ]; do sleep 15; done`.
+  Write the pattern with its first letter in brackets, such as `'[n]ext build'`: another agent's
+  waiting loop holds the pattern in its own command line, and the brackets keep that loop from
+  counting. BSD `pgrep` on macOS has no `-c`. Each auditor's brief carries this order too.

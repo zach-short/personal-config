@@ -557,6 +557,7 @@ function autopilotVars(ctx: RenderContext): Record<string, string | null> {
     ...autopilotNames(ctx),
     ...autonomy,
     LAND_ROUTE: '',
+    SPLIT_JOIN: commits ? splitJoin() : '',
     AFTER_UNCOMMITTED: commits
       ? [
           '- A row whose predecessor in its lane, or an item its "Waits on" names, was signed off in',
@@ -585,6 +586,21 @@ function autopilotVars(ctx: RenderContext): Record<string, string | null> {
   };
 }
 
+/**
+ * Board row 120 under `agent-commits`: section 2 builds a successor from its predecessor's branch,
+ * and a split row's integration sub-row has two to four predecessors, none merged. Built from one
+ * branch, it would wire parts that are not there. Under `print-blocks` section 2 holds it for the
+ * owner's commits instead, so only this policy needs the join.
+ */
+function splitJoin(): string {
+  return [
+    '',
+    "Under this policy the integration sub-row's builder starts from the first sub-row's branch and",
+    "merges each other sub-row's branch into its own before it builds. Their files are disjoint, so a",
+    'merge that conflicts means the split was wrong, and the row is held.',
+  ].join('\n');
+}
+
 function autopilotNames(ctx: RenderContext): Record<string, string> {
   return {
     LEDGER_FILE: ledgerFile(ctx),
@@ -607,6 +623,8 @@ function autopilotLanding(lands: boolean): Record<string, string> {
       "  this run is runnable once that row has landed (`/delegate`'s step 6): it builds from the",
       '  base, which now holds the predecessor. A predecessor whose landing is held holds it.',
     ].join('\n'),
+    // The base holds every sub-row once each has landed, so the integration sub-row needs no join.
+    SPLIT_JOIN: '',
     LAND_ROUTE: lands
       ? [
           '',

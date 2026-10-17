@@ -270,6 +270,11 @@ const COMMIT_PARAGRAPH = '**Commits are the owner’s.**';
  * through the git common directory so a linked worktree finds the main checkout's, logs each
  * gate run, and blocks on an unreadable command or a gate past its limit. The same three keys,
  * 83 still.
+ *
+ * **`/autopilot` moved per variant on 2026-10-17, board row 120.** Its agents question offers
+ * more, with a ceiling read from free memory and a heavy-build cap, and a row splits into sub-rows
+ * before it launches. These lines render under every commit policy, `print-blocks` among them. The
+ * same bytes in all three variants, the same three keys, 83 still.
  */
 describe('§3.1 row 1 — code + full + git is the 0.3.0 output, byte for byte bar one skill', () => {
   const FULL = answersFor(CODE_FULL_GIT);
