@@ -25,7 +25,9 @@ track, ledger and board names. The other six are written to `~/.claude/skills/`.
   session made.
 - **`/autopilot`**: run the whole board with nobody at the keyboard. One round of questions sets
   the budget, then every runnable row goes through `/delegate`, several at once, until the board
-  is done or a cap is reached, and a rundown is written at the end. It runs only when you type it.
+  is done or a cap is reached, and a rundown is written at the end. Where a row's files allow it,
+  the run splits the row before it launches: two to four sub-rows build at the same time, and one
+  integration sub-row joins them last. It runs only when you type it.
 - **`/audit`**: audit the repo in the lanes a file in the repo names (`docs/audit-lanes.md`),
   verify each finding with a second agent, drop what an earlier audit already found, and write a
   dated report and board rows. It builds nothing. `/autopilot` offers it as "audit first" in its
@@ -70,6 +72,16 @@ audited and recorded by `/delegate`, and the rundown says what ran, what was hel
 was and what nobody saw running. Its skill file sets `disable-model-invocation: true`, so the agent
 cannot start it on its own; its description is not even in the agent's context until you type it.
 
+The split and the **more** answer to its agents question are for budget that would otherwise go
+unspent. A run that gives each row one builder leaves most of a usage window idle while a long
+row builds, and the window resets whether it was spent or not. On 2026-10-16 one run split seven
+rows into sub-rows with disjoint files, because the owner asked mid-run, and built seven packages
+in about forty minutes. Splitting is now the default, so nobody has to ask. **More** sizes the run
+to the machine: one agent in flight for each whole GB of memory free at launch, up to ten, seven
+in ten of them builders, with at most two heavy builds at once. That is what a 16 GB machine with
+67% free ran the same night. The skill offers it first when your words before the opening round
+ask for speed.
+
 `/audit` is for the spare budget before a usage window resets. One opening round covers the
 audit and the build, and the run stops at the reset time your lane file names, or at a later time
 you give, read from the clock and never estimated. Every finding is checked by a second agent
@@ -110,6 +122,16 @@ or a row count, not a share of your plan. Under **The agent may commit and push*
 on the remote before anyone looks. Every landing re-runs the gates on the tree that lands, and
 nothing force-pushes or rebases, but a landed row that CI alone can fail is red on the base, not in
 a worktree.
+
+The split moves risk to the seams. Each sub-row's builder and auditor see one part, so a mistake
+that shows only where the parts meet is caught by the integration sub-row's audit, which reads the
+whole row's diff, or by nothing. That is why a Deep row never splits. Under **The agent may
+commit and push**, a Mechanical or Light row's integration sub-row lands on its gates with no audit
+unless a trigger fires, so its seams get no such check. The split also writes rows and item files to your board that you did not write, from
+a plan made from the row's file list and not from the code. A wrong plan is loud: a builder that
+needs a file another sub-row holds stops, and that part waits. **More** costs memory. Its ceiling
+is read once, at launch, so a machine that takes on other work during the run can still swap, and
+the heavy-build cap holds only for the builds the run named at the start.
 
 `/audit` cannot carry the guard `/autopilot` has. The harness blocks a model's Skill call to a
 skill that sets `disable-model-invocation: true`, and `/autopilot` loads `/audit` that way. So its
@@ -163,6 +185,11 @@ it goes: the builder merges the base and runs the gates in its worktree, the ses
 your checkout and pushes, and the row's worktrees go. The run's own folder and the fold's moves are
 committed and pushed at the end, with the files named.
 
+When the run splits a row, it writes each sub-row to the board at the next free number, in a lane
+of its own, with its own item file. The row keeps its number as the integration sub-row: its
+"Files it owns" narrows to the shared wiring, its "Waits on" names the sub-rows, and its item file
+gains a dated note with the sub-rows, the cell before the split and the commit the base was at.
+
 `/audit` also writes nothing at setup beyond its skill file. When it runs, it makes
 `docs/incomplete/audit-<date>/`, holding the raw tool output under `raw/<lane>/` and a
 `REPORT.md`, and it adds rows to the board at the next free numbers. It reads
@@ -187,3 +214,8 @@ copies. A
 run's folder under `docs/incomplete/` is an ordinary folder: archive it with `personal-config
 archive` or delete it. An audit's rows are ordinary board rows: mark one `SETTLED AS NO` to drop
 it. To stop being offered the audit in one repo, delete or rename its `docs/audit-lanes.md`.
+
+To run `/autopilot` without splitting, answer one at a time to its agents question, or type an
+answer that says to run rows whole; to keep one row whole, say so in its prompt. To reverse a
+split already made, restore the row's "Files it owns" from the dated note in its item file, and
+mark the sub-rows that have not launched `SUPERSEDED`.

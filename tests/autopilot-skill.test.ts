@@ -91,6 +91,10 @@ describe('what /autopilot says', () => {
       '25 points',
       '75%',
       '6, of which at most 4 are builders',
+      // Row 120: the ceiling under more, the heavy-build cap and the split.
+      '1 for each whole GB of memory free at launch, at most 10 and never fewer than the default',
+      '| Heavy-build cap under more | 2 at once |',
+      '2 to 4 sub-rows that build at once, plus 1 integration sub-row that runs last',
       '8 hours after the start',
       '2, then the row is held',
       '3600 seconds',
@@ -279,6 +283,62 @@ describe('what /autopilot says', () => {
       expect(text).toContain('---\n\n<!-- personal-config v');
       expect(leftoverTokens(text)).toEqual([]);
     });
+});
+
+/**
+ * Board row 120, 2026-10-17: the agents question offers more, and a row splits into sub-rows
+ * before it launches. Both come from runs on 2026-10-16. The wk run split rows 6 to 12 at the
+ * owner's request and built seven packages in about forty minutes; another run, on a 16 GB machine
+ * with 67% free, ran 10 agents, 7 of them builders, with at most 2 heavy builds at once, and found
+ * that `pgrep -fc` fails on macOS.
+ */
+describe('more agents in flight and the default split (row 120)', () => {
+  const SPLIT = [
+    '**Split a row before it launches**, into the default split',
+    "Together the cells hold every path the row's cell held, and none twice.",
+    'and also when it is Deep,',
+    'The integration sub-row is the row itself.',
+    'Give it the row\'s tier and "Waits on", and a lane no open row uses, because a lane runs its rows in order.',
+    'Take its number from `personal-config passoff next`, run again before each one.',
+    'Against a cap on rows, a row and its sub-rows count as one.',
+    "its auditor reads the whole row, `git diff <that commit> <its tip> -- <the paths of the row's cell before the split>`",
+    "Under every answer but one at a time, rows split before they launch (section 5), unless the person's answer says to run them whole.",
+    'or when the agents-in-flight answer was one at a time or said to run rows whole.',
+    'each split as section 5 says, up to the agents-in-flight cap.',
+  ];
+
+  for (const policy of ['print-blocks', 'agent-commits', 'agent-pushes', 'no-rule'])
+    test(`passes: under ${policy} it offers more and describes the default split`, async () => {
+      const text = (await autopilot({ commitPolicy: policy })).replace(/\s+/g, ' ');
+      expect(text).toContain(
+        '2. **Agents in flight.** The default; more; fewer; or one at a time.',
+      );
+      for (const phrase of SPLIT) expect(text, `${policy}: ${phrase}`).toContain(phrase);
+      expect(text.indexOf('split each runnable row')).toBeLessThan(
+        text.indexOf('then claim each runnable row'),
+      );
+    });
+
+  // Tested on macOS 2026-10-17: a plain pattern counts another agent's waiting loop as a build,
+  // so three waiting builders count each other and never start; the bracketed one does not.
+  test('violates: no heavy-build check uses -c, which BSD pgrep does not have', async () => {
+    for (const policy of ['print-blocks', 'agent-pushes']) {
+      const text = await autopilot({ commitPolicy: policy });
+      expect(text, policy).not.toMatch(/pgrep\s+-[a-z]*c/);
+      expect(text, policy).toContain(`pgrep -f '<pattern>' | wc -l`);
+      expect(text, policy).toContain("such as `'[n]ext build'`");
+    }
+  });
+
+  test('passes: under agent-commits the integration sub-row merges its sub-rows first', async () => {
+    const join =
+      "Under this policy the integration sub-row's builder starts from the first sub-row's branch";
+    const flat = async (policy: string) =>
+      (await autopilot({ commitPolicy: policy })).replace(/\s+/g, ' ');
+    expect(await flat('agent-commits')).toContain(join);
+    for (const policy of ['print-blocks', 'agent-pushes'])
+      expect(await flat(policy), policy).not.toContain(join);
+  });
 });
 
 /** The audit-first option (audit-skill DESIGN 4.2, 4.4, 4.5, 2026-10-15). */
