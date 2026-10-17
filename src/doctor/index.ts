@@ -17,6 +17,7 @@ import { alwaysOnWeight } from './rules/always-on-weight.ts';
 import { archiveIndex } from './rules/archive-index.ts';
 import { archivedCitations } from './rules/archived-citations.ts';
 import { boardStatusRule } from './rules/board-status.ts';
+import { filesGrammar } from './rules/files-grammar.ts';
 import { ignoredFiles, ignoreFix, ignoreTarget } from './rules/ignored.ts';
 import { itemFiles } from './rules/item-files.ts';
 import { ledgerFoldCeiling } from './rules/ledger-fold-ceiling.ts';
@@ -36,6 +37,7 @@ const DOC_RULES = [
   placeholders,
   stepNumbers,
   unstampedAdaptation,
+  filesGrammar,
 ];
 
 export type DoctorReport = { findings: Finding[]; checked: number };
