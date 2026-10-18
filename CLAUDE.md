@@ -111,8 +111,13 @@ bun run typecheck && bun run lint && bun test && bun run doctor . examples
 - **CI's `boilerplate-version` job passes when it has nothing to compare.** With no base
   commit, the first push of a branch, it prints `skipping` and exits 0
   (`.github/workflows/ci.yml`).
-- **The completion gate runs nothing in a worktree.** It reads `gateCommand` from
-  `.personal-config.json` in the working directory, and a worktree has no such file.
+- **The completion gate runs in a worktree, but not in a subfolder.** Since row 122 (commit
+  `b52201e`, 2026-10-16) the hook maps the git common directory to the main checkout and reads
+  that checkout's `.personal-config.json`, so the gate runs in a linked worktree
+  (`templates/hooks/completion-gate.sh:147-177`, function `config_dir`). A stop in a subfolder of
+  a checkout still finds no config and skips the gate silently: the hook appends the subfolder to
+  the path (`templates/hooks/completion-gate.sh:175-176`) and does not climb. A separate change
+  is planned for that (2026-10-18).
 
 **What an agent cannot verify here.** The interactive wizard: the harness has no TTY, so clack
 prompts cannot be driven. Use `--profile <name> --yes` or `--dry-run`, and give the owner the
