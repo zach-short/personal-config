@@ -302,7 +302,8 @@ const COMMIT_PARAGRAPH = '**Commits are the owner’s.**';
  *
  * **`completion-gate.sh` moved per variant on 2026-10-18, gate-contract scope A1.** A stop in a
  * subfolder climbs to the nearest `.personal-config.json`, never above the git top level, where it
- * used to look in that one folder and skip the gate. Three keys, 83 still.
+ * used to look in that one folder and skip the gate, and the gate runs in the config's folder,
+ * mapped into the checkout being stopped in. Three keys, 83 still.
  */
 describe('§3.1 row 1 — code + full + git is the 0.3.0 output, byte for byte bar one skill', () => {
   const FULL = answersFor(CODE_FULL_GIT);

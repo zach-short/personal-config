@@ -115,9 +115,12 @@ bun run typecheck && bun run lint && bun test && bun run doctor . examples
   `b52201e`, 2026-10-16) a linked worktree reads the main checkout's `.personal-config.json`
   through the git common directory, and since 2026-10-18 a stop in a subfolder climbs to the
   nearest one, never above the git top level (`templates/hooks/completion-gate.sh`, `config_dir`
-  and `climb`). A submodule or a nested repository climbs only its own tree, and a worktree the
-  hook cannot map to a main checkout climbs only its own. Where nothing is found it exits 0 and
-  logs `config=none` in `~/.config/personal-config/completion-gate.log`.
+  and `climb`). The gate runs in the folder the config came from, in the checkout being stopped
+  in: from a linked worktree, the same folder of the worktree, or its top level when the worktree
+  lacks that folder. A submodule or a nested repository climbs only its own tree, and a worktree
+  the hook cannot map to a main checkout climbs only its own. Where nothing is found it exits 0
+  and logs `config=none` in `~/.config/personal-config/completion-gate.log`; a run logs the
+  folder it ran in as `ran=`.
 
 **What an agent cannot verify here.** The interactive wizard: the harness has no TTY, so clack
 prompts cannot be driven. Use `--profile <name> --yes` or `--dry-run`, and give the owner the

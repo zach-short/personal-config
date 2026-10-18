@@ -79,6 +79,8 @@ async function scene(run: (s: Scene) => Promise<void>): Promise<void> {
 async function repo(dir: string): Promise<string> {
   await mkdir(join(dir, 'docs', 'bench'), { recursive: true });
   await writeFile(join(dir, 'docs', 'bench', 'keep.txt'), 'x\n');
+  await writeFile(join(dir, 'root-marker'), 'x\n');
+  await writeFile(join(dir, 'docs', 'docs-marker'), 'x\n');
   await writeFile(join(dir, '.gitignore'), `${CONFIG}\ngate-ran\n`);
   await git(dir, 'init', '-q', '--initial-branch=main');
   await git(dir, 'add', '.');
@@ -129,6 +131,10 @@ function found(dir: string): string {
   return `config=${join(dir, CONFIG)} `;
 }
 
+function ran(dir: string): string {
+  return `result=pass ran=${dir}`;
+}
+
 function none(dir: string): string {
   return `config=none looked=${join(dir, CONFIG)}`;
 }
@@ -140,10 +146,11 @@ describe('a stop below the top of a checkout finds the nearest config', () => {
       const bench = join(main, 'docs', 'bench');
       await withGate(main, 'touch gate-ran');
       expect((await fire(s, bench)).code).toBe(ALLOWED);
-      expect(await Bun.file(join(bench, 'gate-ran')).exists()).toBe(true);
+      expect(await Bun.file(join(main, 'gate-ran')).exists()).toBe(true);
+      expect(await Bun.file(join(bench, 'gate-ran')).exists()).toBe(false);
       const line = await lastLog(s, bench);
       expect(line).toContain(found(main));
-      expect(line).toContain('gate=touch gate-ran result=pass');
+      expect(line).toContain(`gate=touch gate-ran ${ran(main)}`);
     });
   });
 
@@ -153,11 +160,12 @@ describe('a stop below the top of a checkout finds the nearest config', () => {
       const bench = join(lane, 'docs', 'bench');
       await withGate(main, 'touch gate-ran');
       expect((await fire(s, bench)).code).toBe(ALLOWED);
-      expect(await Bun.file(join(bench, 'gate-ran')).exists()).toBe(true);
-      expect(await Bun.file(join(main, 'docs', 'bench', 'gate-ran')).exists()).toBe(false);
+      expect(await Bun.file(join(lane, 'gate-ran')).exists()).toBe(true);
+      expect(await Bun.file(join(bench, 'gate-ran')).exists()).toBe(false);
+      expect(await Bun.file(join(main, 'gate-ran')).exists()).toBe(false);
       const line = await lastLog(s, bench);
       expect(line).toContain(found(main));
-      expect(line).toContain('result=pass');
+      expect(line).toContain(ran(lane));
     });
   });
 
@@ -166,9 +174,13 @@ describe('a stop below the top of a checkout finds the nearest config', () => {
       const { main, lane } = await linked(s.base);
       await withGate(main, WRONG);
       await withGate(join(main, 'docs'), 'touch gate-ran');
-      for (const bench of [join(main, 'docs', 'bench'), join(lane, 'docs', 'bench')]) {
+      for (const top of [main, lane]) {
+        const bench = join(top, 'docs', 'bench');
         expect((await fire(s, bench)).code).toBe(ALLOWED);
-        expect(await lastLog(s, bench)).toContain(found(join(main, 'docs')));
+        const line = await lastLog(s, bench);
+        expect(line).toContain(found(join(main, 'docs')));
+        expect(line).toContain(ran(join(top, 'docs')));
+        expect(await Bun.file(join(top, 'docs', 'gate-ran')).exists()).toBe(true);
       }
     });
   });
@@ -189,6 +201,81 @@ describe('a stop below the top of a checkout finds the nearest config', () => {
       expect(await lastLog(s, fromMain)).toContain(none(fromMain));
       expect((await fire(s, fromLane)).code).toBe(ALLOWED);
       expect(await lastLog(s, fromLane)).toContain(none(join(main, 'docs', 'bench')));
+    });
+  });
+});
+
+/**
+ * The gate runs in the folder its config came from (gate-contract review, 2026-10-18). A gate is
+ * written for that folder: `go vet ./...` run from `docs` matched no packages and blocked a green
+ * tree, and a script path relative to the root is not found from below it. Each gate here is a
+ * relative test that passes only in the right folder, and each stop is in a subfolder.
+ */
+describe('the gate runs in the folder its config came from, in this checkout', () => {
+  test('violates: a relative root gate passes from a subfolder of the main checkout', async () => {
+    await scene(async (s) => {
+      const main = await repo(join(s.base, 'main'));
+      await withGate(main, 'test -f root-marker');
+      const bench = join(main, 'docs', 'bench');
+      expect((await fire(s, bench)).code).toBe(ALLOWED);
+      expect(await lastLog(s, bench)).toContain(ran(main));
+    });
+  });
+
+  /** The marker is untracked and only in the worktree, so a run in the main checkout fails it. */
+  test("violates: from a worktree subfolder the root gate proves the worktree's own root", async () => {
+    await scene(async (s) => {
+      const { main, lane } = await linked(s.base);
+      await writeFile(join(lane, 'lane-marker'), 'x\n');
+      await withGate(main, 'test -f lane-marker');
+      const bench = join(lane, 'docs', 'bench');
+      expect((await fire(s, bench)).code).toBe(ALLOWED);
+      expect(await lastLog(s, bench)).toContain(ran(lane));
+    });
+  });
+
+  test('violates: a nearer config runs its gate in its own folder', async () => {
+    await scene(async (s) => {
+      const { main, lane } = await linked(s.base);
+      await withGate(main, WRONG);
+      await withGate(join(main, 'docs'), 'test -f docs-marker');
+      for (const top of [main, lane]) {
+        const bench = join(top, 'docs', 'bench');
+        expect((await fire(s, bench)).code).toBe(ALLOWED);
+        expect(await lastLog(s, bench)).toContain(ran(join(top, 'docs')));
+      }
+    });
+  });
+
+  /**
+   * The config's folder always has a copy in the worktree when git reports the prefix it should,
+   * because it is an ancestor of the stop. A shim reports a prefix the worktree does not have, so
+   * the fallback to the worktree's top level is exercised at all.
+   */
+  test("violates: a config folder the worktree lacks runs the gate at the worktree's top", async () => {
+    await scene(async (s) => {
+      const { main, lane } = await linked(s.base);
+      await mkdir(join(main, 'gone'));
+      await withGate(join(main, 'gone'), 'test -f root-marker');
+      const bin = join(s.base, 'bin');
+      await mkdir(bin);
+      const shim = join(bin, 'git');
+      await writeFile(
+        shim,
+        [
+          '#!/bin/sh',
+          'if [ "$1 $2" = "rev-parse --show-prefix" ]; then echo gone/sub/; exit 0; fi',
+          `exec ${Bun.which('git')} "$@"`,
+          '',
+        ].join('\n'),
+      );
+      await chmod(shim, 0o755);
+      const bench = join(lane, 'docs', 'bench');
+      const env = { PATH: `${bin}:${process.env.PATH ?? ''}` };
+      expect((await fire(s, bench, env)).code).toBe(ALLOWED);
+      const line = await lastLog(s, bench);
+      expect(line).toContain(found(join(main, 'gone')));
+      expect(line).toContain(ran(lane));
     });
   });
 });

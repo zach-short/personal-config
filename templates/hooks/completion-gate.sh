@@ -152,17 +152,24 @@ done <<<"$(candidates)"
 # is untracked and exists only there. The climb stops at the git top level, so a submodule or a
 # nested repository never reaches the config of the repository around it, and a folder that is in
 # no repository, or whose git cannot be trusted, is not climbed at all.
+#
+# It prints two lines: the folder to read the config from, and the folder to run the gate in.
+# They differ only in a linked worktree, where the config comes from the main checkout and the
+# gate runs in the same folder of this worktree, so a root gate (`go test ./...`, a script path
+# relative to the root) proves the root wherever the stop happened (gate-contract review,
+# 2026-10-18: run from `docs`, `go vet ./...` matched no packages and blocked a green tree).
 config_dir() {
-  local git_dir common main prefix indexed missing top start
+  local git_dir common main prefix indexed missing top start found run
   unset GIT_DIR GIT_WORK_TREE GIT_COMMON_DIR
-  git_dir="$(git rev-parse --path-format=absolute --git-dir 2>/dev/null)" || { pwd; return; }
-  common="$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" || { pwd; return; }
-  case "$git_dir" in /*) ;; *) pwd; return ;; esac
-  case "$common" in /*) ;; *) pwd; return ;; esac
+  git_dir="$(git rev-parse --path-format=absolute --git-dir 2>/dev/null)" || { twice "$(pwd)"; return; }
+  common="$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" || { twice "$(pwd)"; return; }
+  case "$git_dir" in /*) ;; *) twice "$(pwd)"; return ;; esac
+  case "$common" in /*) ;; *) twice "$(pwd)"; return ;; esac
   # Every answer below that is not the main checkout climbs this checkout's own tree, so a stop
   # that cannot be mapped still finds a config above it in the same checkout, and nothing beyond.
+  # The gate runs where that config is, which is inside this checkout.
   top="$(git rev-parse --show-toplevel 2>/dev/null || true)"
-  if [ "$git_dir" = "$common" ]; then climb "$top" "$(pwd -P)" "$(pwd)"; return; fi
+  if [ "$git_dir" = "$common" ]; then twice "$(climb "$top" "$(pwd -P)" "$(pwd)")"; return; fi
 
   case "$common" in
     */.git) main="${common%/.git}" ;;
@@ -174,18 +181,35 @@ config_dir() {
   if [ -z "$main" ] ||
     [ "$(git -C "$main" rev-parse --path-format=absolute --git-dir 2>/dev/null)" != "$common" ] ||
     [ "$(git -C "$main" rev-parse --show-toplevel 2>/dev/null)" != "$main" ]; then
-    climb "$top" "$(pwd -P)" "$(pwd)"
+    twice "$(climb "$top" "$(pwd -P)" "$(pwd)")"
     return
   fi
   indexed="$(git -C "$main" ls-files 2>/dev/null | wc -l)"
   missing="$(git -C "$main" ls-files --deleted 2>/dev/null | wc -l)"
   if [ "$indexed" -gt 0 ] && [ "$missing" -ge "$indexed" ]; then
-    climb "$top" "$(pwd -P)" "$(pwd)"
+    twice "$(climb "$top" "$(pwd -P)" "$(pwd)")"
     return
   fi
   prefix="$(git rev-parse --show-prefix 2>/dev/null || true)"
   start="$main${prefix:+/${prefix%/}}"
-  climb "$main" "$start" "$start"
+  found="$(climb "$main" "$start" "$start")"
+  # The config's folder, moved from the main checkout into this worktree. A folder this worktree
+  # does not have (deleted or renamed on its branch) falls back to the worktree's top level, and
+  # a top level git did not print as an absolute path falls back to where the stop happened.
+  case "$top" in
+    /?*)
+      run="$top${found#"$main"}"
+      [ -d "$run" ] || run="$top"
+      ;;
+    *) run="$(pwd)" ;;
+  esac
+  printf '%s\n%s\n' "$found" "$run"
+}
+
+# `twice <folder>` answers the same folder for the config and the run: every case but a mapped
+# linked worktree.
+twice() {
+  printf '%s\n%s\n' "$1" "$1"
 }
 
 # `climb <top> <start> <none>` prints the nearest folder from `<start>` up to `<top>` that holds
@@ -225,7 +249,12 @@ log() {
 # The gate command comes from the repo, never from a constant — the same rule `session-banner.sh`
 # follows, and for the same reason: one hook has to serve every repo, and `bun test` is one
 # repo's answer. Read with `sed` rather than `jq` so a missing `jq` costs nothing here.
-config="$(config_dir)/.personal-config.json"
+# Two lines, read without `read` so a `set -e` exit inside the subshell cannot end the hook: the
+# config's folder, then the gate's. A missing second line or folder leaves the gate in `$PWD`.
+dirs="$(config_dir)"
+config="${dirs%%$'\n'*}/.personal-config.json"
+run_dir="${dirs#*$'\n'}"
+[ -d "$run_dir" ] || run_dir="$PWD"
 raw=""
 if [ -f "$config" ]; then
   raw="$(sed -n 's/.*"gateCommand"[[:space:]]*:[[:space:]]*"\(.*\)".*/\1/p' "$config")"
@@ -272,15 +301,17 @@ case "$LIMIT" in "" | *[!0-9]*) LIMIT=570 ;; esac
 
 # `eval`, because the value is a command line — `bun test`, `make check`, `npm run verify` — and
 # it comes from a file in the person's own repo, at the same trust level as the command they
-# would have typed. It runs here, in the checkout being stopped in, which in a worktree is the
-# worktree: the config comes from the main checkout, the work being proven does not. Output is
+# would have typed. It runs in the folder the config came from, inside the checkout being stopped
+# in, which in a worktree is the worktree: the config comes from the main checkout, the work being
+# proven does not. A gate is written for the folder that holds it (`go test ./...`,
+# `python3 tools/build.py`), so the folder the stop happened in is not where it runs. Output is
 # captured so a failure can quote it; a pass prints nothing, because a Stop hook's stdout is
 # noise on every successful turn. `set -m` gives the gate its own process group, so a timeout
 # stops the whole tree it started and not only the shell around it.
 output_file="$(mktemp "${TMPDIR:-/tmp}/completion-gate.XXXXXX")"
 trap 'rm -f "$output_file"' EXIT
 set -m
-(eval "$gate") </dev/null >"$output_file" 2>&1 &
+(cd "$run_dir" && eval "$gate") </dev/null >"$output_file" 2>&1 &
 pid=$!
 set +m
 # The limit is read from the clock, never counted in sleeps. Each `sleep 0.2` is a process of its
@@ -296,7 +327,7 @@ set +m
 while kill -0 "$pid" 2>/dev/null; do
   if [ "$SECONDS" -ge "$LIMIT" ]; then
     kill -TERM -- "-$pid" 2>/dev/null || kill -TERM "$pid" 2>/dev/null || true
-    log "config=$config gate=$gate result=timeout after ${LIMIT}s"
+    log "config=$config gate=$gate result=timeout after ${LIMIT}s ran=$run_dir"
     block "this repo's gate command did not finish in ${LIMIT} seconds, so it has not passed." "  \$ $gate
 
 $(tail -20 "$output_file")" "Run it yourself, in the background if it is slow, and stop again once it passes. A slow machine is not a false alarm: the gate stopped before it could fail."
@@ -306,11 +337,11 @@ done
 if wait "$pid"; then status=0; else status=$?; fi
 
 if [ "$status" -ne 0 ]; then
-  log "config=$config gate=$gate result=fail exit=$status"
+  log "config=$config gate=$gate result=fail exit=$status ran=$run_dir"
   block "this repo's gate command did not pass." "  \$ $gate
 
 $(tail -20 "$output_file")"
 fi
 
-log "config=$config gate=$gate result=pass"
+log "config=$config gate=$gate result=pass ran=$run_dir"
 exit 0

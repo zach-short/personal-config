@@ -11,6 +11,8 @@ The CLI. The working standard it installs is versioned separately — see
   `.personal-config.json` only in the folder the turn stopped in, so a stop in `docs/bench`
   found nothing and exited 0 without running the gate. It now climbs to the nearest config,
   through the main checkout's tree from a linked worktree, and never above the git top level.
+  The gate runs in the folder that config came from, in the checkout being stopped in, so a
+  gate written for the root (`go test ./...`) proves the root from any subfolder.
 - **A capped repo could not run Haiku.** A ceiling below Deep listed the Light model in
   `availableModels` only when the fourth tier was turned on, and it is off by default. A ceiling
   is an upper bound, so the Light model (`haiku` unless another is named) is now allowed under
