@@ -137,3 +137,24 @@ Built on Opus 5.5 in the worktree `dl/row-132-build`, from `main` at d453fe8.
 - Who gates under wk: the builder and the auditor still run every gate that wk's worker runs again (review 3d).
 - A landed `wk/<n>` branch stays, so a re-run of the same row needs it gone first (4d); auditor worktrees of earlier rounds may be kept for good (4e); `wk claim` where wk's leases are on (4f).
 - The wk text names wk's defaults (the 60-minute quiet window, `~/.wk/<repo>/landing.log`); a repository that changes them in its wk config reads its own values.
+
+## Audit and fix rounds, 2026-10-18
+
+**Audit 1** (Opus 5.5, at 6cfe960) found two blocking problems.
+
+- B1: in a repository that never landed through wk, the landing ref does not exist, and `wk status` prints it as `missing; the first worker pass creates it at <base>` (wk's `internal/wk/landing.go:318`). The claim commit and the `/clean-up` fold sweep accepted only `at <base>; nothing to land` or `behind <base>`, so the first `/delegate` in such a repository would wait for ever. Fixed in 93800ae: both waits accept `missing`, and the claim says why a commit before the first pass is safe. The case for a wait that ends also names `landing` and `gated`, which wk counts as in flight with `submitted` (`landing.go:97`).
+- B2: `landingOf` checked only for git, so the light track and non-code work under `agent-pushes` with `landStep: "wk"` rendered wk landing text in `/close-out` and `/clean-up`, while no `/delegate` existed there to run `wk submit`. Fixed in 93800ae: `landingOf` returns `'wk'` only where the existing exported `rendersDelegate()` is true, the same list that decides which skills are written. The builder's first draft of the fix declared a second, private `rendersDelegate()` beside the exported one, which failed to load; the lead removed it.
+
+**Audit 2** (Opus 5.5, in its own worktree at 93800ae, told to edit nothing; `git status` empty afterwards) found B1 and B2 fixed and no blocking problem. It named two non-blocking points, both fixed in 4f08c63:
+
+- The claim and fold waits did not name `diverged from <base>`, which stops wk's worker and never clears by waiting. Both now stop on it and leave it to the owner, as step 6 already did.
+- No test pinned the `submitted`, `landing` or `gated` wording. A test now does.
+
+**Tests added in these rounds, each with its fix turned off** (mutation in `src/render/skills.ts`, then the file restored):
+
+- `missing` dropped from the two waits: "/delegate lets a commit on the base go ahead while the ref is `missing`" and the `/clean-up` twin fail.
+- `landingOf` back to the git check alone: the light-track and non-code cases of "the key needs a shape that renders /delegate" fail (2 fail). The no-git cases pass under that mutation, because the old check covered them; they guard a later change.
+- The `diverged` sentence reworded: both "stops on `diverged from <base>`" tests fail.
+- The in-flight wording back to "Still `submitted`": "names every in-flight state" and "makes, submits and removes through wk" fail.
+
+**Gate at 4f08c63, in the build worktree:** `bun run typecheck` clean; `bun run lint` "Checked 228 files ... No fixes applied.", no warnings; `bun test` 2163 pass, 0 fail; `bun run doctor . examples` 3 findings, all `relative-dates` in the main checkout's copy of this file at d453fe8, which this branch already fixes.
