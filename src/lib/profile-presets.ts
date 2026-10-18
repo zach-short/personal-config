@@ -40,6 +40,13 @@ const STRICT_PRACTICES: Answers = {
   'practices.drive-by-fixes': 'note-and-raise',
 };
 
+/** Each tier's model by family name, so a ceiling outlives the next model release. */
+const TIER_IDS: Answers = {
+  'modelIds.default': 'opus',
+  'modelIds.mechanical': 'sonnet',
+  'modelIds.light': 'haiku',
+};
+
 const NO_PRACTICES: Answers = Object.fromEntries(
   Object.keys(STRICT_PRACTICES).map((key) => [key, 'none']),
 );
@@ -49,39 +56,52 @@ export const PRESETS: Preset[] = [
     id: 'light',
     name: 'Light setup',
     description:
-      'The lighter method and no house rules. For scripts, experiments, small repos.',
-    answers: { workKind: 'code', configWeight: 'light', usesGit: 'yes', ...NO_PRACTICES },
+      'Sonnet at most, never Opus or Fable. The lighter method and no house rules: scripts, experiments, small repos.',
+    answers: {
+      workKind: 'code',
+      configWeight: 'light',
+      usesGit: 'yes',
+      tierCeiling: 'mechanical',
+      ...TIER_IDS,
+      ...NO_PRACTICES,
+    },
   },
   {
     id: 'medium',
     name: 'Medium setup',
-    description: 'The whole method with plain folders for the record, and looser house rules.',
+    description:
+      'Opus at most, never Fable. The whole method with plain folders for the record, and looser house rules.',
     answers: {
       workKind: 'code',
       configWeight: 'full',
       usesGit: 'yes',
       workProfile: 'folders',
       mode: 'solo',
+      tierCeiling: 'default',
+      ...TIER_IDS,
       ...LOOSE_PRACTICES,
     },
   },
   {
     id: 'heavy',
     name: 'Heavy setup',
-    description: 'The whole method: a ledger, a board, and every house rule at its strictest.',
+    description:
+      'Any model, Fable included. The whole method: a ledger, a board, and every house rule at its strictest.',
     answers: {
       workKind: 'code',
       configWeight: 'full',
       usesGit: 'yes',
       workProfile: 'ledger',
       mode: 'solo',
+      tierCeiling: 'deep',
       ...STRICT_PRACTICES,
     },
   },
   {
     id: 'writing',
     name: 'Writing setup',
-    description: 'For folders of documents, not code: the lighter method and no code rules.',
+    description:
+      'For folders of documents, not code: the lighter method and no code rules. No model ceiling: the ceiling is asked for code only.',
     answers: { workKind: 'non-code', configWeight: 'light', usesGit: 'no' },
   },
 ];

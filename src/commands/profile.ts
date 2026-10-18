@@ -7,6 +7,8 @@ import type { Flow, FrameMenu, MenuItem, SetupFrame } from '../lib/frame.ts';
 import { contractHome, expandHome, home } from '../lib/paths.ts';
 import { findPreset, PRESETS, type Preset, suggestedName } from '../lib/profile-presets.ts';
 import {
+  CEILING_IDS,
+  ceilingOf,
   FOLDER_ONLY_IDS,
   findProfile,
   listProfiles,
@@ -27,7 +29,17 @@ import { plannedRecord } from '../render/context.ts';
 import { initAnswers, insideOnly, planTarget } from './init.ts';
 import { finish, planEverything, priorSource } from './setup.ts';
 
-const STEP = { profile: 0, work: 1, folder: 2, practices: 3, folders: 4, review: 5, done: 7 };
+const STEP = {
+  profile: 0,
+  work: 1,
+  ceiling: 2,
+  folder: 3,
+  practices: 4,
+  folders: 5,
+  review: 6,
+  write: 7,
+  done: 8,
+};
 
 /** The rail every `profile` screen draws on. */
 export const PROFILE_FLOW: Flow = {
@@ -35,6 +47,7 @@ export const PROFILE_FLOW: Flow = {
   steps: [
     'Profile',
     'The work',
+    'Model ceiling',
     'Each folder',
     'Practices',
     'Folders',
@@ -42,12 +55,15 @@ export const PROFILE_FLOW: Flow = {
     'Write',
     'Done',
   ],
-  stepOf: (q) =>
-    q.phase === 'you' ? STEP.work : q.phase === 'discover' ? STEP.folder : STEP.practices,
+  stepOf: (q) => {
+    if (CEILING_IDS.includes(q.id)) return STEP.ceiling;
+    if (q.phase === 'you') return STEP.work;
+    return q.phase === 'discover' ? STEP.folder : STEP.practices;
+  },
   repo: null,
   pick: STEP.folders,
   review: STEP.review,
-  write: 6,
+  write: STEP.write,
   done: STEP.done,
   doneTitle: 'Profiles are saved',
   next: [
@@ -94,7 +110,8 @@ async function list(): Promise<number> {
   if (profiles.length === 0)
     say('No profiles saved yet. Run `personal-config profile new <name>`.');
   for (const profile of profiles) {
-    say(`${slugOf(profile.name).padEnd(20)} ${profile.name} — ${folderCount(profile)}`);
+    const about = `${ceilingOf(profile.answers)}, ${folderCount(profile)}`;
+    say(`${slugOf(profile.name).padEnd(20)} ${profile.name} — ${about}`);
     for (const folder of profile.folders) say(`  ${folder}`);
   }
   for (const problem of problems) say(`✖ ${problem}`);
@@ -124,7 +141,7 @@ function mainItems(profiles: UserProfile[]): MenuItem[] {
   return [
     ...profiles.map((p) => ({
       value: slugOf(p.name),
-      label: `${p.name}  ·  ${folderCount(p)}`,
+      label: `${p.name}  ·  ${ceilingOf(p.answers)}  ·  ${folderCount(p)}`,
       hint: p.description,
     })),
     {
@@ -215,7 +232,8 @@ async function maybeAsk(cli: Cli, frame: SetupFrame, start: Start): Promise<Answ
 
 /**
  * The profile's questions, from `base` over the saved and recommended answers. The `you` phase
- * asks only the three track questions; `discover` skips what is each folder's own.
+ * asks only the three track questions, then the model ceiling, then the rest of `discover`
+ * without what is each folder's own.
  */
 export async function askProfile(
   cli: Cli,
@@ -225,7 +243,9 @@ export async function askProfile(
   const config = await loadConfig({ ...cli, from: null }, null);
   const answers: Answers = { ...config.answers, ...base };
   await askPhase('you', prompter, answers, config, TRACK_IDS);
-  await askPhase('discover', prompter, answers, config, undefined, FOLDER_ONLY_IDS);
+  await askPhase('discover', prompter, answers, config, CEILING_IDS);
+  const asked = [...FOLDER_ONLY_IDS, ...CEILING_IDS];
+  await askPhase('discover', prompter, answers, config, undefined, asked);
   await askPhase('practices', prompter, answers, config);
   return profileAnswers(answers);
 }

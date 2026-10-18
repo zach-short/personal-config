@@ -5,6 +5,13 @@ The CLI. The working standard it installs is versioned separately — see
 
 ## Unreleased
 
+### Fixed
+
+- **A capped repo answered by defaults was capped at Opus.** The Mechanical and Light model
+  ID questions recommended `opus`, as the Default one does, so pressing enter through a
+  Mechanical ceiling wrote `availableModels: ["opus"]`. Each tier now recommends its own family:
+  `opus`, `sonnet`, `haiku`. A repo already set up keeps the IDs it saved.
+
 ### Added
 
 - **Global setup and named profiles, applied to many folders at once.** `personal-config global`
@@ -16,7 +23,9 @@ The CLI. The working standard it installs is versioned separately — see
   preview and one confirm; each folder's `.personal-config.json` records the profile's slug, and
   an edit offers the profile's folders back, ticked, for a re-apply. `profile new`, `apply`,
   `list` and `delete` also run with no terminal. `--profile` reads a saved profile after the
-  built-in ones.
+  built-in ones. Each preset sets the folder's model ceiling first: Light allows Sonnet at most,
+  Medium Opus at most, Heavy any model. The manager asks the ceiling as its own step and lists
+  each profile's top model.
 - **`setup`, `global` and `profile` draw the full-screen frame in a terminal**, the one the bare
   command used, with a rail of steps for each flow. `--yes` and a pipe keep the plain output. The
   bare command's first run is now `global`, then the profile manager. The home menu adds

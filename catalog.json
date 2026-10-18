@@ -1,5 +1,5 @@
 {
-  "catalogVersion": "0.8.0+a5a08e42",
+  "catalogVersion": "0.8.0+efc08e79",
   "questions": [
     {
       "id": "work-kind",
@@ -754,15 +754,15 @@
       "ask": "Which model ID represents your Mechanical tier (for repos with a ceiling)?",
       "options": [
         {
-          "value": "opus",
-          "label": "claude-opus (latest)",
-          "example": "Opus family, any version",
+          "value": "sonnet",
+          "label": "claude-sonnet (latest)",
+          "example": "Sonnet family, any version",
           "recommended": true
         },
         {
-          "value": "sonnet",
-          "label": "claude-sonnet (latest)",
-          "example": "Sonnet family, any version"
+          "value": "opus",
+          "label": "claude-opus (latest)",
+          "example": "Opus family, any version"
         },
         {
           "value": "haiku",
@@ -847,20 +847,20 @@
       "ask": "Which model ID represents your Light tier (for repos with a ceiling)?",
       "options": [
         {
+          "value": "haiku",
+          "label": "claude-haiku (latest)",
+          "example": "Haiku family, any version",
+          "recommended": true
+        },
+        {
           "value": "opus",
           "label": "claude-opus (latest)",
-          "example": "Opus family, any version",
-          "recommended": true
+          "example": "Opus family, any version"
         },
         {
           "value": "sonnet",
           "label": "claude-sonnet (latest)",
           "example": "Sonnet family, any version"
-        },
-        {
-          "value": "haiku",
-          "label": "claude-haiku (latest)",
-          "example": "Haiku family, any version"
         },
         {
           "value": "fable",

@@ -26,6 +26,27 @@ export const TRACK_IDS = ['work-kind', 'config-weight', 'uses-git'];
  */
 export const FOLDER_ONLY_IDS = ['projects-dir', 'proof-line', 'off-limits'];
 
+/** The model ceiling and the model each capped tier stands for, asked as one step. */
+export const CEILING_IDS = [
+  'tier-ceiling',
+  'model-ids-default',
+  'model-ids-default-other',
+  'model-ids-mechanical',
+  'model-ids-mechanical-other',
+  'model-ids-light',
+  'model-ids-light-other',
+];
+
+/** The most expensive model a profile's folders may run, in a few words for a list. */
+export function ceilingOf(answers: Answers): string {
+  if (answers.workKind === 'non-code') return 'no model ceiling';
+  const ceiling = answers.tierCeiling ?? 'deep';
+  if (ceiling === 'mechanical')
+    return `up to ${String(answers['modelIds.mechanical'] ?? 'Mechanical')}`;
+  if (ceiling === 'default') return `up to ${String(answers['modelIds.default'] ?? 'Default')}`;
+  return 'any model';
+}
+
 /** The questions a profile asks, in the order `setup` asks them. */
 export function profileQuestions(): Question[] {
   return [

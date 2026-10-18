@@ -1,13 +1,21 @@
 import type { Question, QuestionOption, WhenSpec } from '../lib/types.ts';
 import { POPULAR_MODEL_IDS } from './model-ids.ts';
 
-// The first popular model, marked recommended, for the tier ceiling's model ID questions.
-const firstPopularModelWithRecommended: QuestionOption = {
-  value: 'opus',
-  label: 'claude-opus (latest)',
-  example: 'Opus family, any version',
-  recommended: true,
-};
+/**
+ * The model ID list for one tier, with that tier's own family first and marked recommended. Until
+ * 2026-10-18 every tier recommended `opus`, so a Mechanical-capped repo answered by defaults was
+ * capped at Opus: the ceiling looked set and allowed the model it existed to keep out.
+ */
+function modelOptions(recommended: string): QuestionOption[] {
+  return [
+    ...POPULAR_MODEL_IDS.filter((o) => o.value === recommended).map((o) => ({
+      ...o,
+      recommended: true,
+    })),
+    ...POPULAR_MODEL_IDS.filter((o) => o.value !== recommended),
+    { value: 'other', label: 'Other — type it', example: 'A model ID not listed above' },
+  ];
+}
 
 /**
  * "This repo is capped below Deep", which is `tierCeiling` being `default` or `mechanical`.
@@ -262,15 +270,7 @@ export const DISCOVER_QUESTIONS: Question[] = [
     ask: 'Which model ID represents your Default tier (for repos with a Default ceiling)?',
     configKey: 'modelIds.default',
     readMore: 'model-ids',
-    options: [
-      firstPopularModelWithRecommended,
-      ...POPULAR_MODEL_IDS.slice(1),
-      {
-        value: 'other',
-        label: 'Other — type it',
-        example: 'A model ID not listed above',
-      },
-    ],
+    options: modelOptions('opus'),
     when: CAPPED,
   },
   {
@@ -292,15 +292,7 @@ export const DISCOVER_QUESTIONS: Question[] = [
     ask: 'Which model ID represents your Mechanical tier (for repos with a ceiling)?',
     configKey: 'modelIds.mechanical',
     readMore: 'model-ids',
-    options: [
-      firstPopularModelWithRecommended,
-      ...POPULAR_MODEL_IDS.slice(1),
-      {
-        value: 'other',
-        label: 'Other — type it',
-        example: 'A model ID not listed above',
-      },
-    ],
+    options: modelOptions('sonnet'),
     when: CAPPED,
   },
   {
@@ -322,15 +314,7 @@ export const DISCOVER_QUESTIONS: Question[] = [
     ask: 'Which model ID represents your Light tier (for repos with a ceiling)?',
     configKey: 'modelIds.light',
     readMore: 'model-ids',
-    options: [
-      firstPopularModelWithRecommended,
-      ...POPULAR_MODEL_IDS.slice(1),
-      {
-        value: 'other',
-        label: 'Other — type it',
-        example: 'A model ID not listed above',
-      },
-    ],
+    options: modelOptions('haiku'),
     when: {
       all: [...CAPPED.all, { key: 'modelLightEnabled', is: 'yes' }],
     },

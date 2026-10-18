@@ -131,7 +131,8 @@ describe('the manager, through the frame', () => {
     try {
       // The list starts with only `+ New profile` and Done; once saved, Done is two rows down.
       const driven = drive((screen) => {
-        if (screen.includes('Heavy setup  ·')) return `${KEY.down}${KEY.down}${KEY.enter}`;
+        if (screen.includes('Heavy setup  ·  any model'))
+          return `${KEY.down}${KEY.down}${KEY.enter}`;
         if (screen.includes('Start the new profile from')) return `${KEY.down}${KEY.down}\r`;
         return KEY.enter;
       });
@@ -187,11 +188,44 @@ describe('global, then a profile applied to many folders', () => {
         expect(record.profile).toBe('heavy-setup');
       }
       const listed = await cli(['profile', 'list'], home, root);
-      expect(listed).toContain('Heavy setup — 2 folders');
+      expect(listed).toContain('Heavy setup — any model, 2 folders');
       expect(await cli(['doctor', a, b], home, root)).toContain('no findings');
       const again = await cli(['profile', 'apply', 'heavy-setup', a, '--dry-run'], home, root);
       // Part 0's prompt names the docs it now finds there, as an `init` re-run does.
       expect(again).toContain('.personal-config.json  — per-repo config  [unchanged]');
+    } finally {
+      await cleanup(root);
+    }
+  });
+});
+
+describe('the model ceiling, per folder', () => {
+  test('each capped tier recommends its own model, so defaults never cap at Opus', () => {
+    const recommended = (id: string) =>
+      ALL_QUESTIONS.find((q) => q.id === id)?.options?.find((o) => o.recommended)?.value;
+    expect(recommended('model-ids-default')).toBe('opus');
+    expect(recommended('model-ids-mechanical')).toBe('sonnet');
+    expect(recommended('model-ids-light')).toBe('haiku');
+  });
+
+  test('Light allows no Opus or Fable, Medium no Fable, Heavy any model', async () => {
+    const root = await tempDir('pc-ceiling-');
+    const home = join(root, 'home');
+    const dirs = { light: join(root, 'l'), medium: join(root, 'm'), heavy: join(root, 'h') };
+    try {
+      await cli(['global', '--yes'], home, root);
+      for (const [preset, dir] of Object.entries(dirs)) {
+        await mkdir(dir, { recursive: true });
+        await cli(['profile', 'new', preset, preset, '--yes'], home, root);
+        await cli(['profile', 'apply', preset, dir, '--yes'], home, root);
+      }
+      const allowed = async (dir: string) =>
+        JSON.parse(await readFile(join(dir, '.claude', 'settings.local.json'), 'utf8'))
+          .availableModels as string[];
+      expect(await allowed(dirs.light)).toEqual(['sonnet']);
+      expect(await allowed(dirs.medium)).toEqual(['sonnet', 'opus']);
+      await expect(allowed(dirs.heavy)).rejects.toThrow();
+      expect(await cli(['profile', 'list'], home, root)).toContain('light — up to sonnet');
     } finally {
       await cleanup(root);
     }
