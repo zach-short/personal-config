@@ -16,7 +16,7 @@ import type { Answers, Finding } from '../../lib/types.ts';
  */
 export async function wkConfig(root: string, answers: Answers): Promise<Finding[]> {
   if (answers.landStep !== 'wk') return [];
-  const file = join(home(), '.wk', `${basename(await documentRoot(root))}.toml`);
+  const file = await wkConfigFile(root);
   if (!(await exists(file))) {
     return [finding(file, `landStep is "wk" but ${contractHome(file)} does not exist`)];
   }
@@ -33,6 +33,11 @@ export async function wkConfig(root: string, answers: Answers): Promise<Finding[
           `landStep is "wk" but ${contractHome(file)} lacks ${missing.join(' and ')}`,
         ),
       ];
+}
+
+/** wk's config for the repository `root` belongs to, which `gate-agree` reads as well. */
+export async function wkConfigFile(root: string): Promise<string> {
+  return join(home(), '.wk', `${basename(await documentRoot(root))}.toml`);
 }
 
 /**

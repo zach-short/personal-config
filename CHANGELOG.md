@@ -48,6 +48,11 @@ The CLI. The working standard it installs is versioned separately — see
   `wk gc --apply`. Every other profile, and every other policy with the key set, renders as
   before, byte for byte. `docs/choices/commit-policy.md` says what the key needs (a
   `~/.wk/<repo>.toml` with landing on and a gate list) and how to undo it.
+- **A `doctor` rule, `gate-agree`, for a profile that sets `"landStep": "wk"`.** It compares
+  `gateCommand` in `.personal-config.json` with the `[[gates.run]]` list in `~/.wk/<repo>.toml`
+  and reports, as advisory, a gate that one runs and the other does not. The comparison is by
+  command words (`go vet`, `bun run lint`), so flags, paths, env assignments and an `sh -c`
+  wrapper do not count as a difference. Where it cannot tell, it says nothing.
 - **A board status word, `COMMITTED`, and standard 2.2.0.** `DONE, <record>` now means built and
   recorded but not yet in a commit, and `COMMITTED, <record>, <short hash>` means the commit
   exists. `doctor`'s `board-status` accepts both on a 1.x board (`<record>` a ledger step) and a
