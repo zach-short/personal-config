@@ -31,6 +31,11 @@ export function configFile(): string {
   return join(configDir(), 'config.json');
 }
 
+/** The person's named profiles, one JSON file each (`src/lib/profiles.ts`). */
+export function profilesDir(): string {
+  return join(configDir(), 'profiles');
+}
+
 export function backupsDir(): string {
   return join(configDir(), 'backups');
 }

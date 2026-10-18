@@ -5,6 +5,8 @@ import type { Cli } from './types.ts';
 
 export const COMMANDS = [
   'setup',
+  'global',
+  'profile',
   'init',
   'catalog',
   'doctor',

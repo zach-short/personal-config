@@ -13,6 +13,7 @@ import {
   SelectPrompt,
   TextPrompt,
 } from '@clack/core';
+import * as p from '@clack/prompts';
 import {
   BACK,
   cancelRun,
@@ -34,6 +35,7 @@ import {
   showsRail,
   sizeOf,
   toneFor,
+  type View,
   wrap,
 } from './screens.ts';
 import type { AnswerValue, Question, RepoScan } from './types.ts';
@@ -53,6 +55,70 @@ export const SETUP_STEPS = [
 
 const STEP = { you: 0, where: 1, pick: 2, repo: 3, practices: 4, review: 5, write: 6, done: 7 };
 
+/**
+ * One run's rail and where each screen sits on it. `setup` is one flow; `global` and `profile`
+ * are others, drawn by the same prompters, so every command that asks looks the same.
+ */
+export type Flow = {
+  view: View;
+  steps: string[];
+  /** The step a question is drawn on. */
+  stepOf: (question: Question) => number;
+  /** The step whose questions are asked once per picked target, or `null` where none are. */
+  repo: number | null;
+  pick: number;
+  review: number;
+  write: number;
+  done: number;
+  doneTitle: string;
+  next: Array<[command: string, does: string]>;
+};
+
+export const SETUP_FLOW: Flow = {
+  view: 'setup',
+  steps: SETUP_STEPS,
+  stepOf: (question) => {
+    if (question.id === 'projects-dir') return STEP.where;
+    if (question.phase === 'you') return STEP.you;
+    if (question.phase === 'practices') return STEP.practices;
+    return STEP.repo;
+  },
+  repo: STEP.repo,
+  pick: STEP.pick,
+  review: STEP.review,
+  write: STEP.write,
+  done: STEP.done,
+  doneTitle: 'Setup is done',
+  next: [
+    ['personal-config profile', 'save these answers as a profile for more folders'],
+    ['personal-config doctor', 'check what was written'],
+    ['personal-config undo', 'put back what this run changed'],
+  ],
+};
+
+/** One row of a frame menu: what it returns, what it says, and the line under it when focused. */
+export type MenuItem = { value: string; label: string; hint?: string };
+
+/** The questions a command asks that are not in the catalog: a menu, a name, a step change. */
+export type FrameMenu = {
+  choose: (ask: string, items: MenuItem[], initial?: string) => Promise<string>;
+  text: (
+    ask: string,
+    options?: {
+      placeholder?: string;
+      initial?: string;
+      validate?: (v: string) => string | null;
+    },
+  ) => Promise<string>;
+  /** Several rows, `ticked` checked to start; an empty choice is allowed. */
+  many: (ask: string, items: MenuItem[], ticked: string[]) => Promise<string[]>;
+  /**
+   * Moves the rail to a step, for a screen no question would have moved it to. It also starts a
+   * fresh batch confirm, so a command that writes more than once draws each write step.
+   */
+  at: (step: number) => void;
+};
+
 /** Where the frame reads keys and draws, and how big that is. A test passes its own streams. */
 export type FrameIo = {
   input: Readable;
@@ -63,6 +129,7 @@ export type FrameIo = {
 };
 
 export type SetupFrame = {
+  menu: FrameMenu;
   /** Asks `setup`'s questions. `runSetup` wraps it in `checkpointing()`, as it does clack's. */
   ask: Prompter;
   /** Answers `confirmBatch()`: the review step. */
@@ -80,6 +147,7 @@ type RepoCount = { names: string[]; index: number; firstId: string | null; after
 
 type State = {
   io: FrameIo;
+  flow: Flow;
   /** What `setup` said since the last panel that showed it, one line per entry. */
   notes: string[];
   step: number;
@@ -99,11 +167,15 @@ export function terminalIo(): FrameIo {
   };
 }
 
-export function framePrompters(io: FrameIo = terminalIo()): SetupFrame {
+export function framePrompters(
+  io: FrameIo = terminalIo(),
+  flow: Flow = SETUP_FLOW,
+): SetupFrame {
   const state: State = {
     io,
+    flow,
     notes: [],
-    step: STEP.you,
+    step: 0,
     repo: { names: [], index: 0, firstId: null, afterBack: false },
     confirms: 0,
     wrote: false,
@@ -112,6 +184,7 @@ export function framePrompters(io: FrameIo = terminalIo()): SetupFrame {
   return {
     ask,
     confirm: { ...ask, confirm: (m, f) => review(state, m, f) },
+    menu: frameMenu(state),
     run: (s) => run(state, s),
   };
 }
@@ -162,6 +235,98 @@ function questionPrompter(state: State): Prompter {
   };
 }
 
+function frameMenu(state: State): FrameMenu {
+  return {
+    async choose(ask, items, initial) {
+      if (narrow(state)) {
+        return flushed(state, async () => {
+          const value = await p.select({
+            message: ask,
+            options: items.map((i) => ({ value: i.value, label: i.label, hint: i.hint })),
+            initialValue: initial,
+          });
+          return p.isCancel(value) ? leave() : String(value);
+        });
+      }
+      const prompt: SelectPrompt<{ value: string }> = new SelectPrompt({
+        ...streams(state),
+        options: items.map((i) => ({ value: i.value })),
+        initialValue: initial ?? items[0]?.value,
+        render: () =>
+          screen(state, {
+            ask,
+            list: items.map((i) => i.label),
+            cursor: prompt.cursor,
+            tail: hintOf(items[prompt.cursor]?.hint),
+            hints: CHOICE_HINTS,
+          }),
+      });
+      return shown(state, prompt);
+    },
+    async text(ask, options = {}) {
+      const { placeholder = '', initial = '', validate } = options;
+      if (narrow(state)) {
+        return flushed(state, async () => {
+          const value = await p.text({
+            message: ask,
+            placeholder,
+            initialValue: initial,
+            validate: validate ? (v) => validate(v ?? '') ?? undefined : undefined,
+          });
+          return p.isCancel(value) ? leave() : String(value);
+        });
+      }
+      const prompt: TextPrompt = new TextPrompt({
+        ...streams(state),
+        placeholder,
+        initialValue: initial,
+        validate: validate ? (v) => validate(v ?? '') ?? undefined : undefined,
+        render: () =>
+          screen(state, {
+            ask,
+            list: [`› ${prompt.userInput === '' ? placeholder : prompt.userInputWithCursor}`],
+            cursor: -1,
+            tail: prompt.state === 'error' ? [prompt.error] : [],
+            hints: TEXT_HINTS,
+          }),
+      });
+      return shown(state, prompt);
+    },
+    async many(ask, items, start) {
+      if (narrow(state)) {
+        return flushed(state, async () => {
+          const value = await p.multiselect({
+            message: ask,
+            options: items.map((i) => ({ value: i.value, label: i.label, hint: i.hint })),
+            initialValues: start,
+            required: false,
+          });
+          return p.isCancel(value) ? leave() : value.map(String);
+        });
+      }
+      const prompt: MultiSelectPrompt<{ value: string }> = new MultiSelectPrompt({
+        ...streams(state),
+        options: items.map((i) => ({ value: i.value })),
+        initialValues: start,
+        required: false,
+        render: () =>
+          screen(state, {
+            ask,
+            list: items.map((i) => `${ticked(prompt.value, i.value)} ${i.label}`),
+            cursor: prompt.cursor,
+            tail: hintOf(items[prompt.cursor]?.hint),
+            hints: MULTI_HINTS,
+          }),
+      });
+      return shown(state, prompt);
+    },
+    at(step) {
+      state.step = step;
+      state.confirms = 0;
+    },
+  };
+}
+
 /** Below a panel's floor the frame cannot draw, so the step is asked as `setup` asks it (BD-10). */
 function narrow(state: State): boolean {
   return state.io.size().columns < PANEL_MIN + 4;
@@ -174,11 +339,9 @@ async function flushed<T>(state: State, ask: () => Promise<T>): Promise<T> {
 }
 
 function stepOf(state: State, question: Question): number {
-  if (question.id === 'projects-dir') return STEP.where;
-  if (question.phase === 'you') return STEP.you;
-  if (question.phase === 'practices') return STEP.practices;
-  countRepo(state.repo, question.id);
-  return STEP.repo;
+  const step = state.flow.stepOf(question);
+  if (step === state.flow.repo) countRepo(state.repo, question.id);
+  return step;
 }
 
 function countRepo(repo: RepoCount, id: string): void {
@@ -337,7 +500,7 @@ async function askConfirm(
 }
 
 async function askPick(state: State, scans: RepoScan[]): Promise<RepoScan[]> {
-  state.step = STEP.pick;
+  state.step = state.flow.pick;
   const options = scans.map((s) => ({
     value: s.path,
     label: s.name,
@@ -442,7 +605,7 @@ async function scroll(state: State, title: string, text: string): Promise<void> 
  */
 async function review(state: State, message: string, fallback: boolean): Promise<boolean> {
   if (narrow(state)) return flushed(state, () => clackPrompter().confirm(message, fallback));
-  state.step = STEP.review;
+  state.step = state.flow.review;
   const log = trimmed(state.notes);
   const room = () => bodyRoom(state) - 6;
   const prompt = new ScrollPrompt(
@@ -467,15 +630,16 @@ async function review(state: State, message: string, fallback: boolean): Promise
 
 function reviewScreen(state: State, message: string, window: string[], yes: boolean): string {
   const { paint } = state.io;
+  const { flow } = state;
   return draw(
     state,
-    STEP.review,
+    flow.review,
     [
       heading(
         paint,
-        SETUP_STEPS[STEP.review] ?? '',
-        STEP.review + 1,
-        SETUP_STEPS.length,
+        flow.steps[flow.review] ?? '',
+        flow.review + 1,
+        flow.steps.length,
         inner(state),
       ),
       '',
@@ -496,40 +660,37 @@ function startWrite(state: State, message: string): void {
   state.wrote = true;
   state.notes = [];
   const { paint } = state.io;
+  const { flow } = state;
   const body = [
     heading(
       paint,
-      SETUP_STEPS[STEP.write] ?? '',
-      STEP.write + 1,
-      SETUP_STEPS.length,
+      flow.steps[flow.write] ?? '',
+      flow.write + 1,
+      flow.steps.length,
       inner(state),
     ),
     '',
     paint.muted(message),
   ];
-  drawScreen(draw(state, STEP.write, body, []), state.io.output);
+  drawScreen(draw(state, flow.write, body, []), state.io.output);
 }
 
 /** D4's six log lines: the last of what the write said, then where to go next (BD-11). */
 function doneScreen(state: State): string {
   const { paint } = state.io;
-  const next: Array<[string, string]> = [
-    ['personal-config init', 'set up one more folder'],
-    ['personal-config doctor', 'check what was written'],
-    ['personal-config undo', 'put back what this run changed'],
-  ];
+  const { flow } = state;
   return draw(
     state,
-    STEP.done,
+    flow.done,
     [
-      heading(paint, 'Setup is done', STEP.done + 1, SETUP_STEPS.length, inner(state)),
+      heading(paint, flow.doneTitle, flow.done + 1, flow.steps.length, inner(state)),
       '',
       ...trimmed(state.notes)
         .filter((l) => l.trim() !== '')
         .slice(-6),
       '',
       paint.bold('Next'),
-      ...next.flatMap(([command, does]) => [paint.ink(command), paint.muted(`  ${does}`)]),
+      ...flow.next.flatMap(([command, does]) => [paint.ink(command), paint.muted(`  ${does}`)]),
     ],
     [],
   );
@@ -539,12 +700,12 @@ function doneScreen(state: State): string {
 function endScreen(state: State): string {
   const { paint } = state.io;
   const said = trimmed(state.notes);
-  const title = SETUP_STEPS[state.step] ?? '';
+  const title = state.flow.steps[state.step] ?? '';
   return draw(
     state,
     state.step,
     [
-      heading(paint, title, state.step + 1, SETUP_STEPS.length, inner(state)),
+      heading(paint, title, state.step + 1, state.flow.steps.length, inner(state)),
       '',
       ...said.slice(-(bodyRoom(state) - 2)),
     ],
@@ -570,7 +731,10 @@ function screen(state: State, spec: Ask): string {
   const { paint } = state.io;
   const width = inner(state);
   const list = spec.cursor < 0 ? spec.list : choices(paint, spec.list, spec.cursor);
-  const top = [heading(paint, stepTitle(state), state.step + 1, SETUP_STEPS.length, width), ''];
+  const top = [
+    heading(paint, stepTitle(state), state.step + 1, state.flow.steps.length, width),
+    '',
+  ];
   const ask = wrap(spec.ask, width).map((l) => paint.bold(l));
   const hint = spec.tail.flatMap((t) => wrap(t, width)).map((l) => paint.muted(l));
   const tail = hint.length > 0 ? ['', ...hint] : [];
@@ -584,8 +748,8 @@ function screen(state: State, spec: Ask): string {
 
 /** The repo's name beside its step, from the picked list (BD-7). */
 function stepTitle(state: State): string {
-  const title = SETUP_STEPS[state.step] ?? '';
-  if (state.step !== STEP.repo) return title;
+  const title = state.flow.steps[state.step] ?? '';
+  if (state.step !== state.flow.repo) return title;
   const name = state.repo.names[state.repo.index - 1];
   return name === undefined ? title : `${title} · ${name}`;
 }
@@ -639,13 +803,14 @@ function inner(state: State): number {
 
 function draw(state: State, current: number, body: string[], hints: readonly Hint[]): string {
   const { columns, rows } = state.io.size();
-  const labels = [...SETUP_STEPS];
-  if (state.repo.names.length > 0) {
-    labels[STEP.repo] =
-      `Each repo (${Math.max(state.repo.index, 1)} of ${state.repo.names.length})`;
+  const labels = [...state.flow.steps];
+  const { repo } = state.flow;
+  if (repo !== null && state.repo.names.length > 0) {
+    labels[repo] =
+      `${labels[repo] ?? ''} (${Math.max(state.repo.index, 1)} of ${state.repo.names.length})`;
   }
   return frame(state.io.paint, {
-    view: 'setup',
+    view: state.flow.view,
     where: state.io.where,
     columns,
     rows,

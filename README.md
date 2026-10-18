@@ -18,7 +18,7 @@ The hook scripts are bash, so on Windows they need WSL or Git Bash. The two guar
 npx personal-config setup
 ```
 
-Run `npx personal-config` with nothing after it in a terminal, and it opens a guided setup in a full-screen frame, one step at a time, when you have no saved config yet. Once a config is saved, the same command opens a home screen with a summary and a short menu. In a pipe or a script it prints the help text. `personal-config setup`, typed in full, works as it did before.
+Run `npx personal-config` with nothing after it in a terminal, and it opens a guided run in a full-screen frame, one step at a time, when you have no saved config yet: first the global setup for your machine, then the profile manager. Once a config is saved, the same command opens a home screen with a summary and a short menu. In a pipe or a script it prints the help text. `setup`, `global` and `profile` draw the same frame in a terminal, and `--yes` keeps them plain.
 
 `bunx personal-config setup` works the same way. To install it once and run it by name in any folder, install it globally with npm:
 
@@ -164,6 +164,23 @@ Known limitation: Claude Code concatenates and deduplicates `availableModels` ac
 Known bug in 0.7.0: a ceiling chosen at the prompt is recorded on the repo's plan but is not passed to the renderers, so steps 2 to 4 above do not happen. The ceiling is applied when `tierCeiling` is already an answer in a profile or a `--from` file. With `{ "answers": { "tierCeiling": "default" } }` in that file, `setup --yes --dry-run` lists `settings.local.json` in its preview.
 
 See [`docs/choices/tier-ceiling.md`](docs/choices/tier-ceiling.md) for the full options and their trade-offs.
+
+## Global setup and saved profiles
+
+```bash
+personal-config global                                  # once on a machine
+personal-config profile                                 # make, change and apply profiles
+personal-config profile new "Heavy setup" heavy         # or save one with no questions
+personal-config profile apply heavy-setup ~/code/a ~/code/b ~/code/c
+```
+
+Setup is split in two, so that it is never run again for each folder. `global` asks the questions about you (who runs `git commit`, your model tiers, the hooks and skills you want, how the agent talks to you) and writes only the files outside every folder: `~/.claude` and `~/.config/personal-config/config.json`. You run it once, and again only when one of those answers changes.
+
+A profile holds the answers that belong to a folder: code or other work, the whole method or the lighter one, git or not, the record's shape, the tier ceiling, and every practices answer. It has a name you choose, and it is saved as `~/.config/personal-config/profiles/<slug>.json`. `personal-config profile` opens the manager, which lists your profiles and offers four starting points for a new one: Light setup (the lighter method and no house rules), Medium setup (the whole method with plain folders and looser rules), Heavy setup (a ledger, a board and the strictest rules) and Writing setup (documents, not code). You can keep the preset's answers as they are or go through every question with them as the defaults, and the name it suggests is yours to change.
+
+Applying a profile sets up any number of folders in one batch: one preview of every file in every folder, one confirm, one backup that `personal-config undo` restores. Each folder's `.personal-config.json` records the profile by its slug, and the profile records each folder it was applied to. When you change a profile's answers, the manager shows those folders ticked, so a re-apply is one more confirm. A folder keeps its own answers to the questions that are about it alone (its proof line and what is off limits), and `doctor` reads every applied folder back as it reads one `init` wrote. `--profile <slug>` also finds a saved profile, after the built-in ones.
+
+`setup` still asks everything for every repo in one run, for those who want that.
 
 ## `init`
 

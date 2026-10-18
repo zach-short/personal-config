@@ -121,7 +121,7 @@ async function noSavedConfig(): Promise<string | null> {
  * from the saved config over it (D4). `loadConfig` puts the folder above the saved config, so an
  * old folder's copy of `commitPolicy` would otherwise beat the person's current one (F4).
  */
-function initAnswers(config: Config, saved: ConfigLayer): Answers {
+export function initAnswers(config: Config, saved: ConfigLayer): Answers {
   const recorded = saved.globalAnswers ?? {};
   const fromRecord = Object.fromEntries(
     RECORDED.flatMap((key) => (recorded[key] === undefined ? [] : [[key, recorded[key]]])),
@@ -153,7 +153,7 @@ function trackName(answers: Answers): string {
  * folder is owned by definition (`planRepo`), so only a git target needs the login, and only a
  * git target makes the network call for it.
  */
-async function planTarget(
+export async function planTarget(
   target: string,
   answers: Answers,
   config: Config,
@@ -172,7 +172,7 @@ async function planTarget(
  * The check after it is D2 rather than the filter restated: a target inside `~/.claude` would keep
  * its own files through the filter and still write there, so that is refused outright.
  */
-function insideOnly(changes: PlannedChange[], target: string): PlannedChange[] {
+export function insideOnly(changes: PlannedChange[], target: string): PlannedChange[] {
   const kept = changes.filter((change) => isUnder(change.file.path, target));
   const global = kept.filter(
     (c) => isUnder(c.file.path, claudeDir()) || isUnder(c.file.path, configDir()),

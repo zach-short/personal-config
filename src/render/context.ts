@@ -42,6 +42,14 @@ export function planned(
   };
 }
 
+/**
+ * A file that is an input to rendering rather than an output of it, such as a saved profile:
+ * no stamp, as `config.json` carries none, and still previewed, backed up and undoable.
+ */
+export function plannedRecord(path: string, label: string, contents: string): PlannedFile {
+  return { path, label, strategy: 'overwrite', contents };
+}
+
 export type PlanOptions = {
   extension?: string;
   strategy?: PlannedFile['strategy'];

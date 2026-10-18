@@ -139,7 +139,7 @@ export function panelInner(columns: number, withRail: boolean): number {
   return Math.max(Math.min(PANEL_MAX, room), PANEL_MIN) - 6;
 }
 
-export type View = 'setup' | 'home';
+export type View = 'setup' | 'home' | 'global' | 'profile';
 
 /** Brand on the left, the working folder on the right, a rule under both. */
 export function header(paint: Paint, view: View, where: string, columns: number): string[] {

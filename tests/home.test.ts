@@ -10,6 +10,7 @@ const ALL_FALSE: HomeFacts = {
   hasFolderConfig: false,
   hasBoard: false,
   hasStandard: false,
+  profiles: 0,
 };
 
 function labels(facts: Partial<HomeFacts>): string[] {
@@ -17,13 +18,23 @@ function labels(facts: Partial<HomeFacts>): string[] {
 }
 
 describe('homeMenu', () => {
-  test('a folder with nothing set up offers init, doctor, setup and quit', () => {
+  test('a folder with nothing set up offers init, doctor, profiles, global, setup and quit', () => {
     expect(labels({})).toEqual([
       'Set up this folder',
       'Check this folder',
-      'Run setup again',
+      'Profiles',
+      'Change your global setup',
+      'Run the full setup again',
       'Quit',
     ]);
+  });
+
+  test('with a profile saved, this folder is set up from a profile', () => {
+    const menu = homeMenu({ ...ALL_FALSE, profiles: 2 });
+    expect(menu[0]).toEqual({
+      label: 'Set up this folder from a profile',
+      argv: ['profile', 'apply'],
+    });
   });
 
   test('a set-up folder with a board and a standard offers passoff and upgrade, not init', () => {
@@ -31,7 +42,9 @@ describe('homeMenu', () => {
       'Check this folder',
       'Next board item',
       'What changed in the standard',
-      'Run setup again',
+      'Profiles',
+      'Change your global setup',
+      'Run the full setup again',
       'Quit',
     ]);
   });
@@ -43,6 +56,8 @@ describe('homeMenu', () => {
       ['doctor', '.'],
       ['passoff', 'next'],
       ['upgrade', '.'],
+      ['profile'],
+      ['global'],
       ['setup'],
       [],
     ]);
@@ -96,6 +111,7 @@ describe('readHome', () => {
         hasFolderConfig: true,
         hasBoard: true,
         hasStandard: true,
+        profiles: 0,
       });
       expect(state.summary).toContainEqual(['Projects folder', '~/code']);
     });

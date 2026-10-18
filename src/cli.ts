@@ -3,10 +3,12 @@ import { runArchive } from './commands/archive.ts';
 import { runCatalog } from './commands/catalog.ts';
 import { runContext } from './commands/context.ts';
 import { runFold } from './commands/fold.ts';
+import { GLOBAL_FLOW, runGlobal } from './commands/global.ts';
 import { runHandoff } from './commands/handoff.ts';
 import { runHome } from './commands/home.ts';
 import { runInit } from './commands/init.ts';
 import { runPassoff } from './commands/passoff.ts';
+import { PROFILE_FLOW, runProfile } from './commands/profile.ts';
 import { runSetup } from './commands/setup.ts';
 import { runUndo } from './commands/undo.ts';
 import { runUpgrade } from './commands/upgrade.ts';
@@ -15,14 +17,25 @@ import { runDoctor } from './doctor/index.ts';
 import { bareRoute, checkUsage, parseCli } from './lib/args.ts';
 import { clackPrompter } from './lib/ask.ts';
 import { exists } from './lib/disk.ts';
-import { framePrompters } from './lib/frame.ts';
+import {
+  type Flow,
+  framePrompters,
+  SETUP_FLOW,
+  type SetupFrame,
+  terminalIo,
+} from './lib/frame.ts';
 import { configFile } from './lib/paths.ts';
 import type { Cli } from './lib/types.ts';
 import { version } from './lib/version.ts';
 
 const HELP = `personal-config — set up an agent-driven working style in your repos
 
-  personal-config setup                        ask, preview, then write
+  personal-config global                       set up your machine once: the answers that are yours
+  personal-config profile                      make, change and apply named profiles to folders
+  personal-config profile apply <name> <dir…>  set up many folders from one profile, in one batch
+  personal-config profile new <name> [preset]  save a profile (light, medium, heavy, writing)
+  personal-config profile list | delete <name> the saved profiles, or remove one
+  personal-config setup                        every question for every repo, in one run
   personal-config init [path]                  set up one project with your saved answers
   personal-config doctor                       check what is written, against the rules it follows
   personal-config upgrade [path…]             what changed in the standard since a repo adapted it
@@ -65,7 +78,13 @@ overwrites, and can be undone.`;
  * two flags it reads, and handing it a `Cli` would typecheck nowhere but read as if it might.
  */
 const DISPATCH: Record<string, (cli: Cli) => Promise<number>> = {
-  setup: runSetup,
+  setup: (cli) => (framed(cli) ? inFrame(SETUP_FLOW, (f) => runSetup(cli, f)) : runSetup(cli)),
+  global: (cli) =>
+    framed(cli) ? inFrame(GLOBAL_FLOW, (f) => runGlobal(cli, f)) : runGlobal(cli),
+  profile: (cli) =>
+    framed(cli) && asksInProfile(cli)
+      ? inFrame(PROFILE_FLOW, (f) => runProfile(cli, f))
+      : runProfile(cli),
   init: runInit,
   catalog: () => runCatalog(),
   doctor: runDoctor,
@@ -86,8 +105,10 @@ async function main(): Promise<number> {
     const route = bareRoute(interactive(), await exists(configFile()));
     if (route === 'home') return runHome(runArgv);
     if (route === 'guided') {
-      const frame = framePrompters();
-      return frame.run(() => runSetup(parseCli(argv), frame));
+      // The machine first, then the profiles that set up folders (profiles PLAN step 1).
+      const cli = parseCli(argv);
+      const code = await inFrame(GLOBAL_FLOW, (f) => runGlobal(cli, f));
+      return code === 0 ? inFrame(PROFILE_FLOW, (f) => runProfile(cli, f)) : code;
     }
   }
   return runArgv(argv);
@@ -104,6 +125,23 @@ async function main(): Promise<number> {
 function interactive(): boolean {
   const ends = process.stdin.isTTY === true && process.stdout.isTTY === true;
   return ends && (process.stdout.columns ?? 0) > 0;
+}
+
+/** A command that asks draws the frame wherever the bare command would, unless `--yes`. */
+function framed(cli: Cli): boolean {
+  return interactive() && !cli.yes;
+}
+
+/** `profile list`, `delete` and `apply` with folders named ask at most a confirm. */
+function asksInProfile(cli: Cli): boolean {
+  const [action, name, ...paths] = cli.paths;
+  if (action === undefined || action === 'new' || action === 'edit') return true;
+  return action === 'apply' && (name === undefined || paths.length === 0);
+}
+
+function inFrame(flow: Flow, body: (frame: SetupFrame) => Promise<number>): Promise<number> {
+  const frame = framePrompters(terminalIo(), flow);
+  return frame.run(() => body(frame));
 }
 
 /** One command line, from the usage check to its runner. The home menu reaches commands here. */

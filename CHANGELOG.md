@@ -7,6 +7,21 @@ The CLI. The working standard it installs is versioned separately — see
 
 ### Added
 
+- **Global setup and named profiles, applied to many folders at once.** `personal-config global`
+  asks the questions about you and writes only `~/.claude` and `config.json`.
+  `personal-config profile` opens a manager that makes, changes, applies and deletes profiles,
+  each a named set of folder answers saved under `~/.config/personal-config/profiles/`. A new
+  profile starts from Light, Medium, Heavy or Writing setup, a copy, or the recommended answers.
+  `profile apply <name> <folder…>` plans every folder and the profile's own record into one
+  preview and one confirm; each folder's `.personal-config.json` records the profile's slug, and
+  an edit offers the profile's folders back, ticked, for a re-apply. `profile new`, `apply`,
+  `list` and `delete` also run with no terminal. `--profile` reads a saved profile after the
+  built-in ones.
+- **`setup`, `global` and `profile` draw the full-screen frame in a terminal**, the one the bare
+  command used, with a rail of steps for each flow. `--yes` and a pipe keep the plain output. The
+  bare command's first run is now `global`, then the profile manager. The home menu adds
+  Profiles and Change your global setup, and sets a folder up from a profile once one is saved.
+
 - **A wk land step, for a profile that sets `"landStep": "wk"`.** Under `agent-pushes` on a board
   with git, `/delegate` makes the builder's workspace with `wk new <n>` and spawns the builder
   there without worktree isolation, makes the auditor's worktree with `git worktree add`, lands a

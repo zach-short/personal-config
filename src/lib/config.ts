@@ -2,8 +2,9 @@ import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import { asConfigLayer, withoutIdentity } from './config-layer.ts';
 import { exists, readJson } from './disk.ts';
-import { configFile, repoRoot } from './paths.ts';
+import { configFile, contractHome, repoRoot } from './paths.ts';
 import { loadProfileFrom } from './profile-source.ts';
+import { findProfile, profilePath } from './profiles.ts';
 import type { Answers, Cli, Config, ConfigLayer } from './types.ts';
 
 /**
@@ -45,13 +46,19 @@ export function emptyConfig(profile: string): Config {
   };
 }
 
+/**
+ * A built-in profile first, then one the person saved with `profile new`. A saved one carries
+ * only folder answers, so it is a layer of answers and nothing else, and it names no identity.
+ */
 async function readProfile(name: string): Promise<ConfigLayer> {
   const path = join(repoRoot(), 'profiles', `${name}.json`);
   const layer = await readLayer(path);
-  if (Object.keys(layer).length === 0 && name !== 'starter') {
-    throw new Error(`No profile named "${name}" — looked in profiles/${name}.json`);
-  }
-  return layer;
+  if (Object.keys(layer).length > 0 || name === 'starter') return layer;
+  const saved = await findProfile(name);
+  if (saved !== null) return { answers: saved.answers };
+  throw new Error(
+    `No profile named "${name}" — looked in profiles/${name}.json and ${contractHome(profilePath(name))}`,
+  );
 }
 
 /** A missing file is an empty layer; a file that is not one is refused by name and field. */

@@ -4,6 +4,7 @@ import { savedUserConfig } from '../lib/config.ts';
 import { exists } from '../lib/disk.ts';
 import { docRoots } from '../lib/doc-roots.ts';
 import { configFile, expandHome } from '../lib/paths.ts';
+import { listProfiles } from '../lib/profiles.ts';
 import { readDocNames, readStandardPath } from '../lib/repo-config.ts';
 import { type HomeView, homeScreen, painter, sizeOf, toneFor } from '../lib/screens.ts';
 import type { ConfigLayer } from '../lib/types.ts';
@@ -15,6 +16,8 @@ export type HomeFacts = {
   hasFolderConfig: boolean;
   hasBoard: boolean;
   hasStandard: boolean;
+  /** How many profiles are saved (`personal-config profile`). */
+  profiles: number;
 };
 
 /** One menu row: its words, and the argv it hands to the real command. Quit has none. */
@@ -38,15 +41,24 @@ const QUIT: MenuEntry = { label: 'Quit', argv: [] };
 export function homeMenu(facts: HomeFacts): MenuEntry[] {
   if (!facts.configLoads) return [QUIT];
   return [
-    ...(facts.hasFolderConfig ? [] : [{ label: 'Set up this folder', argv: ['init', '.'] }]),
+    ...(facts.hasFolderConfig ? [] : [setUpHere(facts)]),
     { label: 'Check this folder', argv: ['doctor', '.'] },
     ...(facts.hasBoard ? [{ label: 'Next board item', argv: ['passoff', 'next'] }] : []),
     ...(facts.hasStandard
       ? [{ label: 'What changed in the standard', argv: ['upgrade', '.'] }]
       : []),
-    { label: 'Run setup again', argv: ['setup'] },
+    { label: 'Profiles', argv: ['profile'] },
+    { label: 'Change your global setup', argv: ['global'] },
+    { label: 'Run the full setup again', argv: ['setup'] },
     QUIT,
   ];
+}
+
+/** With a profile saved, a folder is set up from one; before that, from the saved answers. */
+function setUpHere(facts: HomeFacts): MenuEntry {
+  return facts.profiles > 0
+    ? { label: 'Set up this folder from a profile', argv: ['profile', 'apply'] }
+    : { label: 'Set up this folder', argv: ['init', '.'] };
 }
 
 export async function readHome(cwd: string): Promise<HomeState> {
@@ -73,12 +85,14 @@ async function loadSaved(): Promise<{ layer: ConfigLayer } | { error: string }> 
 
 async function folderFacts(dir: string): Promise<Omit<HomeFacts, 'configLoads'>> {
   const { config, docs } = await docRoots(dir);
+  const { profiles } = await listProfiles();
   const names = await readDocNames(config);
   const standard = await readStandardPath(config);
   return {
     hasFolderConfig: await exists(join(config, '.personal-config.json')),
     hasBoard: await exists(join(docs, names.board)),
     hasStandard: standard !== null && (await exists(resolve(config, expandHome(standard)))),
+    profiles: profiles.length,
   };
 }
 
