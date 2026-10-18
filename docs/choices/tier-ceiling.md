@@ -31,7 +31,7 @@ A session running on the Default model will see Deep-tier tasks and delegate the
 tool to a subagent with full access. Work assigned as Default or Mechanical runs normally.
 
 **What it writes:** `.claude/settings.local.json` with `availableModels` set to allow only
-Default and Mechanical tiers. This ceiling applies to `/model`, `--model`, the model picker, and
+the Default, Mechanical and Light tiers. This ceiling applies to `/model`, `--model`, the model picker, and
 the Agent tool's `model` parameter.
 
 **Strongest argument against:** Some work that *could* run on Default takes longer or produces
@@ -49,7 +49,7 @@ guarantee all work stays within the cheapest, most predictable tier.
 A session running on the Mechanical model will delegate any Default or Deep work to a subagent.
 
 **What it writes:** `.claude/settings.local.json` with `availableModels` set to allow only
-Mechanical tier and Light (if enabled). This is the tightest cap.
+the Mechanical and Light tiers. This is the tightest cap.
 
 **Strongest argument against:** Many real tasks genuinely need a higher reasoning tier. A
 Mechanical-only ceiling will force frequent delegation and may not be practical for day-to-day
@@ -67,7 +67,8 @@ When you set a ceiling below Deep, this tool:
 1. Asks you which model ID represents each allowed tier (e.g., which model runs at the Default
    level in your setup).
 2. Writes `.claude/settings.local.json` with `availableModels` set to allow only that tier and
-   any tiers below it.
+   any tiers below it. The Light model (Haiku unless you name another) is under every ceiling, so
+   it is always allowed, whether or not you run a fourth tier.
 3. Adds a clause to your repo's `CLAUDE.md` reminding sessions about the cap, but only if your
    `modelRouting` answer is `delegate-or-stop` (so the routing rule is actually in place).
 4. Ensures `.claude/settings.local.json` is git-ignored so the cap doesn't spread to other people

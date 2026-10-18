@@ -7,6 +7,10 @@ The CLI. The working standard it installs is versioned separately — see
 
 ### Fixed
 
+- **A capped repo could not run Haiku.** A ceiling below Deep listed the Light model in
+  `availableModels` only when the fourth tier was turned on, and it is off by default. A ceiling
+  is an upper bound, so the Light model (`haiku` unless another is named) is now allowed under
+  every ceiling, and its model ID is asked for every capped repo.
 - **A capped repo answered by defaults was capped at Opus.** The Mechanical and Light model
   ID questions recommended `opus`, as the Default one does, so pressing enter through a
   Mechanical ceiling wrote `availableModels: ["opus"]`. Each tier now recommends its own family:
@@ -24,7 +28,7 @@ The CLI. The working standard it installs is versioned separately — see
   an edit offers the profile's folders back, ticked, for a re-apply. `profile new`, `apply`,
   `list` and `delete` also run with no terminal. `--profile` reads a saved profile after the
   built-in ones. Each preset sets the folder's model ceiling first: Light allows Sonnet at most,
-  Medium Opus at most, Heavy any model. The manager asks the ceiling as its own step and lists
+  Medium Opus at most, Heavy any model, and Haiku is allowed under all three. The manager asks the ceiling as its own step and lists
   each profile's top model.
 - **`setup`, `global` and `profile` draw the full-screen frame in a terminal**, the one the bare
   command used, with a rail of steps for each flow. `--yes` and a pipe keep the plain output. The

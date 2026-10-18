@@ -208,7 +208,7 @@ describe('the model ceiling, per folder', () => {
     expect(recommended('model-ids-light')).toBe('haiku');
   });
 
-  test('Light allows no Opus or Fable, Medium no Fable, Heavy any model', async () => {
+  test('Light allows no Opus or Fable, Medium no Fable, Heavy any model, and Haiku is always in', async () => {
     const root = await tempDir('pc-ceiling-');
     const home = join(root, 'home');
     const dirs = { light: join(root, 'l'), medium: join(root, 'm'), heavy: join(root, 'h') };
@@ -222,8 +222,8 @@ describe('the model ceiling, per folder', () => {
       const allowed = async (dir: string) =>
         JSON.parse(await readFile(join(dir, '.claude', 'settings.local.json'), 'utf8'))
           .availableModels as string[];
-      expect(await allowed(dirs.light)).toEqual(['sonnet']);
-      expect(await allowed(dirs.medium)).toEqual(['sonnet', 'opus']);
+      expect(await allowed(dirs.light)).toEqual(['sonnet', 'haiku']);
+      expect(await allowed(dirs.medium)).toEqual(['sonnet', 'opus', 'haiku']);
       await expect(allowed(dirs.heavy)).rejects.toThrow();
       expect(await cli(['profile', 'list'], home, root)).toContain('light — up to sonnet');
     } finally {

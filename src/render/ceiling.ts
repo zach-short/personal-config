@@ -22,8 +22,8 @@ export async function renderCeiling(ctx: RenderContext): Promise<PlannedFile | n
   const models: string[] = [];
 
   // The ceiling controls what tiers are available.
-  // - mechanical ceiling: [mechanical, light (if enabled)]
-  // - default ceiling: [default, mechanical, light (if enabled)]
+  // - mechanical ceiling: [mechanical, light]
+  // - default ceiling: [mechanical, default, light]
   // - deep ceiling: nothing (no file needed)
 
   const mechanicalId = answer(ctx, 'modelIds.mechanical', '');
@@ -38,11 +38,11 @@ export async function renderCeiling(ctx: RenderContext): Promise<PlannedFile | n
     if (defaultId && defaultId !== 'other') models.push(defaultId);
   }
 
-  // Add Light tier if enabled and ceiling allows it
-  const lightEnabled = answer(ctx, 'modelLightEnabled', 'no') === 'yes';
-  if (lightEnabled && lightId && lightId !== 'other') {
-    models.push(lightId);
-  }
+  // A ceiling is an upper bound, so the cheapest tier is under every one of them. The Light
+  // model is allowed whether or not the person runs a fourth tier; until 2026-10-18 it needed
+  // `modelLightEnabled`, which defaults to no, so a capped repo could not run Haiku at all.
+  const light = lightId !== '' && lightId !== 'other' ? lightId : 'haiku';
+  models.push(light);
 
   // If no models were collected, don't write the file
   if (models.length === 0) return null;

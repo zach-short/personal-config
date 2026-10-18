@@ -56,7 +56,7 @@ export const PRESETS: Preset[] = [
     id: 'light',
     name: 'Light setup',
     description:
-      'Sonnet at most, never Opus or Fable. The lighter method and no house rules: scripts, experiments, small repos.',
+      'Sonnet and Haiku, never Opus or Fable. The lighter method and no house rules: scripts, experiments, small repos.',
     answers: {
       workKind: 'code',
       configWeight: 'light',
@@ -70,7 +70,7 @@ export const PRESETS: Preset[] = [
     id: 'medium',
     name: 'Medium setup',
     description:
-      'Opus at most, never Fable. The whole method with plain folders for the record, and looser house rules.',
+      'Opus, Sonnet and Haiku, never Fable. The whole method with plain folders for the record, and looser house rules.',
     answers: {
       workKind: 'code',
       configWeight: 'full',

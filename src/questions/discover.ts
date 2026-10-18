@@ -311,13 +311,11 @@ export const DISCOVER_QUESTIONS: Question[] = [
     id: 'model-ids-light',
     phase: 'discover',
     kind: 'select',
-    ask: 'Which model ID represents your Light tier (for repos with a ceiling)?',
+    ask: 'Which model ID represents your Light tier? Every ceiling allows it.',
     configKey: 'modelIds.light',
     readMore: 'model-ids',
     options: modelOptions('haiku'),
-    when: {
-      all: [...CAPPED.all, { key: 'modelLightEnabled', is: 'yes' }],
-    },
+    when: CAPPED,
   },
   {
     id: 'model-ids-light-other',
@@ -328,11 +326,7 @@ export const DISCOVER_QUESTIONS: Question[] = [
     readMore: 'model-ids',
     placeholder: 'e.g. claude-haiku-5-5',
     when: {
-      all: [
-        ...CAPPED.all,
-        { key: 'modelLightEnabled', is: 'yes' },
-        { key: 'modelIds.light', is: 'other' },
-      ],
+      all: [...CAPPED.all, { key: 'modelIds.light', is: 'other' }],
     },
   },
 ];

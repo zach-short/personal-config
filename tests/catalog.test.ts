@@ -142,15 +142,10 @@ describe('the conditionals and the one hidden question survive the trip', () => 
     const cappedAndMechanicalOther = {
       all: [...capped, { key: 'modelIds.mechanical', is: 'other' }],
     };
-    const cappedAndLight = {
-      all: [...capped, { key: 'modelLightEnabled', is: 'yes' }],
-    };
+    // Every ceiling allows the Light model (2026-10-18), so its ID is asked of every capped
+    // repo, not only of a person who runs a fourth tier.
     const cappedAndLightOther = {
-      all: [
-        ...capped,
-        { key: 'modelLightEnabled', is: 'yes' },
-        { key: 'modelIds.light', is: 'other' },
-      ],
+      all: [...capped, { key: 'modelIds.light', is: 'other' }],
     };
     expect(conditions).toEqual({
       // Item 62: `commitRuleLine` is read by `repo.ts`, `standard.ts` and `short-standard.ts`
@@ -211,7 +206,7 @@ describe('the conditionals and the one hidden question survive the trip', () => 
       'model-ids-default-other': cappedAndDefaultOther,
       'model-ids-mechanical': cappedOnly,
       'model-ids-mechanical-other': cappedAndMechanicalOther,
-      'model-ids-light': cappedAndLight,
+      'model-ids-light': cappedOnly,
       'model-ids-light-other': cappedAndLightOther,
       'write-doc': nonCodeWithSkills,
       'write-doc-check': writeDocWithHooks,
