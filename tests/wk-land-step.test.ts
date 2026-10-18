@@ -95,6 +95,27 @@ describe('a landing ref that does not exist yet', () => {
     });
 });
 
+// Re-audit, non-blocking 1: a diverged ref stops the worker and never clears, so a wait that names
+// only the states that clear would wait for ever on it.
+describe('a landing ref that has diverged from the base', () => {
+  for (const name of ['delegate', 'clean-up'])
+    test(`passes: /${name} stops on \`diverged from <base>\` and leaves it to the owner`, async () => {
+      const text = flat(skill(await render(WK_LAND_STEP), name));
+      expect(text, name).toContain(
+        'A ref shown as `diverged from <base>` never clears by waiting',
+      );
+    });
+});
+
+// Re-audit, non-blocking 2: wk counts `submitted`, `landing` and `gated` as in flight, so the case for
+// a wait that ends names all three.
+describe('a changeset still in flight when the wait ends', () => {
+  test('passes: /delegate names every in-flight state', async () => {
+    const text = flat(skill(await render(WK_LAND_STEP), 'delegate'));
+    expect(text).toContain('**Still `submitted`, `landing` or `gated` when the wait ends**');
+  });
+});
+
 // Audit 1, B2: only `/delegate` runs `wk submit`, so a shape it does not render for keeps the text it
 // has without the key. Otherwise `/close-out` says wk lands work that nothing ever submits.
 describe('the key needs a shape that renders /delegate', () => {

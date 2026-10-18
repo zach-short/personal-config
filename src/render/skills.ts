@@ -1188,6 +1188,8 @@ function wkClaimCommit(items: string): string[] {
     'onto) as `missing`, `at <base>; nothing to land` or `behind <base>`. A missing ref is made at the',
     "base by the worker's first pass, so a commit before it is safe. Otherwise wait for the landing in",
     "flight: a commit on the base while the landing ref is ahead of it stops wk's landing worker.",
+    'A ref shown as `diverged from <base>` never clears by waiting: hold the row with that line as its',
+    'reason and leave the claim uncommitted, because the owner decides.',
   ];
 }
 
@@ -1475,7 +1477,8 @@ function foldMoveTiming(shape: SkillShape, landing: Landing): string[] {
       '   and `wk gc --apply`, so this sweep removes no worktree. Each commit this sweep makes on the',
       '   base waits until `wk status` shows the landing ref as `missing`, `at <base>; nothing to land`',
       "   or `behind <base>`: a commit on the base while the landing ref is ahead of it stops wk's",
-      '   worker.',
+      '   worker. A ref shown as `diverged from <base>` never clears by waiting: stop the sweep, make',
+      '   none of its commits, and report that line to the owner, who decides.',
     ];
   return [
     "   Run it only once every `COMMITTED` item's close-out is committed: a fold takes the file out",
