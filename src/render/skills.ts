@@ -334,8 +334,9 @@ function landingOf(ctx: RenderContext, shape: SkillShape): Landing {
   if (!agentPushes(ctx)) return 'none';
   if (shape.folders) return 'direct';
   if (proseLandStep(ctx)) return 'step';
-  // wk lands git commits, so a target without git keeps today's text.
-  return shape.git && answer(ctx, 'landStep') === 'wk' ? 'wk' : 'direct';
+  // Fix round 1, B2: only `/delegate` submits to wk's queue, so a target it does not render for
+  // (the light track, non-code work, no git) keeps main's text at d453fe8.
+  return rendersDelegate(ctx) && answer(ctx, 'landStep') === 'wk' ? 'wk' : 'direct';
 }
 
 /**
@@ -719,7 +720,7 @@ function wkLandStep(): string {
     '  workspace, resolves a conflict in a file its item\'s "Files it owns" lists, commits, and reports',
     "  which file and how, as a fix round's report does. A conflict in any other file is an undeclared",
     "  overlap, and the row is held. Otherwise submit again, and wk's gates run on the result.",
-    '- **Still `submitted` when the wait ends**: read `wk status` and the end of',
+    '- **Still `submitted`, `landing` or `gated` when the wait ends**: read `wk status` and the end of',
     "  `~/.wk/<repo>/landing.log`, where `<repo>` is the name of the primary checkout's folder. A batch",
     '  in flight with a live worker is waited for again. Otherwise the worker stopped:',
     '  - A start error (a gate that cannot start, such as a missing binary or directory) blames no',
@@ -1184,8 +1185,9 @@ function wkClaimCommit(items: string): string[] {
     `\`git commit ${items}/<n>-<slug>.md -m "claim item <n>"\`, so the workspace \`wk new\` cuts holds`,
     "it. wk's queue will not fast-forward the primary checkout over an uncommitted edit to a file the",
     'landing changes. Commit it only while `wk status` shows the landing ref (the branch wk lands',
-    'onto) `at <base>; nothing to land` or `behind <base>`. Otherwise wait for the landing in flight:',
-    "a commit on the base while the landing ref is ahead of it stops wk's landing worker.",
+    'onto) as `missing`, `at <base>; nothing to land` or `behind <base>`. A missing ref is made at the',
+    "base by the worker's first pass, so a commit before it is safe. Otherwise wait for the landing in",
+    "flight: a commit on the base while the landing ref is ahead of it stops wk's landing worker.",
   ];
 }
 
@@ -1471,8 +1473,9 @@ function foldMoveTiming(shape: SkillShape, landing: Landing): string[] {
       "   Run it only once every `COMMITTED` item's tracked close-out is on the base: `wk status`",
       "   prints each landed changeset's commit. Finished workspaces are wk's to remove, by `wk gc`",
       '   and `wk gc --apply`, so this sweep removes no worktree. Each commit this sweep makes on the',
-      '   base waits until `wk status` shows the landing ref `at <base>; nothing to land` or',
-      "   `behind <base>`: a commit on the base while the landing ref is ahead of it stops wk's worker.",
+      '   base waits until `wk status` shows the landing ref as `missing`, `at <base>; nothing to land`',
+      "   or `behind <base>`: a commit on the base while the landing ref is ahead of it stops wk's",
+      '   worker.',
     ];
   return [
     "   Run it only once every `COMMITTED` item's close-out is committed: a fold takes the file out",

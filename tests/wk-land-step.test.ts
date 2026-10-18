@@ -13,6 +13,7 @@ import { DEFAULT_ANSWERS, testContext, testRepoPlan, WK_LAND_STEP } from './help
 async function render(
   profileKeys: Answers,
   commitPolicy = 'agent-pushes',
+  shape: Answers = {},
 ): Promise<PlannedFile[]> {
   const answers: Answers = {
     ...DEFAULT_ANSWERS,
@@ -22,6 +23,7 @@ async function render(
     usesGit: 'yes',
     skills: 'all',
     commitPolicy,
+    ...shape,
   };
   return renderAll(testContext(answers, testRepoPlan()));
 }
@@ -49,7 +51,7 @@ describe('/delegate under landStep "wk"', () => {
     // Review finding 4a: a stopped worker leaves the changeset `submitted`, so the wait has a limit
     // and the stop has its own next actions.
     expect(text).toContain('Never a wait with no limit');
-    expect(text).toContain('**Still `submitted` when the wait ends**');
+    expect(text).toContain('**Still `submitted`, `landing` or `gated` when the wait ends**');
     expect(text).toContain('`every gate skipped`');
     expect(text).toContain('`diverged from <base>`');
     expect(text).toContain('`wk land --loop`');
@@ -79,6 +81,36 @@ describe('/close-out and /clean-up under landStep "wk"', () => {
       expect(text, name).toContain('`wk gc`');
       expect(text, name).not.toContain('git worktree remove <worktree>');
     });
+});
+
+// Audit 1, B1: a repository that never landed through wk has no landing ref, and `wk status` prints
+// it as `missing`. A wait that names only the other two states never ends there.
+describe('a landing ref that does not exist yet', () => {
+  for (const name of ['delegate', 'clean-up'])
+    test(`passes: /${name} lets a commit on the base go ahead while the ref is \`missing\``, async () => {
+      const text = flat(skill(await render(WK_LAND_STEP), name));
+      expect(text, name).toContain(
+        'as `missing`, `at <base>; nothing to land` or `behind <base>`',
+      );
+    });
+});
+
+// Audit 1, B2: only `/delegate` runs `wk submit`, so a shape it does not render for keeps the text it
+// has without the key. Otherwise `/close-out` says wk lands work that nothing ever submits.
+describe('the key needs a shape that renders /delegate', () => {
+  const shapes: Record<string, Answers> = {
+    'the light track': { configWeight: 'light' },
+    'non-code work': { workKind: 'non-code' },
+    'no git': { usesGit: 'no' },
+  };
+  for (const [label, shape] of Object.entries(shapes))
+    for (const name of ['close-out', 'clean-up', 'handoff'])
+      test(`passes: on ${label} /${name} renders as it does without the key`, async () => {
+        const without = skill(await render({}, 'agent-pushes', shape), name);
+        const withKey = skill(await render(WK_LAND_STEP, 'agent-pushes', shape), name);
+        expect(withKey, `${label} ${name}`).toBe(without);
+        expect(withKey, `${label} ${name}`).not.toContain('wk submit');
+      });
 });
 
 describe('the key needs agent-pushes', () => {
