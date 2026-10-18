@@ -76,7 +76,7 @@ item 85 is `DONE - HANDOFF 111`, and its findings became rows 95 to 98, of which
 Added by Phase 7, re-checked at `8152a42` on 2026-10-15, with Phase 6 signed off and not
 committed in the same checkout. G43 holds (`/PART0-PROMPT.md` is still the one uncommitted line in
 `.gitignore`). G47 is resolved: item 82 is `DONE - HANDOFF 110` and handed its standard edit to
-this phase (`docs/incomplete/context-ceilings/SCOPE.md` §7). G64 holds.
+this phase (`~/Projects/archive/personal-config/context-ceilings/SCOPE.md` §7). G64 holds.
 
 | # | Claim | Verified state | Citation |
 |---|---|---|---|

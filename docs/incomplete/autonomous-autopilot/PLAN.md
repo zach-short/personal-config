@@ -233,7 +233,7 @@ Scope.
 1. `docs/incomplete/delegate-autopilot/DESIGN.md`: the three dated notes of design D11, placed
    under D19, under D24, and under section 6's first bullet, each as a new paragraph after the
    decision's last line. Edit no existing line.
-2. `docs/incomplete/worktree-sweep/SCOPE.md`: the status-line sentence of design D11, appended to
+2. `~/Projects/archive/personal-config/worktree-sweep/SCOPE.md`: the status-line sentence of design D11, appended to
    the existing status paragraph.
 3. `docs/choices/commit-policy.md` and `docs/choices/skills.md`: the four paragraphs of design D12,
    placed where D12 says. Replace the one sentence D12 names (`skills.md:154`); add the rest.

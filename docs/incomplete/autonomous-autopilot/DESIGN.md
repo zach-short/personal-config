@@ -275,7 +275,7 @@ Under section 6, first bullet:
 
 > **Amended 2026-10-16.** Under `agent-pushes`, `/passoff` carries one added sentence (autonomous-autopilot D10) and `/clean-up` and `/close-out` carry the run's own commit in place of the owner's blocks (D7). The other policies render the bytes above.
 
-One more pointer, in `docs/incomplete/worktree-sweep/SCOPE.md`'s status line: "Under
+One more pointer, in `~/Projects/archive/personal-config/worktree-sweep/SCOPE.md`'s status line: "Under
 `agent-pushes` a landed row's worktrees pass the existing merged-and-clean check
 (autonomous-autopilot D1, 2026-10-16); this sweep stays needed under `print-blocks` and
 `agent-commits`."
