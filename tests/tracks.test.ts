@@ -299,6 +299,10 @@ const COMMIT_PARAGRAPH = '**Commits are the owner’s.**';
  * says `DONE` is final and folds in a folder with no git, which `/clean-up` and `/close-out` say
  * in one clause each; `PASSOFF.md`'s no-git note is written only for a folder target. First
  * drafted as 2.1.0 and 2.1.1 on 2026-10-15. 83 still, and no other key moved.
+ *
+ * **`completion-gate.sh` moved per variant on 2026-10-18, gate-contract scope A1.** A stop in a
+ * subfolder climbs to the nearest `.personal-config.json`, never above the git top level, where it
+ * used to look in that one folder and skip the gate. Three keys, 83 still.
  */
 describe('§3.1 row 1 — code + full + git is the 0.3.0 output, byte for byte bar one skill', () => {
   const FULL = answersFor(CODE_FULL_GIT);

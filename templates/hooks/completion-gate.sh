@@ -144,14 +144,25 @@ done <<<"$(candidates)"
 # a `GIT_COMMON_DIR` in the environment named its own repository from any folder. And a git dir
 # made by `--separate-git-dir=<x>/.git` round-trips to `<x>`, which holds no checkout, so the
 # candidate must hold the files its index tracks: from `<x>` every one of them reads as deleted.
+#
+# The folder is the nearest one holding the file, climbing from where the stop happened. Until
+# 2026-10-18 the answer was that one folder: a stop in `docs/bench` looked for
+# `<main>/docs/bench/.personal-config.json`, found nothing and skipped the gate, 83 times in one
+# repo's log. In a linked worktree the climb is through the main checkout's tree, since the file
+# is untracked and exists only there. The climb stops at the git top level, so a submodule or a
+# nested repository never reaches the config of the repository around it, and a folder that is in
+# no repository, or whose git cannot be trusted, is not climbed at all.
 config_dir() {
-  local git_dir common main prefix indexed missing
+  local git_dir common main prefix indexed missing top start
   unset GIT_DIR GIT_WORK_TREE GIT_COMMON_DIR
   git_dir="$(git rev-parse --path-format=absolute --git-dir 2>/dev/null)" || { pwd; return; }
   common="$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" || { pwd; return; }
   case "$git_dir" in /*) ;; *) pwd; return ;; esac
   case "$common" in /*) ;; *) pwd; return ;; esac
-  if [ "$git_dir" = "$common" ]; then pwd; return; fi
+  # Every answer below that is not the main checkout climbs this checkout's own tree, so a stop
+  # that cannot be mapped still finds a config above it in the same checkout, and nothing beyond.
+  top="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+  if [ "$git_dir" = "$common" ]; then climb "$top" "$(pwd -P)" "$(pwd)"; return; fi
 
   case "$common" in
     */.git) main="${common%/.git}" ;;
@@ -163,17 +174,36 @@ config_dir() {
   if [ -z "$main" ] ||
     [ "$(git -C "$main" rev-parse --path-format=absolute --git-dir 2>/dev/null)" != "$common" ] ||
     [ "$(git -C "$main" rev-parse --show-toplevel 2>/dev/null)" != "$main" ]; then
-    pwd
+    climb "$top" "$(pwd -P)" "$(pwd)"
     return
   fi
   indexed="$(git -C "$main" ls-files 2>/dev/null | wc -l)"
   missing="$(git -C "$main" ls-files --deleted 2>/dev/null | wc -l)"
   if [ "$indexed" -gt 0 ] && [ "$missing" -ge "$indexed" ]; then
-    pwd
+    climb "$top" "$(pwd -P)" "$(pwd)"
     return
   fi
   prefix="$(git rev-parse --show-prefix 2>/dev/null || true)"
-  printf '%s\n' "$main${prefix:+/${prefix%/}}"
+  start="$main${prefix:+/${prefix%/}}"
+  climb "$main" "$start" "$start"
+}
+
+# `climb <top> <start> <none>` prints the nearest folder from `<start>` up to `<top>` that holds
+# `.personal-config.json`, and `<none>` when none does, so the log's `looked=` names the folder
+# the stop happened in, as it did before the climb. A `<start>` that is not inside `<top>` (an
+# empty top, a relative one, a path git spelled differently) is not climbed: `<none>` is checked
+# alone, the open direction. `<start>` is physical (`pwd -P`) because git prints the top level
+# with its symlinks resolved, and macOS's temporary folders sit behind one.
+climb() {
+  local top="$1" dir="$2"
+  case "$top" in /?*) ;; *) printf '%s\n' "$3"; return ;; esac
+  case "$dir" in "$top" | "$top"/*) ;; *) printf '%s\n' "$3"; return ;; esac
+  while [ -n "$dir" ]; do
+    if [ -f "$dir/.personal-config.json" ]; then printf '%s\n' "$dir"; return; fi
+    [ "$dir" != "$top" ] || break
+    dir="${dir%/*}"
+  done
+  printf '%s\n' "$3"
 }
 
 # One line per stop that reaches the gate, appended where `personal-config` keeps its own state,
