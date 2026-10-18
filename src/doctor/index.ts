@@ -29,6 +29,7 @@ import { stampDrift } from './rules/stamp-drift.ts';
 import { stepNumbers } from './rules/step-numbers.ts';
 import { unfoldedRule } from './rules/unfolded.ts';
 import { adaptationFix, unstampedAdaptation } from './rules/unstamped-adaptation.ts';
+import { wkConfig } from './rules/wk-config.ts';
 import { collectDocs, type Doc } from './scan.ts';
 
 const DOC_RULES = [
@@ -103,6 +104,7 @@ export async function runDoctorOn(
   // necessarily been through this wizard. The git read answers null wherever it cannot apply.
   const fromSettled = await settledSupersession(root, docs);
   const fromWeight = await alwaysOnWeight(root, expectation.config.answers);
+  const fromWk = configured ? await wkConfig(root, expectation.config.answers) : [];
 
   return {
     findings: sort([
@@ -113,6 +115,7 @@ export async function runDoctorOn(
       ...fromIgnore,
       ...fromSettled,
       ...fromWeight,
+      ...fromWk,
     ]),
     checked: docs.length,
   };
