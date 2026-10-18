@@ -305,10 +305,11 @@ export type Finding = {
   fixable: boolean;
   /**
    * Present and true is the whole signal, the way `PlannedFile.mode` is: this finding is
-   * reported and does not fail the run (stamp-provenance `DESIGN.md` D4). Two findings carry
+   * reported and does not fail the run (stamp-provenance `DESIGN.md` D4). Three findings carry
    * it: a standard-version lag in an adapted file, which is work to schedule rather than a defect
-   * in the repo, and a `files-grammar` token, which breaks no rule the frozen standard states
-   * (row 124, owner decision 17). Every other finding keeps its non-zero exit by leaving it out.
+   * in the repo, a `files-grammar` token, which breaks no rule the frozen standard states
+   * (row 124, owner decision 17), and a `gate-agree` mismatch, which is an approximate
+   * comparison of two gate lists. Every other finding keeps its non-zero exit by leaving it out.
    */
   advisory?: boolean;
 };

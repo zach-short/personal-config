@@ -18,6 +18,7 @@ import { archiveIndex } from './rules/archive-index.ts';
 import { archivedCitations } from './rules/archived-citations.ts';
 import { boardCommits, boardStatusRule } from './rules/board-status.ts';
 import { filesGrammar } from './rules/files-grammar.ts';
+import { gateAgree } from './rules/gate-agree.ts';
 import { ignoredFiles, ignoreFix, ignoreTarget } from './rules/ignored.ts';
 import { itemFiles } from './rules/item-files.ts';
 import { ledgerFoldCeiling } from './rules/ledger-fold-ceiling.ts';
@@ -105,6 +106,7 @@ export async function runDoctorOn(
   const fromSettled = await settledSupersession(root, docs);
   const fromWeight = await alwaysOnWeight(root, expectation.config.answers);
   const fromWk = configured ? await wkConfig(root, expectation.config.answers) : [];
+  const fromGates = configured ? await gateAgree(root, expectation.config.answers) : [];
 
   return {
     findings: sort([
@@ -116,6 +118,7 @@ export async function runDoctorOn(
       ...fromSettled,
       ...fromWeight,
       ...fromWk,
+      ...fromGates,
     ]),
     checked: docs.length,
   };
