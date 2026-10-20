@@ -29,6 +29,8 @@ describe('checkUsage accepts everything the tool actually takes', () => {
     ['a command with positional paths', ['doctor', 'a', 'b']],
     ['help as a flag', ['--help']],
     ['version as a flag', ['--version']],
+    ['--v as a version alias', ['--v']],
+    ['-v as a version alias', ['-v']],
     ['help as a command', ['help']],
     ['a flag with an = value', ['setup', '--profile=zach']],
   ])('%s passes', (_label, argv) => {
@@ -106,6 +108,12 @@ describe('the paths that were already right stay right', () => {
     expect(result.code).toBe(0);
     expect(result.stdout).toContain('personal-config setup');
     expect(result.stderr).toBe('');
+  });
+
+  test.each(['--v', '-v'])('%s prints the version too', async (flag) => {
+    const result = await run([flag]);
+    expect(result.code).toBe(0);
+    expect(result.stdout.trim()).toMatch(/^\d+\.\d+\.\d+$/);
   });
 
   test('--version still exits 0', async () => {

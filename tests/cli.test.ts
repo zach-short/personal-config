@@ -69,9 +69,9 @@ describe('help and version', () => {
     expect(result.code).toBe(0);
     expect(result.stdout).toContain('personal-config setup');
     // The claim is load-bearing, so it is asserted with its one exception rather than without:
-    // `--from <url|id>` fetches, and a promise that no longer holds is worse than none.
+    // `--from <url|id>` and `update` fetch, and a promise that no longer holds is worse than none.
     expect(result.stdout).toContain('Nothing leaves your machine');
-    expect(result.stdout).toContain('--from <url|id> is the one exception');
+    expect(result.stdout).toContain('--from <url|id> and update are the exceptions');
   });
 
   test('--version prints the package version', async () => {

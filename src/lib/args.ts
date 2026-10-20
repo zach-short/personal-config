@@ -18,6 +18,7 @@ export const COMMANDS = [
   'worktree',
   'context',
   'upgrade',
+  'update',
   'help',
   'version',
 ] as const;
@@ -44,6 +45,8 @@ const OPTIONS = {
   json: { type: 'boolean', default: false },
   help: { type: 'boolean', default: false },
   version: { type: 'boolean', default: false },
+  // `--v` and `-v` are what a person types first; both mean `--version`.
+  v: { type: 'boolean', short: 'v', default: false },
 } as const;
 
 export function parseCli(argv: string[]): Cli {
@@ -55,7 +58,11 @@ export function parseCli(argv: string[]): Cli {
 
   const [first, ...rest] = positionals;
   return {
-    command: resolveCommand(first, values.help === true, values.version === true),
+    command: resolveCommand(
+      first,
+      values.help === true,
+      values.version === true || values.v === true,
+    ),
     profile: values.profile ?? 'starter',
     yes: values.yes === true,
     dryRun: values['dry-run'] === true,

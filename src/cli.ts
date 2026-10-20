@@ -11,6 +11,7 @@ import { runPassoff } from './commands/passoff.ts';
 import { PROFILE_FLOW, runProfile } from './commands/profile.ts';
 import { runSetup } from './commands/setup.ts';
 import { runUndo } from './commands/undo.ts';
+import { runUpdate } from './commands/update.ts';
 import { runUpgrade } from './commands/upgrade.ts';
 import { runWorktree } from './commands/worktree.ts';
 import { runDoctor } from './doctor/index.ts';
@@ -39,6 +40,7 @@ const HELP = `personal-config — set up an agent-driven working style in your r
   personal-config init [path]                  set up one project with your saved answers
   personal-config doctor                       check what is written, against the rules it follows
   personal-config upgrade [path…]             what changed in the standard since a repo adapted it
+  personal-config update                       install the latest release of this tool from npm
   personal-config undo                         restore the files the last run overwrote
   personal-config passoff next                 the next OPEN board item, with its prompt
   personal-config passoff show <n>             board item <n>, with its prompt
@@ -66,10 +68,11 @@ Options
   --log-days <n>       fold only: log lines older than this leave the ledger  (default: 90)
   --sentinel <phrase>  context only: a phrase unique to this conversation  (required)
   --json               passoff next and show only: one JSON object on stdout, refusals on stderr
-  --help, --version
+  --help, --version, -v
 
-Nothing leaves your machine — --from <url|id> is the one exception, and it only fetches the
-profile you ask for. Every run previews the whole file tree before writing, backs up anything it
+Nothing leaves your machine — --from <url|id> and update are the exceptions. The first fetches
+the profile you ask for. The second asks the npm registry for the latest version number. Every
+run previews the whole file tree before writing, backs up anything it
 overwrites, and can be undone.`;
 
 /**
@@ -97,6 +100,7 @@ const DISPATCH: Record<string, (cli: Cli) => Promise<number>> = {
   worktree: runWorktree,
   context: runContext,
   upgrade: runUpgrade,
+  update: runUpdate,
 };
 
 async function main(): Promise<number> {
