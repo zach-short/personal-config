@@ -18,7 +18,7 @@ The hook scripts are bash, so on Windows they need WSL or Git Bash. The two guar
 npx personal-config setup
 ```
 
-Run `npx personal-config` with nothing after it in a terminal, and it opens a guided run in a full-screen frame, one step at a time, when you have no saved config yet: first the global setup for your machine, then the profile manager. Once a config is saved, the same command opens a home screen with a summary and a short menu. In a pipe or a script it prints the help text. `setup`, `global` and `profile` draw the same frame in a terminal, and `--yes` keeps them plain.
+Run `npx personal-config` with nothing after it in a terminal, and it always opens a home screen. What the screen offers depends on where you are. A machine with nothing saved is asked to set up: first the global setup for your machine, then the profile manager. A folder not yet set up is offered setup, and a set-up folder is offered its check, its next board item and its standard changes. No screen shows more than six rows, and `Other…` holds the rest. In a pipe or a script the command prints the help text. `setup`, `global` and `profile` draw the same full-screen frame in a terminal, and `--yes` keeps them plain.
 
 `bunx personal-config setup` works the same way. To install it once and run it by name in any folder, install it globally with npm:
 
@@ -39,10 +39,13 @@ The rest of this file writes commands as `personal-config <command>`, which is h
 
 | Command | What it does |
 |---|---|
-| `setup` | Asks, previews, then writes |
+| `global` | Asks the questions about you, once per machine, and writes `~/.claude` |
+| `profile` | Opens the manager for named profiles. `profile apply <name> <dir…>` sets up many folders in one batch |
+| `setup` | Asks every question for every repo, previews, then writes |
 | `init [path]` | Sets up one project with the answers `setup` saved |
 | `doctor` | Checks what the documents claim against what is there |
 | `upgrade` | Lists what changed in the standard since a repo adapted its copy |
+| `update` | Installs the latest release of this tool from npm. `--dry-run` only reports |
 | `undo` | Restores the files the last run overwrote |
 | `passoff next`, `passoff show <n>`, `passoff claim <n>` | Reads the board: the next open item, any item, and taking it |
 | `handoff step` | Reports the next free ledger step number |
@@ -51,6 +54,12 @@ The rest of this file writes commands as `personal-config <command>`, which is h
 | `worktree <lane>` | Plans a lane's worktree with its checkout recipe |
 | `context --sentinel <phrase>` | Prints this session's context size |
 | `catalog` | Regenerates `catalog.json`, the questions as data |
+
+```bash
+personal-config --help
+```
+
+![Output of personal-config --help](docs/images/pc-help.png)
 
 ## What it asks
 
@@ -94,13 +103,13 @@ The wizard asks only what a person knows. It does not guess what the repo knows:
 | `.claude/settings.local.json` | repo | Written only when you cap the repo's model tier. See the tier ceiling below. |
 | ignore lines | `.gitignore` or `.git/info/exclude` | Lines that keep the personal files out of git. |
 
-The long standard this version writes is 2.1.0. Its Part 4 reads the model tiers from the bottom, so a task takes the lowest tier that fits and the Default tier is the fallback when no lower row fits.
+The long standard this version writes is 2.2.0. Its Part 4 reads the model tiers from the bottom, so a task takes the lowest tier that fits and the Default tier is the fallback when no lower row fits. Standard 2.2.0 adds one board status, `COMMITTED, <record>, <short hash>`. It records that a commit has landed, where `DONE` only means built and recorded. A repo adapted from 2.0.0 or 2.1.0 should be re-adapted. Run `personal-config upgrade` to list the changes first.
 
 Your own `~/.claude/CLAUDE.md` is never edited. Each rule is its own file in `~/.claude/rules/`.
 
 Which hooks you get depends on the hooks answer and on your track. Answering "no hooks" writes none. Otherwise:
 
-- The completion gate is a `Stop` hook. It refuses to end a turn while a changed source file still holds a placeholder such as "rest of the file", and then runs the gate command recorded as `gateCommand` in the repo's `.personal-config.json`. That command is empty until Part 0 or you fill it, and an empty command is skipped. It is written on every track.
+- The completion gate is a `Stop` hook. It refuses to end a turn while a changed source file still holds a placeholder such as "rest of the file", and then runs the gate command recorded as `gateCommand` in the repo's `.personal-config.json`. That command is empty until Part 0 or you fill it, and an empty command is skipped. It is written on every track. From 0.9.0 it climbs from a subfolder to the nearest `.personal-config.json`, never above the git top level, and runs the gate in the folder that config came from. A stop in `docs/bench` therefore runs the root gate instead of skipping it.
 - The commit guard blocks `git commit`, `git push`, `git add -A` and `git add .`, and every other git verb that writes a commit: `cherry-pick`, `revert`, `merge`, `rebase`, `am` and `pull`. It lets through `git merge --ff-only <branch>`, and `--abort` or `--quit` on any of them but `pull`, which write none. It blocks `gh pr merge` as a push. It is written for work kept in git, on the whole-method setup, unless you let the agent commit and push: that answer installs no commit guard, and a later run removes one an earlier run installed. It reads your commit policy from `commit-policy`, a one-word file written beside it. If you let the agent commit, it lets through one plain `git commit <files> -m "<message>"` that names its files and holds no other shell syntax, and still blocks the rest. If you chose only you, or no commit rule, or the file is missing, it blocks every commit. Under every policy that installs it, it also blocks the commands that throw away uncommitted work another session may own: `git stash` but `list` and `show`, `git checkout -- <path>`, `git checkout .` and `-f`, `git restore` of the working tree, `git reset --hard`, and `git switch --discard-changes` and `-f`. It tells the agent to copy the file aside with `cp` instead.
 - The delete guard blocks `rm`, `rmdir` and `unlink` and asks for the file to be moved aside. It is written for work that is not code.
 - The session banner prints where the ledger and standard are and the top open board row. It is written on the whole-method setup when you take the option that includes it.
@@ -120,7 +129,15 @@ See [`examples/`](examples) for a filled ledger, board, archive index and Part 0
 - A wrong answer is fixable in place. `← back` re-asks the previous question instead of making you finish the run and start another, and the correction replaces the answer it corrects, so an interrupted run resumes with the answer you meant.
 - An interrupted run is picked up, not retyped. Each answer is written to `~/.config/personal-config/run.json` as you give it, so `Ctrl+C` on question twenty costs that one question. The next `setup` offers to resume and says how many answers it found and when. Decline and the file is deleted. A run that writes files, or finds nothing to write, deletes it too. A dry run or a declined preview keeps it, so a second run does not make you retype. A checkpoint from a different version is discarded. It is a scratch file and not your saved config, and nothing in it becomes a default until a run completes.
 - Re-running replaces what the tool wrote and touches nothing else. Every generated file carries a stamp that names the version, the date, a hash of your answers and the standard version. A file at one of those paths without that stamp, or with one marked `adapted`, is left alone and named in the run's report.
-- The program makes two network calls and no others. The first is `gh api user`, to find your GitHub login. It runs only while `setup` is choosing projects or `init` is setting up a folder that is a git repo, only if `gh` is installed, and not at all when the profile already names a login. The second is the fetch behind `setup --from <url|id>`, which happens only when you pass that flag and sends nothing but the request. Your answers are never uploaded by this tool.
+- The program makes three network calls and no others. The first is `gh api user`, to find your GitHub login. It runs only while `setup` is choosing projects or `init` is setting up a folder that is a git repo, only if `gh` is installed, and not at all when the profile already names a login. The second is the fetch behind `setup --from <url|id>`, which happens only when you pass that flag and sends nothing but the request. The third is `update`, which asks the npm registry for the latest version number and installs it only when you say yes. Your answers are never uploaded by this tool.
+
+A preview looks like this. It is a real `--dry-run` in a demo repo, and nothing is written:
+
+```bash
+personal-config init --profile starter --yes --dry-run
+```
+
+![Dry-run preview of personal-config init, listing each file it would write](docs/images/pc-dryrun.png)
 
 A stamp looks like this:
 
@@ -223,6 +240,14 @@ personal-config doctor ~/code/app # or any paths
 - a board or ledger with more than 400 lines that `fold` could move
 - a board or ledger over 60,000 characters (about 15k tokens), whether or not a fold would help (`ledger-fold-ceiling`; raise it with the `doctor.ledgerCharCeiling` answer)
 - always-loaded context over 8,000 tokens, counted as characters divided by four: the global `~/.claude/CLAUDE.md`, every `~/.claude/rules/*.md` without a `paths:` scope, the repo's `CLAUDE.md`, the repo's auto-memory `MEMORY.md`, and what the installed session banner prints (`always-on-weight`; raise it with the `doctor.alwaysOnCeiling` answer)
+- the completion gate's command (`gate-agree`) disagrees with the `[[gates.run]]` list in the repo's `wk` config, so the two gates would check different things
+- a `wk` land step is set (`landStep` is `wk`) without landing on in the config, or without a gate to run before the land (`wk-config`)
+
+```bash
+personal-config doctor examples
+```
+
+![Output of personal-config doctor on the examples folder, with advisory findings](docs/images/pc-doctor.png)
 
 One more check reads git and not the files. It flags a line under a `## Settled` heading that your uncommitted work removes or rewrites, with no supersession stated anywhere in that file's diff. Adding an entry records a decision and is never flagged. Only undoing one is. The check is silent where it cannot see: a clean tree, a directory that is not a repository, and a ledger kept untracked all produce nothing.
 
@@ -247,6 +272,16 @@ It reads nothing from the network, because the changelog ships inside the packag
 It answers for the adapted standard only. A standard that `setup` wrote and nobody adapted is brought up to date by re-running `setup`, and `doctor` reports every generated file a re-run would change. Where there is no adapted standard, `upgrade` prints one line saying why and exits 0. That covers a setup that uses the short standard (other work, or the lighter setup), a repo never set up, and a copy adapted before the marker existed, which `doctor --fix` stamps first. Being behind also exits 0, because it is work to schedule. A stamp newer than the installed standard exits 1. It means this copy of the tool is out of date, and reading the changelog backwards would tell you to undo a change.
 
 Upgrading the CLI itself is npm's job, but `npx personal-config` can run a copy it already cached instead of the one just published. If a stamp reports newer than installed when it should not, rule out that stale cache first by running `npx personal-config@latest upgrade` (or `@latest setup`) to force the current release.
+
+## `update`
+
+```bash
+personal-config update            # say whether a newer release exists, and ask before installing it
+personal-config update --dry-run  # report only
+personal-config -v                # print the installed version (also --version)
+```
+
+`update` asks the npm registry for the latest version of this tool. If yours is behind, it asks, then runs `npm install -g personal-config@latest`. It changes nothing without a yes. This is the only network call that is not part of setup, and the [control guarantees](#the-control-guarantees) list it.
 
 ## `passoff`, `handoff`, `archive` and `fold`
 
