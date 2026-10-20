@@ -1,5 +1,5 @@
 {
-  "catalogVersion": "0.8.0+0ecb7c39",
+  "catalogVersion": "0.9.0+0ecb7c39",
   "questions": [
     {
       "id": "work-kind",

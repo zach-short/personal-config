@@ -3,7 +3,7 @@
 The CLI. The working standard it installs is versioned separately — see
 [`standard/CHANGELOG.md`](standard/CHANGELOG.md).
 
-## Unreleased
+## 0.9.0 — 2026-10-20
 
 ### Fixed
 
@@ -24,6 +24,18 @@ The CLI. The working standard it installs is versioned separately — see
 
 ### Added
 
+- **`personal-config update`.** It asks the npm registry for the latest version, says whether
+  yours is behind, and on a yes runs `npm install -g personal-config@latest`. `--dry-run` only
+  reports. This is the second command that reaches the network, after `--from`, and the help
+  text now says so.
+- **`-v` and `--v` print the version**, the same as `--version`.
+- **A bare `personal-config` in a terminal always opens the home screen.** What it shows first
+  depends on where you are. A machine with nothing saved is asked whether to set up (the global
+  answers, then profiles). A folder not yet set up is offered setup. A set-up folder is offered
+  its check, its next board item and its standard changes. No screen shows more than six rows.
+  `Other…` sits above `Quit` and opens the rest in short groups (This folder, Your setup, This
+  tool), each with `← Back`. The shell wrapper now hands a bare call to the CLI instead of an
+  `fzf` list.
 - **Global setup and named profiles, applied to many folders at once.** `personal-config global`
   asks the questions about you and writes only `~/.claude` and `config.json`.
   `personal-config profile` opens a manager that makes, changes, applies and deletes profiles,
