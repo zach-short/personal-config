@@ -289,17 +289,27 @@ export type HomeView = {
   error: string | null;
   menu: string[];
   cursor: number;
+  /** The panel heading; 'You are set up' when absent. */
+  title?: string;
+  /** Plain lines shown in place of the summary, for a machine with nothing saved yet. */
+  lead?: string[];
 };
 
 const SUMMARY_LABEL = 16;
 
 /** The home panel's text: the title, then the summary or the load error, then the menu. */
 export function homeBody(paint: Paint, view: HomeView, inner: number): string[] {
-  const top = [paint.bold('You are set up'), paint.muted(clip(view.configPath, inner)), ''];
+  const top = [
+    paint.bold(view.title ?? 'You are set up'),
+    paint.muted(clip(view.configPath, inner)),
+    '',
+  ];
   const middle =
-    view.error === null
-      ? summaryLines(paint, view, inner)
-      : errorLines(paint, view.error, inner);
+    view.error !== null
+      ? errorLines(paint, view.error, inner)
+      : view.lead !== undefined
+        ? view.lead.flatMap((line) => wrap(line, inner))
+        : summaryLines(paint, view, inner);
   return [...top, ...middle, '', ...choices(paint, view.menu, view.cursor)];
 }
 

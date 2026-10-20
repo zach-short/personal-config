@@ -17,7 +17,6 @@ import { runWorktree } from './commands/worktree.ts';
 import { runDoctor } from './doctor/index.ts';
 import { bareRoute, checkUsage, parseCli } from './lib/args.ts';
 import { clackPrompter } from './lib/ask.ts';
-import { exists } from './lib/disk.ts';
 import {
   type Flow,
   framePrompters,
@@ -25,7 +24,6 @@ import {
   type SetupFrame,
   terminalIo,
 } from './lib/frame.ts';
-import { configFile } from './lib/paths.ts';
 import type { Cli } from './lib/types.ts';
 import { version } from './lib/version.ts';
 
@@ -105,16 +103,7 @@ const DISPATCH: Record<string, (cli: Cli) => Promise<number>> = {
 
 async function main(): Promise<number> {
   const argv = process.argv.slice(2);
-  if (argv.length === 0) {
-    const route = bareRoute(interactive(), await exists(configFile()));
-    if (route === 'home') return runHome(runArgv);
-    if (route === 'guided') {
-      // The machine first, then the profiles that set up folders (profiles PLAN step 1).
-      const cli = parseCli(argv);
-      const code = await inFrame(GLOBAL_FLOW, (f) => runGlobal(cli, f));
-      return code === 0 ? inFrame(PROFILE_FLOW, (f) => runProfile(cli, f)) : code;
-    }
-  }
+  if (argv.length === 0 && bareRoute(interactive()) === 'home') return runHome(runArgv);
   return runArgv(argv);
 }
 

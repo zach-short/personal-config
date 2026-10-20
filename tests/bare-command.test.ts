@@ -20,14 +20,12 @@ async function run(args: string[]) {
 }
 
 describe('bareRoute', () => {
-  test('no terminal is the help text, saved config or not', () => {
-    expect(bareRoute(false, false)).toBe('help');
-    expect(bareRoute(false, true)).toBe('help');
+  test('no terminal is the help text', () => {
+    expect(bareRoute(false)).toBe('help');
   });
 
-  test('a terminal opens the guided setup, or the home screen once a config is saved', () => {
-    expect(bareRoute(true, false)).toBe('guided');
-    expect(bareRoute(true, true)).toBe('home');
+  test('a terminal opens the home screen, which offers the setup when nothing is saved', () => {
+    expect(bareRoute(true)).toBe('home');
   });
 });
 

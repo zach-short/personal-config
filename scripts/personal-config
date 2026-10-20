@@ -75,7 +75,7 @@ cmd_shell() {
 # after `bun link`) — only take over for our own subcommands, so `personal-config setup` run
 # against some OTHER repo still reaches the real, installed CLI.
 personal-config() {
-  local subs; subs=("cd" "--complete" $("$HOME/Projects/personal-config/scripts/personal-config" --complete | cut -d: -f1))
+  local subs; subs=("cd" "--complete" "--version" "-v" "--v" $("$HOME/Projects/personal-config/scripts/personal-config" --complete | cut -d: -f1))
   if [[ $# -eq 0 || " ${subs[*]} " == *" $1 "* ]]; then
     if [[ "$1" == "cd" ]]; then cd "$HOME/Projects/personal-config"; else "$HOME/Projects/personal-config/scripts/personal-config" "$@"; fi
   else
@@ -96,8 +96,9 @@ cmd___complete() {
   all_commands
 }
 
-# Same table drives an fzf picker on bare invocation — only when it'd actually be
-# interactive, so a cron job or `personal-config test | something` never gets asked anything.
+# A bare call at a terminal opens the CLI's own framed home (bare-command-home), not a picker.
+# The dev tasks stay one word away: `personal-config help` lists them.
+# Below, an fzf picker is kept for a terminal with no `bun`, where the CLI cannot start.
 interactive_pick() {
   local lines
   lines="$(all_commands | while IFS= read -r entry; do
@@ -106,6 +107,11 @@ interactive_pick() {
   echo "$lines" | fzf --prompt='personal-config> ' --height='~70%' --reverse --no-info \
     --header='select a command' | awk '{print $1}'
 }
+
+if [[ $# -eq 0 && -t 0 && -t 1 ]] && command -v bun >/dev/null 2>&1; then
+  cli
+  exit $?
+fi
 
 if [[ $# -eq 0 && -t 0 && -t 1 ]] && command -v fzf >/dev/null 2>&1; then
   picked="$(interactive_pick || true)"
@@ -125,7 +131,7 @@ case "$sub" in
   shell) cmd_shell ;;
   --complete) cmd___complete ;;
   help|-h|--help) cmd_help ;;
-  --version) cli --version ;;
+  --version|-v|--v) cli --version ;;
   *)
     # Anything else is the CLI's, if the CLI lists it; otherwise print the usage.
     # A failed --help read (bun missing, a crash) stops here with a message, never falls through

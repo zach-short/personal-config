@@ -12,6 +12,8 @@ import { clearScreen, short } from '../lib/ui.ts';
 
 /** What the menu depends on, read once before it is drawn (bare-command-home BD-3). */
 export type HomeFacts = {
+  /** `config.json` is on disk: the machine setup (`global`) has been run. */
+  hasConfig: boolean;
   configLoads: boolean;
   hasFolderConfig: boolean;
   hasBoard: boolean;
@@ -20,8 +22,19 @@ export type HomeFacts = {
   profiles: number;
 };
 
-/** One menu row: its words, and the argv it hands to the real command. Quit has none. */
-export type MenuEntry = { label: string; argv: string[] };
+/**
+ * One menu row: its words, and the argv it hands to the real command. Quit has none. A row with
+ * `children` opens a screen of them instead of running anything, so no screen shows more than a
+ * handful of rows (3 to 6) and the long list is a tree a person walks one step at a time. `followedBy`
+ * is a second command line run when the first exits 0, for a guided pair such as the machine
+ * setup followed by the profiles.
+ */
+export type MenuEntry = {
+  label: string;
+  argv: string[];
+  followedBy?: string[];
+  children?: MenuEntry[];
+};
 
 export type HomeState = {
   facts: HomeFacts;
@@ -33,25 +46,48 @@ export type HomeState = {
 export type Runner = (argv: string[]) => Promise<number>;
 
 const QUIT: MenuEntry = { label: 'Quit', argv: [] };
+const BACK: MenuEntry = { label: '← Back', argv: [] };
 
 /**
- * D2's menu. A config that does not load leaves only Quit, because every other entry would
- * read it; the rest appear where the working folder has the thing they act on.
+ * The first screen: a few primary actions chosen by where the person is (a machine with nothing
+ * saved, a folder not yet set up, a folder that is), then `Other…` and `Quit`. Everything not
+ * primary is one step down under `Other…`, in groups. A config that does not load leaves only the
+ * entries that never read it.
  */
 export function homeMenu(facts: HomeFacts): MenuEntry[] {
-  if (!facts.configLoads) return [QUIT];
+  const primary = primaryEntries(facts);
+  const groups = otherGroups(facts, new Set(primary.map((entry) => entry.label)));
+  const other: MenuEntry[] =
+    groups.length > 0 ? [{ label: 'Other…', argv: [], children: groups }] : [];
+  return [...primary, ...other, QUIT];
+}
+
+/** The screen a `children` row opens: its rows, then the way back. */
+export function screenOf(entries: MenuEntry[], depth: number): MenuEntry[] {
+  return depth === 0 ? entries : [...entries, BACK];
+}
+
+function primaryEntries(facts: HomeFacts): MenuEntry[] {
+  if (!facts.configLoads) return [];
+  if (!facts.hasConfig) return [setUpMachine()];
+  if (!facts.hasFolderConfig) return [setUpHere(facts), CHECK];
   return [
-    ...(facts.hasFolderConfig ? [] : [setUpHere(facts)]),
-    { label: 'Check this folder', argv: ['doctor', '.'] },
-    ...(facts.hasBoard ? [{ label: 'Next board item', argv: ['passoff', 'next'] }] : []),
-    ...(facts.hasStandard
-      ? [{ label: 'What changed in the standard', argv: ['upgrade', '.'] }]
-      : []),
-    { label: 'Profiles', argv: ['profile'] },
-    { label: 'Change your global setup', argv: ['global'] },
-    { label: 'Run the full setup again', argv: ['setup'] },
-    QUIT,
+    CHECK,
+    ...(facts.hasBoard ? [NEXT_ITEM] : []),
+    ...(facts.hasStandard ? [STANDARD_CHANGES] : []),
   ];
+}
+
+const CHECK: MenuEntry = { label: 'Check this folder', argv: ['doctor', '.'] };
+const NEXT_ITEM: MenuEntry = { label: 'Next board item', argv: ['passoff', 'next'] };
+const STANDARD_CHANGES: MenuEntry = {
+  label: 'What changed in the standard',
+  argv: ['upgrade', '.'],
+};
+
+/** What the machine needs first: the answers that are yours, then the profiles that use them. */
+function setUpMachine(): MenuEntry {
+  return { label: 'Set up this machine', argv: ['global'], followedBy: ['profile'] };
 }
 
 /** With a profile saved, a folder is set up from one; before that, from the saved answers. */
@@ -61,14 +97,50 @@ function setUpHere(facts: HomeFacts): MenuEntry {
     : { label: 'Set up this folder', argv: ['init', '.'] };
 }
 
+/** The rest, in up to three groups of at most five rows. A group with nothing in it is dropped. */
+function otherGroups(facts: HomeFacts, shown: Set<string>): MenuEntry[] {
+  const reads = facts.configLoads;
+  const folder: MenuEntry[] = [
+    ...(reads ? [CHECK] : []),
+    ...(reads && facts.hasBoard ? [NEXT_ITEM] : []),
+    ...(reads && facts.hasStandard ? [STANDARD_CHANGES] : []),
+  ];
+  const setup: MenuEntry[] = reads
+    ? [
+        { label: 'Profiles', argv: ['profile'] },
+        { label: 'Change your global setup', argv: ['global'] },
+        { label: 'Run the full setup again', argv: ['setup'] },
+      ]
+    : [];
+  const tool: MenuEntry[] = [
+    { label: 'Update personal-config', argv: ['update'] },
+    { label: 'Undo the last run', argv: ['undo'] },
+  ];
+  return [
+    group('This folder', folder, shown),
+    group('Your setup', setup, shown),
+    group('This tool', tool, shown),
+  ].flatMap((entry) => (entry === null ? [] : [entry]));
+}
+
+function group(label: string, entries: MenuEntry[], shown: Set<string>): MenuEntry | null {
+  const children = entries.filter((entry) => !shown.has(entry.label));
+  return children.length === 0 ? null : { label, argv: [], children };
+}
+
 export async function readHome(cwd: string): Promise<HomeState> {
   const loaded = await loadSaved();
   const folder = await folderFacts(cwd);
+  const hasConfig = await exists(configFile());
   if ('error' in loaded) {
-    return { facts: { configLoads: false, ...folder }, summary: [], error: loaded.error };
+    return {
+      facts: { hasConfig, configLoads: false, ...folder },
+      summary: [],
+      error: loaded.error,
+    };
   }
   return {
-    facts: { configLoads: true, ...folder },
+    facts: { hasConfig, configLoads: true, ...folder },
     summary: summaryOf(loaded.layer),
     error: null,
   };
@@ -83,7 +155,7 @@ async function loadSaved(): Promise<{ layer: ConfigLayer } | { error: string }> 
   }
 }
 
-async function folderFacts(dir: string): Promise<Omit<HomeFacts, 'configLoads'>> {
+async function folderFacts(dir: string): Promise<Omit<HomeFacts, 'configLoads' | 'hasConfig'>> {
   const { config, docs } = await docRoots(dir);
   const { profiles } = await listProfiles();
   const names = await readDocNames(config);
@@ -110,38 +182,61 @@ function summaryOf(layer: ConfigLayer): Array<[string, string]> {
   ];
 }
 
-/**
- * The home screen. It draws, waits for one choice, and then gets out of the way: the screen is
- * cleared and the command runs with its own output and its own exit code (D4, dial 3).
- */
-export async function runHome(run: Runner): Promise<number> {
-  const state = await readHome(process.cwd());
-  const menu = homeMenu(state.facts);
-  const paint = painter(toneFor(process.env));
-  const where = short(process.cwd());
-  const view = (cursor: number): HomeView => ({
+/** The words around the menu: a machine with nothing saved is welcomed, not told it is set up. */
+function viewOf(state: HomeState, menu: MenuEntry[], cursor: number): HomeView {
+  const base: HomeView = {
     configPath: short(configFile()),
     summary: state.summary,
     error: state.error,
     menu: menu.map((entry) => entry.label),
     cursor,
-  });
+  };
+  if (state.facts.hasConfig || state.error !== null) return base;
+  return {
+    ...base,
+    title: 'Welcome',
+    lead: [
+      'Nothing is saved on this machine yet.',
+      'Setting up takes two steps: the answers that are yours, then the profiles that set up your folders.',
+    ],
+  };
+}
 
+async function choose(state: HomeState, menu: MenuEntry[]): Promise<MenuEntry | undefined> {
+  const paint = painter(toneFor(process.env));
+  const where = short(process.cwd());
   clearScreen();
   const choice = await new SelectPrompt({
     options: menu.map((_, index) => ({ value: index })),
     render() {
-      return homeScreen(
-        paint,
-        view(this.cursor),
-        sizeOf(process.stdout.columns, process.stdout.rows),
-        where,
-      );
+      const size = sizeOf(process.stdout.columns, process.stdout.rows);
+      return homeScreen(paint, viewOf(state, menu, this.cursor), size, where);
     },
   }).prompt();
+  return typeof choice === 'number' && !isCancel(choice) ? menu[choice] : undefined;
+}
 
-  const entry = typeof choice === 'number' && !isCancel(choice) ? menu[choice] : undefined;
-  if (entry === undefined || entry.argv.length === 0) return 0;
+/**
+ * The home screen. It draws, waits for one choice, and then gets out of the way: the screen is
+ * cleared and the command runs with its own output and its own exit code (D4, dial 3). A row with
+ * children opens a screen of them, and `← Back` returns to the one above.
+ */
+export async function runHome(run: Runner): Promise<number> {
+  const state = await readHome(process.cwd());
+  const trail: MenuEntry[][] = [homeMenu(state.facts)];
+
+  for (;;) {
+    const current = trail.at(-1) ?? [];
+    const entry = await choose(state, screenOf(current, trail.length - 1));
+    if (entry === undefined || entry === QUIT) return 0;
+    if (entry === BACK) trail.pop();
+    else if (entry.children !== undefined) trail.push(entry.children);
+    else return runEntry(run, entry);
+  }
+}
+
+async function runEntry(run: Runner, entry: MenuEntry): Promise<number> {
   clearScreen();
-  return run(entry.argv);
+  const code = await run(entry.argv);
+  return code === 0 && entry.followedBy !== undefined ? run(entry.followedBy) : code;
 }
