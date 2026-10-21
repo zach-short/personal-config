@@ -304,6 +304,12 @@ const COMMIT_PARAGRAPH = '**Commits are the owner’s.**';
  * subfolder climbs to the nearest `.personal-config.json`, never above the git top level, where it
  * used to look in that one folder and skip the gate, and the gate runs in the config's folder,
  * mapped into the checkout being stopped in. Three keys, 83 still.
+ *
+ * **`/delegate` moved per variant on 2026-10-21.** Each subagent renames its own branch before
+ * anything else: the builder to `row-<N>-build`, a relayed pass to `row-<N>-build-pass<k>` and
+ * the auditor to `row-<N>-audit`, where worktree isolation had named each one
+ * `worktree-agent-<random id>`. The lead uses the name the report gives from then on, the
+ * worktree removal step among it. The same bytes in all three variants. Three keys, 83 still.
  */
 describe('§3.1 row 1 — code + full + git is the 0.3.0 output, byte for byte bar one skill', () => {
   const FULL = answersFor(CODE_FULL_GIT);

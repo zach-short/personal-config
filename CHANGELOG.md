@@ -3,6 +3,19 @@
 The CLI. The working standard it installs is versioned separately — see
 [`standard/CHANGELOG.md`](standard/CHANGELOG.md).
 
+## Unreleased
+
+### Changed
+
+- **`/delegate` names each subagent's branch after the item.** Worktree isolation named every
+  builder and auditor branch `worktree-agent-<random id>`, so one repo held dozens of branches
+  that said nothing of what they held. Each subagent now renames its own branch before anything
+  else, to `row-<N>-build`, `row-<N>-build-pass<k>` or `row-<N>-audit` on a board and
+  `<phase-slug>-build` and so on in a project folder, and adds `-2`, `-3` where the name is taken.
+  The lead uses the name the report gives from then on, in the audit, the land step, the record
+  and the worktree removal. Under `landStep: "wk"` the branch is already `wk/<n>`, and nothing
+  changes there.
+
 ## 0.9.0 — 2026-10-20
 
 ### Fixed

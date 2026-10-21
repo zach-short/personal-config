@@ -62,6 +62,7 @@ once, whatever their lanes say.
 
 Its brief is the item's own prompt in full, then the relay contract below, then these rules:
 
+{{BUILDER_RENAME}}
 - Do not edit {{RECORD_FILES_OBJECT}}. Only this session writes them.{{ITEM_FILE_RULE}}
 - Where the brief gives a document by an absolute path outside your worktree, read it there,
   and never write there.
@@ -89,8 +90,7 @@ not see this conversation.
 ```
 
 Two shapes come back. **A finished report** goes to step 3. **A relayed pass-off** goes to a
-fresh subagent of the same model, with that prompt as its whole brief. Count the passes: the
-sign-off names them.
+fresh subagent of the same model, with that prompt as its whole brief{{RELAY_BRIEF}}
 
 ## 3. Audit, in a second subagent
 
@@ -102,6 +102,7 @@ Its brief: the item's done-when (the gate commands, and the proof a green gate c
 "What is fixed" and "Not in scope", the builder's worktree path and branch, the patch path, the
 base branch's name, the absolute paths of the documents step 2 found untracked, and these rules:
 
+{{AUDIT_RENAME}}
 - Do not edit {{RECORD_FILES_OBJECT}}, and never write the builder's worktree.
 - {{AUDIT_REPRO}}
 - Re-run every gate yourself. Report each command with its output, and the diffstat of your

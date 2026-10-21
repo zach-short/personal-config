@@ -18,6 +18,7 @@ import {
   testConfig,
   testContext,
   testRepoPlan,
+  WK_LAND_STEP,
 } from './helpers.ts';
 
 const CODE_FULL_GIT = { workKind: 'code', configWeight: 'full', usesGit: 'yes' } as const;
@@ -448,6 +449,63 @@ describe('what /delegate says', () => {
         expect(text).toContain('---\n\n<!-- personal-config v');
         expect(leftoverTokens(text)).toEqual([]);
       });
+});
+
+/**
+ * Owner, 2026-10-21: worktree isolation names every subagent branch `worktree-agent-<random id>`,
+ * so each subagent renames its own branch before anything else, and the lead uses the name the
+ * report gives from then on. Under wk's queue the branch is already `wk/<n>` and the auditor's
+ * worktree is detached, so nothing renames there.
+ */
+describe('/delegate names its branches after the item', () => {
+  const RENAME_FIRST =
+    "rules:\n\n- Before anything else, from your worktree's own directory, run\n";
+  const renders: Array<[string, WorkProfile, string]> = [];
+  for (const policy of ['print-blocks', 'agent-commits', 'agent-pushes', 'no-rule']) {
+    renders.push([policy, 'ledger', 'row-<N>']);
+    renders.push([policy, 'folders', '<phase-slug>']);
+  }
+
+  for (const [policy, profile, stem] of renders)
+    test(`passes: under ${policy} on ${profile}, builder, relay and auditor rename to ${stem}`, async () => {
+      const raw =
+        find(await render({ commitPolicy: policy }, profile), 'delegate/SKILL.md') ?? '';
+      const text = raw.replace(/\s+/g, ' ');
+      for (const phrase of [
+        `Pick the branch name, \`${stem}-build\`, and write it where the rules below say \`<name>\`.`,
+        "From here on, a subagent's branch is the name its report gives, never the one the Agent tool returned.",
+        '`git branch -m <name>` as one plain command. If git refuses because the name exists, add `-2`, then `-3`, until it takes. Report the name that took; it is your branch everywhere below.',
+        `plus the builder rule that renames the branch, with \`<name>\` as \`${stem}-build-pass<k>\`. Count the passes`,
+        `\`git branch -m ${stem}-audit\` as one plain command.`,
+        'The branch is the name its report gave, never the one the Agent tool returned.',
+      ])
+        expect(text, `${policy} ${profile}: ${phrase}`).toContain(phrase);
+      // The rename is the first rule in both briefs, so it runs before any commit on the old name.
+      const builder = raw.indexOf('then these rules:\n\n- Before anything else');
+      const auditor = raw.indexOf(
+        'found untracked, and these rules:\n\n- Before anything else',
+      );
+      expect(builder, `${policy} ${profile}: builder`).toBeGreaterThan(0);
+      expect(auditor, `${policy} ${profile}: auditor`).toBeGreaterThan(builder);
+      expect(raw.split(RENAME_FIRST), `${policy} ${profile}`).toHaveLength(3);
+      // The branch the lead picks is the shape's own: no row on folders, no phase on a board.
+      expect(text).not.toContain(profile === 'ledger' ? '<phase-slug>' : 'row-<N>');
+    });
+
+  test("violates nothing: under wk's queue no subagent renames, and the relay sentence is unchanged", async () => {
+    const raw =
+      find(
+        await render({ ...WK_LAND_STEP, commitPolicy: 'agent-pushes' }),
+        'delegate/SKILL.md',
+      ) ?? '';
+    expect(raw).not.toContain('git branch -m');
+    expect(raw).not.toContain('-build');
+    expect(raw).toContain(
+      'with that prompt as its whole brief. Count the passes: the\nsign-off names them.\n',
+    );
+    expect(raw).toContain('then these rules:\n\n- Do not edit');
+    expect(raw).toContain('found untracked, and these rules:\n\n- Do not edit');
+  });
 });
 
 describe("model-routing.md names /delegate's Deep exception only where /delegate renders", () => {

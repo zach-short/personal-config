@@ -369,7 +369,7 @@ function delegateVars(
   const removal = lands || landing === 'wk' ? 7 : 6;
   return {
     ...vars,
-    ...spawnVars(landing, commits, removal),
+    ...spawnVars(landing, commits, removal, shape.folders ? '<phase-slug>' : 'row-<N>'),
     TIER_TABLE: tierTable(ctx, ''),
     // `null` drops the token's line, so section 5 and the worktree step stay one blank line apart.
     LAND_STEP: landStepOf(landing),
@@ -381,7 +381,8 @@ function delegateVars(
             'run',
             [
               'Remove each worktree that is finished: every builder, auditor and relayed pass that came',
-              'back with a worktree path and a branch. A',
+              'back with a worktree path and a branch. The branch is the name its report gave, never the',
+              'one the Agent tool returned. A',
             ],
             landing,
           ),
@@ -401,17 +402,37 @@ function landStepOf(landing: Landing): string | null {
  * Board row 132: under wk's queue the lead makes each worktree itself and spawns with no
  * `isolation`, because worktree isolation makes a worktree of the session's own repository, not
  * the workspace `wk new` made (wk row 16's run, 2026-10-17). Every other landing keeps the
- * isolated text, byte for byte.
+ * isolated text, byte for byte. `stem` is what a renamed branch starts with: `row-<N>` on a
+ * board, `<phase-slug>` on project folders.
  */
 function spawnVars(
   landing: Landing,
   commits: boolean,
   removal: number,
-): Record<string, string> {
-  return landing === 'wk' ? wkSpawnVars() : isolatedSpawnVars(commits, removal);
+  stem: string,
+): Record<string, string | null> {
+  return landing === 'wk' ? wkSpawnVars() : isolatedSpawnVars(commits, removal, stem);
 }
 
-function isolatedSpawnVars(commits: boolean, removal: number): Record<string, string> {
+/**
+ * Owner, 2026-10-21: worktree isolation names every subagent branch `worktree-agent-<random id>`,
+ * and one repo held dozens that said nothing of what they held. The WorktreeCreate hook gets only
+ * that random name, and a rename after the subagent stops would leave the lead holding a name that
+ * no longer exists, so each subagent renames its own branch first and reports the name that took.
+ */
+function renameRule(name: string): string {
+  return [
+    "- Before anything else, from your worktree's own directory, run",
+    `  \`git branch -m ${name}\` as one plain command. If git refuses because the name exists, add`,
+    '  `-2`, then `-3`, until it takes. Report the name that took; it is your branch everywhere below.',
+  ].join('\n');
+}
+
+function isolatedSpawnVars(
+  commits: boolean,
+  removal: number,
+  stem: string,
+): Record<string, string> {
   return {
     BUILD_SPAWN: [
       'Spawn one Agent with `model` from the tiers above and `isolation: "worktree"`. A worktree holds',
@@ -421,6 +442,17 @@ function isolatedSpawnVars(commits: boolean, removal: number): Record<string, st
     BRIEF_NAMES: [
       "Write the base branch's name and the patch path where the rules below say `<base>` and",
       '  `<patch>`.',
+      `- Pick the branch name, \`${stem}-build\`, and write it where the rules below say \`<name>\`.`,
+      '  Worktree isolation names every subagent branch `worktree-agent-<random id>`, and a list of',
+      "  those says nothing about what each one holds. The worktree's folder keeps its `agent-` name,",
+      '  so a cleanup that finds worktrees by their folder name still finds it. From here on, a',
+      "  subagent's branch is the name its report gives, never the one the Agent tool returned.",
+    ].join('\n'),
+    BUILDER_RENAME: renameRule('<name>'),
+    RELAY_BRIEF: [
+      ', plus the builder rule',
+      `that renames the branch, with \`<name>\` as \`${stem}-build-pass<k>\`. Count the passes: the`,
+      'sign-off names them.',
     ].join('\n'),
     BASE_RULE: [
       "Before the first gate, run the fresh-checkout recipe in the repo's working standard, and bring",
@@ -433,6 +465,7 @@ function isolatedSpawnVars(commits: boolean, removal: number): Record<string, st
       'Spawn a second Agent with its own `isolation: "worktree"`, never the builder\'s. A subagent in a',
       'shared worktree edits source even when it is told only to review.',
     ].join('\n'),
+    AUDIT_RENAME: renameRule(`${stem}-audit`),
     AUDIT_REPRO: [
       'Bring your own worktree to the base branch with `git merge --ff-only <base>`, run from your',
       "  worktree's own directory as one plain command, then reproduce the change there.",
@@ -474,8 +507,12 @@ function auditSource(commits: boolean): string {
  * the skill merges by hand. A hook-blocked commit leaves the branch where `wk new` cut it, where
  * the patch applies as `APPLY_PATCH` has it.
  */
-function wkSpawnVars(): Record<string, string> {
+function wkSpawnVars(): Record<string, string | null> {
   return {
+    // `wk new` names the branch `wk/<n>`, and the auditor's worktree is detached, so neither renames.
+    BUILDER_RENAME: null,
+    AUDIT_RENAME: null,
+    RELAY_BRIEF: '. Count the passes: the\nsign-off names them.',
     BUILD_SPAWN: [
       'Check wk first: from the primary checkout, `wk config show` must give `enabled = true` under',
       '`[landing]` and at least one `[[gates.run]]`. Without them `wk submit` refuses or the base never',
