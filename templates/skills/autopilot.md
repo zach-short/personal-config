@@ -33,7 +33,7 @@ the rest of this skill names them.
 | End time | 8 hours after the start |
 | Rows | No cap |
 | Fix rounds per row | 2, then the row is held |
-| Wake while holding | 3600 seconds |
+| Wake while holding | 3300 seconds, so each wake finds the one-hour prompt cache still warm |
 | Wake while agents run | 1800 seconds |
 | This session's context | No cap, recorded on every wake |
 | Calls of row questions in the opening round | 3, so at most 12 row questions |

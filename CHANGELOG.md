@@ -15,6 +15,10 @@ The CLI. The working standard it installs is versioned separately — see
   The lead uses the name the report gives from then on, in the audit, the land step, the record
   and the worktree removal. Under `landStep: "wk"` the branch is already `wk/<n>`, and nothing
   changes there.
+- **`/autopilot` holds on a 3300-second wake, not 3600.** The main conversation's prompt cache
+  lives one hour. A wake at the full hour arrived after it expired, so every holding wake wrote
+  the orchestrator's whole context to the cache again, at twice the input rate. Measured on
+  2026-10-26, rebuilds after gaps over an hour were about 3.6 percent of one machine's usage.
 
 ## 0.9.0 — 2026-10-20
 

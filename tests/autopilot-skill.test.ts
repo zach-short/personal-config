@@ -97,7 +97,7 @@ describe('what /autopilot says', () => {
       '2 to 4 sub-rows that build at once, plus 1 integration sub-row that runs last',
       '8 hours after the start',
       '2, then the row is held',
-      '3600 seconds',
+      '3300 seconds',
       '1800 seconds',
       '3, so at most 12 row questions',
     ])

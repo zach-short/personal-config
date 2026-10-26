@@ -310,6 +310,10 @@ const COMMIT_PARAGRAPH = '**Commits are the owner’s.**';
  * the auditor to `row-<N>-audit`, where worktree isolation had named each one
  * `worktree-agent-<random id>`. The lead uses the name the report gives from then on, the
  * worktree removal step among it. The same bytes in all three variants. Three keys, 83 still.
+ *
+ * **`/autopilot` moved per variant on 2026-10-26.** The wake while holding is 3300 seconds, not
+ * 3600, so each holding wake finds the one-hour prompt cache still warm and does not write the
+ * orchestrator's whole context again. The same bytes in all three variants. Three keys, 83 still.
  */
 describe('§3.1 row 1 — code + full + git is the 0.3.0 output, byte for byte bar one skill', () => {
   const FULL = answersFor(CODE_FULL_GIT);
